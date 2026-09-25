@@ -27,3 +27,5 @@ POST /v1/orders
 ## 替换点与明确未完成项
 
 `src/commerce/types.ts` 的 `CommerceAdapter` 是商品/库存 seam；`src/data/mockCommerce.ts` 为其样本 Adapter，`server/commerce.ts` 在其后实现报价、预留和幂等行为。企业资料到达后，先实现 PIM/ERP/POS Adapter 和契约测试，再把报价与订单状态迁到事务数据库及 OMS。进程内 Map、单进程幂等、样本库存和宽松的 demo HTTP 服务不能直接用于生产。支付、退款、履约、身份、权限与实际配送覆盖仍未实现。
+
+浏览器后台新增 **Simulatore** 页（`http://localhost:8787/#simulator`），可选样本门店、商品、数量和自提/送货，查看报价与样本库存，并发起 `reserved_demo` 预留。此页与手机演示订单列表分开；预留不代表付款或真实订单。

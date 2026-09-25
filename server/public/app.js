@@ -1,10 +1,12 @@
-const state = { page: 'overview', orders: [], products: [], stores: [], query: '', store: 'all', selected: null, connected: false };
-const labels = { overview: 'Panoramica', orders: 'Ordini', products: 'Prodotti', stores: 'Negozi' };
+const state = { page: 'overview', orders: [], products: [], stores: [], query: '', store: 'all', selected: null, connected: false,
+  sim: { store: 'Arezzo', sku: 'carta-cucina', quantity: 1, fulfilment: 'store', postalCode: '', quote: null, order: null, error: '', busy: false, stock: null, key: '' } };
+const labels = { overview: 'Panoramica', orders: 'Ordini', products: 'Prodotti', stores: 'Negozi', simulator: 'Simulatore' };
 const descriptions = {
   overview: 'Gli ordini inviati dall’app compaiono qui automaticamente.',
   orders: 'Ordini demo ricevuti in tempo reale dall’app CASA & TE.',
   products: 'Catalogo dimostrativo disponibile nell’app.',
   stores: 'Le cinque sedi configurate per questa demo.',
+  simulator: 'Prova preventivo e disponibilità con dati fittizi, senza pagamento.',
 };
 const $ = (selector) => document.querySelector(selector);
 const safe = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -22,6 +24,7 @@ function setConnection(connected) {
 
 function setPage(page) {
   state.page = page;
+  history.replaceState(null, '', `#${page}`);
   state.query = '';
   state.store = 'all';
   document.querySelectorAll('[data-page]').forEach((button) => button.classList.toggle('active', button.dataset.page === page));
@@ -29,6 +32,7 @@ function setPage(page) {
   $('#page-title').textContent = labels[page];
   $('#page-description').textContent = descriptions[page];
   render();
+  if (page === 'simulator') refreshSimulatorStock();
 }
 
 function metrics() {
@@ -74,9 +78,26 @@ function stores() {
   return `<div class="notice">Solo nomi delle sedi configurate. Indirizzi, contatti e inventario non fanno parte della demo.</div><div class="store-list">${state.stores.map((store, index) => `<div class="store-card"><div class="store-symbol">⌂</div><div><strong>${safe(store)}</strong><small>Sede ${String(index + 1).padStart(2, '0')} · ${state.orders.filter((order) => order.store === store).length} ordini demo</small></div></div>`).join('')}</div>`;
 }
 
+function simulator() {
+  const sim = state.sim;
+  return `<div class="notice">Solo dati fittizi. Il preventivo non verifica la copertura del CAP; la prenotazione non incassa denaro e si azzera al riavvio del servizio.</div>
+    <section class="panel sim-panel"><div class="panel-header"><h2>Prova una transazione</h2><small>Interfaccia /v1 · mock</small></div>
+    <div class="sim-body"><div class="sim-grid">
+      <label>Negozio<select id="sim-store">${state.stores.map((store) => `<option value="${safe(store)}" ${sim.store === store ? 'selected' : ''}>${safe(store)}</option>`).join('')}</select></label>
+      <label>Prodotto<select id="sim-sku">${state.products.map((product) => `<option value="${safe(product.id)}" ${sim.sku === product.id ? 'selected' : ''}>${safe(product.name)}</option>`).join('')}</select></label>
+      <label>Quantità<input id="sim-quantity" type="number" min="1" max="99" value="${safe(sim.quantity)}"></label>
+      <label>Consegna<select id="sim-fulfilment"><option value="store" ${sim.fulfilment === 'store' ? 'selected' : ''}>Ritiro in negozio</option><option value="home" ${sim.fulfilment === 'home' ? 'selected' : ''}>Consegna a domicilio</option></select></label>
+      ${sim.fulfilment === 'home' ? `<label>CAP dimostrativo<input id="sim-postal" inputmode="numeric" maxlength="5" value="${safe(sim.postalCode)}" placeholder="Es. 52100"></label>` : ''}
+    </div><div class="sim-actions"><button id="sim-quote" class="sim-primary" ${sim.busy ? 'disabled' : ''}>Calcola preventivo</button><span>${sim.stock === null ? 'Disponibilità non caricata' : `Disponibilità demo: ${safe(sim.stock)} pezzi`}</span></div>
+    ${sim.error ? `<div class="sim-error" role="alert">${safe(sim.error)}</div>` : ''}
+    ${sim.quote ? `<div class="sim-result"><div><small>PREVENTIVO · valido 5 minuti</small><strong>${euro(sim.quote.totalCents / 100)}</strong><span>Articoli ${euro(sim.quote.subtotalCents / 100)} · Consegna ${euro(sim.quote.shippingCents / 100)} · ${(sim.quote.weightGrams / 1000).toFixed(1)} kg</span></div><button id="sim-reserve" class="sim-primary" ${sim.busy || sim.order ? 'disabled' : ''}>${sim.order ? 'Prenotato' : 'Prenota stock demo'}</button></div>` : ''}
+    ${sim.order ? `<div class="sim-success" role="status">Prenotazione demo ${safe(sim.order.id)} · ${safe(sim.order.status)}. Nessun pagamento eseguito.</div>` : ''}
+    </div></section>`;
+}
+
 function render() {
   $('#nav-count').textContent = state.orders.length;
-  $('#view').innerHTML = state.page === 'overview' ? overview() : state.page === 'orders' ? orders() : state.page === 'products' ? productTable() : stores();
+  $('#view').innerHTML = state.page === 'overview' ? overview() : state.page === 'orders' ? orders() : state.page === 'products' ? productTable() : state.page === 'stores' ? stores() : simulator();
   if (state.selected) renderDrawer();
 }
 
@@ -97,6 +118,8 @@ function renderDrawer() {
 function closeDrawer() { state.selected = null; $('#drawer-backdrop').hidden = true; $('#order-drawer').classList.remove('open'); $('#order-drawer').setAttribute('aria-hidden', 'true'); }
 
 document.addEventListener('click', (event) => {
+  if (event.target.id === 'sim-quote') { simulateQuote(); return; }
+  if (event.target.id === 'sim-reserve') { simulateOrder(); return; }
   const page = event.target.closest('[data-page]');
   if (page) { setPage(page.dataset.page); return; }
   const store = event.target.closest('[data-store]');
@@ -106,16 +129,71 @@ document.addEventListener('click', (event) => {
   if (event.target.id === 'drawer-close' || event.target.id === 'drawer-backdrop') closeDrawer();
 });
 document.addEventListener('input', (event) => {
+  if (event.target.id === 'sim-quantity') { state.sim.quantity = Number(event.target.value); state.sim.quote = null; state.sim.order = null; return; }
+  if (event.target.id === 'sim-postal') { state.sim.postalCode = event.target.value; state.sim.quote = null; state.sim.order = null; return; }
   if (event.target.id !== 'order-search') return;
   state.query = event.target.value;
   const start = event.target.selectionStart;
   render();
   const input = $('#order-search'); input.focus(); input.setSelectionRange(start, start);
 });
+document.addEventListener('change', (event) => {
+  const fields = { 'sim-store': 'store', 'sim-sku': 'sku', 'sim-fulfilment': 'fulfilment' };
+  const field = fields[event.target.id];
+  if (!field) return;
+  state.sim[field] = event.target.value;
+  state.sim.quote = null; state.sim.order = null; state.sim.error = '';
+  if (field === 'store' || field === 'sku') refreshSimulatorStock();
+  render();
+});
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeDrawer();
   if (event.key === 'Enter' && event.target.matches('tr[data-id]')) { state.selected = event.target.dataset.id; renderDrawer(); }
 });
+
+async function refreshSimulatorStock() {
+  state.sim.stock = null;
+  try {
+    const store = state.sim.store;
+    const response = await fetch(`/v1/availability?storeId=${encodeURIComponent(store)}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Stock unavailable');
+    const body = await response.json();
+    if (store !== state.sim.store) return;
+    state.sim.stock = body.availability.find((item) => item.sku === state.sim.sku)?.quantity ?? 0;
+  } catch { state.sim.stock = null; }
+  if (state.page === 'simulator') render();
+}
+
+async function simulateQuote() {
+  const sim = state.sim;
+  if (sim.busy) return;
+  sim.busy = true; sim.error = ''; sim.quote = null; sim.order = null; render();
+  try {
+    const response = await fetch('/v1/quotes', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lines: [{ sku: sim.sku, quantity: sim.quantity }], storeId: sim.store,
+        fulfilment: sim.fulfilment, postalCode: sim.fulfilment === 'home' ? sim.postalCode : undefined }) });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.code || body.error || 'Preventivo non disponibile');
+    sim.quote = body.quote;
+    sim.key = `demo-${crypto.randomUUID()}`;
+  } catch (error) { sim.error = error instanceof Error ? error.message : 'Errore di rete'; }
+  finally { sim.busy = false; render(); }
+}
+
+async function simulateOrder() {
+  const sim = state.sim;
+  if (sim.busy || !sim.quote || sim.order) return;
+  sim.busy = true; sim.error = ''; render();
+  try {
+    const response = await fetch('/v1/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quoteId: sim.quote.id, idempotencyKey: sim.key }) });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.code || body.error || 'Prenotazione non disponibile');
+    sim.order = body.order;
+    await refreshSimulatorStock();
+  } catch (error) { sim.error = error instanceof Error ? error.message : 'Errore di rete'; }
+  finally { sim.busy = false; render(); }
+}
 
 let refreshing = false;
 async function refresh() {
@@ -137,4 +215,5 @@ async function refresh() {
   } catch { setConnection(false); }
   finally { refreshing = false; }
 }
-render(); refresh(); setInterval(refresh, 1200); document.addEventListener('visibilitychange', refresh);
+setPage(labels[location.hash.slice(1)] ? location.hash.slice(1) : 'overview');
+refresh(); setInterval(refresh, 1200); document.addEventListener('visibilitychange', refresh);

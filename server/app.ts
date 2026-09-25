@@ -140,7 +140,7 @@ export function createDemoServer(dataFile: string) {
         send(res, 201, { order: candidate });
         return;
       }
-      if (req.method === 'GET' && (path === '/' || path === '/index.html' || path === '/app.css' || path === '/app.js')) {
+      if (req.method === 'GET' && (path === '/' || path === '/index.html' || path === '/app.css' || path === '/sim.css' || path === '/app.js')) {
         const name = path === '/' ? 'index.html' : path.slice(1);
         const type = name.endsWith('.css') ? 'text/css' : name.endsWith('.js') ? 'text/javascript' : 'text/html';
         res.writeHead(200, { 'Content-Type': `${type}; charset=utf-8`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });

@@ -62,6 +62,8 @@ test('admin assets and product catalog are served by the same process', async ()
   assert.match(await page.text(), /CASA & TE/);
   const catalog = await fetch(`${base}/api/products`);
   assert.equal((await catalog.json() as { products: unknown[] }).products.length, 8);
+  const simulatorStyle = await fetch(`${base}/sim.css`);
+  assert.equal(simulatorStyle.status, 200);
 });
 
 test('v1 mock commerce endpoints quote, reserve, and expose the same order', async () => {
