@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["server/**/*.ts", "tests/admin-server.test.ts", "src/domain/**/*.ts", "src/config/**/*.ts", "src/data/products.ts", "src/types/**/*.ts"]
+}

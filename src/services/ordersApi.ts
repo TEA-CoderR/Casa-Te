@@ -2,6 +2,9 @@ import Constants from 'expo-constants';
 import type { Order } from '@/types/order';
 
 function apiBase(): string {
+  if (process.env.EXPO_PUBLIC_APP_ENV === 'production') {
+    throw new Error('Il servizio ordini demo non è abilitato in produzione.');
+  }
   const configured = process.env.EXPO_PUBLIC_ORDER_API_URL?.trim();
   if (configured) return configured.replace(/\/$/, '');
   const hostUri = Constants.expoConfig?.hostUri;

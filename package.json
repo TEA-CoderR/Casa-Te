@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "demo:server": "tsx server/index.ts",
     "typecheck": "tsc --noEmit",
+    "typecheck:server": "tsc --noEmit --project tsconfig.server.json",
     "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
