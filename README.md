@@ -6,7 +6,7 @@ The native UI has since been redesigned. See `UI_REDESIGN.md` for the updated sc
 generated demo assets, phone preview and validation. Current screenshots are under
 `test-results/app-*.png`; `test-results/expo-go.png` is the session's phone preview QR.
 
-This directory is now a configured Expo SDK 54 project for store-installed Expo Go. Dependencies are installed;
+This directory is now a configured Expo SDK 57 project for the installed Expo Go. Dependencies are installed;
 do not create another Expo project or run the original bootstrap instructions below.
 
 From PowerShell in this directory:
@@ -15,9 +15,9 @@ From PowerShell in this directory:
 .\start-demo.ps1
 ```
 
-Scan the terminal QR code with an Expo Go version supporting SDK 54, with the phone
+Scan the terminal QR code with an Expo Go version supporting SDK 57, with the phone
 and computer on the same network. Use `./start-demo.ps1 -Web` for a browser preview.
-The native Android and iOS bundles compile, but physical-device acceptance is still pending.
+The native Android bundle and Expo Go UI run in the local emulator; physical-device and iOS acceptance are still pending.
 
 On a clean machine with Node.js and npm, run `npm ci` once, then `npm start`.
 Standard checks: `npm run typecheck`, `npm test`, `npx expo install --check`,
@@ -36,7 +36,9 @@ The remaining sections are the original handoff instructions, retained for conte
 
 ### Phone connection repair
 
-The first SDK 57 setup was replaced with SDK 54 for store Expo Go compatibility.
+The first SDK 57 setup was temporarily replaced with SDK 54 during connection diagnosis.
+The project was later restored to SDK 57 to match the installed Expo Go; package.json
+is the source of truth for the current SDK version.
 Windows also had a Public-network TCP block for the Node runtime running Expo.
 The authorized repair allows only that runtime's TCP 8081 from LocalSubnet and
 disables its conflicting Public TCP block. UDP rules and firewall profiles are unchanged.

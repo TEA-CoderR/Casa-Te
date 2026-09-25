@@ -1,41 +1,61 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import type { Product } from '@/types/product';
-import { colors } from '@/config/theme';
+import { colors, control, radius, spacing, typeScale } from '@/config/theme';
 import { useCartStore } from '@/store/cart';
 import { ProductVisual } from './ProductVisual';
 import { Icon } from './Icon';
-export function ProductCard({ product }: { product: Product }) {
+
+export function ProductCard({ product, imageAspectRatio = 1 }: {
+  product: Product;
+  imageAspectRatio?: number;
+}) {
   const add = useCartStore((s) => s.add);
   const quantity = useCartStore((s) => s.items[product.id] ?? 0);
-  return <Pressable style={styles.card} onPress={() => router.push(`/product/${product.id}`)} accessibilityRole="link">
-    <View style={styles.media}>
-      <ProductVisual id={product.id} label={product.name} />
-      <View style={styles.badge}><Text style={styles.badgeText}>DEMO</Text></View>
-    </View>
-    <Text style={styles.category}>{product.category}</Text>
-    <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+  const price = `€${product.price.toFixed(2).replace('.', ',')}`;
+  return <View style={styles.card}>
+    <Pressable accessibilityRole="link" accessibilityLabel={`${product.name}, ${price}`}
+      onPress={() => router.push(`/product/${product.id}`)} style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}>
+      <View style={styles.media}>
+        <ProductVisual id={product.id} label={product.name} aspectRatio={imageAspectRatio} />
+      </View>
+      <Text style={styles.category} numberOfLines={1}>{product.category}</Text>
+      <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+    </Pressable>
     <View style={styles.bottom}>
-      <View><Text style={styles.price}>€{product.price.toFixed(2).replace('.', ',')}</Text>
-        <Text style={styles.stock}>{product.available ? 'Disponibile · demo' : 'Esaurito'}</Text></View>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Aggiungi ${product.name}`} disabled={!product.available}
-        onPress={(event) => { event.stopPropagation(); add(product.id); }}
-        style={({ pressed }) => [styles.add, quantity > 0 && { backgroundColor: colors.green }, { opacity: pressed || !product.available ? 0.5 : 1 }]}>
-        {quantity ? <Text style={{ color: '#fff', fontWeight: '600' }}>{quantity}</Text> : <Icon name="plus" size={20} color={colors.green} />}
+      <View style={styles.priceBlock}>
+        <Text style={styles.price}>{price}</Text>
+        <Text style={[styles.availability, !product.available && styles.unavailable]}>
+          {product.available ? 'Disponibile · demo' : 'Esaurito'}
+        </Text>
+      </View>
+      <Pressable accessibilityRole="button" accessibilityLabel={quantity > 0
+          ? `${product.name}: ${quantity} nel carrello. Aggiungi un altro` : `Aggiungi ${product.name}`}
+        accessibilityState={{ disabled: !product.available }} accessibilityLiveRegion="polite"
+        disabled={!product.available} onPress={() => add(product.id)}
+        style={({ pressed }) => [styles.add, quantity > 0 && styles.added,
+          { opacity: pressed || !product.available ? 0.65 : 1 }]}>
+        {quantity > 0 ? <Text style={styles.quantity}>{quantity}</Text>
+          : <Icon name="plus" size={21} color={colors.green} />}
       </Pressable>
     </View>
-  </Pressable>;
+  </View>;
 }
-const styles = StyleSheet.create({
-  card: { flex: 1 },
-  media: { backgroundColor: '#F0F0EA', borderRadius: 18, overflow: 'hidden' },
-  badge: { position: 'absolute', left: 10, top: 10, backgroundColor: '#FFFFFFC9', borderRadius: 5, paddingHorizontal: 5, paddingVertical: 3 },
-  badgeText: { fontSize: 8, letterSpacing: 1, color: '#73786F' },
-  category: { color: colors.muted, fontSize: 10, marginTop: 13, letterSpacing: 0.8, textTransform: 'uppercase' },
-  name: { fontSize: 14, lineHeight: 20, fontWeight: '500', color: colors.text, minHeight: 40, marginTop: 4 },
-  bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 7 },
-  price: { fontSize: 19, fontWeight: '600', color: colors.text, letterSpacing: -0.5 },
-  stock: { fontSize: 9, color: colors.muted, marginTop: 3 },
-  add: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#EAF0E4', alignItems: 'center', justifyContent: 'center' },
-});
 
+const styles = StyleSheet.create({
+  card: { flex: 1, minWidth: 0 },
+  media: { backgroundColor: colors.surfaceMuted, borderRadius: radius.md, overflow: 'hidden' },
+  category: { color: colors.muted, fontSize: typeScale.caption, marginTop: spacing.xs },
+  name: { fontSize: 15, lineHeight: 20, fontWeight: '500', color: colors.text,
+    minHeight: 40, marginTop: spacing.xxs },
+  bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: spacing.xs, marginTop: spacing.xs },
+  priceBlock: { flex: 1, minWidth: 0 },
+  price: { fontSize: typeScale.price, lineHeight: 27, fontWeight: '700', color: colors.greenDark },
+  availability: { fontSize: typeScale.caption, lineHeight: 17, color: colors.muted, marginTop: 2 },
+  unavailable: { color: colors.danger },
+  add: { width: control.minHeight, height: control.minHeight, flexShrink: 0, borderRadius: radius.md,
+    backgroundColor: '#EAF0E4', alignItems: 'center', justifyContent: 'center' },
+  added: { backgroundColor: colors.green },
+  quantity: { color: colors.surface, fontSize: typeScale.body, fontWeight: '700' },
+});

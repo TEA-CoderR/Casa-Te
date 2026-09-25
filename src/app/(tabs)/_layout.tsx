@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '@/config/theme';
+import { colors, spacing, typeScale } from '@/config/theme';
 import { getCartSnapshot, useCartStore } from '@/store/cart';
 import { Icon, type IconName } from '@/components/Icon';
 const tabs: Array<{ name: string; title: string; icon: IconName }> = [
@@ -17,8 +17,8 @@ export default function TabsLayout() {
   return <Tabs screenOptions={{
     headerShown: false, tabBarActiveTintColor: colors.green, tabBarInactiveTintColor: '#8B9187',
     tabBarStyle: { backgroundColor: '#FFFFFF', borderTopColor: '#EBEDE7', height: 64 + Math.max(insets.bottom, 8),
-      paddingBottom: Math.max(insets.bottom, 8), paddingTop: 7, elevation: 0 },
-    tabBarLabelStyle: { fontSize: 10, fontWeight: '500', marginTop: 3 },
+      paddingBottom: Math.max(insets.bottom, spacing.xs), paddingTop: spacing.xxs, elevation: 0 },
+    tabBarLabelStyle: { fontSize: typeScale.caption, fontWeight: '500', marginTop: spacing.xxs },
     tabBarBadgeStyle: { backgroundColor: colors.green, fontSize: 9, color: '#fff' },
   }}>
     {tabs.map((tab) => <Tabs.Screen key={tab.name} name={tab.name} options={{

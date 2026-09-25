@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
 import { PageTitle } from '@/components/UI';
@@ -8,11 +8,20 @@ import { Icon } from '@/components/Icon';
 import { products } from '@/data/products';
 import { colors } from '@/config/theme';
 export default function CatalogScreen() {
-  const params = useLocalSearchParams<{ category?: string }>();
+  const params = useLocalSearchParams<{ category?: string; focus?: string }>();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState(params.category ?? 'Tutte');
   const [sort, setSort] = useState(false);
-  useEffect(() => { if (params.category) setCategory(params.category); }, [params.category]);
+  const searchRef = useRef<TextInput>(null);
+  useEffect(() => {
+    if (params.category) setCategory(params.category);
+    else if (params.focus === 'search') setCategory('Tutte');
+  }, [params.category, params.focus]);
+  useFocusEffect(useCallback(() => {
+    if (params.focus !== 'search') return;
+    const timer = setTimeout(() => searchRef.current?.focus(), 250);
+    return () => clearTimeout(timer);
+  }, [params.focus]));
   const categories = ['Tutte', ...new Set(products.map((p) => p.category))];
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -23,7 +32,7 @@ export default function CatalogScreen() {
   return <Screen>
     <PageTitle title="Catalogo" subtitle="Tutto quello che fa casa." />
     <View style={styles.search}><Icon name="search" size={20} color={colors.muted} />
-      <TextInput value={query} onChangeText={setQuery} placeholder="Cerca prodotti..." placeholderTextColor={colors.muted}
+      <TextInput ref={searchRef} value={query} onChangeText={setQuery} placeholder="Cerca prodotti..." placeholderTextColor={colors.muted}
         accessibilityLabel="Cerca prodotti" style={styles.input} returnKeyType="search" />
       {!!query && <Pressable accessibilityLabel="Cancella ricerca" onPress={() => setQuery('')} style={{ padding: 10 }}>
         <Icon name="close" size={16} /></Pressable>}

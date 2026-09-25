@@ -19,7 +19,7 @@ const fs = require('node:fs');
       console.log('Page errors:', errors);
       return;
     }
-    await page.getByText('La casa, più semplice.').waitFor({ timeout: 45000 });
+    await page.getByText('Prodotti in evidenza').waitFor({ timeout: 45000 });
     await page.waitForFunction(() => [...document.images].every((image) => image.complete && image.naturalWidth > 0));
     await page.screenshot({ path: 'test-results/home-390.png', fullPage: true });
     await page.getByText('Cerca prodotti, categorie...').click();
@@ -37,6 +37,7 @@ const fs = require('node:fs');
     await page.getByText('Inserisci nome, indirizzo, città e un CAP di 5 cifre.').waitFor();
     await page.getByRole('radio', { name: /Ritiro in negozio/ }).click();
     assert.equal(await page.getByPlaceholder('Indirizzo', { exact: true }).count(), 0);
+    await page.getByRole('button', { name: /Cambia negozio/ }).click();
     await page.getByRole('radio', { name: 'Lucca 2', exact: true }).click();
     await page.getByRole('radio', { name: 'Contanti demo', exact: true }).click();
     await page.screenshot({ path: 'test-results/checkout-390.png', fullPage: true });
@@ -65,6 +66,8 @@ const fs = require('node:fs');
     await page.goto('http://localhost:8081/checkout');
     await page.getByText('Il carrello è vuoto.', { exact: true }).waitFor();
     await page.goto('http://localhost:8081/profile');
+    await page.getByRole('button', { name: /Cambia negozio/ }).waitFor();
+    await page.getByRole('button', { name: /Cambia negozio/ }).click();
     await page.getByRole('radio', { name: 'Lucca 2', exact: true }).waitFor();
     assert.equal(await page.getByRole('radio', { name: 'Lucca 2', exact: true }).getAttribute('aria-checked'), 'true');
     await page.goto('http://localhost:8081/product/contenitori-cucina');
@@ -97,7 +100,7 @@ const fs = require('node:fs');
       for (const width of [360, 390, 430]) {
         await page.setViewportSize({ width, height: 844 });
         for (const [route, title, name] of [
-          ['/', 'Ogni spazio, una cura.', 'home'],
+          ['/', 'Prodotti in evidenza', 'home'],
           ['/catalog', 'Tutto quello che fa casa.', 'catalog'],
           ['/product/contenitori-cucina', 'Scegli ciò che ti serve', 'product'],
           ['/profile', 'Il tuo spazio', 'profile'],

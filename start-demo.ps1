@@ -17,7 +17,9 @@ if ($LanAddress) {
   $env:REACT_NATIVE_PACKAGER_HOSTNAME = $LanAddress
   Write-Host "Phone address: exp://${LanAddress}:8081" -ForegroundColor Green
 }
-Write-Host 'Use Expo Go supporting SDK 54. Keep the phone and computer on the same Wi-Fi.'
+$expoVersion = (Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json).dependencies.expo
+$expoMajor = [regex]::Match([string]$expoVersion, '\d+').Value
+Write-Host "Use Expo Go supporting SDK $expoMajor. Keep the phone and computer on the same Wi-Fi."
 if ($Web) { & $demoNode node_modules/expo/bin/cli start --web --go --lan --port 8081 }
 else { & $demoNode node_modules/expo/bin/cli start --go --lan --port 8081 }
 exit $LASTEXITCODE

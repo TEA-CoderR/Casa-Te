@@ -1,7 +1,7 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@/config/theme';
+import { colors, control, spacing, typeScale } from '@/config/theme';
 type Props = PropsWithChildren<{ contentContainerStyle?: ViewStyle; footer?: ReactNode; stack?: boolean }>;
 export function Screen({ children, contentContainerStyle, footer, stack = false }: Props) {
   return <SafeAreaView style={styles.safe} edges={stack ? ['bottom'] : ['top']}>
@@ -17,8 +17,9 @@ export function Screen({ children, contentContainerStyle, footer, stack = false 
 }
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: 20, paddingBottom: 24 },
-  demo: { marginTop: 28, fontSize: 10, lineHeight: 16, color: colors.muted, textAlign: 'center' },
-  footer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12, borderTopWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
+  content: { paddingHorizontal: control.horizontalInset, paddingTop: spacing.md, paddingBottom: spacing.lg },
+  demo: { marginTop: spacing.lg, fontSize: typeScale.caption, lineHeight: 18, color: colors.muted, textAlign: 'center' },
+  footer: { paddingHorizontal: control.horizontalInset, paddingTop: spacing.sm, paddingBottom: spacing.sm,
+    borderTopWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
 });
 

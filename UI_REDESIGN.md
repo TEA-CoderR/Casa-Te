@@ -1,5 +1,9 @@
 # CASA & TE — Native UI redesign, 25 September 2026
 
+Current project note (26 September 2026): package.json now uses Expo SDK 57 for the
+installed Expo Go. The SDK 54 notes below describe an earlier connection attempt.
+See DEMO_V0.2_DECISIONS.md for the later retail UI direction and B1 work.
+
 Connection follow-up: the project now uses Expo SDK 54 (Expo 54.0.37 / React Native
 0.81.5 / React 19.1.0) for store-installed Expo Go. The initial SDK 57 selection was
 not suitable for that assumption. A Windows Public-network block of the exact Node
