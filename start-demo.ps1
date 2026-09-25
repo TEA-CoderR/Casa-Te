@@ -15,8 +15,13 @@ if (!$LanAddress) {
 }
 if ($LanAddress) {
   $env:REACT_NATIVE_PACKAGER_HOSTNAME = $LanAddress
+  $env:EXPO_PUBLIC_ORDER_API_URL = "http://${LanAddress}:8787"
   Write-Host "Phone address: exp://${LanAddress}:8081" -ForegroundColor Green
+  Write-Host "Order service: http://${LanAddress}:8787" -ForegroundColor Green
 }
+$adbCommand = Get-Command adb -ErrorAction SilentlyContinue
+$adbPath = if ($adbCommand) { $adbCommand.Source } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe' }
+if (Test-Path -LiteralPath $adbPath) { & $adbPath reverse tcp:8787 tcp:8787 2>$null | Out-Null }
 $expoVersion = (Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json).dependencies.expo
 $expoMajor = [regex]::Match([string]$expoVersion, '\d+').Value
 Write-Host "Use Expo Go supporting SDK $expoMajor. Keep the phone and computer on the same Wi-Fi."

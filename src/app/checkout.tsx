@@ -12,6 +12,8 @@ import { useOrdersStore } from '@/store/orders';
 import { createDemoOrder } from '@/domain/checkout';
 import { usePreferences } from '@/store/preferences';
 import type { PaymentMethod } from '@/types/order';
+import type { Order } from '@/types/order';
+import { submitOrder } from '@/services/ordersApi';
 const methods: Array<{ id: FulfilmentMethod; title: string; description: string; icon: IconName }> = [
   { id: 'home', title: 'Consegna a domicilio', description: "Direttamente a casa tua", icon: 'truck' },
   { id: 'pickup', title: 'Punto di ritiro / Locker', description: 'Ritira quando preferisci · Demo', icon: 'box' },
@@ -30,6 +32,7 @@ export default function CheckoutScreen() {
   const [payment, setPayment] = useState<PaymentMethod>('card-demo');
   const store = usePreferences((s) => s.store);
   const submitting = useRef(false);
+  const pendingOrder = useRef<{ signature: string; order: Order } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const shipping = calculateShipping({ subtotal, weightKg: totalWeightKg, method });
@@ -40,11 +43,16 @@ export default function CheckoutScreen() {
     setBusy(true);
     setError('');
     try {
-      const order = createDemoOrder(useCartStore.getState().items, {
-        method, payment, store, address: { name, address, city, cap },
-      });
+      const cartItems = useCartStore.getState().items;
+      const details = { method, payment, store, address: { name, address, city, cap } };
+      const signature = JSON.stringify({ cartItems, details });
+      if (pendingOrder.current?.signature !== signature) {
+        pendingOrder.current = { signature, order: createDemoOrder(cartItems, details) };
+      }
+      const order = await submitOrder(pendingOrder.current.order);
       await addOrder(order);
       clear();
+      pendingOrder.current = null;
       router.replace({ pathname: '/order-success', params: { id: order.id } });
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Impossibile salvare. Riprova.');

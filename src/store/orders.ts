@@ -13,7 +13,7 @@ export const useOrdersStore = create<OrdersState>()(
     (set, get) => ({
       orders: [],
       addOrder: async (order) => {
-        const orders = [order, ...get().orders];
+        const orders = [order, ...get().orders.filter((item) => item.id !== order.id)];
         await AsyncStorage.setItem('casa-te-orders', JSON.stringify({ state: { orders }, version: 0 }));
         set({ orders });
       },

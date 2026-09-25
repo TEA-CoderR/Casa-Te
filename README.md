@@ -128,3 +128,12 @@ This version intentionally does NOT connect:
 - production database
 
 Those are Phase 2 after management approves the demo.
+# Live order admin demo
+
+The mobile app and browser console now share a local demo order service. Open two PowerShell terminals in this project:
+
+1. Run `./start-admin.ps1` and open `http://localhost:8787` on the computer.
+2. Run `./start-demo.ps1`, then open the mobile app in Expo Go. On Android Emulator with Metro on localhost, run `adb reverse tcp:8787 tcp:8787` if the helper did not find `adb`.
+3. Confirm a demo order in the app. The browser console updates automatically, usually within 1.2 seconds. The app only shows success after the service accepts the order.
+
+For a physical phone, connect it and the computer to the same Wi-Fi. The service listens on port 8787; permit this port through the computer firewall if necessary. `start-demo.ps1` sets `EXPO_PUBLIC_ORDER_API_URL` from the detected LAN address. If detection chooses the wrong address, pass `-LanAddress 192.168.x.x`. The demo service has no login and is intended only for a trusted local network with fictional customer details. Orders persist in the ignored `demo-data/orders.json`; old phone-only orders remain in AsyncStorage and are not silently uploaded.
