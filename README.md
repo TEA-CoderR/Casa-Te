@@ -4,6 +4,8 @@
 
 This repository is still a **demo**, not a production commerce service. The approved direction is a self-operated Italian department-store pilot with both home delivery and store pickup. See [the commercial launch plan](COMMERCIAL_LAUNCH_PLAN.md), [enterprise integration request](INTEGRATION_DISCOVERY.md), and [first-party research](RETAIL_PRODUCTION_RESEARCH.md). Real product, inventory, payment, fulfilment and identity systems must replace the demo flows before customer sales. CI validates the mobile app and demo service; production mode refuses to use the unauthenticated demo order service.
 
+The first interface-first mock commerce slice is documented in [MOCK_COMMERCE.md](MOCK_COMMERCE.md). It runs in parallel with the existing phone demo and does not create paid orders.
+
 ## Runnable demo — September 25, 2026
 
 The native UI has since been redesigned. See `UI_REDESIGN.md` for the updated screens,

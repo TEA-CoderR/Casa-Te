@@ -7,6 +7,9 @@ import { stores } from '../src/config/stores';
 import { getCartSnapshot } from '../src/domain/cart';
 import { calculateShipping, type FulfilmentMethod } from '../src/config/shipping';
 import type { Order, PaymentMethod } from '../src/types/order';
+import { createMockCommerceAdapter } from '../src/data/mockCommerce';
+import { createCommerceModule, CommerceError } from './commerce';
+import type { QuoteRequest } from '../src/commerce/types';
 
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), 'public');
 const methods: FulfilmentMethod[] = ['home', 'pickup', 'store'];
@@ -89,6 +92,7 @@ function validOrder(input: unknown): Order {
 }
 
 export function createDemoServer(dataFile: string) {
+  const commerce = createCommerceModule(createMockCommerceAdapter());
   function readOrders(): Order[] {
     if (!existsSync(dataFile)) return [];
     const parsed: unknown = JSON.parse(readFileSync(dataFile, 'utf8'));
@@ -102,10 +106,25 @@ export function createDemoServer(dataFile: string) {
     renameSync(temporary, dataFile);
   }
   return createServer(async (req, res) => {
-    const path = new URL(req.url ?? '/', 'http://localhost').pathname;
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const path = url.pathname;
     if (req.method === 'OPTIONS') { send(res, 204, null); return; }
     try {
       if (req.method === 'GET' && path === '/api/health') { send(res, 200, { ok: true, demo: true }); return; }
+      if (req.method === 'GET' && path === '/v1/products') { send(res, 200, { demo: true, products: await commerce.listProducts() }); return; }
+      if (req.method === 'GET' && path === '/v1/availability') {
+        send(res, 200, { demo: true, availability: await commerce.availability(url.searchParams.get('storeId') ?? '') }); return;
+      }
+      if (req.method === 'POST' && path === '/v1/quotes') {
+        send(res, 201, { demo: true, quote: await commerce.quote(await readBody(req) as QuoteRequest) }); return;
+      }
+      if (req.method === 'POST' && path === '/v1/orders') {
+        const body = await readBody(req) as { quoteId?: string; idempotencyKey?: string };
+        send(res, 201, { demo: true, order: await commerce.placeOrder(body?.quoteId ?? '', body?.idempotencyKey ?? '') }); return;
+      }
+      if (req.method === 'GET' && path.startsWith('/v1/orders/')) {
+        send(res, 200, { demo: true, order: commerce.getOrder(decodeURIComponent(path.slice('/v1/orders/'.length))) }); return;
+      }
       if (req.method === 'GET' && path === '/api/orders') { send(res, 200, { orders: readOrders() }); return; }
       if (req.method === 'GET' && path === '/api/products') { send(res, 200, { products }); return; }
       if (req.method === 'GET' && path === '/api/stores') { send(res, 200, { stores }); return; }
@@ -130,6 +149,10 @@ export function createDemoServer(dataFile: string) {
       }
       send(res, 404, { error: 'Non trovato.' });
     } catch (error) {
+      if (error instanceof CommerceError) {
+        send(res, error.status, { code: error.code, error: error.message, demo: true });
+        return;
+      }
       const message = error instanceof Error ? error.message : 'Errore del server.';
       const clientError = ['Ordine non valido.', 'Prodotti non validi.', 'Indirizzo non valido.', 'Totale ordine non valido.',
         'JSON non valido.', 'Richiesta troppo grande.'].includes(message);

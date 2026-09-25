@@ -9,5 +9,5 @@
     "types": ["node"],
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["server/**/*.ts", "tests/admin-server.test.ts", "src/domain/**/*.ts", "src/config/**/*.ts", "src/data/products.ts", "src/types/**/*.ts"]
+  "include": ["server/**/*.ts", "tests/admin-server.test.ts", "tests/mock-commerce.test.ts", "src/commerce/**/*.ts", "src/domain/**/*.ts", "src/config/**/*.ts", "src/data/products.ts", "src/data/mockCommerce.ts", "src/types/**/*.ts"]
 }

@@ -63,3 +63,24 @@ test('admin assets and product catalog are served by the same process', async ()
   const catalog = await fetch(`${base}/api/products`);
   assert.equal((await catalog.json() as { products: unknown[] }).products.length, 8);
 });
+
+test('v1 mock commerce endpoints quote, reserve, and expose the same order', async () => {
+  const quoteResponse = await fetch(`${base}/v1/quotes`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lines: [{ sku: 'carta-cucina', quantity: 1 }], storeId: 'Arezzo', fulfilment: 'store' }),
+  });
+  assert.equal(quoteResponse.status, 201);
+  const quote = (await quoteResponse.json() as { quote: { id: string; totalCents: number } }).quote;
+  assert.equal(quote.totalCents, 499);
+  const submit = () => fetch(`${base}/v1/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quoteId: quote.id, idempotencyKey: 'http-retry-key-123' }) });
+  const first = (await (await submit()).json() as { order: { id: string; status: string } }).order;
+  const again = (await (await submit()).json() as { order: { id: string } }).order;
+  assert.equal(again.id, first.id);
+  assert.equal(first.status, 'reserved_demo');
+  const order = await fetch(`${base}/v1/orders/${first.id}`);
+  assert.equal((await order.json() as { order: { id: string } }).order.id, first.id);
+  const stock = await fetch(`${base}/v1/availability?storeId=Arezzo`);
+  assert.equal((await stock.json() as { availability: Array<{ sku: string; quantity: number }> })
+    .availability.find((item) => item.sku === 'carta-cucina')?.quantity, 4);
+});
