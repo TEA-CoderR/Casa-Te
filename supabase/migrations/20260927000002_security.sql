@@ -101,8 +101,9 @@ create policy coupons_staff on public.coupons for all to authenticated
 -- ---------------------------------------------------------------------------
 -- Customer data
 -- ---------------------------------------------------------------------------
+-- Store staff see customer contact data on their store's orders only; full customer list = managers.
 create policy profiles_own_read on public.profiles for select to authenticated
-  using (id = auth.uid() or public.is_staff());
+  using (id = auth.uid() or public.is_manager());
 create policy profiles_own_update on public.profiles for update to authenticated
   using (id = auth.uid()) with check (id = auth.uid());
 

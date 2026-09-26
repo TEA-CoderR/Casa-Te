@@ -80,4 +80,9 @@ in the back office). Stock shown in the app is the stock of the selected store.
 * Anon key is public by design; the service role key lives only in Edge Function secrets.
 * `checkout-return` redirects only to the fixed app scheme or `WEB_SHOP_URL` (no open redirect).
 * CSV exports neutralise spreadsheet formula injection.
+* Store staff see customer contact data only through their store's orders; the customer list is manager-only.
+* `quote_cart` is public (needed for the cart), so coupon codes can be probed: use long random codes for
+  high-value/limited coupons and rely on `max_redemptions` / `per_customer_limit`. Supabase API rate limits apply.
+* A webhook that fails with `amount_mismatch` is retried by Stripe and must be investigated (should never happen:
+  Stripe is always charged the stored total).
 * Admin console is `noindex` and should additionally sit behind the company SSO/IP allow-list if available.

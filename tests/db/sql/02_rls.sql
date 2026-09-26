@@ -114,6 +114,7 @@ begin
   perform tests.eq(tests.stock('LU1', 'carta-cucina'), 40, 'stocktake own store');
   perform tests.eq((select count(*) from public.coupons)::int, 0, 'store staff cannot see coupons');
   perform tests.eq((select count(*) from public.staff_members)::int, 1, 'staff sees only own staff row');
+  perform tests.eq((select count(*) from public.profiles where id <> auth.uid())::int, 0, 'store staff cannot list customer profiles');
 end $$;
 reset role;
 
@@ -128,6 +129,7 @@ do $$
 declare n integer;
 begin
   perform tests.eq((select count(*) from public.orders)::int, 2, 'manager sees all orders');
+  perform tests.ok((select count(*) from public.profiles) >= 2, 'manager can read customer profiles');
   perform tests.eq((select count(*) from public.products)::int, 8, 'manager sees inactive products too');
   update public.products set price_cents = 899 where sku = 'carta-cucina';
   get diagnostics n = row_count;

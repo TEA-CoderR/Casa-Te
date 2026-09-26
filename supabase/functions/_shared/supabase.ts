@@ -73,9 +73,10 @@ export async function adminDeleteUser(config: Config, userId: string): Promise<v
 
 /** Invites a user by email (creates the account and sends the invite email). */
 export async function adminInviteUser(config: Config, email: string, redirectTo?: string): Promise<AuthUser> {
-  const res = await fetch(`${config.supabaseUrl}/auth/v1/invite`, {
-    method: 'POST', headers: headers(config, config.serviceRoleKey),
-    body: JSON.stringify({ email, ...(redirectTo ? { redirect_to: redirectTo } : {}) }),
+  // GoTrue reads the redirect target from the query string (same as supabase-js inviteUserByEmail).
+  const query = redirectTo ? `?redirect_to=${encodeURIComponent(redirectTo)}` : '';
+  const res = await fetch(`${config.supabaseUrl}/auth/v1/invite${query}`, {
+    method: 'POST', headers: headers(config, config.serviceRoleKey), body: JSON.stringify({ email }),
   });
   if (!res.ok) throw new HttpError(res.status === 422 ? 409 : 502, res.status === 422 ? 'user_exists' : 'auth_admin_error', await res.text());
   return (await res.json()) as AuthUser;

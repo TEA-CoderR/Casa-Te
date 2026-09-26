@@ -53,6 +53,9 @@ begin
   q := public.quote_cart(tests.cart('LU1', 'home', '{"carta-cucina": 0}'));
   perform tests.eq(q -> 'lines' -> 0 ->> 'issue', 'invalid_quantity', 'zero quantity');
   q := public.quote_cart(jsonb_build_object('store_id', tests.store('LU1'), 'items',
+    jsonb_build_array(jsonb_build_object('product_id', tests.product('carta-cucina')))));
+  perform tests.eq(q -> 'lines' -> 0 ->> 'issue', 'invalid_quantity', 'missing quantity');
+  q := public.quote_cart(jsonb_build_object('store_id', tests.store('LU1'), 'items',
     jsonb_build_array(jsonb_build_object('product_id', gen_random_uuid(), 'quantity', 1))));
   perform tests.eq(q -> 'lines' -> 0 ->> 'issue', 'unavailable', 'unknown product');
 

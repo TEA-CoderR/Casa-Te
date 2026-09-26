@@ -108,7 +108,7 @@ begin
   begin
     with req as (
       select (e ->> 'product_id')::uuid as product_id,
-             sum(least(greatest((e ->> 'quantity')::bigint, -1), 1000))::integer as quantity
+             sum(least(greatest(coalesce((e ->> 'quantity')::bigint, 0), -1), 1000))::integer as quantity
       from jsonb_array_elements(p -> 'items') e
       group by 1
     ), priced as (
