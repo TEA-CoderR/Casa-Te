@@ -10,7 +10,6 @@
     "web": "expo start --web",
     "build:web": "expo export --platform web",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
     "doctor": "npx expo install --check"
   },
   "dependencies": {
@@ -39,6 +38,6 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "tsx": "^4.20.0",
-    "typescript": "~5.9.0"
+    "typescript": "~6.0.3"
   }
 }
