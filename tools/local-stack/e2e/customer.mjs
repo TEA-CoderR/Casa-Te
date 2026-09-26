@@ -1,0 +1,90 @@
+import fs from 'node:fs';
+import { env, launch, mailTo, shot, sql, step, watch, STATE_FILE } from './lib.mjs';
+
+const EMAIL = process.env.CUSTOMER_EMAIL ?? `cliente.${Date.now()}@example.com`;
+const browser = await launch();
+const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'it-IT' });
+const page = await ctx.newPage();
+watch(page, 'shop');
+
+step('Browse: home → catalogue → product');
+await page.goto(env.SHOP_URL, { waitUntil: 'networkidle' });
+await page.getByText('Catalogo', { exact: true }).first().click();
+await page.getByText('Padella antiaderente 28 cm').last().waitFor();
+await shot(page, 'catalogo');
+await page.getByText('Padella antiaderente 28 cm').last().click();
+await page.waitForURL(/\/product\//);
+await page.waitForLoadState('networkidle');
+await shot(page, 'prodotto');
+
+step('Cart: add product, open cart');
+await page.getByText('Aggiungi al carrello').last().click();
+await page.waitForTimeout(500);
+await page.goto(`${env.SHOP_URL}/catalog`, { waitUntil: 'networkidle' });
+// Quick-add a second product from the catalogue card "+" button.
+const card = page.getByText('Carta cucina 6 rotoli').last();
+await card.click();
+await page.waitForURL(/\/product\//);
+await page.getByText('Aggiungi al carrello').last().click();
+await page.waitForTimeout(500);
+await page.goto(`${env.SHOP_URL}/cart`, { waitUntil: 'networkidle' });
+await page.getByText('Vai al checkout').last().waitFor();
+await page.waitForLoadState('networkidle');
+await shot(page, 'carrello');
+console.log('  cart:', (await page.innerText('body')).replace(/\s+/g, ' ').match(/Carrello.{0,400}/)?.[0]);
+
+step('Checkout requires sign-in → email OTP');
+await page.getByText('Vai al checkout').last().click();
+await page.getByText('Accedi o registrati').last().click();
+await page.waitForURL(/\/auth\/sign-in/);
+const since = Date.now() - 1000;
+await page.getByLabel('Email').last().fill(EMAIL);
+await page.getByText('Invia codice').last().click();
+await page.getByLabel('Codice a 6 cifre').last().waitFor();
+const mail = await mailTo(EMAIL, since);
+const code = (mail.Text ?? mail.HTML).match(/\b(\d{6})\b/)?.[1];
+console.log(`  email "${mail.Subject}" → code ${code}`);
+await shot(page, 'codice-otp');
+await page.getByLabel('Codice a 6 cifre').last().fill(code);
+await page.getByText('Accedi', { exact: true }).last().click();
+await page.waitForURL(/\/checkout$/);
+await page.getByText("Come vuoi ricevere l'ordine?").last().waitFor();
+await page.waitForLoadState('networkidle');
+
+step('Checkout form: home delivery');
+await page.getByLabel('Nome e cognome').last().fill('Mario Rossi');
+await page.getByLabel('Via e numero civico').last().fill('Via di Prova 1');
+await page.getByLabel('Città').last().fill('Lucca');
+await page.getByLabel('Prov.').last().fill('LU');
+await page.getByLabel('CAP').last().fill('55100');
+await page.getByLabel('Telefono').last().fill('+39 333 1234567');
+await page.getByRole('checkbox').filter({ hasText: 'Condizioni di vendita' }).last().click({ position: { x: 10, y: 10 } });
+await page.waitForLoadState('networkidle');
+await shot(page, 'checkout');
+const payBtn = page.getByText(/^Paga €/).filter({ visible: true }).last();
+const payLabel = await payBtn.innerText();
+console.log(`  button: ${payLabel}`);
+
+step('Pay on (mock) Stripe Checkout with 4242 test card');
+await payBtn.click();
+await page.waitForURL(/localhost:12111\/c\/pay\//, { timeout: 20000 });
+await shot(page, 'stripe-checkout');
+console.log(`  stripe amount: ${await page.getByTestId('amount').innerText()}`);
+await page.getByRole('button', { name: /Paga/ }).click();
+await page.waitForURL(/\/checkout\/return/, { timeout: 20000 });
+await page.getByText('Grazie per il tuo ordine!').last().waitFor({ timeout: 30000 });
+await shot(page, 'grazie');
+const thanks = (await page.innerText('body')).replace(/\s+/g, ' ').match(/Grazie per il tuo ordine!.{0,160}/)?.[0];
+console.log(`  ${thanks}`);
+const orderNumber = thanks.match(/Ordine (\S+)/)?.[1];
+const row = await sql(`select id,status,payment_status,total_cents,stripe_payment_intent_id from orders where order_number='${orderNumber}'`);
+console.log(`  db: ${row}`);
+
+step('Customer order detail');
+await page.getByText("Segui l'ordine").last().click();
+await page.waitForURL(/\/order\//);
+await page.waitForLoadState('networkidle');
+await shot(page, 'ordine-cliente');
+const prev = fs.existsSync(STATE_FILE) ? JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) : { orders: [] };
+fs.writeFileSync(STATE_FILE, JSON.stringify({ orders: [...(prev.orders ?? []), orderNumber] }));
+await browser.close();

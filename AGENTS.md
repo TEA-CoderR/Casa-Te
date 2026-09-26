@@ -1,57 +1,23 @@
-# CASA & TE App — Engineering Instructions
+# CASA & TE — Engineering instructions
 
-You are working on a real retail mobile app for CASA & TE, an Italian household-goods retail chain with 5 physical stores (1 Arezzo, 4 Lucca).
+Commercial online sales platform for CASA & TE (Italian household-goods chain, 5 stores: Arezzo, Lucca 1–4).
+Read `docs/ARCHITECTURE.md` and `docs/DECISIONS.md` first.
 
-## Product goal
-Deliver a management-ready native mobile demo by the end of September.
+## Layout
+- `apps/mobile` — customer app (Expo / React Native / Expo Router), also built as the web shop. UI in Italian.
+- `apps/admin` — back office and store picking (Vite + React). UI in Italian.
+- `packages/shared` — domain types, money/weight helpers, shipping algorithm, validation, error messages.
+- `supabase/migrations` — schema, RLS and commerce RPCs (source of truth for money and stock).
+- `supabase/functions` — Edge Functions (fetch-only, no SDK deps; logic in `handler.ts`, unit-tested in Node).
+- `tests/db` — PostgreSQL test suite (runs migrations on a real server); `tests/functions` — Edge Function tests.
 
-## Stack
-- React Native
-- Expo
-- TypeScript
-- Expo Router
-- Zustand
-- AsyncStorage
-
-## Engineering rules
-1. Do not change shipping business rules without explicit approval.
-2. Keep business logic outside UI components.
-3. Type all domain entities.
-4. Keep screens small; extract reusable UI into `src/components`.
-5. Do not introduce a backend before requested.
-6. Keep the app runnable in Expo Go whenever possible.
-7. Avoid unnecessary dependencies.
-8. UI language for the customer app is Italian.
-9. Code and engineering comments may be English.
-10. Mobile-first: test 360–430px width layouts.
-11. Do not invent real product data, prices, inventory, or store addresses.
-12. Mock data must be visibly isolated in `src/data`.
-
-## Brand
-- Primary green: #2F6634
-- Dark green: #214B27
-- Accent lime: #D9EE2F
-- Background: #F6F7F4
-- Clean, practical retail UI; avoid overly "AI-generated" card-heavy layouts.
-
-## Shipping rules
-See `src/config/shipping.ts`. Treat it as the source of truth.
-
-## Demo acceptance criteria
-A manager must be able to:
-1. Open the app
-2. Browse/search products
-3. Open a product
-4. Add products to cart
-5. Change quantities
-6. See order total weight
-7. Choose home / pickup point / store pickup
-8. See shipping recalculate
-9. Reach €66 and see free shipping (<=10kg)
-10. Confirm a mock order
-11. View it in Orders
-
-## Before changing code
-- Read relevant types/config/store first.
-- Preserve existing flows unless the task says otherwise.
-- After changes, run TypeScript checks and app startup if available.
+## Rules
+1. Never compute a charged amount on the client. Change pricing/shipping/stock logic in SQL and keep
+   `packages/shared` in sync; the parity test must stay green.
+2. Do not change shipping business rules without explicit approval (`docs/PROJECT_CONTEXT.md` §6).
+3. Every new table gets RLS in the same migration; every new function gets explicit GRANTs
+   (Supabase grants EXECUTE to anon/authenticated by default).
+4. Money in integer cents, weight in integer grams.
+5. Never add a new migration that edits an old one; always add a new file.
+6. Do not invent real product data, prices, stock, addresses or legal data.
+7. Run `npm test` (needs `psql` + PostgreSQL binaries or `DATABASE_URL`) and `npm run typecheck` before committing.
