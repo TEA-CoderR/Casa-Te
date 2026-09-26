@@ -50,7 +50,7 @@ export type CouponRow = {
 };
 
 export type ProfileRow = {
-  id: Uuid; full_name: string | null; phone: string | null; preferred_store_id: Uuid | null;
+  id: Uuid; email: string | null; full_name: string | null; phone: string | null; preferred_store_id: Uuid | null;
   marketing_opt_in: boolean; created_at: Timestamp; updated_at: Timestamp;
 };
 

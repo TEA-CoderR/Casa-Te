@@ -6,7 +6,10 @@ $demoNode = if ($nodeCommand) { $nodeCommand.Source } else {
   Join-Path $env:USERPROFILE '.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
 }
 if (!(Test-Path -LiteralPath $demoNode)) { throw 'Install Node.js before starting the demo.' }
-if (!(Test-Path -LiteralPath 'node_modules/expo/bin/cli')) { throw 'Install dependencies with npm ci first.' }
+# npm workspaces may hoist expo to the repository root, so resolve the CLI through Node.
+$expoCli = & $demoNode -e "try{console.log(require.resolve('expo/bin/cli'))}catch{}"
+if (!$expoCli) { throw 'Install dependencies with npm ci (in the repository root) first.' }
+if (!(Test-Path -LiteralPath '.env')) { Write-Warning 'Missing apps/mobile/.env - copy .env.example and add your Supabase URL and anon key.' }
 if (!$LanAddress) {
   $network = Get-NetIPConfiguration -ErrorAction SilentlyContinue |
     Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq 'Up' } |
@@ -17,7 +20,7 @@ if ($LanAddress) {
   $env:REACT_NATIVE_PACKAGER_HOSTNAME = $LanAddress
   Write-Host "Phone address: exp://${LanAddress}:8081" -ForegroundColor Green
 }
-Write-Host 'Use Expo Go supporting SDK 54. Keep the phone and computer on the same Wi-Fi.'
-if ($Web) { & $demoNode node_modules/expo/bin/cli start --web --go --lan --port 8081 }
-else { & $demoNode node_modules/expo/bin/cli start --go --lan --port 8081 }
+Write-Host 'Use an Expo Go version matching the Expo SDK in package.json. Keep the phone and computer on the same Wi-Fi.'
+if ($Web) { & $demoNode $expoCli start --web --go --lan --port 8081 }
+else { & $demoNode $expoCli start --go --lan --port 8081 }
 exit $LASTEXITCODE

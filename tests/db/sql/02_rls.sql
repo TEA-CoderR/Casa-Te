@@ -79,6 +79,8 @@ begin
   get diagnostics n = row_count;
   perform tests.eq(n, 1, 'profile update');
   perform tests.throws($q$update public.profiles set id = gen_random_uuid()$q$, 'permission denied', 'cannot change profile id');
+  perform tests.throws($q$update public.profiles set email = 'x@y.z'$q$, 'permission denied', 'cannot change profile email');
+  perform tests.eq((select email from public.profiles), 'cliente.a@example.com', 'profile email copied from auth');
   update public.profiles set full_name = 'Hacker' where id = '00000000-0000-0000-0000-00000000000b';
   get diagnostics n = row_count;
   perform tests.eq(n, 0, 'cannot edit other profile');

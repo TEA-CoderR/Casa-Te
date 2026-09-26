@@ -1,13 +1,24 @@
 {
   "expo": {
-    "name": "CASA & TE Demo",
-    "slug": "casa-te-demo",
+    "name": "CASA & TE",
+    "slug": "casa-te",
     "version": "1.0.0",
     "scheme": "casate",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "plugins": ["expo-router"],
+    "icon": "./assets/logo.png",
+    "ios": {
+      "bundleIdentifier": "it.casate.app",
+      "supportsTablet": true,
+      "infoPlist": { "ITSAppUsesNonExemptEncryption": false }
+    },
+    "android": {
+      "package": "it.casate.app",
+      "adaptiveIcon": { "foregroundImage": "./assets/logo.png", "backgroundColor": "#F6F7F4" }
+    },
+    "plugins": ["expo-router", "expo-web-browser"],
     "experiments": { "typedRoutes": true },
-    "web": { "bundler": "metro" }
+    "web": { "bundler": "metro", "output": "single", "favicon": "./assets/logo.png" },
+    "extra": { "router": { "origin": false } }
   }
 }

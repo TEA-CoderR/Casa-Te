@@ -103,4 +103,10 @@ begin
 end $$;
 reset role;
 
+-- Email changes in auth propagate to the profile.
+update auth.users set email = 'nuova@example.com' where id = '00000000-0000-0000-0000-00000000000a';
+do $$ begin
+  perform tests.eq((select email from public.profiles where id = '00000000-0000-0000-0000-00000000000a'), 'nuova@example.com', 'email synced');
+end $$;
+
 rollback;
