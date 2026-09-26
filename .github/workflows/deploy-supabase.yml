@@ -1,0 +1,32 @@
+name: Deploy Supabase (migrations + Edge Functions)
+
+# Manual, protected deployment. Configure repository secrets:
+#   SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF, SUPABASE_DB_PASSWORD
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [staging, production]
+        default: staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+      - name: Apply database migrations
+        run: supabase db push
+      - name: Deploy Edge Functions
+        run: |
+          for fn in checkout checkout-return stripe-webhook admin-refund admin-staff delete-account notify-order-event; do
+            supabase functions deploy "$fn"
+          done

@@ -1,128 +1,65 @@
-# CASA & TE Mobile App — Codex Handoff Package
+# CASA & TE — Online sales platform
 
-## Runnable demo — September 25, 2026
+Customer app (iOS · Android · web shop), back office and store picking for the CASA & TE chain,
+built on Supabase and Stripe.
 
-The native UI has since been redesigned. See `UI_REDESIGN.md` for the updated screens,
-generated demo assets, phone preview and validation. Current screenshots are under
-`test-results/app-*.png`; `test-results/expo-go.png` is the session's phone preview QR.
+> The original September 2026 demo is preserved on `main` at commit `031e8f4`; its handoff documents
+> are in `docs/demo-handoff/`.
 
-This directory is now a configured Expo SDK 54 project for store-installed Expo Go. Dependencies are installed;
-do not create another Expo project or run the original bootstrap instructions below.
+## 中文概览
 
-From PowerShell in this directory:
+| 模块 | 位置 | 说明 |
+|---|---|---|
+| 顾客 App + 网页商城 | `apps/mobile` | Expo，一套代码同时出 iOS、Android、Web；浏览/搜索、门店库存、购物车、三种配送方式、优惠码、发票信息、Stripe 支付、订单跟踪、邮箱验证码登录、地址簿、删除账号 |
+| 运营后台 + 门店拣货端 | `apps/admin` | 仪表盘、订单处理、拣货流程、退款/取消、商品与图片、CSV 批量导入、库存与流水、分类、优惠码、运费规则、自提点、客户、门店、员工权限 |
+| 后端 | `supabase/` | PostgreSQL 表结构 + 行级权限（RLS）；价格、运费、库存全部在服务端计算；Stripe 结账、Webhook、退款、邮件通知等 Edge Functions |
+| 共享业务逻辑 | `packages/shared` | 金额（分）、重量（克）、运费规则、订单状态、校验、错误提示 |
 
-```powershell
-.\start-demo.ps1
+上线前需要公司提供或确认的事项见 **`docs/LAUNCH_CHECKLIST.md`**，部署步骤见 **`docs/DEPLOYMENT.md`**，门店员工操作手册（意大利语）见 **`docs/OPERATIONS.md`**。
+
+## Repository layout
+
+```
+apps/mobile        Expo app (customer app + web shop)
+apps/admin         Vite + React back office
+packages/shared    Domain types and business helpers shared by apps and tests
+supabase/          migrations, seed (dev only), Edge Functions, config.toml
+tests/db           PostgreSQL test suite (migrations, RLS, lifecycle, concurrency)
+tests/functions    Edge Function unit tests (mocked fetch)
+docs/              architecture, deployment, operations, launch checklist, decisions
 ```
 
-Scan the terminal QR code with an Expo Go version supporting SDK 54, with the phone
-and computer on the same network. Use `./start-demo.ps1 -Web` for a browser preview.
-The native Android and iOS bundles compile, but physical-device acceptance is still pending.
+## Quick start (local development)
 
-On a clean machine with Node.js and npm, run `npm ci` once, then `npm start`.
-Standard checks: `npm run typecheck`, `npm test`, `npx expo install --check`,
-and `npx expo export --platform all --max-workers 2`.
+Requirements: Node 20+, a Supabase project (or `supabase start` with Docker), Stripe test keys.
 
-Browser integration test: with Expo running on port 8081 and Playwright plus Microsoft
-Edge installed, run `node tests/smoke.cjs`. An optional first argument supplies a path
-to an existing Playwright module. Screenshots are written to `test-results/`.
-
-The demo uses local placeholder products and simulated payments. Shipping rules are
-unchanged, including the provisional fallback above 10 kg. Home delivery asks for demo
-address information; pickup points are explicitly simulated. Store preferences, cart,
-and orders persist locally. See `IMPLEMENTATION_REPORT.md` for scope and validation.
-
-The remaining sections are the original handoff instructions, retained for context.
-
-### Phone connection repair
-
-The first SDK 57 setup was replaced with SDK 54 for store Expo Go compatibility.
-Windows also had a Public-network TCP block for the Node runtime running Expo.
-The authorized repair allows only that runtime's TCP 8081 from LocalSubnet and
-disables its conflicting Public TCP block. UDP rules and firewall profiles are unchanged.
-To undo the firewall repair, run `./scripts/enable-expo-lan.ps1 -Restore` as administrator.
-`start-demo.ps1` selects the adapter with a default gateway to avoid VMware-only addresses;
-you can supply `-LanAddress 192.168.1.94` explicitly when necessary.
-Connection diagnostic: `node scripts/check-phone-preview.mjs http://192.168.1.94:8081`.
-
-This package is designed so Codex can understand the full project context without access to the previous ChatGPT conversation.
-
-## Fastest path
-
-1. Create/open the Expo project locally.
-2. Copy this package into the project root.
-3. Open Codex in the project root.
-4. Give Codex this exact instruction:
-
-```text
-Read CODEX_MASTER_PROMPT.md and execute it.
+```bash
+npm install                                    # installs all workspaces
+cp apps/mobile/.env.example apps/mobile/.env   # Supabase URL + anon key
+cp apps/admin/.env.example apps/admin/.env
+npm run mobile                                 # Expo: scan the QR with Expo Go, or press w for web
+npm run admin                                  # http://localhost:5173
 ```
 
-Codex should then read the project context/specification files and begin implementation.
+Backend setup (migrations, Edge Functions, Stripe webhook, first admin): see `docs/DEPLOYMENT.md`.
+Windows helper for phone testing on the LAN: `apps/mobile/start-demo.ps1`.
 
----
+## Tests
 
-# CASA & TE Mobile App — Starter v0.1
-
-This folder is an **Expo + React Native + TypeScript source overlay** for the CASA & TE mobile demo.
-
-## 1) Create the real Expo project
-
-Open PowerShell in the folder where you want the project:
-
-```powershell
-npx create-expo-app@latest CASA_TE_App
-cd CASA_TE_App
-npm install zustand @react-native-async-storage/async-storage
+```bash
+npm test                 # shared + admin + edge functions + database
+npm run test:db          # needs PostgreSQL 16 binaries locally, or DATABASE_URL=postgres://...
+npm run typecheck
 ```
 
-Expo's default template currently includes Expo Router and TypeScript.
+The database suite starts a throwaway PostgreSQL, emulates the Supabase roles/auth schema,
+applies every migration and the seed, and verifies: shipping parity with the approved demo rules
+(468 cases), RLS for every role, order creation and stock reservation, payment idempotency,
+expiry release, late-payment refunds, the staff workflow, refunds, CSV import, dashboard KPIs,
+coupon limits and a two-session race for the last unit in stock.
 
-## 2) Copy this starter overlay into the Expo project
+## Business rules
 
-Copy:
-- `src/` → `CASA_TE_App/src/`
-- `assets/logo.png` → `CASA_TE_App/assets/logo.png`
-- `AGENTS.md` → `CASA_TE_App/AGENTS.md`
-- `CODEX_TASKS.md` → `CASA_TE_App/CODEX_TASKS.md`
-
-If the generated Expo project already contains `app/` or `src/app/` demo files, replace the route files with this starter.
-
-## 3) Run on your phone
-
-```powershell
-npx expo start
-```
-
-Install **Expo Go** on iOS/Android and scan the QR code.
-
-## 4) What works in this starter
-
-- Native bottom tabs
-- Home page
-- Product catalogue
-- Product details
-- Cart with quantities
-- Automatic order weight calculation
-- CASA & TE shipping rules
-- Checkout
-- Delivery methods:
-  - Home delivery
-  - Pickup point / locker
-  - Store pickup
-- €66 free-shipping logic for <=10kg
-- Mock order confirmation
-- Local cart persistence
-- Order history screen
-
-## 5) Demo scope
-
-This version intentionally does NOT connect:
-- real payment
-- Packlink / Sendcloud
-- POS / ERP inventory
-- member card
-- login
-- production database
-
-Those are Phase 2 after management approves the demo.
+Shipping (agreed, unchanged): value + weight + method; store pickup always free; free delivery
+from €66 up to 10 kg; the >10 kg rate is provisional. See `docs/PROJECT_CONTEXT.md` §6 and
+`docs/DECISIONS.md` (Phase 2 decisions 19–28).

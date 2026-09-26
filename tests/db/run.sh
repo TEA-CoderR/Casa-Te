@@ -24,5 +24,6 @@ for t in "$ROOT"/tests/db/sql/*.sql; do
     echo "  ✗ $name"; echo "$out" | grep -v '^NOTICE' | sed 's/^/      /'; fail=$((fail+1))
   fi
 done
+if bash "$ROOT/tests/db/concurrency.sh" "$URL"; then pass=$((pass+1)); else fail=$((fail+1)); fi
 echo "db tests: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

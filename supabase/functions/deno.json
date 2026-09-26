@@ -1,4 +1,3 @@
 {
-  "compilerOptions": { "strict": true, "lib": ["deno.window", "dom"] },
-  "lint": { "rules": { "tags": ["recommended"] } }
+  "compilerOptions": { "strict": true, "lib": ["deno.window"] }
 }

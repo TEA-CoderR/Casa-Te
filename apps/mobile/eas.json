@@ -1,0 +1,14 @@
+{
+  "cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
+  "build": {
+    "development": { "developmentClient": false, "distribution": "internal", "environment": "development" },
+    "preview": { "distribution": "internal", "environment": "preview", "android": { "buildType": "apk" } },
+    "production": { "environment": "production", "autoIncrement": true }
+  },
+  "submit": {
+    "production": {
+      "ios": { "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID" },
+      "android": { "track": "internal", "serviceAccountKeyPath": "./google-play-service-account.json" }
+    }
+  }
+}
