@@ -46,8 +46,11 @@ Dashboard settings:
 
 ### First administrator
 
-1. Supabase → Authentication → Users → *Invite user* (your email).
-2. Accept the invite, set a password on the admin console `/reset-password` page.
+1. Supabase → Authentication → Users → *Invite user* (your email). Do **not** use the link in that
+   email: dashboard invites redirect to the Site URL (the web shop), not to the admin console.
+2. Open the admin console, enter the same email and click **Password dimenticata / primo accesso**;
+   the emailed link opens `/reset-password` on the console, where you set the password
+   (this works before the account has a staff role).
 3. In the SQL editor:
    ```sql
    insert into public.staff_members (user_id, role, email, display_name)

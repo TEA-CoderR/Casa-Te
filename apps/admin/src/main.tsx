@@ -35,9 +35,14 @@ function Root() {
     <p className="muted">Copia apps/admin/.env.example in apps/admin/.env con URL e chiave anon di Supabase.</p></div></div>;
   if (loading) return <div className="login"><Loading /></div>;
   if (!session) return <Routes><Route path="/reset-password" element={<ResetPasswordPage />} /><Route path="*" element={<LoginPage />} /></Routes>;
-  if (!staff) return <div className="login"><div className="card"><h1>Accesso non autorizzato</h1>
-    <p className="muted">Il tuo account non è abilitato alla gestione. Contatta un amministratore.</p>
-    <ResetLogout /></div></div>;
+  // Setting a password must work before the account is enabled as staff: the first administrator
+  // sets it from the email link and is granted the admin role afterwards (docs/DEPLOYMENT.md).
+  if (!staff) return <Routes>
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Route path="*" element={<div className="login"><div className="card"><h1>Accesso non autorizzato</h1>
+      <p className="muted">Il tuo account non è abilitato alla gestione. Contatta un amministratore.</p>
+      <ResetLogout /></div></div>} />
+  </Routes>;
   const M = ['admin', 'manager'] as Array<'admin' | 'manager'>;
   return <Routes>
     <Route path="/reset-password" element={<ResetPasswordPage />} />
