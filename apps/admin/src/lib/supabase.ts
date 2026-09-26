@@ -15,7 +15,7 @@ export function unwrap<T>(result: { data: T | null; error: { message: string } |
 }
 
 /** Calls an Edge Function and surfaces its `{ error }` code. */
-export async function invoke<T>(name: string, body: unknown): Promise<T> {
+export async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(name, { body });
   if (error) {
     let code = error.message;

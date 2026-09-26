@@ -104,7 +104,7 @@ export async function fetchQuote(input: QuoteInput): Promise<Quote> {
   return unwrap(await supabase.rpc('quote_cart', { p: input })) as Quote;
 }
 
-async function invoke<T>(name: string, body: unknown): Promise<T> {
+async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(name, { body });
   if (error) {
     let code = 'internal_error';
