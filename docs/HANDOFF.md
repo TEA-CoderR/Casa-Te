@@ -29,6 +29,26 @@ web shop (same Expo codebase), admin console, store picking; catalogue via admin
 - ✅ Fixed `invoke` body typing (functions-js) in admin + mobile; admin tsconfig loads Node types.
 - Re-run the full P0 list below to confirm typecheck, tests, both builds and `deno check` are all green.
 
+## Session 3 (P0 steps 2–4)
+- ✅ From a clean `npm ci` (no `.expo/` types): `expo install --check` (offline mode; the Expo API is
+  unreachable from the sandbox — CI runs the online check), `npm run typecheck`, `npm test` (incl. DB
+  suite), admin build, web export, `deno check --all */index.ts` — all green.
+- 🐞 Fixed: `build:web` could ship the **previous** build's `EXPO_PUBLIC_SUPABASE_URL` (Metro transform
+  cache). It now runs `expo export --clear`.
+- 🐞 Fixed: admin `/reset-password` was unreachable for an account without a staff role, so the
+  documented first-admin procedure dead-ended ("Accesso non autorizzato"). Also, dashboard invites
+  redirect to the Site URL (web shop); `docs/DEPLOYMENT.md` §1 now says to set the password via
+  "Password dimenticata / primo accesso" on the console.
+- ✅ Step 4 done **without Docker/Stripe** (both blocked in the sandbox) using `tools/local-stack`:
+  real Supabase Auth + PostgREST + all migrations, Edge Functions under Deno, Stripe mock with signed
+  webhooks. `tools/local-stack/e2e/run.sh` passes: browse → cart → email OTP → checkout (home delivery,
+  €17,98 + €6,90) → pay (4242) → paid order; first admin → staff invite → store picking → shipped
+  → partial refund €4,99 → second order cancelled with full refund, stock restored; webhooks
+  idempotent (`already_paid`, no duplicate refunds); store staff sees no refund actions.
+- Added `STRIPE_API_BASE` (optional, default `https://api.stripe.com`) for the mock.
+- Still to verify in staging (P1): real Stripe Checkout/API version, hosted Supabase (Kong, Storage,
+  pg_cron, DB webhook → `notify-order-event` → Resend), native deep link return.
+
 ## Known risk spots to check first
 1. Dependency versions were written without the registry: `expo-web-browser ~57.0.0`,
    `@supabase/supabase-js ^2.49.0`, `react-native-url-polyfill ^2`, `react-router-dom ^7.6`,
@@ -50,12 +70,9 @@ web shop (same Expo codebase), admin console, store picking; catalogue via admin
 ## Next tasks (in order)
 **P0 — make it build (no external accounts needed)**
 1. ~~`npm install` at repo root; commit `package-lock.json`~~ (done in session 2).
-2. `cd apps/mobile && npx expo install --check` (versions aligned in session 2 — confirm clean).
-3. `npm run typecheck`, `npm test` (db tests need PostgreSQL binaries or `DATABASE_URL`),
-   `npm run build -w @casa-te/admin`, `npm run build:web -w @casa-te/mobile`,
-   `cd supabase/functions && deno check */index.ts`. Fix everything; keep tests green.
-4. Run the web shop and admin locally against `supabase start` (needs Docker) or a staging project,
-   click through: browse → cart → checkout (Stripe test) → order → admin picking → refund.
+2. ~~`cd apps/mobile && npx expo install --check`~~ (session 3; online check runs in CI).
+3. ~~typecheck, tests, both builds, `deno check`~~ (session 3, all green).
+4. ~~Local click-through~~ (session 3, `tools/local-stack/e2e/run.sh`; real Stripe → P1 step 7).
 5. Push, confirm GitHub Actions CI is green, open a PR to `main` (ask the user before merging).
 
 **P1 — staging environment (needs the user to create accounts)**

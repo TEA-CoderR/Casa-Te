@@ -5,6 +5,11 @@ import { HttpError } from './http.ts';
 /** Pinned API version; override with STRIPE_API_VERSION if your account requires another. */
 export const STRIPE_API_VERSION = env('STRIPE_API_VERSION') ?? '2025-03-31.basil';
 
+/** API origin. Only overridden for local end-to-end runs against a Stripe mock (tools/local-stack). */
+function stripeApiBase(): string {
+  return (env('STRIPE_API_BASE') ?? 'https://api.stripe.com').replace(/\/$/, '');
+}
+
 type Params = { [key: string]: string | number | boolean | null | undefined | Params | Array<string | number | Params> };
 
 /** Encodes nested params the way Stripe expects: a[b][0][c]=1 */
@@ -32,7 +37,7 @@ export async function stripeRequest<T>(
 ): Promise<T> {
   if (!config.stripeSecretKey) throw new HttpError(503, 'payment_unavailable', 'STRIPE_SECRET_KEY not configured');
   const body = method === 'POST' ? formEncode(params) : undefined;
-  const url = `https://api.stripe.com/v1/${path}${method === 'GET' && Object.keys(params).length ? `?${formEncode(params)}` : ''}`;
+  const url = `${stripeApiBase()}/v1/${path}${method === 'GET' && Object.keys(params).length ? `?${formEncode(params)}` : ''}`;
   const res = await fetch(url, {
     method,
     headers: {
