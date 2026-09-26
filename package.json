@@ -9,6 +9,11 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "demo:server": "tsx server/index.ts",
+    "product:server": "tsx backend/index.ts",
+    "db:migrate": "tsx backend/migrate.ts",
+    "account:provision": "tsx backend/provision.ts",
+    "typecheck:backend": "tsc --noEmit --project tsconfig.backend.json",
+    "test:integration": "tsx --test tests/product-commerce.integration.ts",
     "typecheck": "tsc --noEmit",
     "typecheck:server": "tsc --noEmit --project tsconfig.server.json",
     "test": "tsx --test tests/*.test.ts"
@@ -20,6 +25,7 @@
     "expo-linking": "~57.0.11",
     "expo-router": "~57.0.23",
     "expo-status-bar": "~57.0.1",
+    "pg": "^8.23.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -33,6 +39,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@types/pg": "^8.23.1",
     "@types/react": "~19.2.2",
     "tsx": "^4.20.0",
     "typescript": "~6.0.3"

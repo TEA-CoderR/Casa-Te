@@ -16,13 +16,13 @@ Before changing any code, read ALL of these files:
 Treat those documents as the source of truth for this project.
 
 Your goal:
-Deliver a stable, management-ready native mobile demo by the end of September 2026.
+Deliver a commercial retail product for selected store pilots. The demo phase has ended. Production scope in AGENTS.md and COMMERCIAL_LAUNCH_PLAN.md supersedes historical demo-only restrictions below.
 
 Working style:
 - Do not repeatedly ask questions that are already answered in the project docs.
 - Do not change frozen business decisions.
 - Do not alter shipping rules without explicit approval.
-- Do not introduce a backend, real payment, real logistics API, login, loyalty, or ERP integration unless explicitly requested.
+- Build persistent backend, authentication, payments and fulfilment interfaces. Activate external providers only with verified enterprise configuration; use isolated fixtures for tests.
 - Do not invent real product, inventory, store-address, or pricing data.
 - Keep the app compatible with Expo Go.
 - Keep business logic separate from UI.

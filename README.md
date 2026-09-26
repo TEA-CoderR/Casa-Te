@@ -143,3 +143,6 @@ The mobile app and browser console now share a local demo order service. Open tw
 3. Confirm a demo order in the app. The browser console updates automatically, usually within 1.2 seconds. The app only shows success after the service accepts the order.
 
 For a physical phone, connect it and the computer to the same Wi-Fi. The service listens on port 8787; permit this port through the computer firewall if necessary. `start-demo.ps1` sets `EXPO_PUBLIC_ORDER_API_URL` from the detected LAN address. If detection chooses the wrong address, pass `-LanAddress 192.168.x.x`. The demo service has no login and is intended only for a trusted local network with fictional customer details. Orders persist in the ignored `demo-data/orders.json`; old phone-only orders remain in AsyncStorage and are not silently uploaded.
+# Commercial product development
+
+The demonstration phase has ended. The current product backend, verification and remaining launch work are documented in [PRODUCT_DELIVERY_STATUS.md](PRODUCT_DELIVERY_STATUS.md). The mobile demo described below is not yet a commercially deployable client.
