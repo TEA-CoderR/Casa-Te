@@ -26,13 +26,20 @@ export function LoginPage() {
     setInfo('Se l’indirizzo è registrato riceverai un link per impostare la password.');
   };
 
-  return <div className="login"><form className="card" onSubmit={submit}>
+  return <div className="login split"><aside className="login-art" aria-hidden="true">
     <div className="brand" style={{ padding: 0 }}>CASA &amp; TE<small>GESTIONE ONLINE</small></div>
+    <div>
+      <p className="login-quote">Ordini, magazzino e catalogo dei negozi di Arezzo e Lucca, in un unico posto.</p>
+      <ul className="login-points"><li>Preparazione ordini per negozio</li><li>Rimborsi con un clic tramite Stripe</li><li>Scorte aggiornate in tempo reale</li></ul>
+    </div>
+    <span className="small" style={{ color: '#9fb697' }}>© {new Date().getFullYear()} CASA &amp; TE</span>
+  </aside><form className="card" onSubmit={submit}>
+    <div><h1 style={{ marginBottom: 4 }}>Accedi</h1><p className="muted" style={{ margin: 0 }}>Area riservata al personale.</p></div>
     <Field label="Email"><input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required /></Field>
     <Field label="Password"><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></Field>
     {error && <Notice tone="error">{error}</Notice>}
     {info && <Notice>{info}</Notice>}
-    <button disabled={busy}>Accedi</button>
+    <button disabled={busy} className="big" style={{ justifyContent: 'center' }}>Accedi</button>
     <button type="button" className="ghost" onClick={forgot} disabled={busy}>Password dimenticata / primo accesso</button>
   </form></div>;
 }
