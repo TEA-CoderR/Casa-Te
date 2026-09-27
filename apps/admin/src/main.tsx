@@ -74,6 +74,6 @@ function ResetLogout() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter><AuthProvider><Root /></AuthProvider></BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}><AuthProvider><Root /></AuthProvider></BrowserRouter>
   </StrictMode>,
 );

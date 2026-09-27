@@ -6,6 +6,13 @@
     <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" href="/favicon.png" />
     <title>CASA & TE · Gestione</title>
+    <script>
+      // GitHub Pages SPA fallback: 404.html sends deep links here as ?__p=<path>; restore the real URL.
+      (function () {
+        var m = /[?&]__p=([^&]*)/.exec(location.search);
+        if (m) history.replaceState(null, '', decodeURIComponent(m[1]) + location.hash);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
