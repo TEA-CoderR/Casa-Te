@@ -1,0 +1,61 @@
+name: Deploy web (GitHub Pages)
+
+# Staging web shop at https://<owner>.github.io/Casa-Te/ and admin console at .../Casa-Te/admin/.
+# Needs: Settings → Pages → Source = GitHub Actions.
+# The Supabase URL and publishable key are public client values (RLS protects the data); override
+# them with repository variables STAGING_SUPABASE_URL / STAGING_SUPABASE_PUBLISHABLE_KEY.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL || 'https://kejjinbapxnjbceirrtv.supabase.co' }}
+      SUPABASE_KEY: ${{ vars.STAGING_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_5owPpJOcvD_m6hcDD2Iv7Q_CCVylaXA' }}
+      BASE: /${{ github.event.repository.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: Build admin console
+        run: npm run build -w @casa-te/admin
+        env:
+          VITE_SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.SUPABASE_KEY }}
+          ADMIN_BASE_PATH: ${{ env.BASE }}/admin/
+      - name: Export web shop
+        run: npm run build:web -w @casa-te/mobile
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SUPABASE_KEY }}
+          EXPO_BASE_URL: ${{ env.BASE }}
+      - name: Assemble site
+        run: node tools/pages/assemble.mjs
+        env:
+          PAGES_BASE_PATH: ${{ env.BASE }}/
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: pages-dist }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

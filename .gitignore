@@ -19,3 +19,4 @@ apps/mobile/google-play-service-account.json
 *.p8
 *.p12
 *.keystore
+pages-dist/

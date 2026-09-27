@@ -21,7 +21,7 @@ export function LoginPage() {
   const forgot = async () => {
     if (!email.trim()) { setError("Inserisci l'email."); return; }
     setBusy(true); setError('');
-    await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
+    await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}reset-password` });
     setBusy(false);
     setInfo('Se l’indirizzo è registrato riceverai un link per impostare la password.');
   };
