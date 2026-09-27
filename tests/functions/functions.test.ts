@@ -130,8 +130,8 @@ test('checkout-return: settles payment then redirects to app or web shop', async
     route(/rpc\/mark_order_paid$/, () => jsonRes('paid')),
   ];
   const native = await checkoutReturn(new Request(`https://fn/x?order=${ORDER_ID}&result=success&platform=native&session_id=cs_test_1`), config);
-  assert.equal(native.status, 200);
-  assert.match(await native.text(), new RegExp(`casate://checkout/return\\?order=${ORDER_ID}&amp;result=success|casate://checkout/return\\?order=${ORDER_ID}&result=success`));
+  assert.equal(native.status, 303);
+  assert.equal(native.headers.get('location'), `casate://checkout/return?order=${ORDER_ID}&result=success`);
   assert.deepEqual(JSON.parse(callsTo(/mark_order_paid/)[0].body), { p_order_id: ORDER_ID, p_session_id: 'cs_test_1', p_payment_intent_id: 'pi_1', p_amount_cents: 3188 });
 
   const web = await checkoutReturn(new Request(`https://fn/x?order=${ORDER_ID}&result=cancel&platform=web`), config);
@@ -139,7 +139,14 @@ test('checkout-return: settles payment then redirects to app or web shop', async
   assert.equal(web.headers.get('location'), `https://shop.casate.it/checkout/return?order=${ORDER_ID}&result=cancel`);
 
   const bad = await checkoutReturn(new Request('https://fn/x?order=javascript:alert(1)&platform=web'), config);
+  assert.equal(bad.status, 400);
   assert.match(await bad.text(), /Link non valido/);
+
+  // Without WEB_SHOP_URL there is nowhere to go: plain text (Supabase would show HTML as source).
+  const noShop = await checkoutReturn(new Request(`https://fn/x?order=${ORDER_ID}&result=cancel&platform=web`), { ...config, webShopUrl: '' });
+  assert.equal(noShop.status, 200);
+  assert.match(noShop.headers.get('content-type') ?? '', /^text\/plain/);
+  assert.match(await noShop.text(), /Pagamento annullato/);
 });
 
 async function signedWebhook(event: unknown) {

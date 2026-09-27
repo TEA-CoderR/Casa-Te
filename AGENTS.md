@@ -15,7 +15,8 @@ Read `docs/ARCHITECTURE.md` and `docs/DECISIONS.md` first.
 1. Never compute a charged amount on the client. Change pricing/shipping/stock logic in SQL and keep
    `packages/shared` in sync; the parity test must stay green.
 2. Do not change shipping business rules without explicit approval (`docs/PROJECT_CONTEXT.md` §6).
-3. Every new table gets RLS in the same migration; every new function gets explicit GRANTs
+3. Every new table gets RLS **and explicit GRANTs** in the same migration (newer Supabase projects grant
+   nothing to anon/authenticated/service_role by default); every new function gets explicit GRANTs
    (Supabase grants EXECUTE to anon/authenticated by default).
 4. Money in integer cents, weight in integer grams.
 5. Never add a new migration that edits an old one; always add a new file.
