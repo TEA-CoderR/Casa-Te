@@ -8,14 +8,12 @@ import { settleCheckoutSession } from '../_shared/payments.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function html(message: string, target?: string): Response {
-  const link = target ? `<p><a href="${target}">Torna all'app CASA &amp; TE</a></p>` : '';
-  const redirect = target ? `<meta http-equiv="refresh" content="0;url=${target}">` : '';
-  return new Response(
-    `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${redirect}` +
-    `<title>CASA &amp; TE</title></head><body style="font-family:system-ui;padding:32px;text-align:center;color:#182019">` +
-    `<h1 style="color:#2F6634">${message}</h1>${link}</body></html>`,
-    { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+// Supabase serves Edge Function responses to GET requests with `text/html` rewritten to
+// `text/plain` (anti-phishing on *.supabase.co), so an HTML page shows up as raw source. Customers
+// therefore only ever get a 303 redirect or, when there is nowhere to go, a short plain-text note.
+function text(message: string, status = 200): Response {
+  return new Response(`CASA & TE\n\n${message}\n`,
+    { status, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
 }
 
 export async function checkoutReturn(req: Request, config: Config): Promise<Response> {
@@ -24,7 +22,7 @@ export async function checkoutReturn(req: Request, config: Config): Promise<Resp
   const result = url.searchParams.get('result') === 'success' ? 'success' : 'cancel';
   const platform = url.searchParams.get('platform') === 'web' ? 'web' : 'native';
   const sessionId = url.searchParams.get('session_id') ?? '';
-  if (!UUID.test(order)) return html('Link non valido');
+  if (!UUID.test(order)) return text('Link non valido.', 400);
 
   if (result === 'success' && /^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
     try {
@@ -39,10 +37,12 @@ export async function checkoutReturn(req: Request, config: Config): Promise<Resp
   const target = platform === 'native'
     ? `${config.appScheme}://checkout/return?${query}`
     : config.webShopUrl ? `${config.webShopUrl}/checkout/return?${query}` : undefined;
-  if (!target) return html(result === 'success' ? 'Pagamento completato' : 'Pagamento annullato');
-  if (platform === 'native') {
-    // Some in-app browsers ignore 30x to custom schemes; an HTML page with a link always works.
-    return html(result === 'success' ? 'Pagamento completato' : 'Pagamento annullato', target);
+  if (!target) {
+    // WEB_SHOP_URL not configured yet (e.g. staging without hosting): the payment is already settled.
+    return text(result === 'success'
+      ? 'Pagamento completato. Puoi chiudere questa pagina e tornare al negozio.'
+      : 'Pagamento annullato. Puoi chiudere questa pagina e tornare al negozio.');
   }
+  // Native: WebBrowser.openAuthSessionAsync watches for the casate:// redirect and closes the sheet.
   return new Response(null, { status: 303, headers: { Location: target, 'Cache-Control': 'no-store' } });
 }

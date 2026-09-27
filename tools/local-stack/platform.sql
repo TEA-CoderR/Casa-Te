@@ -28,8 +28,7 @@ create table storage.objects (
 alter table storage.objects enable row level security;
 grant all on storage.objects, storage.buckets to anon, authenticated, service_role;
 
--- Supabase default privileges: API roles get full table privileges (RLS does the filtering)
--- and EXECUTE on new functions.
-alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
-alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+-- Newer Supabase projects grant NO table privileges to the API roles by default (migration
+-- 20260928000002 grants them explicitly). Functions still get EXECUTE by default, which is the
+-- worst case migration 0003 must lock down.
 alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;

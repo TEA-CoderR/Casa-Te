@@ -3,6 +3,8 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Config } from '../../supabase/functions/_shared/env.ts';
 import { handle } from '../../supabase/functions/_shared/http.ts';
+import { loadConfig } from '../../supabase/functions/_shared/env.ts';
+import { headers as supabaseHeaders } from '../../supabase/functions/_shared/supabase.ts';
 import { formEncode, hmacSha256Hex, verifyStripeEvent } from '../../supabase/functions/_shared/stripe.ts';
 import { checkout } from '../../supabase/functions/checkout/handler.ts';
 import { checkoutReturn } from '../../supabase/functions/checkout-return/handler.ts';
@@ -128,8 +130,8 @@ test('checkout-return: settles payment then redirects to app or web shop', async
     route(/rpc\/mark_order_paid$/, () => jsonRes('paid')),
   ];
   const native = await checkoutReturn(new Request(`https://fn/x?order=${ORDER_ID}&result=success&platform=native&session_id=cs_test_1`), config);
-  assert.equal(native.status, 200);
-  assert.match(await native.text(), new RegExp(`casate://checkout/return\\?order=${ORDER_ID}&amp;result=success|casate://checkout/return\\?order=${ORDER_ID}&result=success`));
+  assert.equal(native.status, 303);
+  assert.equal(native.headers.get('location'), `casate://checkout/return?order=${ORDER_ID}&result=success`);
   assert.deepEqual(JSON.parse(callsTo(/mark_order_paid/)[0].body), { p_order_id: ORDER_ID, p_session_id: 'cs_test_1', p_payment_intent_id: 'pi_1', p_amount_cents: 3188 });
 
   const web = await checkoutReturn(new Request(`https://fn/x?order=${ORDER_ID}&result=cancel&platform=web`), config);
@@ -137,7 +139,14 @@ test('checkout-return: settles payment then redirects to app or web shop', async
   assert.equal(web.headers.get('location'), `https://shop.casate.it/checkout/return?order=${ORDER_ID}&result=cancel`);
 
   const bad = await checkoutReturn(new Request('https://fn/x?order=javascript:alert(1)&platform=web'), config);
+  assert.equal(bad.status, 400);
   assert.match(await bad.text(), /Link non valido/);
+
+  // Without WEB_SHOP_URL there is nowhere to go: plain text (Supabase would show HTML as source).
+  const noShop = await checkoutReturn(new Request(`https://fn/x?order=${ORDER_ID}&result=cancel&platform=web`), { ...config, webShopUrl: '' });
+  assert.equal(noShop.status, 200);
+  assert.match(noShop.headers.get('content-type') ?? '', /^text\/plain/);
+  assert.match(await noShop.text(), /Pagamento annullato/);
 });
 
 async function signedWebhook(event: unknown) {
@@ -272,4 +281,50 @@ test('notification emails', () => {
   assert.equal(buildEmail({ id: 4, order_id: ORDER_ID, status: 'cancelled', kind: 'status', note: 'Tempo per il pagamento scaduto', visible_to_customer: true }, order, 'x'), null);
   const xss = buildEmail({ id: 5, order_id: ORDER_ID, status: 'paid', kind: 'status', note: null, visible_to_customer: true }, { ...order, customer_name: '<script>' }, 'x');
   assert.ok(!xss!.body.includes('<script>'));
+});
+
+// ---- Supabase API keys (legacy JWT keys and new sb_publishable_/sb_secret_ keys) ---------------
+
+test('supabase headers: new-format keys go only in apikey, JWTs in Authorization', () => {
+  const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1MSJ9.sig';
+  assert.deepEqual(supabaseHeaders(config, jwt), { apikey: 'anon', Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' });
+  const secret = supabaseHeaders({ ...config, anonKey: 'sb_publishable_x' }, 'sb_secret_x');
+  assert.equal(secret.apikey, 'sb_secret_x');
+  assert.equal(secret.Authorization, undefined, 'a non-JWT key in Authorization is rejected by PostgREST');
+});
+
+test('checkout with a new-format secret key: service-role calls send it as apikey only', async () => {
+  const cfg = { ...config, anonKey: 'sb_publishable_x', serviceRoleKey: 'sb_secret_x' };
+  routes = [
+    route(/GET .*\/auth\/v1\/user$/, () => jsonRes({ id: 'u1', email: 'anna@example.com' })),
+    route(/POST .*\/rpc\/create_order$/, () => jsonRes({ id: ORDER_ID, order_number: 'CT26001001', total_cents: 3188, customer_email: 'anna@example.com', expires_at: '' })),
+    route(/POST https:\/\/api\.stripe\.com\/v1\/checkout\/sessions$/, () => jsonRes({ id: 'cs_test_1', url: 'https://checkout.stripe.com/c/pay/cs_test_1' })),
+    route(/POST .*\/rpc\/attach_checkout_session$/, () => new Response(null, { status: 204 })),
+  ];
+  const res = await handle((r) => checkout(r, cfg))(post('checkout', { platform: 'web', order: {} }));
+  assert.equal(res.status, 200);
+  const create = callsTo(/create_order/)[0];
+  assert.equal(create.headers.apikey, 'sb_publishable_x');
+  assert.equal(create.headers.authorization, 'Bearer user-jwt');
+  const attach = callsTo(/attach_checkout_session/)[0];
+  assert.equal(attach.headers.apikey, 'sb_secret_x');
+  assert.equal(attach.headers.authorization, undefined);
+});
+
+test('loadConfig prefers SUPABASE_SECRET_KEYS / SUPABASE_PUBLISHABLE_KEYS over legacy keys', () => {
+  const keys = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_PUBLISHABLE_KEYS', 'SUPABASE_SECRET_KEYS'] as const;
+  const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+  try {
+    Object.assign(process.env, { SUPABASE_URL: 'https://p.supabase.co/', SUPABASE_ANON_KEY: 'legacy-anon', SUPABASE_SERVICE_ROLE_KEY: 'legacy-service' });
+    delete process.env.SUPABASE_PUBLISHABLE_KEYS; delete process.env.SUPABASE_SECRET_KEYS;
+    assert.deepEqual([loadConfig().anonKey, loadConfig().serviceRoleKey, loadConfig().supabaseUrl], ['legacy-anon', 'legacy-service', 'https://p.supabase.co']);
+    process.env.SUPABASE_PUBLISHABLE_KEYS = JSON.stringify({ default: 'sb_publishable_new' });
+    process.env.SUPABASE_SECRET_KEYS = JSON.stringify({ default: 'sb_secret_new' });
+    assert.deepEqual([loadConfig().anonKey, loadConfig().serviceRoleKey], ['sb_publishable_new', 'sb_secret_new']);
+    delete process.env.SUPABASE_ANON_KEY; delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_SECRET_KEYS = 'not json';
+    assert.throws(() => loadConfig(), /SUPABASE_SECRET_KEYS or SUPABASE_SERVICE_ROLE_KEY/);
+  } finally {
+    for (const k of keys) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
+  }
 });

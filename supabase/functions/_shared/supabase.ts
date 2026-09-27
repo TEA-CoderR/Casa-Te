@@ -5,8 +5,14 @@ import { HttpError } from './http.ts';
 
 export type AuthUser = { id: string; email?: string; is_anonymous?: boolean };
 
-function headers(config: Config, token: string, extra: Record<string, string> = {}): Record<string, string> {
-  return { apikey: config.anonKey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...extra };
+/**
+ * `token` is either a user access token (JWT) or a server key. New-format Supabase keys
+ * (`sb_secret_…`, `sb_publishable_…`) are not JWTs and must travel only in the `apikey` header —
+ * in `Authorization: Bearer` next to a different apikey they reach PostgREST as an invalid JWT.
+ */
+export function headers(config: Config, token: string, extra: Record<string, string> = {}): Record<string, string> {
+  const auth: Record<string, string> = token.startsWith('sb_') ? { apikey: token } : { apikey: config.anonKey, Authorization: `Bearer ${token}` };
+  return { ...auth, 'Content-Type': 'application/json', ...extra };
 }
 
 /** Extracts the Postgres error code raised with `raise exception '<code>'`. */

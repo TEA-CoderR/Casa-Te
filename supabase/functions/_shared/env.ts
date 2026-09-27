@@ -25,11 +25,29 @@ export type Config = {
   appScheme: string;
 };
 
+/** Reads the `default` key from the JSON dictionaries Supabase injects (SUPABASE_SECRET_KEYS etc.). */
+function namedKey(dictVar: string, name = 'default'): string | undefined {
+  const raw = env(dictVar);
+  if (!raw) return undefined;
+  try {
+    const value = (JSON.parse(raw) as Record<string, unknown>)[name];
+    return typeof value === 'string' && value ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function loadConfig(): Config {
+  // New API keys (sb_publishable_/sb_secret_) first; legacy anon/service_role JWTs as fallback
+  // (Supabase retires the legacy keys at the end of 2026).
+  const anonKey = namedKey('SUPABASE_PUBLISHABLE_KEYS') ?? env('SUPABASE_ANON_KEY');
+  const serviceRoleKey = namedKey('SUPABASE_SECRET_KEYS') ?? env('SUPABASE_SERVICE_ROLE_KEY');
+  if (!anonKey) throw new Error('Missing environment variable SUPABASE_PUBLISHABLE_KEYS or SUPABASE_ANON_KEY');
+  if (!serviceRoleKey) throw new Error('Missing environment variable SUPABASE_SECRET_KEYS or SUPABASE_SERVICE_ROLE_KEY');
   return {
     supabaseUrl: requireEnv('SUPABASE_URL').replace(/\/$/, ''),
-    anonKey: requireEnv('SUPABASE_ANON_KEY'),
-    serviceRoleKey: requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
+    anonKey,
+    serviceRoleKey,
     stripeSecretKey: env('STRIPE_SECRET_KEY') ?? '',
     stripeWebhookSecret: env('STRIPE_WEBHOOK_SECRET') ?? '',
     webShopUrl: (env('WEB_SHOP_URL') ?? '').replace(/\/$/, ''),
