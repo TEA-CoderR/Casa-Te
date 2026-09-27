@@ -49,6 +49,24 @@ web shop (same Expo codebase), admin console, store picking; catalogue via admin
 - Still to verify in staging (P1): real Stripe Checkout/API version, hosted Supabase (Kong, Storage,
   pg_cron, DB webhook → `notify-order-event` → Resend), native deep link return.
 
+## Session 4 — staging deployed (2026-09-28)
+- Supabase staging project `kejjinbapxnjbceirrtv` ("TEA-CoderR's Project", eu-central-1, Postgres 17),
+  API `https://kejjinbapxnjbceirrtv.supabase.co`. Applied through the Supabase MCP connector:
+  migrations 0001–0005 + `20260928000001_enable_pg_net`, then `seed.sql` (demo catalogue).
+  `supabase_migrations.schema_migrations` versions were repaired to match the file names, so
+  `supabase db push` treats them as applied. **Migrations 0001–0005 are now frozen (AGENTS.md rule 5).**
+- Verified on staging: RLS on every table, pg_cron job `casa-te-expire-stale-orders` active, storage
+  bucket + policies, EXECUTE grants as designed. Advisors: no real security issue; performance
+  suggestions (wrap `auth.uid()` in `select`, 10 unindexed FKs, overlapping `FOR ALL` policies) → future migration.
+- All 7 Edge Functions deployed (verify_jwt as in `config.toml`) and smoke-tested from SQL via pg_net
+  (the sandbox cannot reach `*.supabase.co` directly).
+- Stripe sandbox `acct_1UKKXxLe2u4NCBLP` ("casate 沙盒"): webhook endpoint `we_1UKL4tLe2u4NCBLPJMaplg9j`
+  → `/functions/v1/stripe-webhook`, API version `2025-03-31.basil`, 6 events. Stripe Tax not set up
+  (no head office / registration). Integration review and plan: see the session-4 chat summary.
+- **Owner actions pending:** Edge Function secrets (`STRIPE_SECRET_KEY` as restricted key,
+  `STRIPE_WEBHOOK_SECRET`, `WEB_SHOP_URL`, `ADMIN_URL`, `ALLOWED_ORIGINS`), Auth URL config and
+  email templates with `{{ .Token }}`, custom SMTP, first admin (DEPLOYMENT.md §1).
+
 ## Known risk spots to check first
 1. Dependency versions were written without the registry: `expo-web-browser ~57.0.0`,
    `@supabase/supabase-js ^2.49.0`, `react-native-url-polyfill ^2`, `react-router-dom ^7.6`,
