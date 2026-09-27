@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { isEmail } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
@@ -10,7 +10,17 @@ import { supabase } from '@/lib/supabase';
 /**
  * Passwordless sign-in / sign-up with a 6-digit email code (Supabase OTP). The Supabase
  * "Magic Link" email template must include {{ .Token }} — see docs/DEPLOYMENT.md.
+ * On the web the email's link also works (Supabase's default templates only contain the link,
+ * and editing them requires custom SMTP): it returns to the shop, already signed in.
  */
+
+/** Web only: where the email link lands, e.g. https://host/Casa-Te/cart (must be an allowed redirect URL). */
+function webRedirect(next?: string): string | undefined {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
+  const base = window.location.pathname.replace(/auth\/sign-in\/?$/, '');
+  const target = typeof next === 'string' && next.startsWith('/') ? next.slice(1) : 'profile';
+  return `${window.location.origin}${base}${target}`;
+}
 export default function SignInScreen() {
   const { next } = useLocalSearchParams<{ next?: string }>();
   const [step, setStep] = useState<'email' | 'code'>('email');
@@ -26,11 +36,14 @@ export default function SignInScreen() {
     setBusy(true); setError(''); setInfo('');
     const { error: e } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      options: { shouldCreateUser: true },
+      options: { shouldCreateUser: true, emailRedirectTo: webRedirect(next) },
     });
     setBusy(false);
     if (e) { setError(e.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.' : 'Invio non riuscito. Riprova.'); return; }
-    setStep('code'); setInfo(`Abbiamo inviato un codice a ${email.trim()}. Controlla anche lo spam.`);
+    setStep('code');
+    setInfo(Platform.OS === 'web'
+      ? `Abbiamo inviato un'email a ${email.trim()}: apri il link "Log In" per accedere, oppure inserisci qui il codice se presente. Controlla anche lo spam.`
+      : `Abbiamo inviato un codice a ${email.trim()}. Controlla anche lo spam.`);
   };
 
   const verify = async () => {
