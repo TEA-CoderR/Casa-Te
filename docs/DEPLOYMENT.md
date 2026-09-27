@@ -27,6 +27,11 @@ supabase db push             # applies supabase/migrations/*
 psql "$STAGING_DB_URL" -f supabase/seed.sql
 ```
 
+If a migration is applied another way (SQL editor, Supabase MCP connector), it is recorded with a
+different version and `supabase db push` would try to run it again. Align it with the file name:
+`supabase migration repair --status applied <file_version>` (or update
+`supabase_migrations.schema_migrations.version` to the file's timestamp).
+
 Dashboard settings:
 
 * **Database → Extensions**: `pg_cron` enabled (migration 0004 schedules `expire_stale_orders`).
