@@ -1,41 +1,50 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { Icon, type AdminIcon } from './Icon';
 
 const ROLE_LABEL = { admin: 'Amministratore', manager: 'Responsabile', store_staff: 'Personale negozio' } as const;
+
+function Item({ to, icon, children, end }: { to: string; icon: AdminIcon; children: string; end?: boolean }) {
+  return <NavLink to={to} end={end}><Icon name={icon} /><span>{children}</span></NavLink>;
+}
 
 export function Layout() {
   const { staff, session, signOut, can } = useAuth();
   const manager = can('admin', 'manager');
+  const name = staff?.display_name || session?.user.email || '';
   return <div className="shell">
     <aside className="sidebar">
       <div className="brand">CASA &amp; TE<small>GESTIONE ONLINE</small></div>
       <nav className="nav" aria-label="Navigazione principale">
         <div className="group">Operativo</div>
-        <NavLink to="/" end>Dashboard</NavLink>
-        <NavLink to="/picking">Preparazione ordini</NavLink>
-        <NavLink to="/orders">Ordini</NavLink>
-        <NavLink to="/inventory">Magazzino</NavLink>
+        <Item to="/" end icon="dashboard">Dashboard</Item>
+        <Item to="/picking" icon="picking">Preparazione ordini</Item>
+        <Item to="/orders" icon="orders">Ordini</Item>
+        <Item to="/inventory" icon="inventory">Magazzino</Item>
         {manager && <>
           <div className="group">Catalogo</div>
-          <NavLink to="/products">Prodotti</NavLink>
-          <NavLink to="/import">Importa CSV</NavLink>
-          <NavLink to="/categories">Categorie</NavLink>
+          <Item to="/products" icon="products">Prodotti</Item>
+          <Item to="/import" icon="import">Importa CSV</Item>
+          <Item to="/categories" icon="categories">Categorie</Item>
           <div className="group">Vendite</div>
-          <NavLink to="/coupons">Codici sconto</NavLink>
-          <NavLink to="/shipping">Tariffe spedizione</NavLink>
-          <NavLink to="/pickup-points">Punti di ritiro</NavLink>
-          <NavLink to="/customers">Clienti</NavLink>
+          <Item to="/coupons" icon="coupons">Codici sconto</Item>
+          <Item to="/shipping" icon="shipping">Tariffe spedizione</Item>
+          <Item to="/pickup-points" icon="pickup">Punti di ritiro</Item>
+          <Item to="/customers" icon="customers">Clienti</Item>
         </>}
         {can('admin') && <>
           <div className="group">Amministrazione</div>
-          <NavLink to="/stores">Negozi</NavLink>
-          <NavLink to="/staff">Personale</NavLink>
+          <Item to="/stores" icon="stores">Negozi</Item>
+          <Item to="/staff" icon="staff">Personale</Item>
         </>}
       </nav>
       <div className="who">
-        <div><strong>{staff?.display_name || session?.user.email}</strong></div>
-        <div className="muted">{staff ? ROLE_LABEL[staff.role] : ''}</div>
-        <button className="ghost" style={{ paddingLeft: 0 }} onClick={signOut}>Esci</button>
+        <div className="avatar" aria-hidden="true">{name.slice(0, 1).toUpperCase()}</div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="who-name">{name}</div>
+          <div className="who-role">{staff ? ROLE_LABEL[staff.role] : ''}</div>
+        </div>
+        <button className="ghost icon-btn" onClick={signOut} title="Esci" aria-label="Esci"><Icon name="logout" /></button>
       </div>
     </aside>
     <main className="main"><Outlet /></main>
