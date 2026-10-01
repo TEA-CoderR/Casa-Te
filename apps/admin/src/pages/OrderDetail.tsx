@@ -64,7 +64,7 @@ export function OrderDetailPage() {
       <StatusBadge status={o.status} /><PaymentBadge status={o.payment_status} />
       <span className="badge muted">{FULFILMENT_LABELS[o.fulfilment]}</span>
       {o.shipping_provisional && <span className="badge warn">Tariffa oltre 10 kg (provvisoria)</span>}
-      {o.invoice_requested && <span className="badge warn">Fattura richiesta</span>}
+      {o.invoice_requested && <span className="badge flag">Fattura richiesta</span>}
     </div>
     {error && <Notice tone="error">{error}</Notice>}
     {done && <Success onDismiss={() => setDone('')}>{done}</Success>}

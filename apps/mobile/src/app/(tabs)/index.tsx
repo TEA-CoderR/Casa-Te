@@ -38,7 +38,11 @@ export default function HomeScreen() {
   const featured = useQuery(selected ? `featured:${selected.id}` : null,
     () => fetchProducts({ storeId: selected?.id ?? null, featured: true, pageSize: columns * 2 }));
   const value = useQuery(selected ? `value:${selected.id}` : null,
-    () => fetchProducts({ storeId: selected?.id ?? null, sort: 'price_asc', pageSize: columns }));
+    () => fetchProducts({ storeId: selected?.id ?? null, sort: 'price_asc', pageSize: columns * 3 }));
+  // Rows end on a full line, and the second rail never repeats products already featured above.
+  const fullRows = <T,>(list: T[]) => list.length >= columns ? list.slice(0, list.length - (list.length % columns)) : list;
+  const featuredIds = new Set((featured.data?.items ?? []).map((p) => p.id));
+  const valueItems = fullRows((value.data?.items ?? []).filter((p) => !featuredIds.has(p.id)).slice(0, columns));
   const refresh = () => { void categories.refetch(); void featured.refetch(); void value.refetch(); };
   const catName = (id: string | null) => categories.data?.find((c) => c.id === id)?.name;
   const productGrid = (items: NonNullable<typeof featured.data>['items']) => <View style={styles.grid}>{items.map((product) =>
@@ -122,8 +126,8 @@ export default function HomeScreen() {
       <Pressable onPress={() => router.push('/catalog')} style={styles.seeAll} accessibilityLabel="Tutti i prodotti">
         <Text style={styles.seeAllText}>Vedi tutti</Text><Icon name="arrow" color={colors.green} size={17} /></Pressable>
     </View>
-    {featured.error && !featured.data ? <Notice tone="error" message="Impossibile caricare i prodotti. Trascina verso il basso per riprovare." />
-      : !featured.data ? <Loading /> : productGrid(featured.data.items)}
+    {featured.error && !featured.data ? <Notice tone="error" message="Impossibile caricare i prodotti. Controlla la connessione e ricarica la pagina." />
+      : !featured.data ? <Loading /> : productGrid(fullRows(featured.data.items))}
 
     <View style={[styles.split, wide && { flexDirection: 'row' }]}>
       <View style={[styles.splitPanel, styles.splitDark, wide && { flex: 1.2 }]}>
@@ -150,10 +154,10 @@ export default function HomeScreen() {
       </View>
     </View>
 
-    {!!value.data?.items.length && <>
+    {valueItems.length >= Math.min(columns, 2) && <>
       <View style={styles.section}><View><Text style={styles.sectionTitle}>Piccoli prezzi, grande casa</Text>
         <Text style={styles.sectionSub}>Idee utili per tutti i giorni</Text></View></View>
-      {productGrid(value.data.items)}
+      {productGrid(valueItems)}
     </>}
 
     <View style={styles.footer}>
@@ -187,7 +191,7 @@ const styles = StyleSheet.create({
   announceLink: { color: colors.lime, fontSize: 13, fontWeight: '700', textDecorationLine: 'underline' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5, marginBottom: 23, gap: 12 },
   wordmark: { fontSize: 25, fontFamily: serif, letterSpacing: 1.5, fontWeight: '700', color: colors.greenDark },
-  tagline: { fontSize: 11, letterSpacing: 1.4, marginTop: 4, color: colors.green },
+  tagline: { fontSize: 12, letterSpacing: 1, marginTop: 4, color: colors.green },
   store: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 44, maxWidth: 170 },
   storeText: { fontSize: 14, color: colors.green, fontWeight: '500', flexShrink: 1 },
   search: { flexDirection: 'row', gap: 11, alignItems: 'center', backgroundColor: '#ECEEE8', borderRadius: 14, paddingHorizontal: 16, height: 48, marginBottom: 20 },

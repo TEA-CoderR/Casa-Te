@@ -32,13 +32,26 @@ export function ProductEditPage() {
   const stock = useAsync(async () => isNew ? [] : unwrap(await supabase.from('inventory').select('store_id,quantity').eq('product_id', id!)) as Array<{ store_id: string; quantity: number }>, [id]);
   const [stockEdits, setStockEdits] = useState<Record<string, string>>({});
   const fileInput = useRef<HTMLInputElement>(null);
+  const [loaded, setLoaded] = useState<Form>(blank);
 
   useEffect(() => {
     const p = product.data;
     if (p) setForm({ sku: p.sku, name: p.name, slug: p.slug, description: p.description ?? '', brand: p.brand ?? '', category_id: p.category_id ?? '',
       price: euros(p.price_cents), compare: euros(p.compare_at_price_cents), vat_rate: String(p.vat_rate), weight_g: String(p.weight_g),
       barcode: p.barcode ?? '', max_per_order: String(p.max_per_order), active: p.active, featured: p.featured });
+    if (p) setLoaded({ sku: p.sku, name: p.name, slug: p.slug, description: p.description ?? '', brand: p.brand ?? '', category_id: p.category_id ?? '',
+      price: euros(p.price_cents), compare: euros(p.compare_at_price_cents), vat_rate: String(p.vat_rate), weight_g: String(p.weight_g),
+      barcode: p.barcode ?? '', max_per_order: String(p.max_per_order), active: p.active, featured: p.featured });
   }, [product.data]);
+  // Unsaved changes (product fields or stock) must not vanish on navigation or tab close.
+  const dirty = JSON.stringify(form) !== JSON.stringify(loaded) || Object.keys(stockEdits).length > 0;
+  useEffect(() => {
+    if (!dirty) return;
+    const onUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, [dirty]);
+  const leave = () => { if (!dirty || window.confirm('Ci sono modifiche non salvate. Uscire senza salvare?')) navigate('/products'); };
 
   if (!isNew && !product.data) return product.error ? <Notice tone="error">{product.error}</Notice> : <Loading />;
 
@@ -68,6 +81,7 @@ export function ProductEditPage() {
         unwrap(await supabase.from('products').update(row).eq('id', id!));
         const stockCount = await writeStock();
         setSaved(stockCount ? `Prodotto e ${stockCount} giacenze salvati.` : 'Prodotto salvato.');
+        setLoaded(form);
         await product.reload();
       }
     } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
@@ -125,7 +139,7 @@ export function ProductEditPage() {
   const pendingStock = Object.keys(stockEdits).length;
   return <>
     <PageHead title={isNew ? 'Nuovo prodotto' : form.name || 'Prodotto'} subtitle={isNew ? 'Dopo la creazione potrai aggiungere immagini e giacenze.' : `SKU ${form.sku}`}
-      actions={<button className="secondary" onClick={() => navigate('/products')}><Icon name="back" size={16} /> Prodotti</button>} />
+      actions={<button className="secondary" onClick={leave}><Icon name="back" size={16} /> Prodotti</button>} />
     {error && <Notice tone="error">{error}</Notice>}
     {saved && <Success onDismiss={() => setSaved('')}>{saved}</Success>}
     <form onSubmit={save} id="product-form" className="edit-layout">
@@ -180,7 +194,7 @@ export function ProductEditPage() {
           <table><tbody>{stores.data?.map((s) => {
             const current = stock.data?.find((x) => x.store_id === s.id)?.quantity ?? 0;
             return <tr key={s.id}><td>{s.name}</td><td className="num" style={{ width: 120 }}>
-              <input type="number" min={0} inputMode="numeric" value={stockEdits[s.id] ?? String(current)} style={{ width: 100 }} aria-label={`Giacenza ${s.name}`}
+              <input type="number" min={0} inputMode="numeric" onWheel={(e) => e.currentTarget.blur()} value={stockEdits[s.id] ?? String(current)} style={{ width: 100 }} aria-label={`Giacenza ${s.name}`}
                 className={stockEdits[s.id] !== undefined ? 'edited' : undefined}
                 onChange={(e) => setStockEdits({ ...stockEdits, [s.id]: e.target.value })} /></td></tr>;
           })}</tbody></table>
@@ -188,7 +202,7 @@ export function ProductEditPage() {
       </div>
     </form>
     <div className="savebar">
-      <span className="muted">{isNew ? 'Compila i campi con * e crea il prodotto.' : pendingStock ? `${pendingStock} giacenze modificate verranno salvate insieme al prodotto.` : 'Le modifiche si salvano con un solo pulsante.'}</span>
+      <span className={dirty && !isNew ? '' : 'muted'}>{isNew ? 'Compila i campi con * e crea il prodotto.' : dirty ? <><strong>Modifiche non salvate</strong>{pendingStock ? ` · ${pendingStock} giacenze incluse` : ''}</> : 'Tutto salvato.'}</span>
       <span className="spacer" />
       <button type="submit" form="product-form" disabled={busy}>{busy ? 'Salvataggio…' : isNew ? 'Crea prodotto' : 'Salva'}</button>
     </div>

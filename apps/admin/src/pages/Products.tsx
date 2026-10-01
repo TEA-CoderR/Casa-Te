@@ -67,7 +67,7 @@ export function ProductsPage() {
             <td className="num">{formatEuro(p.price_cents)}{p.compare_at_price_cents ? <div className="small muted" style={{ textDecoration: 'line-through' }}>{formatEuro(p.compare_at_price_cents)}</div> : null}</td>
             <td className="num">{formatWeight(p.weight_g)}</td>
             <td className="num"><span className={`badge ${stock === 0 ? 'bad' : stock <= 3 ? 'warn' : 'muted'}`}>{stock}</span></td>
-            <td>{p.active ? <span className="badge">Pubblicato</span> : <span className="badge muted">Non pubblicato</span>}{p.featured && <span className="badge warn" style={{ marginLeft: 4 }}>In evidenza</span>}</td>
+            <td>{p.active ? <span className="badge">Pubblicato</span> : <span className="badge muted">Non pubblicato</span>}{p.featured && <span className="badge flag" style={{ marginLeft: 4 }}>In evidenza</span>}</td>
           </tr>;
         })}</tbody></table></div>}
     {products.data && <Pager page={page} hasMore={(page + 1) * PAGE < products.data.count} onPage={setPage} />}

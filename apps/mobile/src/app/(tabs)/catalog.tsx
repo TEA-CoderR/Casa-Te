@@ -27,6 +27,13 @@ export default function CatalogScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(params.category ?? null);
   const [sortIndex, setSortIndex] = useState(0);
   const [sortOpen, setSortOpen] = useState(false);
+  // Close the sort menu with Escape (web keyboard users).
+  useEffect(() => {
+    if (!sortOpen || typeof window === 'undefined' || !window.addEventListener) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSortOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [sortOpen]);
   const [items, setItems] = useState<CatalogProduct[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);

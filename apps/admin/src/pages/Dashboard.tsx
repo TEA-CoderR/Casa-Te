@@ -79,7 +79,7 @@ export function DashboardPage() {
   const maxDay = Math.max(1, ...days.map((d) => d.revenue_cents));
   const fulfilment = Object.entries(s?.by_fulfilment ?? {}) as Array<[FulfilmentMethod, number]>;
   const fulfilmentTotal = fulfilment.reduce((n, [, v]) => n + v, 0);
-  const topMax = Math.max(1, ...(s?.top_products ?? []).map((p) => p.revenue_cents));
+  const topMax = Math.max(1, ...(s?.top_products ?? []).map((p) => p.quantity)); // ranked by pieces sold, so bars use pieces too
   const toWork = (open.paid ?? 0) + (open.picking ?? 0);
   const firstName = (staff?.display_name ?? '').split(' ')[0];
 
@@ -94,8 +94,8 @@ export function DashboardPage() {
         </p>
       </div>
       <div className="row">
-        <div className="segmented" role="tablist" aria-label="Periodo">
-          {RANGES.map((r) => <button key={r.id} role="tab" aria-selected={r.id === range.id}
+        <div className="segmented" role="group" aria-label="Periodo">
+          {RANGES.map((r) => <button key={r.id} aria-pressed={r.id === range.id}
             className={r.id === range.id ? 'on' : ''} onClick={() => setRange(r)}>{r.label}</button>)}
         </div>
         {can('admin', 'manager') && <select value={storeId} onChange={(e) => setStoreId(e.target.value)} aria-label="Negozio">
@@ -107,7 +107,7 @@ export function DashboardPage() {
     {!s ? <Loading /> : <>
       <div className="grid kpi">
         <Kpi tone="hero" icon="euro" label="Incasso netto" value={formatEuro(s.revenue_cents)} hint="al netto dei rimborsi" />
-        <Kpi icon="bag" label="Ordini pagati" value={String(s.orders)} hint={`${fulfilmentTotal} consegne programmate`} />
+        <Kpi icon="bag" label="Ordini pagati" value={String(s.orders)} hint={toWork ? `${toWork} da preparare` : 'nessuno da preparare'} />
         <Kpi icon="receipt" label="Scontrino medio" value={formatEuro(s.average_order_cents)} hint="per ordine pagato" />
         <Kpi icon="refund" label="Rimborsi" value={formatEuro(s.refunded_cents)} hint={s.refunded_cents ? 'emessi su Stripe' : 'nessun rimborso'} />
       </div>
@@ -128,7 +128,8 @@ export function DashboardPage() {
           <div className="chart">
             <div className="chart-grid">{[1, 0.5, 0].map((f) =>
               <div key={f} className="gridline"><span>{formatEuro(Math.round(maxDay * f))}</span></div>)}</div>
-            <div className="bars">{days.map((d) =>
+            <p className="sr-only">{`Incasso per giorno: ${days.filter((d) => d.revenue_cents).map((d) => `${dayLabel(d.day)} ${formatEuro(d.revenue_cents)}`).join(', ') || 'nessuna vendita nel periodo'}.`}</p>
+            <div className="bars" aria-hidden="true">{days.map((d) =>
               <div key={d.day} className="bar-col" title={`${dayLabel(d.day)}: ${formatEuro(d.revenue_cents)} · ${d.orders} ordini`}>
                 <div className={`bar ${d.revenue_cents ? '' : 'empty'}`} style={{ height: `${Math.max(2, (d.revenue_cents / maxDay) * 100)}%` }} />
               </div>)}</div>
@@ -146,14 +147,14 @@ export function DashboardPage() {
         </div>
 
         <div className="card">
-          <div className="card-head"><h2>Prodotti più venduti</h2><Link to="/products" className="small inline-link">Catalogo <Icon name="arrow" size={13} /></Link></div>
+          <div className="card-head"><h2>Prodotti più venduti <span className="small muted" style={{ fontWeight: 500 }}>per pezzi</span></h2><Link to="/products" className="small inline-link">Catalogo <Icon name="arrow" size={13} /></Link></div>
           {s.top_products.length ? <ol className="top-list">{s.top_products.map((p, i) => <li key={p.sku}>
             <span className="rank">{i + 1}</span>
             <div className="top-body">
               <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}>
-                <span className="top-name">{p.name}</span><strong>{formatEuro(p.revenue_cents)}</strong></div>
-              <div className="meter"><div style={{ width: `${(p.revenue_cents / topMax) * 100}%` }} /></div>
-              <span className="small muted">{p.quantity} pezzi · {p.sku}</span>
+                <span className="top-name">{p.name}</span><span className="muted">{formatEuro(p.revenue_cents)}</span></div>
+              <div className="meter" aria-hidden="true"><div style={{ width: `${(p.quantity / topMax) * 100}%` }} /></div>
+              <span className="small muted"><strong>{p.quantity} pezzi</strong> · {p.sku}</span>
             </div>
           </li>)}</ol> : <Empty>Nessuna vendita nel periodo.</Empty>}
         </div>

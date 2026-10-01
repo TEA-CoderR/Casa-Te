@@ -50,6 +50,7 @@ export function InventoryPage() {
     window.addEventListener('beforeunload', onUnload);
     return () => window.removeEventListener('beforeunload', onUnload);
   }, [pending]);
+  // Edits are keyed by product, so they survive search, filters and paging; only a store switch discards them.
   const guard = (apply: () => void) => {
     if (pending && !window.confirm(`Hai ${pending} ${pending === 1 ? 'modifica non salvata' : 'modifiche non salvate'}. Vuoi scartarle?`)) return;
     setEdits({}); apply();
@@ -73,21 +74,21 @@ export function InventoryPage() {
         {stores.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
     </>} />
     <div className="toolbar">
-      <input type="search" placeholder="Cerca nome, SKU, EAN (anche con lettore barcode)" value={search} onChange={(e) => { const v = e.target.value; guard(() => { setSearch(v); setPage(0); }); }} style={{ minWidth: 320 }} aria-label="Cerca prodotto" />
-      <label className="check"><input type="checkbox" checked={lowOnly} onChange={(e) => { const v = e.target.checked; guard(() => { setLowOnly(v); setPage(0); }); }} /> Solo scorte basse (≤ 3)</label>
+      <input type="search" placeholder="Cerca nome, SKU, EAN (anche con lettore barcode)" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} style={{ minWidth: 320 }} aria-label="Cerca prodotto" />
+      <label className="check"><input type="checkbox" checked={lowOnly} onChange={(e) => { setLowOnly(e.target.checked); setPage(0); }} /> Solo scorte basse (≤ 3)</label>
     </div>
     {error && <Notice tone="error">{error}</Notice>}
     {saved && <Success onDismiss={() => setSaved('')}>{saved}</Success>}
     {!rows.data ? <Loading /> : !visible.length ? <Empty>{lowOnly ? 'Nessun prodotto sotto scorta in questo negozio.' : 'Nessun prodotto trovato.'}</Empty> : <div className="table-wrap"><table>
       <thead><tr><th>Prodotto</th><th>SKU / EAN</th><th className="num">Disponibili</th><th></th></tr></thead>
       <tbody>{visible.map((r) => <tr key={r.id}><td>{r.name}</td><td className="small muted">{r.sku}{r.barcode ? ` · ${r.barcode}` : ''}</td>
-        <td className="num"><input type="number" min={0} inputMode="numeric" className={edits[r.id] !== undefined ? 'edited' : undefined} style={{ width: 100 }}
+        <td className="num"><input type="number" min={0} inputMode="numeric" onWheel={(e) => e.currentTarget.blur()} onKeyDown={(e) => { if (e.key === 'Enter' && pending) { e.preventDefault(); void save(); } }} className={edits[r.id] !== undefined ? 'edited' : undefined} style={{ width: 100 }}
           value={edits[r.id] ?? String(qty(r))} aria-label={`Giacenza ${r.name}`}
           onChange={(e) => setEdits({ ...edits, [r.id]: e.target.value })} /></td>
         <td className="num"><button className="ghost" onClick={() => setHistory(r)}>Movimenti</button></td></tr>)}</tbody></table></div>}
-    {rows.data && <Pager page={page} hasMore={(page + 1) * PAGE < rows.data.count} onPage={(p) => guard(() => setPage(p))} />}
+    {rows.data && <Pager page={page} hasMore={(page + 1) * PAGE < rows.data.count} onPage={setPage} />}
     {pending > 0 && <div className="savebar" role="region" aria-label="Modifiche non salvate">
-      <span><strong>{pending}</strong> {pending === 1 ? 'giacenza modificata' : 'giacenze modificate'}, non ancora salvate</span>
+      <span><strong>{pending}</strong> {pending === 1 ? 'giacenza modificata' : 'giacenze modificate'}, non ancora salvate{(() => { const off = Object.keys(edits).filter((id) => !visible.some((r) => r.id === id)).length; return off ? ` (${off} non in questa vista)` : ''; })()}</span>
       <span className="spacer" />
       <button className="secondary" onClick={() => setEdits({})} disabled={busy}>Annulla modifiche</button>
       <button onClick={save} disabled={busy}>{busy ? 'Salvataggio…' : 'Salva giacenze'}</button>
