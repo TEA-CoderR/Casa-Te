@@ -13,6 +13,7 @@ import { colors } from '@/config/theme';
 import { imageUrl } from '@/lib/api';
 import { useCartQuote, useLayout } from '@/lib/hooks';
 import { cartItemCount, useCartStore } from '@/store/cart';
+import { useUser } from '@/store/session';
 
 const ISSUE_TEXT: Record<NonNullable<QuoteLine['issue']>, string> = {
   unavailable: 'Non più disponibile',
@@ -28,6 +29,7 @@ export default function CartScreen() {
   const [removed, setRemoved] = useState<{ id: string; name: string; qty: number } | null>(null);
   const { quote, error, loading, store, empty, refresh } = useCartQuote();
   const { wide } = useLayout();
+  const user = useUser();
 
   if (empty) return <Screen><PageTitle title="Carrello" /><EmptyState title="Il carrello è vuoto"
     message="La tua casa aspetta nuove idee. Inizia da un piccolo essenziale.">
@@ -47,13 +49,14 @@ export default function CartScreen() {
   const home = quote.shipping.home;
   const hasIssues = quote.issue_count > 0;
 
-  const cta = <PrimaryButton title="Scegli consegna e paga" disabled={hasIssues || quote.item_count === 0 || loading}
-    onPress={() => router.push('/checkout')} />;
+  const cta = <PrimaryButton title={user ? 'Scegli consegna e paga' : 'Accedi e continua'} disabled={hasIssues || quote.item_count === 0 || loading}
+    onPress={() => user ? router.push('/checkout') : router.push({ pathname: '/auth/sign-in', params: { next: '/checkout' } })} />;
   const summary = <>
-    <SectionTitle>Riepilogo</SectionTitle>
+    {wide ? <Text style={styles.summaryTitle}>Riepilogo</Text> : <SectionTitle>Riepilogo</SectionTitle>}
     <SummaryRow label={`Prodotti (${cartItemCount(items)})`} value={formatEuro(subtotal)} />
     <SummaryRow label="Peso ordine" value={formatWeight(weight)} />
     <SummaryRow label="Consegna a domicilio" value={home ? formatShipping(home.price_cents) : 'Non disponibile'} />
+    {quote.shipping.pickup && <SummaryRow label="Punto di ritiro" value={formatShipping(quote.shipping.pickup.price_cents)} />}
     <SummaryRow label="Ritiro in negozio" value="Gratis" tone="green" />
     <Text style={styles.small}>Il totale finale dipende dalla consegna che scegli al passo successivo.</Text>
   </>;
@@ -104,6 +107,7 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
+  summaryTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 10 },
   undo: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#EEF1EA', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
   undoText: { flex: 1, fontSize: 14, color: colors.text },
   undoLink: { fontSize: 14, fontWeight: '700', color: colors.green, textDecorationLine: 'underline' },

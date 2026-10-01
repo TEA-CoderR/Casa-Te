@@ -28,14 +28,14 @@ await page.waitForURL(/\/product\//);
 await page.getByText('Aggiungi al carrello').last().click();
 await page.waitForTimeout(500);
 await page.goto(`${env.SHOP_URL}/cart`, { waitUntil: 'networkidle' });
-await page.getByText('Scegli consegna e paga').last().waitFor();
+await page.getByText('Accedi e continua').last().waitFor();
 await page.waitForLoadState('networkidle');
 await shot(page, 'carrello');
 console.log('  cart:', (await page.innerText('body')).replace(/\s+/g, ' ').match(/Carrello.{0,400}/)?.[0]);
 
 step('Checkout requires sign-in → email OTP');
-await page.getByText('Scegli consegna e paga').last().click();
-await page.getByText('Accedi o registrati').last().click();
+// Signed out, the cart button goes straight to sign-in and returns to checkout afterwards.
+await page.getByText('Accedi e continua').last().click();
 await page.waitForURL(/\/auth\/sign-in/);
 const since = Date.now() - 1000;
 await page.getByLabel('Email').last().fill(EMAIL);

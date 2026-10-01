@@ -42,7 +42,7 @@ export default function SignInScreen() {
     if (e) { setError(e.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.' : 'Invio non riuscito. Riprova.'); return; }
     setStep('code');
     setInfo(Platform.OS === 'web'
-      ? `Abbiamo inviato un'email a ${email.trim()}: apri il link di accesso contenuto nell'email, oppure inserisci qui il codice se c'è. Controlla anche lo spam.`
+      ? `Abbiamo inviato un'email a ${email.trim()}: apri il link di accesso contenuto nell'email per entrare. Se l'email contiene un codice a 6 cifre, puoi inserirlo qui. Controlla anche lo spam.`
       : `Abbiamo inviato un codice a ${email.trim()}. Controlla anche lo spam.`);
   };
 
