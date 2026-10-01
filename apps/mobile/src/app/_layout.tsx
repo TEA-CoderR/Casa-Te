@@ -36,8 +36,8 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'CASA & TE' }} />
-        <Stack.Screen name="product/[id]" options={{ title: 'Prodotto' }} />
-        <Stack.Screen name="checkout/index" options={{ title: 'Checkout' }} />
+        <Stack.Screen name="product/[id]" options={{ title: '' }} />
+        <Stack.Screen name="checkout/index" options={{ title: 'Consegna e pagamento' }} />
         <Stack.Screen name="checkout/return" options={{ title: 'Pagamento', headerBackVisible: false, gestureEnabled: false }} />
         <Stack.Screen name="order/[id]" options={{ title: 'Ordine' }} />
         <Stack.Screen name="auth/sign-in" options={{ title: 'Accedi', presentation: 'modal' }} />

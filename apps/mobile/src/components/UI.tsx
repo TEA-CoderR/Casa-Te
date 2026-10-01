@@ -58,9 +58,11 @@ export function EmptyState({ title, message, icon = 'bag', children }: PropsWith
 export function TextField({ label, error, hint, ...props }: TextInputProps & { label: string; error?: string; hint?: string }) {
   return <View style={{ marginBottom: 12 }}>
     <Text style={styles.fieldLabel}>{label}</Text>
-    <TextInput placeholderTextColor={colors.muted} accessibilityLabel={label} {...props}
-      style={[styles.input, error ? { borderColor: colors.danger } : null, props.style]} />
-    {error ? <Text style={styles.fieldError}>{error}</Text> : hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+    <TextInput placeholderTextColor={colors.faint} accessibilityLabel={label} {...props}
+      // data-invalid lets the checkout scroll to and focus the first field with an error (web).
+      {...({ dataSet: { invalid: error ? 'true' : 'false' } } as object)}
+      style={[styles.input, error ? { borderColor: colors.danger, borderWidth: 1.5 } : null, props.style]} />
+    {error ? <Text style={styles.fieldError} accessibilityLiveRegion="polite">{error}</Text> : hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
   </View>;
 }
 
@@ -142,8 +144,8 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 12, color: colors.muted, marginBottom: 6, fontWeight: '500' },
   input: { minHeight: 50, borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 14, fontSize: 15,
     color: colors.text, backgroundColor: colors.surface },
-  fieldError: { color: colors.danger, fontSize: 11, marginTop: 5 },
-  fieldHint: { color: colors.muted, fontSize: 11, marginTop: 5 },
+  fieldError: { color: colors.danger, fontSize: 12, marginTop: 5 },
+  fieldHint: { color: colors.muted, fontSize: 12, marginTop: 5 },
   checkRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 8, minHeight: 44 },
   checkBox: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: colors.green, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   checkBoxOn: { backgroundColor: colors.green },
@@ -156,12 +158,12 @@ const styles = StyleSheet.create({
   summaryValue: { color: colors.text, fontSize: 13, fontWeight: '500' },
   listRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, borderBottomWidth: 1, borderColor: colors.line, minHeight: 56 },
   listTitle: { fontSize: 14, color: colors.text, fontWeight: '500' },
-  listSubtitle: { fontSize: 11, color: colors.muted, marginTop: 3 },
+  listSubtitle: { fontSize: 12, color: colors.muted, marginTop: 3 },
   option: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, borderWidth: 1, borderColor: colors.line,
     backgroundColor: colors.surface, marginBottom: 10, minHeight: 64 },
   optionOn: { borderColor: colors.green, borderWidth: 1.5, backgroundColor: '#F7FAF3' },
   optionIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#EAF0E4', alignItems: 'center', justifyContent: 'center' },
   optionTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
-  optionDescription: { fontSize: 11, color: colors.muted, marginTop: 3, lineHeight: 16 },
+  optionDescription: { fontSize: 12, color: colors.muted, marginTop: 3, lineHeight: 16 },
   optionRight: { fontSize: 14, fontWeight: '600', color: colors.text },
 });

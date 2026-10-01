@@ -49,14 +49,14 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   order: { backgroundColor: '#fff', borderRadius: 20, padding: 19, marginBottom: 18, borderWidth: 1, borderColor: '#E8EBE3' },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  date: { fontSize: 16, fontWeight: '500', color: colors.text }, orderId: { fontSize: 11, color: colors.muted, marginTop: 5 },
+  date: { fontSize: 16, fontWeight: '500', color: colors.text }, orderId: { fontSize: 12, color: colors.muted, marginTop: 5 },
   status: { flexDirection: 'row', gap: 5, alignItems: 'center', paddingHorizontal: 9, paddingVertical: 6, borderRadius: 14, backgroundColor: '#EBF1E5' },
-  statusDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.green }, statusText: { color: colors.green, fontSize: 10 },
+  statusDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.green }, statusText: { color: colors.green, fontSize: 12 },
   products: { flexDirection: 'row', gap: 9, marginTop: 20, alignItems: 'center' },
   thumb: { width: 60, height: 60, borderRadius: 11, backgroundColor: '#F1F2ED', overflow: 'hidden' },
   more: { color: colors.muted, fontSize: 12 },
   totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 1, borderColor: colors.line },
-  meta: { color: colors.muted, fontSize: 11 }, total: { fontSize: 21, fontWeight: '600', color: colors.text },
+  meta: { color: colors.muted, fontSize: 12 }, total: { fontSize: 21, fontWeight: '600', color: colors.text },
   fulfilment: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingTop: 17 },
   fulfilmentText: { fontSize: 12, color: colors.green, flex: 1 },
 });

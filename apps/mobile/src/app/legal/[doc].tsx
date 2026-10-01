@@ -12,7 +12,7 @@ export default function LegalScreen() {
   return <Screen stack maxWidth={760}>
     <Stack.Screen options={{ title: content.title }} />
     <Text style={{ fontSize: 26, fontWeight: '600', color: colors.text, letterSpacing: -0.6 }} accessibilityRole="header">{content.title}</Text>
-    <Text style={{ fontSize: 11, color: colors.muted, marginTop: 6 }}>Ultimo aggiornamento: {content.updated}</Text>
+    <Text style={{ fontSize: 12, color: colors.muted, marginTop: 6 }}>Ultimo aggiornamento: {content.updated}</Text>
     {content.sections.map((s) => <View key={s.heading} style={{ marginTop: 22 }}>
       <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{s.heading}</Text>
       <Text style={{ fontSize: 13, lineHeight: 21, color: colors.text, marginTop: 6 }}>{s.body}</Text>

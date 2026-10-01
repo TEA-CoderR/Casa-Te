@@ -38,6 +38,6 @@ const styles = StyleSheet.create({
   dot: { width: 17, height: 17, borderRadius: 9, backgroundColor: '#EDF0E8', borderWidth: 1, borderColor: '#DCE2D4', alignItems: 'center', justifyContent: 'center' },
   dotDone: { backgroundColor: colors.green, borderColor: colors.green },
   stepText: { fontSize: 12, lineHeight: 17, color: '#9BA291' },
-  at: { fontSize: 10, color: colors.muted, marginTop: 2 },
+  at: { fontSize: 12, color: colors.muted, marginTop: 2 },
   cancelled: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: '#F8E9E7' },
 });
