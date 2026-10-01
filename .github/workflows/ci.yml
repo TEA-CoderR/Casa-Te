@@ -48,7 +48,15 @@ jobs:
       - name: Export web shop (Expo web)
         run: npm run build:web -w @casa-te/mobile
       - name: Expo dependency check
-        run: cd apps/mobile && npx expo install --check
+        # Prints the mismatches as an annotation so they are visible without downloading logs.
+        run: |
+          cd apps/mobile
+          if ! npx expo install --check > expo-check.txt 2>&1; then
+            cat expo-check.txt
+            echo "::error title=Expo dependency check::$(grep -vE '^\s*$' expo-check.txt | tr '\n' ' ' | cut -c1-900)"
+            exit 1
+          fi
+          cat expo-check.txt
 
   edge-functions:
     runs-on: ubuntu-latest
