@@ -20,3 +20,4 @@ apps/mobile/google-play-service-account.json
 *.p12
 *.keystore
 pages-dist/
+.impeccable/

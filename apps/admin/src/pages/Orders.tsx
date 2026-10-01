@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FULFILMENT_LABELS, ORDER_STATUS_LABELS, formatEuro, type FulfilmentMethod, type OrderRow, type OrderStatus } from '@casa-te/shared';
 import { supabase, unwrap } from '../lib/supabase';
 import { useAsync, useDebounced, useStores } from '../lib/data';
@@ -17,14 +17,22 @@ export function OrdersPage() {
   const status = params.get('status') ?? '';
   const storeId = params.get('store') ?? '';
   const fulfilment = params.get('fulfilment') ?? '';
+  // Every filter lives in the URL, so refresh, back and shared links keep the same view.
+  const from = params.get('dal') ?? '';
+  const to = params.get('al') ?? '';
+  const page = Math.max(0, Number(params.get('pagina') ?? '1') - 1) || 0;
   const [search, setSearch] = useState(params.get('q') ?? '');
   const q = useDebounced(search.trim());
-  const [page, setPage] = useState(0);
   const [exporting, setExporting] = useState(false);
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
 
-  const set = (key: string, value: string) => { const next = new URLSearchParams(params); if (value) next.set(key, value); else next.delete(key); setParams(next); setPage(0); };
+  const set = (key: string, value: string, keepPage = false) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value); else next.delete(key);
+    if (!keepPage) next.delete('pagina');
+    setParams(next, { replace: key === 'q' });
+  };
+  const setPage = (p: number) => set('pagina', p > 0 ? String(p + 1) : '', true);
+  useEffect(() => { if ((params.get('q') ?? '') !== q) set('q', q); }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const buildQuery = () => {
     let query = supabase.from('orders').select('*', { count: 'exact' });
@@ -74,7 +82,7 @@ export function OrdersPage() {
     <PageHead title="Ordini" subtitle={orders.data ? `${orders.data.count} ordini` : undefined}
       actions={<button className="secondary" onClick={exportCsv} disabled={exporting}>{exporting ? 'Esportazione…' : 'Esporta CSV'}</button>} />
     <div className="toolbar">
-      <input placeholder="Numero, email, nome, telefono" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} style={{ minWidth: 260 }} aria-label="Cerca" />
+      <input type="search" placeholder="Numero, email, nome, telefono" value={search} onChange={(e) => setSearch(e.target.value)} style={{ minWidth: 260 }} aria-label="Cerca ordini" />
       <select value={status} onChange={(e) => set('status', e.target.value)} aria-label="Stato">
         <option value="">Tutti (esclusi non pagati)</option>
         {(Object.keys(ORDER_STATUS_LABELS) as OrderStatus[]).map((s) => <option key={s} value={s}>{ORDER_STATUS_LABELS[s]}</option>)}
@@ -85,14 +93,15 @@ export function OrdersPage() {
       </select>
       {can('admin', 'manager') && <select value={storeId} onChange={(e) => set('store', e.target.value)} aria-label="Negozio">
         <option value="">Tutti i negozi</option>{stores.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>}
-      <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(0); }} aria-label="Dal" />
-      <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(0); }} aria-label="Al" />
+      <label className="inline-field">Dal <input type="date" value={from} onChange={(e) => set('dal', e.target.value)} /></label>
+      <label className="inline-field">Al <input type="date" value={to} onChange={(e) => set('al', e.target.value)} /></label>
+      {(status || storeId || fulfilment || from || to || q) && <button className="ghost" onClick={() => { setSearch(''); setParams(new URLSearchParams()); }}>Azzera filtri</button>}
     </div>
     {orders.error && <Notice tone="error">{orders.error}</Notice>}
-    {!orders.data ? <Loading /> : !orders.data.rows.length ? <Empty>Nessun ordine.</Empty> : <div className="table-wrap"><table>
+    {!orders.data ? <Loading /> : !orders.data.rows.length ? <Empty>Nessun ordine con questi filtri.</Empty> : <div className="table-wrap"><table>
       <thead><tr><th>Ordine</th><th>Data</th><th>Cliente</th><th>Negozio</th><th>Consegna</th><th>Stato</th><th>Pagamento</th><th className="num">Totale</th></tr></thead>
       <tbody>{orders.data.rows.map((o) => <tr key={o.id} className="clickable" onClick={() => navigate(`/orders/${o.id}`)}>
-        <td><strong>{o.order_number}</strong></td><td>{fmtDate(o.created_at)}</td>
+        <td><Link to={`/orders/${o.id}`} className="row-link" onClick={(e) => e.stopPropagation()}>{o.order_number}</Link></td><td>{fmtDate(o.created_at)}</td>
         <td>{o.customer_name}<div className="small muted">{o.customer_email}</div></td>
         <td>{storeName(o.store_id)}</td><td>{FULFILMENT_LABELS[o.fulfilment]}</td>
         <td><StatusBadge status={o.status} /></td><td><PaymentBadge status={o.payment_status} /></td>

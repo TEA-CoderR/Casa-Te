@@ -20,6 +20,12 @@ const PATHS = {
   refund: 'M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4',
   arrow: 'M5 12h14M13 6l6 6-6 6',
   alert: 'M12 4l9 16H3zM12 10v4M12 17h.01',
+  close: 'M6 6l12 12M18 6L6 18',
+  back: 'M19 12H5M11 6l-6 6 6 6',
+  check: 'M5 12.5l4.5 4.5L19 7',
+  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3 2',
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  external: 'M14 4h6v6M20 4l-9 9M18 14v5H5V6h5',
 } as const;
 
 export type AdminIcon = keyof typeof PATHS;

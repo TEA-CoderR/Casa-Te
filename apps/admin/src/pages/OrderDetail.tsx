@@ -7,7 +7,8 @@ import {
 import { invoke, supabase, unwrap } from '../lib/supabase';
 import { errorText, useAsync, useStores } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { Field, Loading, Modal, Notice, PageHead, PaymentBadge, StatusBadge, fmtDate } from '../components/ui';
+import { Field, Loading, Modal, Notice, PageHead, PaymentBadge, StatusBadge, Success, fmtDate } from '../components/ui';
+import { Icon } from '../components/Icon';
 
 type Detail = OrderRow & { order_items: OrderItemRow[]; order_events: OrderEventRow[]; refunds: RefundRow[] };
 
@@ -25,6 +26,7 @@ export function OrderDetailPage() {
     .order('created_at', { referencedTable: 'order_events' }).single()) as Detail, [id]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [done, setDone] = useState('');
   const [modal, setModal] = useState<null | 'ship' | 'refund' | 'cancel' | 'note'>(null);
   const [form, setForm] = useState({ carrier: '', tracking: '', trackingUrl: '', amount: '', reason: '', note: '', visible: false });
 
@@ -36,17 +38,26 @@ export function OrderDetailPage() {
   const next = allowedNextStatuses(o.status, o.fulfilment);
   const remaining = o.total_cents - o.refunded_cents;
 
-  const run = async (fn: () => Promise<unknown>) => {
-    setBusy(true); setError('');
-    try { await fn(); setModal(null); await order.reload(); } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
+  const run = async (fn: () => Promise<unknown>, success = '') => {
+    setBusy(true); setError(''); setDone('');
+    try { await fn(); setModal(null); await order.reload(); setDone(success); } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   };
+  const refundCents = modal === 'refund' ? parseEuroInput(form.amount) : remaining;
+  const refundInvalid = modal === 'refund' && (!refundCents || refundCents <= 0 || refundCents > remaining);
+  const lastRefund = [...(o.refunds ?? [])].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+  // Quick picks: one unit of each line (what a "missing item" refund usually is) and the remaining amount.
+  const picks = [
+    ...o.order_items.filter((i) => i.unit_price_cents <= remaining).slice(0, 4)
+      .map((i) => ({ label: `1 × ${i.name}`, cents: i.unit_price_cents })),
+    { label: 'Intero importo residuo', cents: remaining },
+  ];
   const setStatus = (status: OrderStatus, extra: Record<string, string | null> = {}) => run(async () => unwrap(await supabase.rpc('staff_set_order_status', {
     p_order_id: o.id, p_status: status, p_note: null, p_carrier: null, p_tracking_number: null, p_tracking_url: null, ...extra,
   })));
 
   return <>
     <PageHead title={`Ordine ${o.order_number}`} subtitle={`${fmtDate(o.created_at)} · ${store?.name ?? ''}`} actions={<>
-      <Link to="/orders" className="btn secondary no-print">← Ordini</Link>
+      <Link to="/orders" className="btn secondary no-print"><Icon name="back" size={16} /> Ordini</Link>
       <button className="secondary no-print" onClick={() => window.print()}>Stampa distinta</button>
     </>} />
     <div className="row" style={{ marginBottom: 16 }}>
@@ -56,16 +67,18 @@ export function OrderDetailPage() {
       {o.invoice_requested && <span className="badge warn">Fattura richiesta</span>}
     </div>
     {error && <Notice tone="error">{error}</Notice>}
+    {done && <Success onDismiss={() => setDone('')}>{done}</Success>}
     {o.status === 'cancelled' && o.payment_status === 'paid' && <Notice tone="warn">Pagamento ricevuto su ordine annullato: verificare il rimborso automatico su Stripe.</Notice>}
 
     <div className="row no-print" style={{ marginBottom: 18 }}>
       {next.filter((s) => s !== 'cancelled').map((s) => <button key={s} disabled={busy}
         onClick={() => s === 'shipped' ? setModal('ship') : setStatus(s)}>
         {s === 'completed' && o.fulfilment === 'store' ? 'Consegnato al cliente (ritirato)' : ACTION_LABEL[s]}</button>)}
-      {manager && next.includes('cancelled') && <button className="danger" disabled={busy} onClick={() => { setForm({ ...form, reason: '' }); setModal('cancel'); }}>Annulla e rimborsa</button>}
       {manager && remaining > 0 && o.payment_status !== 'unpaid' && <button className="secondary" disabled={busy}
-        onClick={() => { setForm({ ...form, amount: (remaining / 100).toFixed(2).replace('.', ','), reason: '' }); setModal('refund'); }}>Rimborso parziale</button>}
+        onClick={() => { setForm({ ...form, amount: '', reason: '' }); setModal('refund'); }}>Rimborso parziale</button>}
       <button className="secondary" disabled={busy} onClick={() => { setForm({ ...form, note: '', visible: false }); setModal('note'); }}>Aggiungi nota</button>
+      {manager && next.includes('cancelled') && <><span className="spacer" />
+        <button className="danger-outline" disabled={busy} onClick={() => { setForm({ ...form, reason: '' }); setModal('cancel'); }}>Annulla ordine…</button></>}
     </div>
 
     <div className="grid two">
@@ -116,7 +129,8 @@ export function OrderDetailPage() {
             <strong>{e.status ? orderStatusLabel(e.status, o.fulfilment) : e.kind === 'note' ? 'Nota' : e.kind === 'refund' ? 'Rimborso' : 'Evento'}</strong>
             {e.note && <span> — {e.note}</span>}
             <div className="small muted">{fmtDate(e.created_at)}{!e.visible_to_customer && ' · interno'}</div></li>)}</ul>
-          {o.stripe_payment_intent_id && <p className="small muted">Stripe: {o.stripe_payment_intent_id}</p>}
+          {o.stripe_payment_intent_id && <p className="small muted">Pagamento Stripe: <code>{o.stripe_payment_intent_id}</code></p>}
+          {lastRefund?.stripe_refund_id && <p className="small muted">Ultimo rimborso: {formatEuro(lastRefund.amount_cents)} · <code>{lastRefund.stripe_refund_id}</code></p>}
         </div>
       </div>
     </div>
@@ -130,17 +144,35 @@ export function OrderDetailPage() {
       </div>
     </Modal>}
 
-    {(modal === 'refund' || modal === 'cancel') && <Modal title={modal === 'cancel' ? 'Annulla e rimborsa' : 'Rimborso parziale'} onClose={() => setModal(null)}>
-      <div className="grid">
-        {modal === 'cancel' ? <Notice tone="warn">L'ordine verrà annullato, {remaining > 0 ? `verranno rimborsati ${formatEuro(remaining)} e ` : ''}i prodotti torneranno disponibili in magazzino.</Notice>
-          : <Field label={`Importo (max ${formatEuro(remaining)})`}><input value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} inputMode="decimal" /></Field>}
-        <Field label="Motivo (visibile al cliente)"><input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></Field>
-        <button className="danger" disabled={busy} onClick={() => run(async () => {
-          const amount = modal === 'refund' ? parseEuroInput(form.amount) : undefined;
-          if (modal === 'refund' && (!amount || amount > remaining)) throw new Error('invalid_refund_amount');
-          await invoke('admin-refund', { order_id: o.id, amount_cents: amount, reason: form.reason || undefined, cancel: modal === 'cancel' });
-        })}>Conferma</button>
-      </div>
+    {(modal === 'refund' || modal === 'cancel') && <Modal title={modal === 'cancel' ? `Annulla l'ordine ${o.order_number}` : 'Rimborso parziale'}
+      onClose={() => setModal(null)} dirty={busy || !!form.reason || (modal === 'refund' && !!form.amount)}>
+      <form className="grid" onSubmit={(e) => { e.preventDefault();
+        if (refundInvalid) return;
+        void run(async () => {
+          await invoke('admin-refund', { order_id: o.id, amount_cents: modal === 'refund' ? refundCents : undefined, reason: form.reason || undefined, cancel: modal === 'cancel' });
+        }, modal === 'cancel'
+          ? `Ordine annullato${remaining > 0 ? ` e ${formatEuro(remaining)} rimborsati` : ''}. I prodotti sono tornati in magazzino.`
+          : `Rimborso di ${formatEuro(refundCents ?? 0)} emesso. Il cliente lo vedrà in 5–10 giorni lavorativi.`); }}>
+        {modal === 'cancel' ? <p style={{ margin: 0 }}>L'ordine verrà annullato{remaining > 0 ? <>, <strong>{formatEuro(remaining)}</strong> tornano a {o.customer_name ?? 'il cliente'}</> : ''} e i prodotti tornano disponibili in magazzino.</p>
+          : <>
+            <Field label={`Importo da rimborsare (residuo ${formatEuro(remaining)})`} hint={form.amount && refundInvalid ? `Inserisci un importo tra €0,01 e ${formatEuro(remaining)}.` : undefined}>
+              <input value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} inputMode="decimal" placeholder="0,00"
+                aria-invalid={!!form.amount && refundInvalid} required /></Field>
+            <div className="row" role="group" aria-label="Importi rapidi">{picks.map((p) =>
+              <button type="button" key={p.label} className="chip" onClick={() => setForm({ ...form, amount: (p.cents / 100).toFixed(2).replace('.', ',') })}>
+                {p.label} · {formatEuro(p.cents)}</button>)}</div>
+          </>}
+        <Field label="Motivo (visibile al cliente)"><input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="es. prodotto mancante" /></Field>
+        <Notice tone="warn"><Icon name="alert" size={16} /> Il rimborso viene inviato subito tramite Stripe e non si può annullare.</Notice>
+        <div className="row">
+          <button type="button" className="secondary" onClick={() => setModal(null)} disabled={busy}>Torna all'ordine</button>
+          <span className="spacer" />
+          <button type="submit" className="danger" disabled={busy || refundInvalid}>
+            {busy ? 'Invio a Stripe…' : modal === 'cancel'
+              ? (remaining > 0 ? `Annulla e rimborsa ${formatEuro(remaining)}` : 'Annulla ordine')
+              : refundInvalid ? 'Rimborsa' : `Rimborsa ${formatEuro(refundCents ?? 0)}${o.customer_name ? ` a ${o.customer_name}` : ''}`}</button>
+        </div>
+      </form>
     </Modal>}
 
     {modal === 'note' && <Modal title="Aggiungi nota" onClose={() => setModal(null)}>

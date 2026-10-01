@@ -86,10 +86,10 @@ export function DashboardPage() {
   return <>
     <div className="dash-head">
       <div>
-        <div className="eyebrow">{new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
         <h1>{greeting()}{firstName ? `, ${firstName}` : ''}</h1>
         <p className="muted" style={{ margin: 0 }}>
-          {toWork > 0 ? <>Ci sono <strong>{toWork} ordini</strong> da preparare. <Link to="/picking">Vai alla preparazione →</Link></>
+          <span className="date-line">{new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}.</span>{' '}
+          {toWork > 0 ? <>{toWork === 1 ? <>C'è <strong>1 ordine</strong></> : <>Ci sono <strong>{toWork} ordini</strong></>} da preparare. <Link to="/picking" className="inline-link">Vai alla preparazione <Icon name="arrow" size={14} /></Link></>
             : 'Nessun ordine in attesa di preparazione.'}
         </p>
       </div>
@@ -106,7 +106,7 @@ export function DashboardPage() {
     {stats.error && <Notice tone="error">{stats.error}</Notice>}
     {!s ? <Loading /> : <>
       <div className="grid kpi">
-        <Kpi tone="hero" icon="euro" label="Incasso netto" value={formatEuro(s.revenue_cents)} hint={`${range.label.toLowerCase()} · al netto dei rimborsi`} />
+        <Kpi tone="hero" icon="euro" label="Incasso netto" value={formatEuro(s.revenue_cents)} hint="al netto dei rimborsi" />
         <Kpi icon="bag" label="Ordini pagati" value={String(s.orders)} hint={`${fulfilmentTotal} consegne programmate`} />
         <Kpi icon="receipt" label="Scontrino medio" value={formatEuro(s.average_order_cents)} hint="per ordine pagato" />
         <Kpi icon="refund" label="Rimborsi" value={formatEuro(s.refunded_cents)} hint={s.refunded_cents ? 'emessi su Stripe' : 'nessun rimborso'} />
@@ -146,7 +146,7 @@ export function DashboardPage() {
         </div>
 
         <div className="card">
-          <div className="card-head"><h2>Prodotti più venduti</h2><Link to="/products" className="small">Catalogo →</Link></div>
+          <div className="card-head"><h2>Prodotti più venduti</h2><Link to="/products" className="small inline-link">Catalogo <Icon name="arrow" size={13} /></Link></div>
           {s.top_products.length ? <ol className="top-list">{s.top_products.map((p, i) => <li key={p.sku}>
             <span className="rank">{i + 1}</span>
             <div className="top-body">
@@ -161,10 +161,10 @@ export function DashboardPage() {
 
       <div className="grid dash-main" style={{ marginTop: 16 }}>
         <div className="card flush">
-          <div className="card-head pad"><h2>Ultimi ordini</h2><Link to="/orders" className="small">Tutti gli ordini →</Link></div>
+          <div className="card-head pad"><h2>Ultimi ordini</h2><Link to="/orders" className="small inline-link">Tutti gli ordini <Icon name="arrow" size={13} /></Link></div>
           {recent.data?.length ? <table><thead><tr><th>Ordine</th><th>Cliente</th><th>Consegna</th><th>Stato</th><th className="num">Totale</th></tr></thead>
             <tbody>{recent.data.map((o) => <tr key={o.id} className="clickable" onClick={() => navigate(`/orders/${o.id}`)}>
-              <td><strong>{o.order_number}</strong><div className="small muted">{timeAgo(o.created_at)}</div></td>
+              <td><Link to={`/orders/${o.id}`} className="row-link" onClick={(e) => e.stopPropagation()}>{o.order_number}</Link><div className="small muted">{timeAgo(o.created_at)}</div></td>
               <td>{o.customer_name ?? '—'}</td>
               <td className="small">{FULFILMENT_LABELS[o.fulfilment]}</td>
               <td><span className={`badge ${o.status}`}>{ORDER_STATUS_LABELS[o.status]}</span></td>
