@@ -1,9 +1,10 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { formatEuro, parseEuroInput, productImageUrl, type ProductImageRow, type ProductRow } from '@casa-te/shared';
+import { parseEuroInput, productImageUrl, type ProductImageRow, type ProductRow } from '@casa-te/shared';
 import { SUPABASE_URL, supabase, unwrap } from '../lib/supabase';
 import { errorText, useAsync, useCategories, useStores } from '../lib/data';
-import { Field, Loading, Notice, PageHead } from '../components/ui';
+import { Field, Loading, Notice, PageHead, Success } from '../components/ui';
+import { Icon } from '../components/Icon';
 
 type Form = {
   sku: string; name: string; slug: string; description: string; brand: string; category_id: string; price: string; compare: string;
@@ -30,6 +31,7 @@ export function ProductEditPage() {
   const images = useAsync(async () => isNew ? [] : unwrap(await supabase.from('product_images').select('*').eq('product_id', id!).order('sort')) as ProductImageRow[], [id]);
   const stock = useAsync(async () => isNew ? [] : unwrap(await supabase.from('inventory').select('store_id,quantity').eq('product_id', id!)) as Array<{ store_id: string; quantity: number }>, [id]);
   const [stockEdits, setStockEdits] = useState<Record<string, string>>({});
+  const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const p = product.data;
@@ -64,7 +66,8 @@ export function ProductEditPage() {
         navigate(`/products/${created.id}`, { replace: true });
       } else {
         unwrap(await supabase.from('products').update(row).eq('id', id!));
-        setSaved('Salvato.');
+        const stockCount = await writeStock();
+        setSaved(stockCount ? `Prodotto e ${stockCount} giacenze salvati.` : 'Prodotto salvato.');
         await product.reload();
       }
     } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
@@ -89,6 +92,7 @@ export function ProductEditPage() {
   };
 
   const removeImage = async (img: ProductImageRow) => {
+    if (!window.confirm('Eliminare questa immagine dal prodotto?')) return;
     setBusy(true);
     try {
       unwrap(await supabase.from('product_images').delete().eq('id', img.id));
@@ -106,72 +110,87 @@ export function ProductEditPage() {
     } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
   };
 
-  const saveStock = async () => {
-    setBusy(true); setError('');
-    try {
-      for (const [storeId, value] of Object.entries(stockEdits)) {
-        const q = Number(value);
-        if (!Number.isInteger(q) || q < 0) throw new Error('Quantità non valida.');
-        unwrap(await supabase.rpc('staff_set_stock', { p_store_id: storeId, p_product_id: id, p_quantity: q, p_reason: 'manual' }));
-      }
-      setStockEdits({}); await stock.reload(); setSaved('Giacenze aggiornate.');
-    } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
-  };
+  /** Writes pending per-store quantities; returns how many changed. Used by the single "Salva". */
+  async function writeStock(): Promise<number> {
+    const entries = Object.entries(stockEdits);
+    for (const [storeId, value] of entries) {
+      const q = Number(value);
+      if (!Number.isInteger(q) || q < 0) throw new Error('Giacenza non valida: usa un numero intero da 0 in su.');
+      unwrap(await supabase.rpc('staff_set_stock', { p_store_id: storeId, p_product_id: id, p_quantity: q, p_reason: 'manual' }));
+    }
+    if (entries.length) { setStockEdits({}); await stock.reload(); }
+    return entries.length;
+  }
 
+  const pendingStock = Object.keys(stockEdits).length;
   return <>
-    <PageHead title={isNew ? 'Nuovo prodotto' : form.name || 'Prodotto'} subtitle={isNew ? undefined : `SKU ${form.sku}`}
-      actions={<button className="secondary" onClick={() => navigate('/products')}>← Prodotti</button>} />
+    <PageHead title={isNew ? 'Nuovo prodotto' : form.name || 'Prodotto'} subtitle={isNew ? 'Dopo la creazione potrai aggiungere immagini e giacenze.' : `SKU ${form.sku}`}
+      actions={<button className="secondary" onClick={() => navigate('/products')}><Icon name="back" size={16} /> Prodotti</button>} />
     {error && <Notice tone="error">{error}</Notice>}
-    {saved && <Notice>{saved}</Notice>}
-    <form className="card" onSubmit={save}>
-      <div className="form-grid">
-        <Field label="SKU / codice articolo *"><input value={form.sku} onChange={(e) => set('sku', e.target.value)} required pattern="[A-Za-z0-9._\-]{1,40}" /></Field>
-        <Field label="Nome *"><input value={form.name} onChange={(e) => set('name', e.target.value)} required maxLength={200} /></Field>
-        <Field label="Marca"><input value={form.brand} onChange={(e) => set('brand', e.target.value)} /></Field>
-        <Field label="Categoria"><select value={form.category_id} onChange={(e) => set('category_id', e.target.value)}>
-          <option value="">—</option>{categories.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
-        <Field label="Prezzo € (IVA inclusa) *"><input value={form.price} onChange={(e) => set('price', e.target.value)} inputMode="decimal" required placeholder="12,90" /></Field>
-        <Field label="Prezzo barrato €" hint="Prezzo precedente più basso degli ultimi 30 giorni (Omnibus)"><input value={form.compare} onChange={(e) => set('compare', e.target.value)} inputMode="decimal" /></Field>
-        <Field label="IVA %"><select value={form.vat_rate} onChange={(e) => set('vat_rate', e.target.value)}>{[22, 10, 5, 4, 0].map((v) => <option key={v} value={v}>{v}%</option>)}</select></Field>
-        <Field label="Peso (grammi) *" hint={form.weight_g ? `${(Number(form.weight_g) / 1000).toFixed(2)} kg` : undefined}>
-          <input value={form.weight_g} onChange={(e) => set('weight_g', e.target.value.replace(/\D/g, ''))} inputMode="numeric" required /></Field>
-        <Field label="EAN / codice a barre"><input value={form.barcode} onChange={(e) => set('barcode', e.target.value.replace(/\D/g, ''))} maxLength={14} /></Field>
-        <Field label="Max pezzi per ordine"><input type="number" min={1} max={99} value={form.max_per_order} onChange={(e) => set('max_per_order', e.target.value)} /></Field>
-        <Field label="Slug (URL)"><input value={form.slug} onChange={(e) => set('slug', e.target.value)} placeholder="generato automaticamente" /></Field>
+    {saved && <Success onDismiss={() => setSaved('')}>{saved}</Success>}
+    <form onSubmit={save} id="product-form" className="edit-layout">
+      <div className="grid" style={{ alignContent: 'start' }}>
+        <fieldset className="card">
+          <legend>Prodotto</legend>
+          <div className="form-grid">
+            <Field label="Nome *"><input value={form.name} onChange={(e) => set('name', e.target.value)} required maxLength={200} /></Field>
+            <Field label="SKU / codice articolo *"><input value={form.sku} onChange={(e) => set('sku', e.target.value)} required pattern="[A-Za-z0-9._\-]{1,40}" /></Field>
+            <Field label="Categoria"><select value={form.category_id} onChange={(e) => set('category_id', e.target.value)}>
+              <option value="">Nessuna</option>{categories.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+            <Field label="Marca"><input value={form.brand} onChange={(e) => set('brand', e.target.value)} /></Field>
+            <Field label="EAN / codice a barre"><input value={form.barcode} onChange={(e) => set('barcode', e.target.value.replace(/\D/g, ''))} maxLength={14} inputMode="numeric" /></Field>
+          </div>
+          <div style={{ marginTop: 14 }}><Field label="Descrizione"><textarea value={form.description} onChange={(e) => set('description', e.target.value)} /></Field></div>
+        </fieldset>
+        <fieldset className="card">
+          <legend>Prezzo e spedizione</legend>
+          <div className="form-grid">
+            <Field label="Prezzo € (IVA inclusa) *"><input value={form.price} onChange={(e) => set('price', e.target.value)} inputMode="decimal" required placeholder="0,00" /></Field>
+            <Field label="Prezzo barrato €" hint="Prezzo più basso degli ultimi 30 giorni (Omnibus)"><input value={form.compare} onChange={(e) => set('compare', e.target.value)} inputMode="decimal" /></Field>
+            <Field label="IVA"><select value={form.vat_rate} onChange={(e) => set('vat_rate', e.target.value)}>{[22, 10, 5, 4, 0].map((v) => <option key={v} value={v}>{v}%</option>)}</select></Field>
+            <Field label="Peso in grammi *" hint={form.weight_g ? `${(Number(form.weight_g) / 1000).toFixed(2).replace('.', ',')} kg · serve per calcolare la spedizione` : 'Serve per calcolare la spedizione'}>
+              <input value={form.weight_g} onChange={(e) => set('weight_g', e.target.value.replace(/\D/g, ''))} inputMode="numeric" required /></Field>
+            <Field label="Max pezzi per ordine"><input type="number" min={1} max={99} value={form.max_per_order} onChange={(e) => set('max_per_order', e.target.value)} /></Field>
+            <Field label="Indirizzo pagina (slug)"><input value={form.slug} onChange={(e) => set('slug', e.target.value)} placeholder="generato dal nome" /></Field>
+          </div>
+        </fieldset>
       </div>
-      <div style={{ marginTop: 14 }}><Field label="Descrizione"><textarea value={form.description} onChange={(e) => set('description', e.target.value)} /></Field></div>
-      <div className="row" style={{ marginTop: 14 }}>
-        <label className="check"><input type="checkbox" checked={form.active} onChange={(e) => set('active', e.target.checked)} /> Pubblicato (visibile ai clienti)</label>
-        <label className="check"><input type="checkbox" checked={form.featured} onChange={(e) => set('featured', e.target.checked)} /> In evidenza in home</label>
-        <span className="spacer" />
-        {!isNew && form.price && parseEuroInput(form.price) && <span className="muted">Prezzo: {formatEuro(parseEuroInput(form.price)!)}</span>}
-        <button disabled={busy}>{isNew ? 'Crea prodotto' : 'Salva'}</button>
+
+      <div className="grid" style={{ alignContent: 'start' }}>
+        <fieldset className="card">
+          <legend>Visibilità</legend>
+          <label className="check"><input type="checkbox" checked={form.active} onChange={(e) => set('active', e.target.checked)} /> Pubblicato, visibile ai clienti</label>
+          <label className="check" style={{ marginTop: 8 }}><input type="checkbox" checked={form.featured} onChange={(e) => set('featured', e.target.checked)} /> In evidenza nella home</label>
+        </fieldset>
+        {!isNew && <fieldset className="card">
+          <legend>Immagini</legend>
+          <div className="row">{(images.data ?? []).map((img, i) => <figure key={img.id} className="img-tile">
+            <img src={productImageUrl(SUPABASE_URL, img.path) ?? ''} alt={img.alt ?? ''} />
+            <figcaption className="row" style={{ justifyContent: 'center', gap: 2 }}>
+              {i === 0 ? <span className="badge">Principale</span> : <button type="button" className="ghost" onClick={() => makeMain(img)} disabled={busy}>Rendi principale</button>}
+              <button type="button" className="ghost danger" onClick={() => removeImage(img)} disabled={busy} aria-label="Elimina immagine"><Icon name="close" size={16} /></button>
+            </figcaption>
+          </figure>)}</div>
+          <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { void upload(e.target.files); e.target.value = ''; }} />
+          <button type="button" className="secondary" style={{ marginTop: 10 }} onClick={() => fileInput.current?.click()} disabled={busy}>Carica immagini</button>
+          <p className="small muted">JPG, PNG o WEBP fino a 5 MB. Sfondo chiaro, formato quadrato (1200 × 1200).</p>
+        </fieldset>}
+        {!isNew && <fieldset className="card">
+          <legend>Giacenze per negozio</legend>
+          <table><tbody>{stores.data?.map((s) => {
+            const current = stock.data?.find((x) => x.store_id === s.id)?.quantity ?? 0;
+            return <tr key={s.id}><td>{s.name}</td><td className="num" style={{ width: 120 }}>
+              <input type="number" min={0} inputMode="numeric" value={stockEdits[s.id] ?? String(current)} style={{ width: 100 }} aria-label={`Giacenza ${s.name}`}
+                className={stockEdits[s.id] !== undefined ? 'edited' : undefined}
+                onChange={(e) => setStockEdits({ ...stockEdits, [s.id]: e.target.value })} /></td></tr>;
+          })}</tbody></table>
+        </fieldset>}
       </div>
     </form>
-
-    {!isNew && <div className="grid two" style={{ marginTop: 14 }}>
-      <div className="card">
-        <h2 style={{ marginTop: 0 }}>Immagini</h2>
-        <div className="row">{(images.data ?? []).map((img, i) => <div key={img.id} style={{ textAlign: 'center' }}>
-          <img src={productImageUrl(SUPABASE_URL, img.path) ?? ''} alt={img.alt ?? ''} style={{ width: 110, height: 110, objectFit: 'contain', background: '#f1f2ed', borderRadius: 10 }} />
-          <div className="row" style={{ justifyContent: 'center', gap: 2 }}>
-            {i > 0 && <button type="button" className="ghost" onClick={() => makeMain(img)} disabled={busy}>Principale</button>}
-            <button type="button" className="ghost danger" onClick={() => removeImage(img)} disabled={busy}>Elimina</button></div>
-        </div>)}</div>
-        <label className="btn secondary" style={{ marginTop: 10 }}>Carica immagini
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { void upload(e.target.files); e.target.value = ''; }} /></label>
-        <p className="small muted">JPG/PNG/WEBP fino a 5 MB, sfondo chiaro, formato quadrato consigliato (1200×1200).</p>
-      </div>
-      <div className="card">
-        <h2 style={{ marginTop: 0 }}>Giacenze per negozio</h2>
-        <table><tbody>{stores.data?.map((s) => {
-          const current = stock.data?.find((x) => x.store_id === s.id)?.quantity ?? 0;
-          return <tr key={s.id}><td>{s.name}</td><td className="num" style={{ width: 120 }}>
-            <input type="number" min={0} value={stockEdits[s.id] ?? String(current)} style={{ width: 100 }} aria-label={`Giacenza ${s.name}`}
-              onChange={(e) => setStockEdits({ ...stockEdits, [s.id]: e.target.value })} /></td></tr>;
-        })}</tbody></table>
-        <button style={{ marginTop: 10 }} disabled={busy || !Object.keys(stockEdits).length} onClick={saveStock}>Salva giacenze</button>
-      </div>
-    </div>}
+    <div className="savebar">
+      <span className="muted">{isNew ? 'Compila i campi con * e crea il prodotto.' : pendingStock ? `${pendingStock} giacenze modificate verranno salvate insieme al prodotto.` : 'Le modifiche si salvano con un solo pulsante.'}</span>
+      <span className="spacer" />
+      <button type="submit" form="product-form" disabled={busy}>{busy ? 'Salvataggio…' : isNew ? 'Crea prodotto' : 'Salva'}</button>
+    </div>
   </>;
 }

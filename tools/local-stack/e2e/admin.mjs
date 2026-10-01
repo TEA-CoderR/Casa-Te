@@ -70,7 +70,7 @@ await staff.getByRole('button', { name: new RegExp(order1) }).click();
 await shot(staff, 'picking-da-preparare');
 await staff.getByRole('button', { name: 'Inizia preparazione' }).click();
 await staff.getByRole('button', { name: 'Tutto pronto' }).waitFor();
-const boxes = staff.getByRole('checkbox', { name: /^Preparato / });
+const boxes = staff.getByRole('checkbox', { name: /: preparato$/ });
 for (let i = 0; i < await boxes.count(); i++) {
   const box = boxes.nth(i);
   await staff.waitForFunction((el) => !el.disabled, await box.elementHandle());
@@ -89,7 +89,7 @@ await staff.getByLabel('Codice di tracciamento').fill('TEST123456');
 await staff.getByRole('button', { name: 'Conferma spedizione' }).click();
 await staff.getByText('TEST123456').waitFor();
 await shot(staff, 'ordine-spedito');
-const staffRefundButtons = await staff.getByRole('button', { name: /Rimborso parziale|Annulla e rimborsa/ }).count();
+const staffRefundButtons = await staff.getByRole('button', { name: /Rimborso parziale|Annulla ordine/ }).count();
 console.log(`  refund buttons visible to store staff: ${staffRefundButtons} (expected 0)`);
 console.log(`  db: ${await sql(`select status, carrier, tracking_number from orders where order_number='${order1}'`)}`);
 
@@ -100,7 +100,8 @@ await admin.goto(`${env.ADMIN_URL}/orders/${id1}`, { waitUntil: 'networkidle' })
 await admin.getByRole('button', { name: 'Rimborso parziale' }).click();
 await admin.getByLabel(/Importo/).fill('4,99');
 await admin.getByLabel(/Motivo/).fill('Carta cucina arrivata danneggiata');
-await admin.getByRole('button', { name: 'Conferma' }).click();
+await admin.getByRole('button', { name: /^Rimborsa €4,99/ }).click();
+await admin.getByRole('status').filter({ hasText: /Rimborso di €4,99 emesso/ }).waitFor();
 await admin.getByText('Rimborsato').first().waitFor();
 await shot(admin, 'rimborso-parziale');
 console.log(`  db: ${await sql(`select status, payment_status, total_cents, refunded_cents from orders where id='${id1}'`)}`);
@@ -112,9 +113,10 @@ const stockSql = `select string_agg(p.sku||'='||i.quantity, ', ' order by p.sku)
   join stores s on s.id=i.store_id where s.id=(select store_id from orders where id='${id2}') and p.sku in ('padella-28','carta-cucina')`;
 const before = await sql(stockSql);
 await admin.goto(`${env.ADMIN_URL}/orders/${id2}`, { waitUntil: 'networkidle' });
-await admin.getByRole('button', { name: 'Annulla e rimborsa' }).click();
+await admin.getByRole('button', { name: 'Annulla ordine…' }).click();
 await admin.getByLabel(/Motivo/).fill('Richiesta del cliente');
-await admin.getByRole('button', { name: 'Conferma' }).click();
+await admin.getByRole('button', { name: /^Annulla e rimborsa €/ }).click();
+await admin.getByRole('status').filter({ hasText: /Ordine annullato/ }).waitFor();
 await admin.getByText('Rimborsato').first().waitFor();
 await admin.waitForLoadState('networkidle');
 await shot(admin, 'annulla-rimborsa');

@@ -44,7 +44,7 @@ export function ProductsPage() {
     <PageHead title="Prodotti" subtitle={products.data ? `${products.data.count} prodotti` : undefined} actions={<>
       <button className="secondary" onClick={exportCatalog}>Esporta CSV</button>
       <Link to="/import" className="btn secondary">Importa CSV</Link>
-      <Link to="/products/new" className="btn">+ Nuovo prodotto</Link>
+      <Link to="/products/new" className="btn">Nuovo prodotto</Link>
     </>} />
     <div className="toolbar">
       <input placeholder="Cerca nome, marca, SKU, EAN" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} style={{ minWidth: 260 }} aria-label="Cerca" />
@@ -62,12 +62,12 @@ export function ProductsPage() {
           const stock = p.inventory.reduce((s, i) => s + i.quantity, 0);
           return <tr key={p.id} className="clickable" onClick={() => navigate(`/products/${p.id}`)}>
             <td style={{ width: 56 }}>{img ? <img className="thumb" src={img} alt="" /> : <div className="thumb" />}</td>
-            <td><strong>{p.name}</strong><div className="small muted">{p.sku}{p.barcode ? ` · ${p.barcode}` : ''}{p.brand ? ` · ${p.brand}` : ''}</div></td>
+            <td><Link to={`/products/${p.id}`} className="row-link" onClick={(e) => e.stopPropagation()}>{p.name}</Link><div className="small muted">{p.sku}{p.barcode ? ` · ${p.barcode}` : ''}{p.brand ? ` · ${p.brand}` : ''}</div></td>
             <td>{catName(p.category_id)}</td>
             <td className="num">{formatEuro(p.price_cents)}{p.compare_at_price_cents ? <div className="small muted" style={{ textDecoration: 'line-through' }}>{formatEuro(p.compare_at_price_cents)}</div> : null}</td>
             <td className="num">{formatWeight(p.weight_g)}</td>
-            <td className="num"><span className={`badge ${stock === 0 ? 'bad' : stock <= 5 ? 'warn' : 'muted'}`}>{stock}</span></td>
-            <td>{p.active ? <span className="badge">Pubblicato</span> : <span className="badge muted">Bozza</span>}{p.featured && <span className="badge warn" style={{ marginLeft: 4 }}>In evidenza</span>}</td>
+            <td className="num"><span className={`badge ${stock === 0 ? 'bad' : stock <= 3 ? 'warn' : 'muted'}`}>{stock}</span></td>
+            <td>{p.active ? <span className="badge">Pubblicato</span> : <span className="badge muted">Non pubblicato</span>}{p.featured && <span className="badge warn" style={{ marginLeft: 4 }}>In evidenza</span>}</td>
           </tr>;
         })}</tbody></table></div>}
     {products.data && <Pager page={page} hasMore={(page + 1) * PAGE < products.data.count} onPage={setPage} />}

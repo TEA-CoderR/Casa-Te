@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Icon, type AdminIcon } from './Icon';
 
@@ -12,12 +13,20 @@ export function Layout() {
   const { staff, session, signOut, can } = useAuth();
   const manager = can('admin', 'manager');
   const name = staff?.display_name || session?.user.email || '';
+  const { pathname } = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
   return <div className="shell">
-    <aside className="sidebar">
-      <div className="brand">CASA &amp; TE<small>GESTIONE ONLINE</small></div>
-      <nav className="nav" aria-label="Navigazione principale">
+    <a className="skip-link" href="#contenuto">Vai al contenuto</a>
+    <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
+      <div className="sidebar-top">
+        <div className="brand">CASA &amp; TE<small>GESTIONE ONLINE</small></div>
+        <button className="ghost icon-btn menu-toggle" aria-expanded={menuOpen} aria-controls="nav-principale"
+          onClick={() => setMenuOpen((v) => !v)} aria-label={menuOpen ? 'Chiudi menu' : 'Apri menu'}><Icon name={menuOpen ? 'close' : 'menu'} size={22} /></button>
+      </div>
+      <nav className="nav" id="nav-principale" aria-label="Navigazione principale">
         <div className="group">Operativo</div>
-        <Item to="/" end icon="dashboard">Dashboard</Item>
+        <Item to="/" end icon="dashboard">Panoramica</Item>
         <Item to="/picking" icon="picking">Preparazione ordini</Item>
         <Item to="/orders" icon="orders">Ordini</Item>
         <Item to="/inventory" icon="inventory">Magazzino</Item>
@@ -47,6 +56,6 @@ export function Layout() {
         <button className="ghost icon-btn" onClick={signOut} title="Esci" aria-label="Esci"><Icon name="logout" /></button>
       </div>
     </aside>
-    <main className="main"><Outlet /></main>
+    <main className="main" id="contenuto" tabIndex={-1}><Outlet /></main>
   </div>;
 }

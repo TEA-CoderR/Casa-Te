@@ -1,13 +1,24 @@
 // Touch-friendly workflow for store staff: new paid orders → pick items → ready → handed over / shipped.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FULFILMENT_LABELS, formatWeight, type OrderItemRow, type OrderRow } from '@casa-te/shared';
-import { supabase, unwrap } from '../lib/supabase';
+import { FULFILMENT_LABELS, formatWeight, productImageUrl, type OrderItemRow, type OrderRow } from '@casa-te/shared';
+import { SUPABASE_URL, supabase, unwrap } from '../lib/supabase';
 import { errorText, useAsync, useStores } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { Empty, Loading, Notice, PageHead, StatusBadge, fmtDate } from '../components/ui';
+import { Loading, Notice, PageHead, StatusBadge, Success, fmtDate } from '../components/ui';
+import { Icon } from '../components/Icon';
 
-type Row = OrderRow & { order_items: OrderItemRow[] };
+type Item = OrderItemRow & { product: { product_images: Array<{ path: string; sort: number }> } | null };
+type Row = OrderRow & { order_items: Item[] };
+
+/** "da 25 min", "da 3 h", "da 2 giorni" plus an urgency level for the badge colour. */
+function age(iso: string | null): { text: string; level: '' | 'warn' | 'bad' } {
+  if (!iso) return { text: '', level: '' };
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  const text = min < 60 ? `da ${min} min` : min < 60 * 24 ? `da ${Math.round(min / 60)} h` : `da ${Math.round(min / 1440)} ${Math.round(min / 1440) === 1 ? 'giorno' : 'giorni'}`;
+  return { text, level: min >= 60 * 24 ? 'bad' : min >= 60 * 4 ? 'warn' : '' };
+}
+const thumb = (i: Item) => productImageUrl(SUPABASE_URL, [...(i.product?.product_images ?? [])].sort((a, b) => a.sort - b.sort)[0]?.path);
 
 export function PickingPage() {
   const { staff, can } = useAuth();
@@ -16,9 +27,10 @@ export function PickingPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState('');
 
   const queue = useAsync(async () => {
-    let q = supabase.from('orders').select('*, order_items(*)').in('status', ['paid', 'picking', 'ready']).order('paid_at', { ascending: true });
+    let q = supabase.from('orders').select('*, order_items(*, product:products(product_images(path,sort)))').in('status', ['paid', 'picking', 'ready']).order('paid_at', { ascending: true });
     if (storeId) q = q.eq('store_id', storeId);
     return unwrap(await q.limit(200)) as Row[];
   }, [storeId]);
@@ -29,23 +41,32 @@ export function PickingPage() {
   const orders = queue.data ?? [];
   const current = orders.find((o) => o.id === selected) ?? null;
 
-  const act = async (fn: () => Promise<unknown>) => {
-    setBusy(true); setError('');
-    try { await fn(); await queue.reload(); } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
+  const act = async (fn: () => Promise<unknown>, success = '') => {
+    setBusy(true); setError(''); setDone('');
+    try { await fn(); await queue.reload(); setDone(success); } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   };
+  // Store staff cannot refund; they flag the missing item and a manager handles the partial refund.
+  const reportMissing = (o: Row, i: Item) => act(async () => unwrap(await supabase.rpc('staff_add_order_note', {
+    p_order_id: o.id, p_note: `Prodotto mancante: ${i.quantity - i.picked_quantity} × ${i.name} (${i.sku}). Serve un rimborso parziale.`, p_visible: false,
+  })), `Segnalato: ${i.name}. Un responsabile vedrà la nota nell'ordine ${o.order_number}.`);
   const setStatus = (o: Row, status: string) => act(async () => unwrap(await supabase.rpc('staff_set_order_status', { p_order_id: o.id, p_status: status })));
   const setPicked = (item: OrderItemRow, qty: number) => act(async () =>
     unwrap(await supabase.from('order_items').update({ picked_quantity: Math.max(0, Math.min(item.quantity, qty)) }).eq('id', item.id)));
 
-  const column = (title: string, list: Row[]) => <div className="card">
+  const column = (title: string, list: Row[], hint: string) => <section className="card pick-col" aria-label={title}>
     <h2 style={{ marginTop: 0 }}>{title} <span className="badge muted">{list.length}</span></h2>
-    {!list.length ? <Empty>Nessun ordine.</Empty> : list.map((o) => <button key={o.id} className="secondary"
-      style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8, textAlign: 'left', borderColor: selected === o.id ? 'var(--green)' : 'var(--line)', color: 'var(--text)' }}
-      onClick={() => setSelected(o.id)}>
-      <span><strong>{o.order_number}</strong><br /><span className="small muted">{o.customer_name} · {FULFILMENT_LABELS[o.fulfilment]}</span></span>
-      <span className="small muted">{fmtDate(o.paid_at)}</span>
-    </button>)}
-  </div>;
+    {!list.length ? <p className="small muted" style={{ margin: 0 }}>{hint}</p> : list.map((o) => {
+      const a = age(o.paid_at);
+      return <button key={o.id} className={`pick-order ${selected === o.id ? 'on' : ''}`} aria-pressed={selected === o.id} onClick={() => setSelected(o.id)}>
+        <span style={{ minWidth: 0 }}><strong>{o.order_number}</strong><br />
+          <span className="small muted">{o.customer_name} · {FULFILMENT_LABELS[o.fulfilment]} · {o.order_items.reduce((n, i) => n + i.quantity, 0)} pz</span></span>
+        {a.text && <span className={`badge ${a.level || 'muted'}`}><Icon name="clock" size={12} /> {a.text}</span>}
+      </button>;
+    })}
+  </section>;
+  const toPick = orders.filter((o) => o.status === 'paid');
+  const picking = orders.filter((o) => o.status === 'picking');
+  const ready = orders.filter((o) => o.status === 'ready');
 
   return <>
     <PageHead title="Preparazione ordini" subtitle="Aggiornamento automatico ogni 30 secondi" actions={<>
@@ -54,29 +75,39 @@ export function PickingPage() {
       <button className="secondary" onClick={() => queue.reload()}>Aggiorna</button>
     </>} />
     {error && <Notice tone="error">{error}</Notice>}
-    {!queue.data ? <Loading /> : <div className="grid picking-grid">
-      <div className="grid">
-        {column('Da preparare', orders.filter((o) => o.status === 'paid'))}
-        {column('In preparazione', orders.filter((o) => o.status === 'picking'))}
-        {column('Pronti', orders.filter((o) => o.status === 'ready'))}
+    {done && <Success onDismiss={() => setDone('')}>{done}</Success>}
+    {!queue.data ? <Loading /> : !orders.length ? <div className="card all-clear">
+      <span className="kpi-icon"><Icon name="check" size={22} /></span>
+      <div><h2 style={{ margin: 0 }}>Nessun ordine da preparare</h2>
+        <p className="muted" style={{ margin: '4px 0 0' }}>I nuovi ordini pagati compaiono qui da soli. Puoi lasciare questa pagina aperta.</p></div>
+    </div> : <div className={`grid picking-grid ${current ? 'has-selection' : ''}`}>
+      <div className="grid pick-lists">
+        {column('Da preparare', toPick, 'Nessun nuovo ordine.')}
+        {column('In preparazione', picking, 'Nessun ordine in corso.')}
+        {column('Pronti', ready, 'Nessun ordine in attesa di ritiro o spedizione.')}
       </div>
-      <div className="card">
-        {!current ? <Empty>Seleziona un ordine dalla lista.</Empty> : <>
-          <div className="row"><h2 style={{ margin: 0 }}>{current.order_number}</h2><StatusBadge status={current.status} /><span className="spacer" />
-            <Link to={`/orders/${current.id}`}>Dettaglio completo</Link></div>
-          <p className="muted">{current.customer_name} · {current.customer_phone} · {FULFILMENT_LABELS[current.fulfilment]} · {formatWeight(current.total_weight_g)}</p>
-          {current.notes && <Notice tone="warn">Note: {current.notes}</Notice>}
-          <div style={{ border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', margin: '12px 0' }}>
+      <section className="card pick-detail" aria-label="Ordine selezionato">
+        {!current ? <p className="muted" style={{ margin: 0 }}>Scegli un ordine dalla lista: il più vecchio è in cima.</p> : <>
+          <button className="ghost pick-back" onClick={() => setSelected(null)}><Icon name="back" size={16} /> Tutti gli ordini</button>
+          <div className="row"><h2 style={{ margin: 0 }}>{current.order_number}</h2><StatusBadge status={current.status} />
+            {age(current.paid_at).text && <span className={`badge ${age(current.paid_at).level || 'muted'}`}>pagato {age(current.paid_at).text}</span>}
+            <span className="spacer" /><Link to={`/orders/${current.id}`}>Dettaglio completo</Link></div>
+          <p className="muted">{current.customer_name} · {current.customer_phone} · {FULFILMENT_LABELS[current.fulfilment]} · {formatWeight(current.total_weight_g)} · {fmtDate(current.paid_at)}</p>
+          {current.notes && <Notice tone="warn">Note del cliente: {current.notes}</Notice>}
+          <div className="pick-list">
             {current.order_items.map((i) => {
-              const done = i.picked_quantity >= i.quantity;
-              return <div key={i.id} className={`pick-item ${done ? 'done' : ''}`}>
-                <input type="checkbox" checked={done} disabled={current.status !== 'picking' || busy} aria-label={`Preparato ${i.name}`}
+              const complete = i.picked_quantity >= i.quantity;
+              const img = thumb(i);
+              return <div key={i.id} className={`pick-item ${complete ? 'done' : ''}`}>
+                <input type="checkbox" checked={complete} disabled={current.status !== 'picking' || busy} aria-label={`${i.name}: preparato`}
                   onChange={(e) => setPicked(i, e.target.checked ? i.quantity : 0)} />
-                <div style={{ flex: 1 }}><strong>{i.quantity} ×</strong> {i.name}<div className="small muted">{i.sku}</div></div>
-                {current.status === 'picking' && i.quantity > 1 && <div className="row">
-                  <button className="secondary" disabled={busy || i.picked_quantity <= 0} onClick={() => setPicked(i, i.picked_quantity - 1)}>−</button>
-                  <span>{i.picked_quantity}/{i.quantity}</span>
-                  <button className="secondary" disabled={busy || done} onClick={() => setPicked(i, i.picked_quantity + 1)}>+</button></div>}
+                {img ? <img className="pick-thumb" src={img} alt="" /> : <span className="pick-thumb" aria-hidden="true"><Icon name="bag" size={20} /></span>}
+                <div style={{ flex: 1, minWidth: 0 }}><span className="pick-qty">{i.quantity}×</span> {i.name}<div className="small muted">{i.sku}</div></div>
+                {current.status === 'picking' && i.quantity > 1 && <div className="row" style={{ flexWrap: 'nowrap' }}>
+                  <button className="secondary" disabled={busy || i.picked_quantity <= 0} onClick={() => setPicked(i, i.picked_quantity - 1)} aria-label={`Un pezzo in meno di ${i.name}`}>−</button>
+                  <span aria-live="polite">{i.picked_quantity}/{i.quantity}</span>
+                  <button className="secondary" disabled={busy || complete} onClick={() => setPicked(i, i.picked_quantity + 1)} aria-label={`Un pezzo in più di ${i.name}`}>+</button></div>}
+                {current.status === 'picking' && !complete && <button className="ghost" disabled={busy} onClick={() => reportMissing(current, i)}>Segnala mancante</button>}
               </div>;
             })}
           </div>
@@ -86,12 +117,12 @@ export function PickingPage() {
               onClick={() => setStatus(current, 'ready')}>Tutto pronto</button>}
             {current.status === 'ready' && current.fulfilment === 'store' && <button className="big" disabled={busy} onClick={() => setStatus(current, 'completed')}>Consegnato al cliente</button>}
             {current.status === 'ready' && current.fulfilment !== 'store' && <Link className="btn big" to={`/orders/${current.id}`}>Registra spedizione</Link>}
-            <button className="secondary" onClick={() => window.print()}>Stampa</button>
+            <button className="secondary" onClick={() => window.print()}>Stampa distinta</button>
           </div>
           {current.status === 'picking' && current.order_items.some((i) => i.picked_quantity < i.quantity) &&
-            <p className="small muted">Spunta tutti i prodotti per completare. Se un prodotto manca, contatta un responsabile per il rimborso parziale.</p>}
+            <p className="small muted">Spunta ogni prodotto per completare. Se un prodotto manca, usa "Segnala mancante": un responsabile farà il rimborso parziale.</p>}
         </>}
-      </div>
+      </section>
     </div>}
   </>;
 }
