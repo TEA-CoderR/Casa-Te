@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
+import { useFonts } from 'expo-font';
+import { LibreCaslonText_400Regular, LibreCaslonText_400Regular_Italic, LibreCaslonText_700Bold } from '@expo-google-fonts/libre-caslon-text';
+import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600SemiBold } from '@expo-google-fonts/hanken-grotesk';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors } from '@/config/theme';
+import { colors, fonts } from '@/config/theme';
 import { PersistenceGate } from '@/components/PersistenceGate';
 import { isConfigured } from '@/lib/supabase';
 import { startSessionListener } from '@/store/session';
@@ -19,15 +22,21 @@ function NotConfigured() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    LibreCaslonText_400Regular, LibreCaslonText_400Regular_Italic, LibreCaslonText_700Bold,
+    HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600SemiBold,
+  });
   useEffect(() => { if (isConfigured) startSessionListener(); }, []);
   if (!isConfigured) return <NotConfigured />;
+  // Native needs the faces registered before first render; the web shop falls back to system fonts meanwhile.
+  if (Platform.OS !== 'web' && !fontsLoaded && !fontError) return null;
   return (
     <PersistenceGate>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
-          headerTintColor: colors.green,
-          headerTitleStyle: { fontWeight: '500', fontSize: 15 },
+          headerTintColor: colors.text,
+          headerTitleStyle: { fontFamily: fonts.serif, fontSize: 19, color: colors.text },
           headerShadowVisible: false,
           headerTitleAlign: 'center',
           headerStyle: { backgroundColor: colors.background },
