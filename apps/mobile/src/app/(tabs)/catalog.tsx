@@ -26,6 +26,7 @@ export default function CatalogScreen() {
   const [debounced, setDebounced] = useState(query);
   const [categoryId, setCategoryId] = useState<string | null>(params.category ?? null);
   const [sortIndex, setSortIndex] = useState(0);
+  const [sortOpen, setSortOpen] = useState(false);
   const [items, setItems] = useState<CatalogProduct[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -61,7 +62,7 @@ export default function CatalogScreen() {
   return <Screen>
     <PageTitle title="Catalogo" subtitle="Tutto quello che fa casa." />
     <View style={styles.search}><Icon name="search" size={20} color={colors.muted} />
-      <TextInput value={query} onChangeText={setQuery} placeholder="Cerca per nome, marca o codice..." placeholderTextColor={colors.muted}
+      <TextInput value={query} onChangeText={setQuery} placeholder="Cerca per nome, marca o codice..." placeholderTextColor={colors.faint}
         accessibilityLabel="Cerca prodotti" style={styles.input} returnKeyType="search" autoCorrect={false} />
       {!!query && <Pressable accessibilityLabel="Cancella ricerca" onPress={() => setQuery('')} style={{ padding: 10 }}>
         <Icon name="close" size={16} /></Pressable>}
@@ -76,11 +77,19 @@ export default function CatalogScreen() {
         </Pressable>;
       })}
     </ScrollView>
-    <View style={styles.toolbar}><Text style={styles.count}>{items.length}{hasMore ? '+' : ''} prodotti</Text>
-      <Pressable onPress={() => setSortIndex((sortIndex + 1) % SORTS.length)} style={styles.sort} accessibilityRole="button"
-        accessibilityLabel={`Ordina: ${SORTS[sortIndex].label}`}>
-        <Text style={styles.sortText}>{SORTS[sortIndex].label}</Text><Icon name="down" size={14} />
-      </Pressable></View>
+    <View style={[styles.toolbar, { zIndex: 10 }]}><Text style={styles.count}>{items.length}{hasMore ? '+' : ''} prodotti</Text>
+      <View>
+        <Pressable onPress={() => setSortOpen((v) => !v)} style={styles.sort} accessibilityRole="button"
+          accessibilityState={{ expanded: sortOpen }} accessibilityLabel={`Ordina per: ${SORTS[sortIndex].label}`}>
+          <Text style={styles.sortLabel}>Ordina per</Text><Text style={styles.sortText}>{SORTS[sortIndex].label}</Text><Icon name="down" size={14} />
+        </Pressable>
+        {sortOpen && <View style={styles.menu} accessibilityRole="menu">
+          {SORTS.map((o, i) => <Pressable key={o.id} accessibilityRole="menuitem" accessibilityState={{ selected: i === sortIndex }}
+            onPress={() => { setSortIndex(i); setSortOpen(false); }} style={[styles.menuItem, i === sortIndex && styles.menuItemOn]}>
+            <Text style={[styles.menuText, i === sortIndex && { color: colors.greenDark, fontWeight: '700' }]}>{o.label}</Text>
+          </Pressable>)}
+        </View>}
+      </View></View>
     {error && !items.length ? <Notice tone="error" message="Impossibile caricare il catalogo. Controlla la connessione." /> : null}
     {!loading && !error && !items.length && <View style={{ paddingVertical: 48, alignItems: 'center', gap: 16 }}>
       <Icon name="search" size={32} color={colors.muted} />
@@ -97,10 +106,16 @@ const styles = StyleSheet.create({
   input: { flex: 1, minWidth: 0, paddingVertical: 15, fontSize: 14, color: colors.text, outlineWidth: 0 },
   chip: { borderRadius: 22, minHeight: 44, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EDEFE9' },
   chipActive: { backgroundColor: colors.green },
-  chipText: { fontSize: 12, fontWeight: '500', color: colors.muted },
+  chipText: { fontSize: 14, fontWeight: '500', color: colors.text },
   toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 18 },
-  count: { fontSize: 12, color: colors.muted },
+  count: { fontSize: 13, color: colors.muted },
   sort: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 44 },
-  sortText: { fontSize: 12, color: colors.text },
+  sortLabel: { fontSize: 13, color: colors.muted },
+  sortText: { fontSize: 14, color: colors.text, fontWeight: '600' },
+  menu: { position: 'absolute', right: 0, top: 46, minWidth: 210, backgroundColor: colors.surface, borderRadius: 14, padding: 6, borderWidth: 1, borderColor: colors.line,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
+  menuItem: { paddingHorizontal: 12, minHeight: 42, justifyContent: 'center', borderRadius: 10 },
+  menuItemOn: { backgroundColor: '#EEF4E7' },
+  menuText: { fontSize: 14, color: colors.text },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, rowGap: 25 },
 });

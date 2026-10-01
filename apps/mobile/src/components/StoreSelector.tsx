@@ -16,10 +16,10 @@ export function StoreSelector({ title = 'Il tuo negozio', filter }: { title?: st
           style={{ paddingVertical: 10, paddingHorizontal: 14, minHeight: 44, borderWidth: 1, borderRadius: 12, justifyContent: 'center',
             borderColor: colors.green, backgroundColor: on ? colors.green : colors.surface }}>
           <Text style={{ color: on ? '#fff' : colors.green, fontWeight: '600', fontSize: 13 }}>{store.name.replace(/^CASA & TE\s*/, '')}</Text>
-          {!!store.address && <Text style={{ color: on ? '#E6EFE0' : colors.muted, fontSize: 10, marginTop: 2 }}>{store.address}</Text>}
+          {!!store.address && <Text style={{ color: on ? '#E6EFE0' : colors.muted, fontSize: 12, marginTop: 2 }}>{store.address}</Text>}
         </Pressable>;
       })}
     </View>
-    {!!selected?.opening_hours && <Text style={{ color: colors.muted, fontSize: 11 }}>Orari: {selected.opening_hours}</Text>}
+    {!!selected?.opening_hours && <Text style={{ color: colors.muted, fontSize: 12 }}>Orari: {selected.opening_hours}</Text>}
   </View>;
 }

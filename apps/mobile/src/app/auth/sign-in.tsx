@@ -42,7 +42,7 @@ export default function SignInScreen() {
     if (e) { setError(e.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.' : 'Invio non riuscito. Riprova.'); return; }
     setStep('code');
     setInfo(Platform.OS === 'web'
-      ? `Abbiamo inviato un'email a ${email.trim()}: apri il link "Log In" per accedere, oppure inserisci qui il codice se presente. Controlla anche lo spam.`
+      ? `Abbiamo inviato un'email a ${email.trim()}: apri il link di accesso contenuto nell'email, oppure inserisci qui il codice se c'è. Controlla anche lo spam.`
       : `Abbiamo inviato un codice a ${email.trim()}. Controlla anche lo spam.`);
   };
 
@@ -67,7 +67,7 @@ export default function SignInScreen() {
         <Text style={{ fontSize: 12, color: colors.muted, lineHeight: 18 }}>Voglio ricevere offerte e novità CASA & TE via email (facoltativo, revocabile in ogni momento).</Text>
       </Checkbox>
       <View style={{ marginTop: 16 }}><PrimaryButton title="Invia codice" loading={busy} onPress={sendCode} /></View>
-      <Text style={{ fontSize: 11, color: colors.muted, marginTop: 16, lineHeight: 17 }}>
+      <Text style={{ fontSize: 12, color: colors.muted, marginTop: 16, lineHeight: 17 }}>
         Continuando accetti le{' '}
         <Text style={{ color: colors.green }} onPress={() => router.push('/legal/terms')}>Condizioni</Text> e confermi di aver letto l'{' '}
         <Text style={{ color: colors.green }} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text>.

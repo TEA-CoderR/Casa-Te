@@ -48,7 +48,7 @@ export default function ProfileScreen() {
       <ListRow icon="close" title="Elimina account" danger onPress={() => router.push('/account/delete')} />
     </>}
     <View style={{ marginTop: 28, alignItems: 'center' }}>
-      <Text style={{ color: colors.muted, fontSize: 10 }}>CASA & TE · versione {Constants.expoConfig?.version ?? '1.0.0'}</Text>
+      <Text style={{ color: colors.muted, fontSize: 12 }}>CASA & TE · versione {Constants.expoConfig?.version ?? '1.0.0'}</Text>
     </View>
   </Screen>;
 }

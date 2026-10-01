@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import {
   FULFILMENT_LABELS, formatEuro, formatShipping, formatWeight, friendlyError, isPhone, validateAddress, validateInvoice,
@@ -33,6 +33,9 @@ export default function CheckoutScreen() {
   const [method, setMethod] = useState<FulfilmentMethod>('home');
   const [couponInput, setCouponInput] = useState('');
   const [coupon, setCoupon] = useState('');
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [attempted, setAttempted] = useState(false);
   const { quote, loading: quoting, error: quoteError, store, empty } = useCartQuote({ fulfilment: method, couponCode: coupon });
 
   const profile = useQuery(user ? `profile:${user.id}` : null, () => fetchProfile(user!.id));
@@ -69,10 +72,6 @@ export default function CheckoutScreen() {
     }
   }, [addresses.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const couponMessage = useMemo(() => {
-    if (!coupon || !quote) return '';
-    return quote.coupon_error ? friendlyError(quote.coupon_error) : `Codice ${quote.coupon?.code} applicato`;
-  }, [coupon, quote]);
 
   if (!user) return <Screen stack><EmptyState icon="user" title="Accedi per completare l'ordine"
     message="Ti invieremo un codice via email: nessuna password da ricordare.">
@@ -85,7 +84,7 @@ export default function CheckoutScreen() {
   const methodQuote = quote.shipping[method];
   const total = quote.total_cents;
 
-  const validate = (): boolean => {
+  const validate = (): Record<string, string> => {
     const e: Record<string, string> = {};
     if (quote.issue_count > 0) e.cart = 'cart';
     if (!methodQuote) e.method = 'Metodo non disponibile';
@@ -99,14 +98,27 @@ export default function CheckoutScreen() {
     if (method === 'pickup' && !pickupPointId) e.pickup = 'Seleziona un punto di ritiro';
     if (invoice) for (const [k, v] of Object.entries(validateInvoice(invoiceData))) e[`invoice.${k}`] = v as string;
     if (!accepted) e.accepted = 'Devi accettare le condizioni di vendita';
-    setErrors(e);
-    return Object.keys(e).length === 0;
+    return e;
+  };
+  // After the first "Paga", errors update as the customer fixes each field.
+  const liveErrors = attempted ? validate() : errors;
+
+  /** Web: bring the first problem into view and focus it, instead of a message far from the field. */
+  const revealFirstError = () => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>('[data-invalid="true"], [data-field-error="true"]');
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA') el.focus({ preventScroll: true });
+    });
   };
 
   const pay = async () => {
     if (submitting.current) return;
     setSubmitError('');
-    if (!validate() || !store) { setSubmitError('Controlla i campi evidenziati.'); return; }
+    const found = validate();
+    setErrors(found); setAttempted(true);
+    if (Object.keys(found).length || !store) { revealFirstError(); return; }
     submitting.current = true; setBusy(true);
     try {
       const order: CreateOrderInput = {
@@ -143,10 +155,15 @@ export default function CheckoutScreen() {
   };
 
   const setAddr = (patch: Partial<Address>) => { setAddress((a) => ({ ...a, ...patch })); if (addressId !== 'new') setAddressId('new'); };
-  const err = (k: string) => errors[k];
+  const err = (k: string) => liveErrors[k];
+  const fieldError = (k: string) => err(k) ? <Text style={styles.error} {...({ dataSet: { fieldError: 'true' } } as object)} accessibilityRole="alert">{err(k)}</Text> : null;
 
+  const pending = attempted ? Object.keys(liveErrors).filter((k) => k !== 'cart').length : 0;
   return <Screen stack maxWidth={720} footer={<View style={{ gap: 8 }}>
-    {!!submitError && <Text style={{ color: colors.danger, fontSize: 12, textAlign: 'center' }} accessibilityRole="alert">{submitError}</Text>}
+    {pending > 0 ? <Pressable onPress={revealFirstError} accessibilityRole="button">
+      <Text style={styles.footerError} accessibilityRole="alert">{pending === 1 ? 'Manca un dato' : `Mancano ${pending} dati`} · <Text style={{ textDecorationLine: 'underline' }}>mostra</Text></Text></Pressable>
+      : !!submitError && <Text style={styles.footerError} accessibilityRole="alert">{submitError}</Text>}
+    <Text style={styles.secure}>Pagamento sicuro con Stripe · IVA inclusa · recesso entro 14 giorni</Text>
     <PrimaryButton title={total !== null ? `Paga ${formatEuro(total)}` : 'Scegli la consegna'} icon="card"
       loading={busy} disabled={quoting || total === null || quote.issue_count > 0} onPress={pay} />
   </View>}>
@@ -193,7 +210,7 @@ export default function CheckoutScreen() {
 
     {method === 'pickup' && <>
       <SectionTitle>Punto di ritiro</SectionTitle>
-      {!!err('pickup') && <Text style={styles.error}>{err('pickup')}</Text>}
+      {fieldError('pickup')}
       {(pickupPoints.data ?? []).map((p) => <OptionCard key={p.id} selected={pickupPointId === p.id} onPress={() => setPickupPointId(p.id)}
         icon="pin" title={p.name} description={`${p.address}, ${p.postal_code} ${p.city}${p.opening_hours ? ` · ${p.opening_hours}` : ''}`} />)}
     </>}
@@ -205,14 +222,19 @@ export default function CheckoutScreen() {
         hint="Ti avvisiamo quando l'ordine è pronto" />
     </>}
 
-    <SectionTitle>Codice sconto</SectionTitle>
-    <View style={[styles.row, { alignItems: 'flex-start' }]}>
-      <View style={{ flex: 1 }}><TextField label="Codice" value={couponInput} autoCapitalize="characters" autoCorrect={false}
-        onChangeText={(v) => setCouponInput(v.toUpperCase())} /></View>
-      <View style={{ paddingTop: 22 }}><SecondaryButton title={coupon && coupon === couponInput ? 'Rimuovi' : 'Applica'}
-        onPress={() => { if (coupon && coupon === couponInput) { setCoupon(''); setCouponInput(''); } else setCoupon(couponInput.trim()); }} /></View>
-    </View>
-    {!!couponMessage && <Text style={[styles.checkText, { color: quote.coupon_error ? colors.danger : colors.green, marginTop: -4 }]}>{couponMessage}</Text>}
+    {coupon && !quote.coupon_error ? <View style={styles.applied}>
+      <Text style={styles.appliedText}>Codice <Text style={{ fontWeight: '700' }}>{quote.coupon?.code ?? coupon}</Text> applicato</Text>
+      <Pressable onPress={() => { setCoupon(''); setCouponInput(''); }} accessibilityRole="button"><Text style={styles.link}>Rimuovi</Text></Pressable>
+    </View> : !couponOpen && !coupon ? <Pressable onPress={() => setCouponOpen(true)} accessibilityRole="button" style={styles.toggle}>
+      <Text style={styles.link}>Hai un codice sconto?</Text></Pressable> : <>
+      <SectionTitle>Codice sconto</SectionTitle>
+      <View style={[styles.row, { alignItems: 'flex-start' }]}>
+        <View style={{ flex: 1 }}><TextField label="Codice" value={couponInput} autoCapitalize="characters" autoCorrect={false} autoFocus={!coupon}
+          onChangeText={(v) => setCouponInput(v.toUpperCase())} onSubmitEditing={() => setCoupon(couponInput.trim())}
+          error={coupon && quote.coupon_error ? friendlyError(quote.coupon_error) : undefined} /></View>
+        <View style={{ paddingTop: 22 }}><SecondaryButton title="Applica" disabled={!couponInput.trim()} onPress={() => setCoupon(couponInput.trim())} /></View>
+      </View>
+    </>}
 
     <SectionTitle>Fattura</SectionTitle>
     <Checkbox checked={invoice} onChange={setInvoice}><Text style={styles.checkText}>Richiedo la fattura</Text></Checkbox>
@@ -230,8 +252,12 @@ export default function CheckoutScreen() {
       </>}
     </View>}
 
-    <SectionTitle>Note per il negozio</SectionTitle>
-    <TextField label="Note (facoltative)" value={notes} onChangeText={setNotes} multiline maxLength={500} style={{ minHeight: 80, textAlignVertical: 'top', paddingTop: 12 }} />
+    {notesOpen || notes ? <>
+      <SectionTitle>Note per il negozio</SectionTitle>
+      <TextField label="Note (facoltative)" value={notes} onChangeText={setNotes} multiline maxLength={500} autoFocus={!notes}
+        style={{ minHeight: 80, textAlignVertical: 'top', paddingTop: 12 }} />
+    </> : <Pressable onPress={() => setNotesOpen(true)} accessibilityRole="button" style={styles.toggle}>
+      <Text style={styles.link}>Aggiungi una nota per il negozio</Text></Pressable>}
 
     <SectionTitle>Riepilogo</SectionTitle>
     <SummaryRow label={`Prodotti (${quote.item_count})`} value={formatEuro(quote.subtotal_cents)} />
@@ -246,8 +272,8 @@ export default function CheckoutScreen() {
           <Text style={styles.link} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e l'{' '}
           <Text style={styles.link} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text>.</Text>
       </Checkbox>
-      {!!err('accepted') && <Text style={styles.error}>{err('accepted')}</Text>}
-      <Text style={styles.fine}>Pagamento sicuro con Stripe: carta, Apple Pay, Google Pay e altri metodi. I dati della carta non transitano sui nostri server.
+      {fieldError('accepted')}
+      <Text style={styles.fine}>Paghi sulla pagina sicura di Stripe con carta o wallet digitale: i dati della carta non passano dai nostri server.
         Hai 14 giorni per il diritto di recesso.</Text>
     </View>
   </Screen>;
@@ -255,8 +281,13 @@ export default function CheckoutScreen() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
-  checkText: { fontSize: 13, color: colors.text, lineHeight: 20 },
+  checkText: { fontSize: 14, color: colors.text, lineHeight: 21 },
   link: { color: colors.green, textDecorationLine: 'underline', fontWeight: '600' },
-  error: { color: colors.danger, fontSize: 12, marginBottom: 8 },
-  fine: { color: colors.muted, fontSize: 11, lineHeight: 17, marginTop: 10 },
+  error: { color: colors.danger, fontSize: 13, marginBottom: 8 },
+  fine: { color: colors.muted, fontSize: 13, lineHeight: 19, marginTop: 10 },
+  footerError: { color: colors.danger, fontSize: 14, textAlign: 'center', fontWeight: '500' },
+  secure: { color: colors.muted, fontSize: 12, textAlign: 'center' },
+  toggle: { minHeight: 44, justifyContent: 'center', marginTop: 10 },
+  applied: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#E5F2DC', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14 },
+  appliedText: { flex: 1, fontSize: 14, color: colors.greenDark },
 });

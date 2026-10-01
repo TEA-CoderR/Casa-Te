@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   number: { fontSize: 22, fontWeight: '600', color: colors.text },
   date: { fontSize: 12, color: colors.muted, marginTop: 4 },
   badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: '#EBF1E5' },
-  badgeText: { color: colors.green, fontSize: 11, fontWeight: '600' },
+  badgeText: { color: colors.green, fontSize: 12, fontWeight: '600' },
   tracking: { marginTop: 12, padding: 14, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, gap: 4 },
   trackingText: { color: colors.green, fontSize: 13, fontWeight: '500' },
   block: { fontSize: 13, lineHeight: 21, color: colors.text },
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.line },
   thumb: { width: 56, height: 56, borderRadius: 10, backgroundColor: '#F1F2ED', overflow: 'hidden' },
   itemName: { fontSize: 13, color: colors.text, fontWeight: '500' },
-  itemMeta: { fontSize: 11, color: colors.muted, marginTop: 3 },
+  itemMeta: { fontSize: 12, color: colors.muted, marginTop: 3 },
   itemTotal: { fontSize: 14, fontWeight: '600', color: colors.text },
-  fine: { fontSize: 11, color: colors.muted, lineHeight: 17 },
+  fine: { fontSize: 12, color: colors.muted, lineHeight: 17 },
 });

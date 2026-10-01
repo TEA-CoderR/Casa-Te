@@ -19,7 +19,7 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { wide } = useLayout();
   return <Tabs screenOptions={{
-    headerShown: false, tabBarActiveTintColor: colors.green, tabBarInactiveTintColor: '#8B9187',
+    headerShown: false, tabBarActiveTintColor: colors.green, tabBarInactiveTintColor: colors.faint,
     // Desktop web shop: navigation as a sidebar instead of a phone-style bottom bar.
     tabBarPosition: wide ? 'left' : 'bottom',
     tabBarVariant: wide ? 'material' : 'uikit',
@@ -27,8 +27,8 @@ export default function TabsLayout() {
       ? { backgroundColor: '#FFFFFF', borderRightColor: '#EBEDE7', minWidth: 200, paddingTop: 24 }
       : { backgroundColor: '#FFFFFF', borderTopColor: '#EBEDE7', height: 64 + Math.max(insets.bottom, 8),
           paddingBottom: Math.max(insets.bottom, 8), paddingTop: 7, elevation: 0 },
-    tabBarLabelStyle: { fontSize: wide ? 14 : 10, fontWeight: '500', marginTop: wide ? 0 : 3 },
-    tabBarBadgeStyle: { backgroundColor: colors.green, fontSize: 9, color: '#fff' },
+    tabBarLabelStyle: { fontSize: wide ? 14 : 11, fontWeight: '500', marginTop: wide ? 0 : 3 },
+    tabBarBadgeStyle: { backgroundColor: colors.green, fontSize: 11, color: '#fff' },
   }}>
     {tabs.map((tab) => <Tabs.Screen key={tab.name} name={tab.name} options={{
       title: tab.title, tabBarBadge: tab.name === 'cart' && count > 0 ? count : undefined,
