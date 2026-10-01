@@ -9,7 +9,7 @@ import { Screen } from '@/components/Screen';
 import { ProductImage } from '@/components/ProductImage';
 import { EmptyState, Loading, Notice, PageTitle, PrimaryButton, QuantityControl, SectionTitle, SummaryRow } from '@/components/UI';
 import { Icon } from '@/components/Icon';
-import { colors } from '@/config/theme';
+import { colors, fonts } from '@/config/theme';
 import { imageUrl } from '@/lib/api';
 import { useCartQuote, useLayout } from '@/lib/hooks';
 import { cartItemCount, useCartStore } from '@/store/cart';
@@ -31,12 +31,12 @@ export default function CartScreen() {
   const { wide } = useLayout();
   const user = useUser();
 
-  if (empty) return <Screen><PageTitle title="Carrello" /><EmptyState title="Il carrello è vuoto"
+  if (empty) return <Screen><PageTitle title="Il tuo carrello" /><EmptyState title="Il carrello è vuoto"
     message="La tua casa aspetta nuove idee. Inizia da un piccolo essenziale.">
     <PrimaryButton title="Vai al catalogo" onPress={() => router.push('/catalog')} />
   </EmptyState></Screen>;
 
-  if (!quote) return <Screen><PageTitle title="Carrello" />
+  if (!quote) return <Screen><PageTitle title="Il tuo carrello" />
     {error ? <Notice tone="error" title="Impossibile aggiornare il carrello" message="Controlla la connessione e riprova.">
       <Pressable onPress={refresh}><Text style={{ color: colors.green, fontWeight: '600' }}>Riprova</Text></Pressable>
     </Notice> : <Loading />}
@@ -49,7 +49,7 @@ export default function CartScreen() {
   const home = quote.shipping.home;
   const hasIssues = quote.issue_count > 0;
 
-  const cta = <PrimaryButton title={user ? 'Scegli consegna e paga' : 'Accedi e continua'} disabled={hasIssues || quote.item_count === 0 || loading}
+  const cta = <PrimaryButton title={user ? 'Procedi al checkout' : 'Accedi e continua'} disabled={hasIssues || quote.item_count === 0 || loading}
     onPress={() => user ? router.push('/checkout') : router.push({ pathname: '/auth/sign-in', params: { next: '/checkout' } })} />;
   const summary = <>
     {wide ? <Text style={styles.summaryTitle}>Riepilogo</Text> : <SectionTitle>Riepilogo</SectionTitle>}
@@ -62,10 +62,10 @@ export default function CartScreen() {
   </>;
 
   return <Screen onRefresh={refresh} refreshing={loading} footer={wide ? undefined : <View style={styles.footer}>
-    <View style={styles.footerTotal}><Text style={styles.small}>Prodotti</Text><Text style={styles.total}>{formatEuro(subtotal)}</Text></View>
+    <View style={styles.footerTotal}><Text style={styles.small}>Totale prodotti</Text><Text style={styles.total}>{formatEuro(subtotal)}</Text></View>
     <View style={{ flex: 1 }}>{cta}</View>
   </View>}>
-    <PageTitle title="Carrello" subtitle={`${cartItemCount(items)} ${cartItemCount(items) === 1 ? 'articolo' : 'articoli'} · ${store?.name ?? ''}`} />
+    <PageTitle title="Il tuo carrello" subtitle={`${cartItemCount(items)} ${cartItemCount(items) === 1 ? 'prodotto' : 'prodotti'} · ${store?.name ?? ''}`} />
     <View style={wide ? styles.wide : undefined}><View style={wide ? { flex: 1.6, minWidth: 0 } : undefined}>
     {removed && <View style={styles.undo} accessibilityLiveRegion="polite">
       <Text style={styles.undoText}>{removed.name} rimosso dal carrello.</Text>
@@ -73,7 +73,7 @@ export default function CartScreen() {
     </View>}
     {hasIssues && <Notice tone="error" title="Alcuni articoli richiedono attenzione"
       message="Modifica le quantità o rimuovi gli articoli segnalati per continuare." />}
-    <View style={styles.shippingNote}><View style={styles.noteHeading}><Icon name="truck" color={colors.green} size={20} />
+    <View style={styles.shippingNote}><View style={styles.noteHeading}><Icon name="truck" color={colors.text} size={22} strokeWidth={1.4} />
       <Text style={styles.noteTitle}>{overweight ? 'Il tuo ordine supera 10 kg' : remaining === 0 ? 'Spedizione gratuita raggiunta!' : 'La spedizione gratuita è vicina'}</Text></View>
       <Text style={styles.noteText}>{overweight ? 'Oltre 10 kg si applica una tariffa dedicata. Il ritiro in negozio è sempre gratuito.'
         : remaining ? `Mancano ${formatEuro(remaining)} alla spedizione gratuita (fino a 10 kg).` : 'Per il tuo ordine fino a 10 kg, la consegna è gratis.'}</Text>
@@ -94,7 +94,7 @@ export default function CartScreen() {
             {line.issue !== 'unavailable' && <QuantityControl value={items[line.product_id] ?? line.quantity} label={line.name} max={max}
               onChange={(q) => setQuantity(line.product_id, q)} />}
             <Pressable onPress={() => { setRemoved({ id: line.product_id, name: line.name, qty: items[line.product_id] ?? line.quantity }); remove(line.product_id); }} style={styles.remove} accessibilityRole="button" accessibilityLabel={`Rimuovi ${line.name}`}>
-              <Text style={styles.removeText}>Rimuovi</Text></Pressable>
+              <Icon name="trash" size={20} color={colors.muted} strokeWidth={1.5} /></Pressable>
           </View>
         </View>
       </View>;
@@ -107,30 +107,29 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  summaryTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 10 },
-  undo: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#EEF1EA', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
-  undoText: { flex: 1, fontSize: 14, color: colors.text },
-  undoLink: { fontSize: 14, fontWeight: '700', color: colors.green, textDecorationLine: 'underline' },
-  wide: { flexDirection: 'row', gap: 32, alignItems: 'flex-start' },
-  summaryCard: { flex: 1, maxWidth: 380, backgroundColor: colors.surface, borderRadius: 20, padding: 22, borderWidth: 1, borderColor: colors.line, marginTop: 8 },
-  shippingNote: { backgroundColor: '#EDF2E5', borderRadius: 17, padding: 17, marginBottom: 8 },
-  noteHeading: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  noteTitle: { fontSize: 13, fontWeight: '600', color: colors.greenDark, flex: 1 },
-  noteText: { fontSize: 13, lineHeight: 19, color: '#4F5C46', marginTop: 9 },
-  progress: { height: 4, borderRadius: 2, backgroundColor: '#DCE4D2', marginTop: 13, overflow: 'hidden' },
+  summaryTitle: { fontSize: 24, fontFamily: fonts.serif, color: colors.text, marginBottom: 10 },
+  undo: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.cream, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
+  undoText: { flex: 1, fontSize: 14, color: colors.text, fontFamily: fonts.sans },
+  undoLink: { fontSize: 14, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.green, textDecorationLine: 'underline' },
+  wide: { flexDirection: 'row', gap: 40, alignItems: 'flex-start' },
+  summaryCard: { flex: 1, maxWidth: 400, backgroundColor: colors.surface, borderRadius: 18, padding: 24, borderWidth: 1, borderColor: colors.line, marginTop: 8 },
+  shippingNote: { backgroundColor: colors.sand, borderRadius: 14, padding: 18, marginBottom: 6 },
+  noteHeading: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  noteTitle: { fontSize: 17, fontFamily: fonts.serif, color: colors.text, flex: 1 },
+  noteText: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 8, fontFamily: fonts.sans },
+  progress: { height: 4, borderRadius: 2, backgroundColor: '#E6DAC4', marginTop: 13, overflow: 'hidden' },
   progressValue: { height: 4, backgroundColor: colors.green, borderRadius: 2 },
-  line: { flexDirection: 'row', gap: 15, paddingVertical: 22, borderBottomWidth: 1, borderColor: colors.line },
-  thumb: { width: 84, height: 100, backgroundColor: '#EEEFE9', borderRadius: 14, justifyContent: 'center', overflow: 'hidden' },
-  name: { fontSize: 14, lineHeight: 20, fontWeight: '500', color: colors.text },
-  meta: { fontSize: 12, color: colors.muted, marginTop: 5 },
-  issue: { fontSize: 12, color: colors.danger, marginTop: 8, fontWeight: '500' },
-  linePrice: { fontSize: 17, fontWeight: '600', color: colors.text, marginTop: 8 },
-  lineBottom: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginTop: 12 },
-  remove: { minHeight: 44, paddingHorizontal: 8, justifyContent: 'center' },
-  removeText: { color: colors.muted, fontSize: 13, textDecorationLine: 'underline' },
+  line: { flexDirection: 'row', gap: 16, paddingVertical: 18, borderBottomWidth: 1, borderColor: colors.line },
+  thumb: { width: 96, height: 96, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.line, justifyContent: 'center', overflow: 'hidden' },
+  name: { fontSize: 16, lineHeight: 21, fontFamily: fonts.serif, color: colors.text },
+  meta: { fontSize: 12, color: colors.muted, marginTop: 4, fontFamily: fonts.sans },
+  issue: { fontSize: 13, color: colors.danger, marginTop: 8, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  linePrice: { fontSize: 19, fontFamily: fonts.serif, color: colors.text, marginTop: 6 },
+  lineBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4, marginTop: 10 },
+  remove: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   pickup: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 22 },
   pickupText: { flex: 1, color: colors.green, fontSize: 12, lineHeight: 19 },
-  footer: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  footerTotal: { minWidth: 73 }, small: { color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: 4 },
-  total: { fontSize: 23, fontWeight: '600', letterSpacing: -0.6, marginTop: 3, color: colors.text },
+  footer: { flexDirection: 'row', alignItems: 'center', gap: 18 },
+  footerTotal: { minWidth: 80 }, small: { color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: 4, fontFamily: fonts.sans },
+  total: { fontSize: 25, fontFamily: fonts.serif, marginTop: 2, color: colors.text },
 });

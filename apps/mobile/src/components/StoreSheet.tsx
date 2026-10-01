@@ -1,6 +1,6 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { StoreRow } from '@casa-te/shared';
-import { colors } from '@/config/theme';
+import { colors, fonts } from '@/config/theme';
 import { useStores } from '@/lib/hooks';
 import { usePreferences } from '@/store/preferences';
 import { Icon } from './Icon';
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: 22, padding: 20, gap: 14,
     shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 30, shadowOffset: { width: 0, height: 12 } },
   head: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  title: { fontSize: 19, fontWeight: '600', color: colors.text, letterSpacing: -0.4 },
+  title: { fontSize: 23, fontFamily: fonts.serif, color: colors.text },
   sub: { fontSize: 13, color: colors.muted, marginTop: 4, lineHeight: 19 },
   close: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#EEF1EA', alignItems: 'center', justifyContent: 'center' },
   option: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.line, alignItems: 'flex-start' },
@@ -58,6 +58,6 @@ const styles = StyleSheet.create({
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.faint, marginTop: 1, alignItems: 'center', justifyContent: 'center' },
   radioOn: { borderColor: colors.green },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.green },
-  name: { fontSize: 15, fontWeight: '600', color: colors.text },
+  name: { fontSize: 17, fontFamily: fonts.serif, color: colors.text },
   meta: { fontSize: 12, color: colors.muted, marginTop: 3, lineHeight: 17 },
 });

@@ -18,7 +18,12 @@ const paths = {
   leaf: 'M20 3C7 1 1 9 6 16s16 2 14-13ZM4 21l12-12',
   bell: 'M5 9a7 7 0 0 1 14 0v6l2 3H3l2-3V9Zm4 12h6',
   help: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M9 8a3 3 0 0 1 6 1c0 2-3 2-3 5M12 17v.1',
-  close: 'm6 6 12 12M6 18 18 6', weight: 'M4 7h16l2 14H2L4 7Zm5 0V5a3 3 0 1 1 6 0v2',
+  close: 'm6 6 12 12M6 18 18 6',
+  cart: 'M2 3h3l2.4 11.2a2 2 0 0 0 2 1.6h8.3a2 2 0 0 0 2-1.5L21 7H6M10 20.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0M19 20.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0',
+  trash: 'M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6',
+  sort: 'M4 6h16M7 12h10M10 18h4',
+  back: 'm15 5-7 7 7 7',
+  weight: 'M4 7h16l2 14H2L4 7Zm5 0V5a3 3 0 1 1 6 0v2',
 } as const;
 export type IconName = keyof typeof paths;
 export function Icon({ name, size = 22, color = colors.text, strokeWidth = 1.65 }: {
