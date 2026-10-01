@@ -1,6 +1,6 @@
-# Handoff — commercial platform (branch `feature/commercial-platform`)
+# Handoff — commercial platform
 
-Written 2026-09-27 at the end of the first build session. Read with `AGENTS.md`,
+Started 2026-09-27, last updated 2026-10-01 (session 5). Read with `AGENTS.md`,
 `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` (19–28), `docs/DEPLOYMENT.md`, `docs/LAUNCH_CHECKLIST.md`.
 
 ## Goal
@@ -8,11 +8,14 @@ Turn the September demo into a production online-sales system for CASA & TE (5 s
 Chosen stack (confirmed by the user): **Supabase + Stripe**; first release = customer app (iOS/Android),
 web shop (same Expo codebase), admin console, store picking; catalogue via admin + CSV import.
 
-## State
-- `main` = untouched demo (`031e8f4`). All new work is on `feature/commercial-platform` (not merged, no PR yet).
-- Built: Supabase schema/RLS/RPCs (migrations 0001–0005), 7 Edge Functions, `packages/shared`,
-  rewritten customer app (`apps/mobile`), new admin console (`apps/admin`), CI + deploy workflows, docs.
-- **Nothing is deployed.** No Supabase project, Stripe account or hosting exists yet.
+## State (2026-10-01)
+- Everything is on `main` (PRs #1–#6 merged). The repository is **public** (needed for free GitHub Pages).
+- **Staging is live**: web shop https://tea-coderr.github.io/Casa-Te/ and admin
+  https://tea-coderr.github.io/Casa-Te/admin/ (GitHub Pages, `deploy-pages.yml` on every push to `main`),
+  backed by Supabase project `kejjinbapxnjbceirrtv` and the Stripe sandbox. Full flow verified with
+  real Stripe test payments: browse → sign-in → pay → picking → refund (see sessions 4–5).
+- Demo admin: `e2e.admin@casate.test` (password given to the owner in chat; staging only).
+- Catalogue is still the 8 placeholder products from `seed.sql` (no real data — AGENTS.md rule 6).
 
 ## What was verified in session 1 (npm registry was blocked, so no real dependencies)
 - ✅ `tests/db`: real PostgreSQL 16 with a Supabase emulation — migrations, RLS per role, order lifecycle,
@@ -67,6 +70,31 @@ web shop (same Expo codebase), admin console, store picking; catalogue via admin
   `STRIPE_WEBHOOK_SECRET`, `WEB_SHOP_URL`, `ADMIN_URL`, `ALLOWED_ORIGINS`), Auth URL config and
   email templates with `{{ .Token }}`, custom SMTP, first admin (DEPLOYMENT.md §1).
 
+## Session 5 — staging hardened, public demo (2026-09-28 → 10-01)
+- 🐞 New Supabase API keys: `sb_secret_…`/`sb_publishable_…` are not JWTs. `_shared/supabase.ts`
+  sends `sb_` keys only as `apikey`; `loadConfig()` prefers `SUPABASE_SECRET_KEYS` /
+  `SUPABASE_PUBLISHABLE_KEYS` (JSON, key `default`). All 7 functions redeployed.
+- 🐞 Newer Supabase projects grant **no table privileges** to anon/authenticated/service_role.
+  Migration `20260928000002_api_role_grants.sql` grants them and re-applies the 0002/0005 narrowing;
+  the test stub no longer emulates old defaults; `tests/db/sql/05_grants.sql`; AGENTS.md rule 3.
+  (Before this the Stripe webhook failed with 42501/403.)
+- 🐞 Supabase serves Edge Function `text/html` as `text/plain`, so `checkout-return` now only
+  redirects (303 to `casate://…` or `WEB_SHOP_URL`) or returns a plain-text note.
+- Email templates can no longer be edited without **custom SMTP**, so `{{ .Token }}` codes are not
+  available yet. Web sign-in also works through the default email's link (`emailRedirectTo` = the
+  page the customer came from). Built-in SMTP only delivers to project team members, a few per hour.
+- GitHub Pages hosting: `tools/pages/assemble.mjs` (shop at `/<repo>/`, admin at `/<repo>/admin/`,
+  `404.html` SPA fallback), Vite `ADMIN_BASE_PATH`, Expo `EXPO_BASE_URL` via `app.config.js`.
+- UI refresh: shop home (promises, category cards, Click & Collect, footer) and admin (dark
+  sidebar, split login, new dashboard).
+- Owner already did: Stripe restricted key + webhook secret, `WEB_SHOP_URL`/`ADMIN_URL` secrets,
+  Auth Site URL + redirect URL `https://tea-coderr.github.io/Casa-Te/**`, repo public + Pages.
+- Verified on staging: real Checkout payments (CT26001002–04), webhooks recorded once, partial
+  refund via `admin-refund` (€4,99, `refund.created/updated` idempotent), pg_cron released an
+  unpaid order, admin storage upload allowed by policy.
+- Deferred by the owner: Stripe Tax (head office + P.IVA), SDI e-invoicing provider, Google Pay /
+  PayPal in the Dashboard (code needs no change: Checkout uses the Dashboard payment-method config).
+
 ## Known risk spots to check first
 1. Dependency versions were written without the registry: `expo-web-browser ~57.0.0`,
    `@supabase/supabase-js ^2.49.0`, `react-native-url-polyfill ^2`, `react-router-dom ^7.6`,
@@ -91,14 +119,15 @@ web shop (same Expo codebase), admin console, store picking; catalogue via admin
 2. ~~`cd apps/mobile && npx expo install --check`~~ (session 3; online check runs in CI).
 3. ~~typecheck, tests, both builds, `deno check`~~ (session 3, all green).
 4. ~~Local click-through~~ (session 3, `tools/local-stack/e2e/run.sh`; real Stripe → P1 step 7).
-5. Push, confirm GitHub Actions CI is green, open a PR to `main` (ask the user before merging).
+5. ~~Push, CI green, PR to `main`~~ (PR #1 merged).
 
 **P1 — staging environment (needs the user to create accounts)**
-6. Supabase staging project (EU Frankfurt) → `supabase db push`, seed, secrets, deploy functions,
-   first admin (`docs/DEPLOYMENT.md` §1–2).
-7. Stripe test mode: webhook endpoint + events, test full lifecycle incl. expired session and
-   dashboard refund (`docs/DEPLOYMENT.md` §3). Resend + DB webhook for emails.
-8. Host web shop + admin (SPA fallback). EAS `preview` build on real Android/iOS phones.
+6. ~~Supabase staging project, secrets, functions, first admin~~ (sessions 4–5).
+7. ~~Stripe test mode lifecycle~~ (session 5). Still open: custom SMTP (e.g. Resend) so email
+   templates with `{{ .Token }}` can be set, DB webhook → `notify-order-event` for order emails.
+8. ~~Host web shop + admin~~ (GitHub Pages, staging). Still open: EAS `preview` build on real phones;
+   production hosting/domain (decide whether to keep the repo public).
+9. Clean up staging test data (orders CT26001001–04, `e2e.*@casate.test` users) when no longer needed.
 
 **P2 — business/launch items (user/company input)** — see `docs/LAUNCH_CHECKLIST.md`:
 >10 kg rule, coupon vs. free-shipping rule, fulfilment store model, legal texts
@@ -111,8 +140,9 @@ push notifications, native Stripe PaymentSheet, analytics + cookie consent, erro
 SDI e-invoicing integration, product search improvements (full-text/typo tolerance), multi-language.
 
 ## Conventions / gotchas
-- Migrations 0001–0005 have never been deployed; until the first staging deploy they may still be
-  amended. After that, follow AGENTS.md rule 5 (new files only).
+- Migrations are deployed to staging: never edit an existing file, always add a new one (AGENTS.md rule 5).
+- The sandbox cannot reach `*.supabase.co` or `api.stripe.com`; smoke-test staging from SQL with
+  `pg_net` via the Supabase MCP connector. Redeploying a function via MCP needs `import_map_path: "deno.json"`.
 - The user works on Windows; their connected folder `C:\Users\XH\Desktop\Casa & Te CC` contains `&`,
   which breaks npm — use `C:\Users\XH\casa-te` (see `run-checks.ps1` delivered there, which extracts
   the project, installs, typechecks, tests, builds and writes `verify-log.txt`).
