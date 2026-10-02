@@ -190,6 +190,18 @@ export type DashboardStats = {
   low_stock: Array<{ store_code: string; sku: string; name: string; quantity: number }>;
 };
 
+/** admin_overview(): the back-office "Panoramica" page. Days are Europe/Rome dates (YYYY-MM-DD). */
+export type AdminOverviewDay = { day: string; revenue_cents: number; orders: number; customers: number; new_customers: number | null };
+export type AdminOverview = {
+  today: string; from: string; to: string; prev_from: string;
+  series: AdminOverviewDay[];
+  status: Partial<Record<OrderStatus, number>>;
+  open: Partial<Record<OrderStatus, number>>;
+  top_products: Array<{ product_id: string | null; sku: string; name: string; category: string; price_cents: number | null;
+    image: string | null; quantity: number; revenue_cents: number }>;
+  low_stock: Array<{ product_id: string; store_code: string; sku: string; name: string; quantity: number; image: string | null }>;
+};
+
 export type ImportRow = {
   sku: string; name: string; category?: string; price_cents: number; compare_at_price_cents?: number | null;
   vat_rate?: number; weight_g: number; barcode?: string; brand?: string; description?: string;

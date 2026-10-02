@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { formatEuro, formatWeight, productImageUrl, type ProductRow } from '@casa-te/shared';
 import { SUPABASE_URL, supabase, unwrap } from '../lib/supabase';
 import { useAsync, useCategories, useDebounced } from '../lib/data';
@@ -12,7 +12,8 @@ const PAGE = 50;
 export function ProductsPage() {
   const navigate = useNavigate();
   const categories = useCategories();
-  const [search, setSearch] = useState('');
+  const [params] = useSearchParams();
+  const [search, setSearch] = useState(params.get('q') ?? '');
   const q = useDebounced(search.trim().toLowerCase());
   const [categoryId, setCategoryId] = useState('');
   const [status, setStatus] = useState<'all' | 'active' | 'inactive'>('all');

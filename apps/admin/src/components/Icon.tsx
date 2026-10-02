@@ -1,5 +1,30 @@
 // Minimal stroke icon set for the console (no icon-font dependency).
 const PATHS = {
+  home: 'M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z',
+  clipboard: 'M9 4h6v3H9zM9 5.5H6v15h12v-15h-3M9 12l2 2 4-4M9 17h6',
+  box: 'M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8M7.5 5.5l9 5',
+  warehouse: 'M3 21V9l9-6 9 6v12M7 21v-8h10v8M7 17h10',
+  megaphone: 'M4 10v4h3l7 4V6L7 10zM17 9a4 4 0 0 1 0 6M7 14l1 5h3l-1-5',
+  chart: 'M5 20V12M10 20V6M15 20v-9M20 20V4M3 20h18',
+  monitor: 'M3 5h18v11H3zM8 20h8M12 16v4',
+  settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+  search: 'M20 20l-4.5-4.5M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0',
+  calendar: 'M4 6h16v15H4zM4 10h16M8 3v4M16 3v4',
+  bell: 'M6 9a6 6 0 0 1 12 0v5l2 3H4l2-3zM10 20a2 2 0 0 0 4 0',
+  chevronDown: 'M6 9l6 6 6-6',
+  refresh: 'M20 11a8 8 0 0 0-14.3-4.3L4 9M4 4v5h5M4 13a8 8 0 0 0 14.3 4.3L20 15M20 20v-5h-5',
+  trendUp: 'M7 17 17 7M9 7h8v8',
+  trendDown: 'M7 7l10 10M17 9v8H9',
+  userPlus: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M2 21c0-4 3-6 7-6s7 2 7 6M19 8v6M16 11h6',
+  document: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
+  wallet: 'M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2',
+  creditCard: 'M3 6h18v12H3zM3 10h18M7 15h3',
+  truck: 'M3 6h11v10H3zM14 9h4l3 4v3h-7M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4M17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+  checkCircle: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M8 12.5l2.5 2.5L16 9.5',
+  alertCircle: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7.5v5.5M12 16.5h.01',
+  xCircle: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M9 9l6 6M15 9l-6 6',
+  package: 'M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10',
   dashboard: 'M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z',
   picking: 'M9 5h10M9 12h10M9 19h10M4.5 5l1 1 2-2M4.5 12l1 1 2-2M4.5 19l1 1 2-2',
   orders: 'M6 3h12l1 18H5zM9 8a3 3 0 0 0 6 0',
@@ -31,7 +56,7 @@ const PATHS = {
 
 export type AdminIcon = keyof typeof PATHS;
 
-export function Icon({ name, size = 18 }: { name: AdminIcon; size?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}
+export function Icon({ name, size = 18, strokeWidth = 1.7 }: { name: AdminIcon; size?: number; strokeWidth?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth}
     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={PATHS[name]} /></svg>;
 }

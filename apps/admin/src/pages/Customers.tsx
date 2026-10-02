@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import type { ProfileRow } from '@casa-te/shared';
 import { supabase, unwrap } from '../lib/supabase';
 import { useAsync, useDebounced, useStores } from '../lib/data';
@@ -10,7 +10,8 @@ const PAGE = 50;
 
 export function CustomersPage() {
   const stores = useStores();
-  const [search, setSearch] = useState('');
+  const [params] = useSearchParams();
+  const [search, setSearch] = useState(params.get('q') ?? '');
   const q = useDebounced(search.trim());
   const [marketingOnly, setMarketingOnly] = useState(false);
   const [page, setPage] = useState(0);
