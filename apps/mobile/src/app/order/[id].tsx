@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import {
-  FULFILMENT_LABELS, PAYMENT_STATUS_LABELS, formatEuro, formatShipping, formatWeight, friendlyError, orderStatusLabel,
-} from '@casa-te/shared';
+import { FULFILMENT_LABELS, PAYMENT_STATUS_LABELS, formatWeight, friendlyError, orderStatusLabel } from '@casa-te/shared';
+import { formatEuro, formatShipping } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { OrderTimeline } from '@/components/OrderTimeline';
 import { ProductImage } from '@/components/ProductImage';

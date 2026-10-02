@@ -4,7 +4,7 @@ import { colors } from '@/config/theme';
 import { ProductImage } from './ProductImage';
 
 /** Swipeable product photos with page dots (one photo: no dots). */
-export function ProductGallery({ images, sku, label, inset = 0.1 }: { images: string[]; sku: string; label: string; inset?: number }) {
+export function ProductGallery({ images, sku, label, inset = 0.1, blend }: { images: string[]; sku: string; label: string; inset?: number; blend?: boolean }) {
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
   const pages = images.length ? images : [null];
@@ -16,9 +16,9 @@ export function ProductGallery({ images, sku, label, inset = 0.1 }: { images: st
       ? <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={32}
           accessibilityLabel={`${label}: ${pages.length} foto`}>
           {pages.map((uri, i) => <View key={uri ?? i} style={{ width }}>
-            <ProductImage uri={uri} sku={sku} label={`${label}, foto ${i + 1} di ${pages.length}`} inset={inset} /></View>)}
+            <ProductImage uri={uri} sku={sku} label={`${label}, foto ${i + 1} di ${pages.length}`} inset={inset} blend={blend} /></View>)}
         </ScrollView>
-      : <ProductImage uri={pages[0]} sku={sku} label={label} inset={inset} />}
+      : <ProductImage uri={pages[0]} sku={sku} label={label} inset={inset} blend={blend} />}
     {pages.length > 1 && <View style={styles.dots} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {pages.map((_, i) => <View key={i} style={[styles.dot, i === index && styles.dotOn]} />)}
     </View>}

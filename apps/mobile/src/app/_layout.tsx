@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { Platform, Text, View } from 'react-native';
 import { useFonts } from 'expo-font';
-import { LibreCaslonText_400Regular, LibreCaslonText_400Regular_Italic, LibreCaslonText_700Bold } from '@expo-google-fonts/libre-caslon-text';
 import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600SemiBold } from '@expo-google-fonts/hanken-grotesk';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -23,7 +22,10 @@ function NotConfigured() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    LibreCaslonText_400Regular, LibreCaslonText_400Regular_Italic, LibreCaslonText_700Bold,
+    // Latin subsets of EB Garamond and Bodoni Moda (assets/fonts, SIL Open Font License).
+    EBGaramond_400Regular: require('../../assets/fonts/EBGaramond_400Regular.ttf'),
+    EBGaramond_500Medium: require('../../assets/fonts/EBGaramond_500Medium.ttf'),
+    BodoniModa_600SemiBold: require('../../assets/fonts/BodoniModa_600SemiBold.ttf'),
     HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600SemiBold,
   });
   useEffect(() => { if (isConfigured) startSessionListener(); }, []);
@@ -36,7 +38,7 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerTintColor: colors.text,
-          headerTitleStyle: { fontFamily: fonts.serif, fontSize: 19, color: colors.text },
+          headerTitleStyle: { fontFamily: fonts.serif, fontSize: 21, color: colors.text },
           headerShadowVisible: false,
           headerTitleAlign: 'center',
           headerStyle: { backgroundColor: colors.background },

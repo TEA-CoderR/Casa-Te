@@ -8,13 +8,15 @@ import { colors } from '@/config/theme';
  * Product photo from storage/CDN. Falls back to the demo illustration sheet for the seeded
  * placeholder SKUs, and to a neutral icon otherwise.
  */
-export function ProductImage({ uri, sku, label, inset = 0.12, aspect = 1 }: { uri: string | null; sku?: string | null; label?: string; inset?: number; aspect?: number }) {
+export function ProductImage({ uri, sku, label, inset = 0.12, aspect = 1, blend }: { uri: string | null; sku?: string | null; label?: string; inset?: number; aspect?: number; blend?: boolean }) {
+  // blend: on a tinted backdrop, white studio backgrounds of product photos take the backdrop colour.
+  const blendStyle = blend ? ({ mixBlendMode: 'multiply' } as object) : null;
   if (uri) {
     return <View style={{ width: '100%', aspectRatio: aspect, padding: `${inset * 100}%` as `${number}%` }}>
-      <Image source={{ uri }} resizeMode="contain" style={{ width: '100%', height: '100%' }} accessibilityLabel={label} />
+      <Image source={{ uri }} resizeMode="contain" style={[{ width: '100%', height: '100%' }, blendStyle]} accessibilityLabel={label} />
     </View>;
   }
-  if (sku && productImageCells[sku] !== undefined) return <ProductVisual id={sku} label={label} inset={inset} aspect={aspect} />;
+  if (sku && productImageCells[sku] !== undefined) return <ProductVisual id={sku} label={label} inset={inset} aspect={aspect} blend={blend} />;
   return <View style={{ width: '100%', aspectRatio: aspect, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel={label}>
     <Icon name="box" size={36} color={colors.line} />
   </View>;

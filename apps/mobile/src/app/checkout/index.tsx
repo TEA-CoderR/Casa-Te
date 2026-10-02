@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import {
-  FULFILMENT_LABELS, formatEuro, formatShipping, formatWeight, friendlyError, isPhone, validateAddress, validateInvoice,
-  type Address, type AddressRow, type CreateOrderInput, type FulfilmentMethod, type InvoiceDetails, type PickupPointRow,
-} from '@casa-te/shared';
+import { FULFILMENT_LABELS, formatWeight, friendlyError, isPhone, validateAddress, validateInvoice, type Address, type AddressRow, type CreateOrderInput, type FulfilmentMethod, type InvoiceDetails, type PickupPointRow } from '@casa-te/shared';
+import { formatEuro, formatShipping } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { Icon, type IconName } from '@/components/Icon';
 import { FulfilmentSheet } from '@/components/FulfilmentSheet';

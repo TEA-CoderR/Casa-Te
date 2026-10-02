@@ -1,5 +1,5 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { formatEuro } from '@casa-te/shared';
+import { formatEuro } from '@/lib/price';
 import { colors, fonts } from '@/config/theme';
 import { Icon } from './Icon';
 import { PrimaryButton } from './UI';

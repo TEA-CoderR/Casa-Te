@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useLocalSearchParams, router, Stack } from 'expo-router';
-import { formatEuro, formatPackSize, formatWeight, unitPriceLabel } from '@casa-te/shared';
+import { formatPackSize, formatWeight } from '@casa-te/shared';
+import { formatEuro, unitPriceLabel } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { ProductGallery } from '@/components/ProductGallery';
 import { FavoriteButton, stockLabel } from '@/components/ProductCard';
@@ -89,7 +90,7 @@ export default function ProductDetailScreen() {
       {unitPrice ? <Text style={styles.vat}>{unitPrice}{pack ? ` · ${pack}` : ''}</Text> : <Text style={styles.vat}>IVA inclusa</Text>}
     </View>
     <View style={styles.ratingRow} accessibilityLabel={product.rating_count ? `Valutazione ${product.rating_avg} su 5, ${product.rating_count} recensioni` : 'Nessuna recensione'}>
-      <Stars value={product.rating_avg ?? 0} size={18} />
+      <Stars value={product.rating_avg ?? 0} size={15} />
       <Text style={styles.ratingText}>{product.rating_count ? `(${product.rating_count})` : 'Nessuna recensione'}</Text>
     </View>
     <Pressable style={styles.availability} onPress={() => setStoreSheet(true)} accessibilityRole="button"
@@ -99,7 +100,7 @@ export default function ProductDetailScreen() {
       <Text style={styles.change}>Cambia</Text>
     </Pressable>
     <View style={styles.features}>
-      {features.map((f) => <View key={f.icon + f.text} style={styles.feature}><Icon name={f.icon} size={24} color={colors.text} strokeWidth={1.3} />
+      {features.map((f) => <View key={f.icon + f.text} style={styles.feature}><Icon name={f.icon} size={23} color={colors.text} strokeWidth={1.15} />
         <Text style={styles.featureText}>{f.text}</Text></View>)}
     </View>
     {!!product.description && <Text style={styles.description}>{product.description}</Text>}
@@ -112,11 +113,11 @@ export default function ProductDetailScreen() {
 
   const actions = <>
     <Pressable onPress={back} accessibilityRole="button" accessibilityLabel="Indietro" style={[styles.round, styles.roundLeft]}>
-      <Icon name="back" size={22} strokeWidth={1.7} /></Pressable>
+      <Icon name="back" size={22} strokeWidth={1.5} /></Pressable>
     <View style={styles.roundRight}>
-      <FavoriteButton productId={product.id} name={product.name} size={21} style={styles.round} />
-      <Pressable onPress={() => share(product.name)} accessibilityRole="button" accessibilityLabel={`Condividi ${product.name}`} style={styles.round}>
-        <Icon name="share" size={20} strokeWidth={1.6} /></Pressable>
+      <FavoriteButton productId={product.id} name={product.name} size={20} style={styles.round} />
+      <Pressable onPress={() => share(product.name)} accessibilityRole="button" accessibilityLabel={`Condividi ${product.name}`} style={[styles.round, styles.roundBare]}>
+        <Icon name="share" size={21} strokeWidth={1.4} /></Pressable>
     </View>
   </>;
   const sharedNote = shared && <View style={styles.toast} accessibilityLiveRegion="polite"><Text style={styles.toastText}>Link copiato</Text></View>;
@@ -126,13 +127,13 @@ export default function ProductDetailScreen() {
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
     {wide ? <View style={[styles.wide, { paddingTop: 16 + insets.top }]}>
       <View style={[styles.media, styles.mediaWide]}>
-        <ProductGallery images={product.images} sku={product.sku} label={product.name} />
+        <ProductGallery images={product.images} sku={product.sku} label={product.name} blend />
         <View style={[styles.overlay, { top: 12 }]}>{actions}</View>
       </View>
       <View style={{ flex: 1, maxWidth: 460 }}>{details}</View>
     </View> : <>
       <View style={[styles.media, { paddingTop: insets.top + 8 }]}>
-        <ProductGallery images={product.images} sku={product.sku} label={product.name} />
+        <ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0.12} blend />
         <View style={[styles.overlay, { top: insets.top + 12 }]}>{actions}</View>
       </View>
       {details}
@@ -143,30 +144,32 @@ export default function ProductDetailScreen() {
 
 const styles = StyleSheet.create({
   wide: { flexDirection: 'row', gap: 56, alignItems: 'flex-start', paddingTop: 8 },
-  media: { backgroundColor: colors.surface, marginHorizontal: -20, marginTop: -20, marginBottom: 20 },
+  media: { backgroundColor: '#F2EEE8', marginHorizontal: -20, marginTop: -20, marginBottom: 22 },
   overlay: { position: 'absolute', left: 12, right: 12, flexDirection: 'row', justifyContent: 'space-between' },
-  round: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line },
-  roundLeft: { borderWidth: 0, backgroundColor: 'transparent' },
-  roundRight: { flexDirection: 'row', gap: 10 },
+  round: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#3A2E1A', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  roundBare: { backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0 },
+  roundLeft: { backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0 },
+  roundRight: { flexDirection: 'row', gap: 6 },
   toast: { position: 'absolute', alignSelf: 'center', top: 80, backgroundColor: colors.text, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
   toastText: { color: '#fff', fontSize: 13, fontFamily: fonts.sansMedium },
-  mediaWide: { flex: 1.1, marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 18, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
-  brand: { fontSize: 12, letterSpacing: 2.4, textTransform: 'uppercase', color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500', marginBottom: 8 },
-  title: { fontSize: 29, lineHeight: 36, fontFamily: fonts.serif, color: colors.text },
+  mediaWide: { flex: 1.1, marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 18, overflow: 'hidden' },
+  brand: { fontSize: 11, letterSpacing: 2.6, textTransform: 'uppercase', color: colors.text, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginBottom: 6 },
+  title: { fontSize: 30, lineHeight: 33, fontFamily: fonts.serif, color: colors.text, letterSpacing: -0.2 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 10 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  ratingText: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
-  price: { fontSize: 32, fontFamily: fonts.serif, color: colors.text },
-  compare: { fontSize: 17, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
-  vat: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  ratingText: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans },
+  price: { fontSize: 31, fontFamily: fonts.serifMedium, color: colors.text },
+  compare: { fontSize: 15, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
+  vat: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans },
   availability: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 40, marginTop: 6, flexWrap: 'wrap' },
-  availabilityText: { fontSize: 14, color: colors.green, fontFamily: fonts.sansMedium, fontWeight: '500' },
-  change: { fontSize: 14, color: colors.text, textDecorationLine: 'underline', fontFamily: fonts.sans },
+  availabilityText: { fontSize: 13, color: colors.green, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  change: { fontSize: 13, color: colors.text, textDecorationLine: 'underline', fontFamily: fonts.sans },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.green },
-  features: { flexDirection: 'row', marginTop: 18, paddingVertical: 18, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line },
-  feature: { flex: 1, alignItems: 'center', gap: 8, paddingHorizontal: 4 },
-  featureText: { fontSize: 12, lineHeight: 16, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans },
-  description: { fontSize: 15, lineHeight: 24, color: colors.muted, marginTop: 18, maxWidth: 560, fontFamily: fonts.sans },
+  features: { flexDirection: 'row', marginTop: 14, paddingVertical: 16, borderTopWidth: 1, borderColor: '#EEE9E0' },
+  feature: { flex: 1, alignItems: 'center', gap: 7, paddingHorizontal: 3 },
+  featureText: { fontSize: 11, lineHeight: 14, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans },
+  description: { fontSize: 13.5, lineHeight: 21, color: colors.muted, marginTop: 6, maxWidth: 560, fontFamily: fonts.sans },
   buyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   sku: { fontSize: 12, color: colors.muted, marginTop: 22, fontFamily: fonts.sans },
   added: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#E8EFE6', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },

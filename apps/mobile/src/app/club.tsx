@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router, Stack } from 'expo-router';
-import { formatEuro, friendlyError, type ClubOffer } from '@casa-te/shared';
+import { friendlyError, type ClubOffer } from '@casa-te/shared';
+import { formatEuro } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { Icon, type IconName } from '@/components/Icon';
 import { Loading, Notice, PrimaryButton, SecondaryButton } from '@/components/UI';

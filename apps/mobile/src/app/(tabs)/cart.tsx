@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import {
-  FREE_SHIPPING_MAX_WEIGHT_G, FULFILMENT_LABELS, formatEuro, formatPackSize, formatShipping, formatWeight,
-  freeShippingRemainingCents, type QuoteLine,
-} from '@casa-te/shared';
+import { FREE_SHIPPING_MAX_WEIGHT_G, FULFILMENT_LABELS, formatPackSize, formatWeight, freeShippingRemainingCents, type QuoteLine } from '@casa-te/shared';
+import { formatEuro, formatShipping } from '@/lib/price';
 import { FulfilmentSheet } from '@/components/FulfilmentSheet';
 import { usePreferences } from '@/store/preferences';
 import { useQuery } from '@/lib/useQuery';
@@ -80,7 +78,7 @@ export default function CartScreen() {
       <Text style={styles.modify}>Modifica</Text></Pressable>
   </View>;
   const club = <Pressable onPress={() => router.push('/club')} accessibilityRole="link" style={styles.banner}>
-    <Icon name="crown" size={30} color="#B07A1E" strokeWidth={1.4} />
+    <Icon name="crown" size={32} color="#B07A1E" strokeWidth={1.2} />
     <View style={{ flex: 1 }}>
       <Text style={styles.bannerTitle}>Casa & Te Club</Text>
       <Text style={styles.bannerText}>{clubTagline}</Text>
@@ -133,7 +131,7 @@ export default function CartScreen() {
               {line.issue !== 'unavailable' && <QuantityControl value={items[line.product_id] ?? line.quantity} label={line.name} max={max} compact
                 onChange={(q) => setQuantity(line.product_id, q)} />}
               <Pressable onPress={() => { setRemoved({ id: line.product_id, name: line.name, qty: items[line.product_id] ?? line.quantity }); remove(line.product_id); }} style={styles.remove} accessibilityRole="button" accessibilityLabel={`Rimuovi ${line.name}`}>
-                <Icon name="trash" size={19} color={colors.muted} strokeWidth={1.5} /></Pressable>
+                <Icon name="trash" size={18} color={colors.muted} strokeWidth={1.3} /></Pressable>
             </View>
           </View>
         </View>
@@ -153,26 +151,26 @@ const styles = StyleSheet.create({
   undoLink: { fontSize: 14, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.green, textDecorationLine: 'underline' },
   wide: { flexDirection: 'row', gap: 40, alignItems: 'flex-start' },
   summaryCard: { flex: 1, maxWidth: 420, backgroundColor: colors.surface, borderRadius: 16, padding: 22, borderWidth: 1, borderColor: colors.line },
-  lines: { borderTopWidth: 1, borderColor: colors.line },
-  line: { flexDirection: 'row', gap: 14, paddingVertical: 14, borderBottomWidth: 1, borderColor: colors.line },
-  thumb: { width: 92, height: 92, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.line, justifyContent: 'center', overflow: 'hidden' },
-  name: { fontSize: 15, lineHeight: 19, fontFamily: fonts.serif, color: colors.text },
-  meta: { fontSize: 12, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
+  lines: { borderTopWidth: 1, borderColor: '#EEE9E0' },
+  line: { flexDirection: 'row', gap: 14, paddingVertical: 12, borderBottomWidth: 1, borderColor: '#EEE9E0' },
+  thumb: { width: 86, height: 86, backgroundColor: colors.surface, borderRadius: 8, borderWidth: 1, borderColor: '#EEE9E0', justifyContent: 'center', overflow: 'hidden' },
+  name: { fontSize: 16.5, lineHeight: 19, fontFamily: fonts.serif, color: colors.text },
+  meta: { fontSize: 11.5, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
   issue: { fontSize: 12, color: colors.danger, marginTop: 4, fontFamily: fonts.sansMedium, fontWeight: '500' },
   hint: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans, marginTop: -2, marginBottom: 4 },
   lineBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginTop: 'auto', paddingTop: 6 },
-  linePrice: { fontSize: 19, fontFamily: fonts.serif, color: colors.text },
-  remove: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginRight: -8 },
+  linePrice: { fontSize: 19.5, fontFamily: fonts.serifMedium, color: colors.text },
+  remove: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: -8 },
   delivery: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16 },
-  deliveryTitle: { fontSize: 15, fontFamily: fonts.serif, color: colors.text },
+  deliveryTitle: { fontSize: 16.5, fontFamily: fonts.serif, color: colors.text },
   deliveryText: { fontSize: 12, color: colors.muted, marginTop: 2, lineHeight: 17, fontFamily: fonts.sans },
-  modify: { fontSize: 13, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium, fontWeight: '500' },
-  banner: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.sand, borderRadius: 12, padding: 16 },
-  bannerTitle: { fontSize: 17, fontFamily: fonts.serif, color: colors.text },
+  modify: { fontSize: 12.5, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium, fontWeight: '500' },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#F5ECDD', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16 },
+  bannerTitle: { fontSize: 19, fontFamily: fonts.serif, color: colors.text },
   bannerText: { fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
   totals: { marginTop: 16 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 8 },
-  totalLabel: { fontSize: 22, fontFamily: fonts.serif, color: colors.text },
-  totalValue: { fontSize: 24, fontFamily: fonts.serif, color: colors.text },
+  totalLabel: { fontSize: 23, fontFamily: fonts.serif, color: colors.text },
+  totalValue: { fontSize: 24, fontFamily: fonts.serifMedium, color: colors.text },
   vat: { fontSize: 12, color: colors.muted, textAlign: 'right', marginTop: 2, fontFamily: fonts.sans },
 });
