@@ -181,7 +181,8 @@ export function ProductEditPage() {
             <Field label="Nome *"><input value={form.name} onChange={(e) => set('name', e.target.value)} required maxLength={200} /></Field>
             <Field label="SKU / codice articolo *"><input value={form.sku} onChange={(e) => set('sku', e.target.value)} required pattern="[A-Za-z0-9._\-]{1,40}" /></Field>
             <Field label="Categoria"><select value={form.category_id} onChange={(e) => set('category_id', e.target.value)}>
-              <option value="">Nessuna</option>{categories.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+              <option value="">Nessuna</option>{(categories.data ?? []).filter((c) => !c.parent_id).flatMap((p) => [p, ...(categories.data ?? []).filter((c) => c.parent_id === p.id)])
+                .map((c) => <option key={c.id} value={c.id}>{c.parent_id ? `${categories.data?.find((p) => p.id === c.parent_id)?.name} › ${c.name}` : c.name}</option>)}</select></Field>
             <Field label="Marca"><input value={form.brand} onChange={(e) => set('brand', e.target.value)} /></Field>
             <Field label="EAN / codice a barre"><input value={form.barcode} onChange={(e) => set('barcode', e.target.value.replace(/\D/g, ''))} maxLength={14} inputMode="numeric" /></Field>
           </div>

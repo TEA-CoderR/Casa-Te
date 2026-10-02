@@ -117,6 +117,21 @@ export async function fetchFacets(categoryIds: string[] | null): Promise<{ brand
     minCents: prices.length ? Math.min(...prices) : 0, maxCents: prices.length ? Math.max(...prices) : 0 };
 }
 
+/** One representative photo per category (featured products first), for the category circles. */
+export async function fetchCategoryCovers(): Promise<Record<string, { image: string | null; sku: string }>> {
+  const rows = unwrap(await supabase.from('products').select('sku,category_id,featured,product_images(path,sort)')
+    .eq('active', true).not('category_id', 'is', null).order('featured', { ascending: false }).order('created_at').limit(500)) as unknown as
+    Array<{ sku: string; category_id: string; product_images: Array<{ path: string; sort: number }> }>;
+  const covers: Record<string, { image: string | null; sku: string }> = {};
+  for (const r of rows) {
+    const path = [...(r.product_images ?? [])].sort((a, b) => a.sort - b.sort)[0]?.path;
+    const cover = { image: imageUrl(path), sku: r.sku };
+    // Keep the first one; upgrade a cover without a photo when a product with a photo comes along.
+    if (!covers[r.category_id] || (!covers[r.category_id].image && cover.image)) covers[r.category_id] = cover;
+  }
+  return covers;
+}
+
 /** Other products of the same variant group (e.g. the other fragrances), with stock for the store. */
 export async function fetchVariants(group: string, storeId: string | null): Promise<CatalogProduct[]> {
   let query = supabase.from('products').select(PRODUCT_FIELDS).eq('active', true).eq('variant_group', group).order('variant_label').limit(12);
