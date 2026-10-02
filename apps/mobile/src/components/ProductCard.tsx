@@ -65,7 +65,7 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
   return <View style={styles.card}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={styles.media}>
-        <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.1} />
+        <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.06} aspect={1.55} />
         {!!product.compare_at_price_cents && <View style={styles.badge}><Text style={styles.badgeText}>Offerta</Text></View>}
       </View>
       <View style={styles.body}>
@@ -73,7 +73,7 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
         {!!note && <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{note}</Text>}
       </View>
     </Pressable></Link>
-    <FavoriteButton productId={product.id} name={product.name} style={styles.heartCorner} />
+    <FavoriteButton productId={product.id} name={product.name} size={20} style={styles.heartCorner} />
     <View style={styles.bottom}>{price}{cartButton}</View>
   </View>;
 }
@@ -81,18 +81,18 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
 const styles = StyleSheet.create({
   card: { flex: 1, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
   media: { backgroundColor: colors.surface },
-  heart: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  heart: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 4, right: 4 },
   badge: { position: 'absolute', left: 10, top: 10, backgroundColor: colors.green, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
   badgeText: { fontSize: 11, color: '#fff', fontFamily: fonts.sansSemiBold, fontWeight: '600' },
-  body: { paddingHorizontal: 12 },
-  name: { fontSize: 15, lineHeight: 19, fontFamily: fonts.serif, color: colors.text, minHeight: 38 },
+  body: { paddingHorizontal: 10 },
+  name: { fontSize: 14, lineHeight: 17, fontFamily: fonts.serif, color: colors.text, minHeight: 34 },
   meta: { fontSize: 12, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
-  bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 6, paddingBottom: 12, gap: 6, marginTop: 'auto' },
+  bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingTop: 4, paddingBottom: 8, gap: 6, marginTop: 'auto' },
   priceRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
-  price: { fontSize: 19, fontFamily: fonts.serif, color: colors.text },
+  price: { fontSize: 18, fontFamily: fonts.serif, color: colors.text },
   compare: { fontSize: 13, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
-  add: { width: 40, height: 40, borderRadius: 11, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  add: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   addCount: { color: '#fff', fontSize: 15, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
   row: { flexDirection: 'row', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.line, alignItems: 'center' },
   rowLink: { flex: 1, flexDirection: 'row', gap: 14, alignItems: 'center' },

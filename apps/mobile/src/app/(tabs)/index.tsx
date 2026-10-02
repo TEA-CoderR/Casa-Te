@@ -99,8 +99,8 @@ export default function HomeScreen() {
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#shade)" rx={wide ? 18 : 0} />
       </Svg>
       <View style={[styles.heroCopy, wide && { padding: 48, maxWidth: 620 }]}>
-        <Text style={[styles.heroTitle, wide && styles.heroTitleWide]}>La casa,{'\n'}più semplice.</Text>
-        <Text style={[styles.heroText, wide && { fontSize: 19, lineHeight: 27 }]}>Oggetti utili per ogni stanza.{'\n'}Ordina online, ritira gratis nel tuo negozio.</Text>
+        <Text style={[styles.heroTitle, wide && styles.heroTitleWide]}>La bellezza{'\n'}vive con te.</Text>
+        <Text style={[styles.heroText, wide && { fontSize: 19, lineHeight: 27 }]}>Casa, stile e ispirazione{'\n'}per ogni momento{'\n'}della tua vita.</Text>
       </View>
       <Pressable accessibilityRole="search" accessibilityLabel="Cerca prodotti" onPress={() => router.push({ pathname: '/catalog', params: { search: '1' } })}
         style={[styles.search, wide && { left: 48, right: undefined, width: 480, bottom: 40 }]}>

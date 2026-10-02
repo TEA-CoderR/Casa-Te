@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Image, View } from 'react-native';
 import { demoProductSheet, productImageCells } from '@/data/productImages';
-export function ProductVisual({ id, label, inset = 0.12 }: { id: string; label?: string; inset?: number }) {
+export function ProductVisual({ id, label, inset = 0.12, aspect = 1 }: { id: string; label?: string; inset?: number; aspect?: number }) {
   const [width, setWidth] = useState(0);
   const cell = productImageCells[id];
-  const size = width * (1 - inset * 2);
+  // The sprite cell is square: fit it in the (possibly wider) box.
+  const size = Math.min(width, width / aspect) * (1 - inset * 2);
   return <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-    style={{ width: '100%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' }}
+    style={{ width: '100%', aspectRatio: aspect, alignItems: 'center', justifyContent: 'center' }}
     accessibilityLabel={label ? `${label} · immagine dimostrativa` : undefined}>
     {width > 0 && cell !== undefined && <View style={{ width: size, height: size, overflow: 'hidden' }}>
       <Image source={demoProductSheet} resizeMode="stretch" fadeDuration={0}

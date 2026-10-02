@@ -25,7 +25,27 @@ export type ProductRow = {
   category_id: Uuid | null; price_cents: number; compare_at_price_cents: number | null; vat_rate: number;
   weight_g: number; barcode: string | null; max_per_order: number; active: boolean; featured: boolean;
   search_text: string; created_at: Timestamp; updated_at: Timestamp;
+  /** Pack size for the unit price (e.g. 500 ml). Both set or both null. */
+  unit_quantity: number | null; unit: ProductUnit | null;
+  color: string | null; highlights: ProductHighlight[];
+  /** Products sharing a variant_group are shown as variants of each other (each has its own SKU and stock). */
+  variant_group: string | null; variant_title: string | null; variant_label: string | null;
+  /** Maintained from visible product_reviews (read-only for clients). */
+  rating_avg: number | null; rating_count: number;
 };
+
+export type ProductUnit = 'ml' | 'l' | 'g' | 'kg' | 'pz' | 'm';
+export const HIGHLIGHT_ICONS = ['leaf', 'home', 'diamond', 'drop', 'sun', 'shield', 'star', 'recycle', 'hand', 'box', 'heart', 'sparkle'] as const;
+export type HighlightIcon = typeof HIGHLIGHT_ICONS[number];
+export type ProductHighlight = { icon: HighlightIcon; label: string };
+
+export type ProductReviewRow = {
+  id: Uuid; product_id: Uuid; author_name: string; rating: number; comment: string | null; created_at: Timestamp;
+  /** Visible to staff only. */
+  hidden?: boolean;
+};
+export type ReviewEligibility = { eligible: boolean; review: { rating: number; comment: string | null; hidden: boolean } | null };
+export type ClubOffer = { code: string; description: string | null; kind: CouponKind; value: number; min_subtotal_cents: number; ends_at: Timestamp | null };
 
 export type ProductImageRow = { id: Uuid; product_id: Uuid; path: string; alt: string | null; sort: number; created_at: Timestamp };
 export type InventoryRow = { store_id: Uuid; product_id: Uuid; quantity: number; updated_at: Timestamp };
@@ -47,11 +67,15 @@ export type CouponRow = {
   id: Uuid; code: string; description: string | null; kind: CouponKind; value: number; min_subtotal_cents: number;
   starts_at: Timestamp | null; ends_at: Timestamp | null; max_redemptions: number | null;
   per_customer_limit: number | null; redemptions: number; active: boolean; created_at: Timestamp; updated_at: Timestamp;
+  /** Only for CASA & TE Club members (checked in quote_cart). */
+  club_only: boolean;
 };
 
 export type ProfileRow = {
   id: Uuid; email: string | null; full_name: string | null; phone: string | null; preferred_store_id: Uuid | null;
   marketing_opt_in: boolean; created_at: Timestamp; updated_at: Timestamp;
+  /** Set when the customer joined the CASA & TE Club (set_club_membership RPC only). */
+  club_member_since: Timestamp | null;
 };
 
 export type AddressRow = {

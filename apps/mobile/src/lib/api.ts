@@ -3,14 +3,16 @@
 import {
   productImageUrl, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
   type CreateOrderInput, type OrderEventRow, type OrderItemRow, type OrderRow, type PickupPointRow,
-  type ProductRow, type ProfileRow, type Quote, type QuoteInput, type StoreRow,
+  type ClubOffer, type ProductReviewRow, type ProductRow, type ProfileRow, type Quote, type QuoteInput,
+  type ReviewEligibility, type StoreRow,
 } from '@casa-te/shared';
 import { Platform } from 'react-native';
 import { SUPABASE_URL, supabase } from './supabase';
 
 export type CatalogProduct = Pick<ProductRow,
   'id' | 'sku' | 'name' | 'description' | 'brand' | 'category_id' | 'price_cents' | 'compare_at_price_cents' |
-  'weight_g' | 'max_per_order' | 'featured'> & {
+  'weight_g' | 'max_per_order' | 'featured' | 'unit_quantity' | 'unit' | 'color' | 'highlights' |
+  'variant_group' | 'variant_title' | 'variant_label' | 'rating_avg' | 'rating_count'> & {
   image: string | null;
   images: string[];
   /** Units available in the selected store (null when no store is selected). */
@@ -33,6 +35,7 @@ export const imageUrl = (path: string | null | undefined) => productImageUrl(SUP
 
 const PRODUCT_FIELDS =
   'id,sku,name,description,brand,category_id,price_cents,compare_at_price_cents,weight_g,max_per_order,featured,' +
+  'unit_quantity,unit,color,highlights,variant_group,variant_title,variant_label,rating_avg,rating_count,' +
   'product_images(path,sort),inventory(quantity,store_id)';
 
 type RawProduct = Omit<CatalogProduct, 'image' | 'images' | 'stock'> & {
@@ -61,6 +64,13 @@ export async function fetchCategories(): Promise<CategoryRow[]> {
 export type ProductQuery = {
   storeId: string | null;
   categoryId?: string | null;
+  /** Any of these categories (a parent plus its subcategories). */
+  categoryIds?: string[];
+  brands?: string[];
+  colors?: string[];
+  /** Price range in cents (inclusive). */
+  priceMin?: number | null;
+  priceMax?: number | null;
   search?: string;
   featured?: boolean;
   /** Only these products (favourites). */
@@ -70,12 +80,17 @@ export type ProductQuery = {
   pageSize?: number;
 };
 
-export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogProduct[]; hasMore: boolean }> {
+export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogProduct[]; hasMore: boolean; total: number | null }> {
   const pageSize = q.pageSize ?? 40;
   const from = (q.page ?? 0) * pageSize;
-  let query = supabase.from('products').select(PRODUCT_FIELDS).eq('active', true);
+  let query = supabase.from('products').select(PRODUCT_FIELDS, { count: 'exact' }).eq('active', true);
   if (q.storeId) query = query.eq('inventory.store_id', q.storeId);
   if (q.categoryId) query = query.eq('category_id', q.categoryId);
+  if (q.categoryIds?.length) query = query.in('category_id', q.categoryIds);
+  if (q.brands?.length) query = query.in('brand', q.brands);
+  if (q.colors?.length) query = query.in('color', q.colors);
+  if (q.priceMin != null) query = query.gte('price_cents', q.priceMin);
+  if (q.priceMax != null) query = query.lte('price_cents', q.priceMax);
   if (q.featured) query = query.eq('featured', true);
   if (q.ids) query = query.in('id', q.ids.length ? q.ids : ['00000000-0000-0000-0000-000000000000']);
   const needle = q.search?.trim().toLowerCase().replace(/[%_,()]/g, ' ');
@@ -86,8 +101,53 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
     case 'name': query = query.order('name'); break;
     default: query = query.order('featured', { ascending: false }).order('name');
   }
-  const rows = unwrap(await query.range(from, from + pageSize)) as unknown as RawProduct[];
-  return { items: rows.slice(0, pageSize).map((r) => toCatalogProduct(r, q.storeId)), hasMore: rows.length > pageSize };
+  const result = await query.range(from, from + pageSize);
+  const rows = unwrap(result) as unknown as RawProduct[];
+  return { items: rows.slice(0, pageSize).map((r) => toCatalogProduct(r, q.storeId)), hasMore: rows.length > pageSize, total: result.count ?? null };
+}
+
+/** Filter options (brands, colours, price range) for the products of some categories. */
+export async function fetchFacets(categoryIds: string[] | null): Promise<{ brands: string[]; colors: string[]; minCents: number; maxCents: number }> {
+  let query = supabase.from('products').select('brand,color,price_cents').eq('active', true).limit(2000);
+  if (categoryIds?.length) query = query.in('category_id', categoryIds);
+  const rows = unwrap(await query) as Array<{ brand: string | null; color: string | null; price_cents: number }>;
+  const uniq = (v: Array<string | null>) => [...new Set(v.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'it'));
+  const prices = rows.map((r) => r.price_cents);
+  return { brands: uniq(rows.map((r) => r.brand)), colors: uniq(rows.map((r) => r.color)),
+    minCents: prices.length ? Math.min(...prices) : 0, maxCents: prices.length ? Math.max(...prices) : 0 };
+}
+
+/** Other products of the same variant group (e.g. the other fragrances), with stock for the store. */
+export async function fetchVariants(group: string, storeId: string | null): Promise<CatalogProduct[]> {
+  let query = supabase.from('products').select(PRODUCT_FIELDS).eq('active', true).eq('variant_group', group).order('variant_label').limit(12);
+  if (storeId) query = query.eq('inventory.store_id', storeId);
+  const rows = unwrap(await query) as unknown as RawProduct[];
+  return rows.map((r) => toCatalogProduct(r, storeId));
+}
+
+// ---- Reviews -----------------------------------------------------------------
+
+export async function fetchReviews(productId: string): Promise<ProductReviewRow[]> {
+  return unwrap(await supabase.from('product_reviews').select('id,product_id,author_name,rating,comment,created_at')
+    .eq('product_id', productId).order('created_at', { ascending: false }).limit(50)) as ProductReviewRow[];
+}
+
+export async function fetchReviewEligibility(productId: string): Promise<ReviewEligibility> {
+  return unwrap(await supabase.rpc('can_review_product', { p_product_id: productId })) as ReviewEligibility;
+}
+
+export async function submitReview(productId: string, rating: number, comment: string): Promise<ReviewEligibility> {
+  return unwrap(await supabase.rpc('submit_review', { p_product_id: productId, p_rating: rating, p_comment: comment || null })) as ReviewEligibility;
+}
+
+// ---- CASA & TE Club ----------------------------------------------------------
+
+export async function setClubMembership(join: boolean): Promise<string | null> {
+  return unwrap(await supabase.rpc('set_club_membership', { p_join: join })) as string | null;
+}
+
+export async function fetchClubOffers(): Promise<ClubOffer[]> {
+  return unwrap(await supabase.rpc('club_offers')) as ClubOffer[];
 }
 
 export async function fetchProduct(id: string, storeId: string | null): Promise<CatalogProduct | null> {

@@ -2,14 +2,18 @@ import { useState } from 'react';
 import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useLocalSearchParams, router, Stack } from 'expo-router';
-import { formatEuro, formatWeight } from '@casa-te/shared';
+import { formatEuro, formatPackSize, formatWeight, unitPriceLabel } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductGallery } from '@/components/ProductGallery';
 import { FavoriteButton, stockLabel } from '@/components/ProductCard';
-import { Icon } from '@/components/Icon';
+import { Icon, type IconName } from '@/components/Icon';
 import { EmptyState, Loading, PrimaryButton, QuantityControl } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
-import { fetchProduct } from '@/lib/api';
+import { fetchProduct, fetchVariants } from '@/lib/api';
+import { Stars } from '@/components/Stars';
+import { ProductReviews } from '@/components/ProductReviews';
+import { ProductVariants } from '@/components/ProductVariants';
+import { invalidate } from '@/lib/useQuery';
 import { useLayout, useStores } from '@/lib/hooks';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { useQuery } from '@/lib/useQuery';
@@ -26,7 +30,9 @@ export default function ProductDetailScreen() {
   const insets = useSafeAreaInsets();
   const add = useCartStore((s) => s.add);
   const inCart = useCartStore((s) => s.items[id ?? ''] ?? 0);
-  const { data: product, loading, error } = useQuery(id ? `product:${id}:${selected?.id}` : null, () => fetchProduct(id!, selected?.id ?? null));
+  const { data: product, loading, error, refetch } = useQuery(id ? `product:${id}:${selected?.id}` : null, () => fetchProduct(id!, selected?.id ?? null));
+  const group = product?.variant_group ?? null;
+  const variants = useQuery(group ? `variants:${group}:${selected?.id}` : null, () => fetchVariants(group!, selected?.id ?? null));
 
   const back = () => router.canGoBack() ? router.back() : router.replace('/');
   const share = async (name: string) => {
@@ -68,13 +74,23 @@ export default function ProductDetailScreen() {
 
   const caption = inCart ? `Già ${inCart} nel carrello` : product.stock !== null && product.stock < product.max_per_order ? `${product.stock} disponibili` : '';
   const store = storeShortName(selected) || 'negozio';
+  const unitPrice = unitPriceLabel(product.price_cents, product.unit_quantity, product.unit);
+  const pack = formatPackSize(product.unit_quantity, product.unit);
+  const features: Array<{ icon: IconName; text: string }> = product.highlights.length
+    ? product.highlights.map((h) => ({ icon: h.icon as IconName, text: h.label }))
+    : [{ icon: 'store', text: `Ritiro gratuito\na ${store}` }, { icon: 'truck', text: 'Spedizione gratis\nda €66' },
+       { icon: 'shield', text: 'Pagamento\nsicuro' }, { icon: 'weight', text: `Peso\n${formatWeight(product.weight_g)}` }];
   const details = <>
     {!!product.brand && <Text style={styles.brand}>{product.brand}</Text>}
     <Text style={styles.title} accessibilityRole="header">{product.name}</Text>
-    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+    <View style={styles.priceRow}>
       <Text style={styles.price}>{formatEuro(product.price_cents)}</Text>
       {!!product.compare_at_price_cents && <Text style={styles.compare}>{formatEuro(product.compare_at_price_cents)}</Text>}
-      <Text style={styles.vat}>IVA inclusa</Text>
+      {unitPrice ? <Text style={styles.vat}>{unitPrice}{pack ? ` · ${pack}` : ''}</Text> : <Text style={styles.vat}>IVA inclusa</Text>}
+    </View>
+    <View style={styles.ratingRow} accessibilityLabel={product.rating_count ? `Valutazione ${product.rating_avg} su 5, ${product.rating_count} recensioni` : 'Nessuna recensione'}>
+      <Stars value={product.rating_avg ?? 0} size={18} />
+      <Text style={styles.ratingText}>{product.rating_count ? `(${product.rating_count})` : 'Nessuna recensione'}</Text>
     </View>
     <Pressable style={styles.availability} onPress={() => setStoreSheet(true)} accessibilityRole="button"
       accessibilityLabel={`${stock.text}. Cambia negozio`}>
@@ -83,13 +99,15 @@ export default function ProductDetailScreen() {
       <Text style={styles.change}>Cambia</Text>
     </Pressable>
     <View style={styles.features}>
-      {([['store', `Ritiro gratuito\na ${store}`], ['truck', 'Spedizione gratis\nda €66'], ['shield', 'Pagamento\nsicuro'], ['weight', `Peso\n${formatWeight(product.weight_g)}`]] as const).map(([icon, text]) =>
-        <View key={icon} style={styles.feature}><Icon name={icon} size={24} color={colors.text} strokeWidth={1.3} />
-          <Text style={styles.featureText}>{text}</Text></View>)}
+      {features.map((f) => <View key={f.icon + f.text} style={styles.feature}><Icon name={f.icon} size={24} color={colors.text} strokeWidth={1.3} />
+        <Text style={styles.featureText}>{f.text}</Text></View>)}
     </View>
     {!!product.description && <Text style={styles.description}>{product.description}</Text>}
+    {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
     {wide && <View style={{ marginTop: 24 }}>{buy}</View>}
-    <Text style={styles.sku}>Codice articolo {product.sku} · spedizione gratuita fino a 10 kg</Text>
+    <Text style={styles.sku}>Codice articolo {product.sku}{product.color ? ` · Colore ${product.color}` : ''} · IVA inclusa</Text>
+    <ProductReviews productId={product.id} average={product.rating_avg} count={product.rating_count}
+      onChanged={() => { void refetch(); invalidate('featured'); }} />
   </>;
 
   const actions = <>
@@ -135,6 +153,9 @@ const styles = StyleSheet.create({
   mediaWide: { flex: 1.1, marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 18, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
   brand: { fontSize: 12, letterSpacing: 2.4, textTransform: 'uppercase', color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500', marginBottom: 8 },
   title: { fontSize: 29, lineHeight: 36, fontFamily: fonts.serif, color: colors.text },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 10 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  ratingText: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
   price: { fontSize: 32, fontFamily: fonts.serif, color: colors.text },
   compare: { fontSize: 17, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
   vat: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },

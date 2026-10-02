@@ -17,6 +17,7 @@ import { ImportPage } from './pages/Import';
 import { CategoriesPage } from './pages/Categories';
 import { InventoryPage } from './pages/Inventory';
 import { CouponsPage } from './pages/Coupons';
+import { ReviewsPage } from './pages/Reviews';
 import { ShippingPage } from './pages/Shipping';
 import { PickupPointsPage } from './pages/PickupPoints';
 import { CustomersPage } from './pages/Customers';
@@ -57,6 +58,7 @@ function Root() {
       <Route path="import" element={<Guard roles={M}><ImportPage /></Guard>} />
       <Route path="categories" element={<Guard roles={M}><CategoriesPage /></Guard>} />
       <Route path="coupons" element={<Guard roles={M}><CouponsPage /></Guard>} />
+      <Route path="reviews" element={<Guard roles={M}><ReviewsPage /></Guard>} />
       <Route path="shipping" element={<Guard roles={M}><ShippingPage /></Guard>} />
       <Route path="pickup-points" element={<Guard roles={M}><PickupPointsPage /></Guard>} />
       <Route path="customers" element={<Guard roles={M}><CustomersPage /></Guard>} />

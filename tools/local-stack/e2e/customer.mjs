@@ -52,6 +52,7 @@ await page.getByText("Come vuoi ricevere l'ordine?").last().waitFor();
 await page.waitForLoadState('networkidle');
 
 step('Checkout form: home delivery');
+await page.getByRole('radio', { name: /Consegna a domicilio/ }).last().click();
 await page.getByLabel('Nome e cognome').last().fill('Mario Rossi');
 await page.getByLabel('Via e numero civico').last().fill('Via di Prova 1');
 await page.getByLabel('Città').last().fill('Lucca');
@@ -85,6 +86,17 @@ await page.getByText("Segui l'ordine").last().click();
 await page.waitForURL(/\/order\//);
 await page.waitForLoadState('networkidle');
 await shot(page, 'ordine-cliente');
+step('Verified buyer reviews a purchased product');
+const padella = await sql(`select id from products where sku = 'padella-28'`);
+await page.goto(`${env.SHOP_URL}/product/${padella}`, { waitUntil: 'networkidle' });
+await page.getByText('Scrivi una recensione').last().click();
+await page.getByRole('radio', { name: '5 stelle' }).last().click();
+await page.getByLabel('Commento').last().fill('Scalda in modo uniforme, manico comodo.');
+await page.getByText('Pubblica recensione').last().click();
+await page.getByText('Grazie! La tua recensione è pubblicata.').last().waitFor();
+await shot(page, 'recensione');
+console.log(`  db: ${await sql(`select rating_count, rating_avg from products where sku = 'padella-28'`)}`);
+
 const prev = fs.existsSync(STATE_FILE) ? JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) : { orders: [] };
 fs.writeFileSync(STATE_FILE, JSON.stringify({ orders: [...(prev.orders ?? []), orderNumber] }));
 await browser.close();

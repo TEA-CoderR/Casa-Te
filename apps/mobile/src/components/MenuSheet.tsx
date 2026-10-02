@@ -9,6 +9,7 @@ const LINKS: Array<{ icon: IconName; label: string; href: Href }> = [
   { icon: 'cart', label: 'Carrello', href: '/cart' },
   { icon: 'box', label: 'I miei ordini', href: '/orders' },
   { icon: 'user', label: 'Profilo', href: '/profile' },
+  { icon: 'crown', label: 'Casa & Te Club', href: '/club' },
 ];
 const INFO: Array<{ label: string; doc: 'shipping' | 'terms' | 'privacy' }> = [
   { label: 'Spedizioni e ritiro', doc: 'shipping' },
