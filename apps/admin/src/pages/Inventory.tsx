@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { InventoryMovementRow } from '@casa-te/shared';
 import { supabase, unwrap } from '../lib/supabase';
 import { errorText, useAsync, useDebounced, useStores } from '../lib/data';
@@ -14,10 +15,12 @@ const REASON: Record<InventoryMovementRow['reason'], string> = {
 export function InventoryPage() {
   const { staff, can } = useAuth();
   const stores = useStores();
-  const [storeId, setStoreId] = useState(staff?.store_id ?? '');
-  const [search, setSearch] = useState('');
+  const [params] = useSearchParams();
+  // Links from the overview ("Rifornisci", "Visualizza tutto") arrive with ?q=, ?negozio= and ?basse=1.
+  const [storeId, setStoreId] = useState(staff?.store_id ?? params.get('negozio') ?? '');
+  const [search, setSearch] = useState(params.get('q') ?? '');
   const q = useDebounced(search.trim().toLowerCase());
-  const [lowOnly, setLowOnly] = useState(false);
+  const [lowOnly, setLowOnly] = useState(params.get('basse') === '1');
   const [page, setPage] = useState(0);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [error, setError] = useState('');

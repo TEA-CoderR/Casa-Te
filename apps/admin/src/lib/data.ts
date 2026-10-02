@@ -56,6 +56,7 @@ export const ERROR_TEXT: Record<string, string> = {
   payment_unavailable: 'Stripe non raggiungibile o non configurato.',
   user_exists: 'Utente già esistente.',
   invalid_email: 'Email non valida.',
+  invalid_range: 'Intervallo di date non valido (al massimo un anno).',
   store_required: 'Seleziona il negozio per il personale di negozio.',
 };
 
