@@ -50,14 +50,14 @@ export default function HomeScreen() {
   const heroImageStyle = heroWidth && heroWidth < photoWidth
     ? { width: photoWidth, height: heroHeight, left: heroWidth - photoWidth, borderRadius: wide ? 18 : 0 }
     : wide ? { borderRadius: 18 } : undefined;
-  // Each department gets a line drawing on a soft tone; the tones alternate so the grid reads as a set.
-  const tones = ['#E9EFE7', '#F4ECDD', '#F3E8E3', '#ECEDE4'];
+  // Each department gets a line drawing on the same warm stone tone, like the photo tiles of the design.
+  const tones = ['#F1ECE4'];
   const categoryItem = (category: CategoryRow, index: number, width?: `${number}%`) =>
     <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`Categoria ${category.name}`}
       style={({ pressed }) => [styles.category, width ? { width } : { minWidth: 82 }, { opacity: pressed ? 0.7 : 1 }]}
       onPress={() => router.push({ pathname: '/catalog', params: { category: category.id } })}>
       <View style={[styles.circle, { backgroundColor: tones[index % tones.length] }, wide && { width: 104, height: 104, borderRadius: 52 }]}>
-        <CategoryIcon slug={category.slug} name={category.name} size={wide ? 46 : 32} />
+        <CategoryIcon slug={category.slug} name={category.name} size={wide ? 44 : 30} strokeWidth={1.25} />
       </View>
       <Text style={[styles.categoryLabel, wide && { fontSize: 16 }]} numberOfLines={1}>{category.name}</Text>
     </Pressable>;
@@ -162,9 +162,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 8 },
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   brand: { flex: 1, alignItems: 'center' },
-  wordmark: { fontSize: 31, fontFamily: fonts.serif, color: colors.text, textAlign: 'center' },
+  wordmark: { fontSize: 30, fontFamily: fonts.display, color: colors.text, textAlign: 'center', letterSpacing: -0.2 },
   storeLink: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 28, maxWidth: 240 },
-  storeText: { fontSize: 13, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500', flexShrink: 1 },
+  storeText: { fontSize: 12, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500', flexShrink: 1 },
   badge: { position: 'absolute', top: 3, right: 0, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: colors.badge,
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   badgeText: { color: '#fff', fontSize: 11, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
@@ -172,20 +172,20 @@ const styles = StyleSheet.create({
   heroPhone: { height: 330 },
   heroWide: { height: 520, borderRadius: 18 },
   heroCopy: { padding: 20, paddingTop: 52 },
-  heroTitle: { fontSize: 38, lineHeight: 41, color: '#FFFFFF', fontFamily: fonts.serif, textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 12 },
-  heroTitleWide: { fontSize: 72, lineHeight: 76 },
-  heroText: { marginTop: 10, fontSize: 16, lineHeight: 21, color: '#FFFFFF', fontFamily: fonts.serif, textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 8 },
+  heroTitle: { fontSize: 42, lineHeight: 43, color: '#FFFFFF', fontFamily: fonts.serif, letterSpacing: -0.3, textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 12 },
+  heroTitleWide: { fontSize: 76, lineHeight: 78 },
+  heroText: { marginTop: 10, fontSize: 18, lineHeight: 22, color: '#FFFFFF', fontFamily: fonts.serif, textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 8 },
   search: { position: 'absolute', left: 16, right: 16, bottom: 14, flexDirection: 'row', gap: 12, alignItems: 'center',
     backgroundColor: '#FFFFFF', borderRadius: 999, paddingHorizontal: 18, height: 46, ...cardShadow },
   searchText: { fontSize: 15, color: colors.muted, fontFamily: fonts.sans },
   categories: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   category: { alignItems: 'center', paddingHorizontal: 4, gap: 8 },
-  circle: { width: 66, height: 66, borderRadius: 33, alignItems: 'center', justifyContent: 'center' },
-  categoryLabel: { fontSize: 13, letterSpacing: -0.1, fontFamily: fonts.serif, color: colors.text, textAlign: 'center' },
+  circle: { width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E9E2D6' },
+  categoryLabel: { fontSize: 14.5, fontFamily: fonts.serif, color: colors.text, textAlign: 'center' },
   section: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 26, marginBottom: 12 },
-  sectionTitle: { fontSize: 22, fontFamily: fonts.serif, color: colors.text },
+  sectionTitle: { fontSize: 25, fontFamily: fonts.serif, color: colors.text },
   seeAll: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 8, marginRight: -8 },
-  seeAllText: { color: colors.green, fontSize: 14, fontFamily: fonts.serif },
+  seeAllText: { color: colors.green, fontSize: 13, fontFamily: fonts.sansMedium, fontWeight: '500' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, rowGap: 12 },
   banner: { marginTop: 34, backgroundColor: colors.sand, borderRadius: 14, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14 },
   bannerIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },

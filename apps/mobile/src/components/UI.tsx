@@ -34,15 +34,15 @@ export function SecondaryButton({ title, onPress, disabled, icon, danger }: {
 export function QuantityControl({ value, onChange, label = '', min = 0, max = 99, compact }: {
   value: number; onChange: (value: number) => void; label?: string; min?: number; max?: number; compact?: boolean;
 }) {
-  const step = compact ? [styles.step, { width: 34, height: 36 }] : styles.step;
+  const step = compact ? [styles.step, { width: 30, height: 32 }] : styles.step;
   return <View style={styles.quantity}>
     <Pressable accessibilityRole="button" accessibilityLabel={`Riduci quantità${label ? ` ${label}` : ''}`}
       disabled={value <= min} onPress={() => onChange(value - 1)} style={step}>
-      <Icon name="minus" size={16} color={value <= min ? colors.line : colors.text} />
-    </Pressable><Text style={styles.quantityValue} accessibilityLabel={`Quantità ${value}`}>{value}</Text>
+      <Icon name="minus" size={compact ? 14 : 16} color={value <= min ? colors.line : colors.text} strokeWidth={1.5} />
+    </Pressable><Text style={[styles.quantityValue, compact && { fontSize: 15, minWidth: 16 }]} accessibilityLabel={`Quantità ${value}`}>{value}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={`Aumenta quantità${label ? ` ${label}` : ''}`}
       disabled={value >= max} onPress={() => onChange(value + 1)} style={step}>
-      <Icon name="plus" size={16} color={value >= max ? colors.line : colors.text} />
+      <Icon name="plus" size={compact ? 14 : 16} color={value >= max ? colors.line : colors.text} strokeWidth={1.5} />
     </Pressable>
   </View>;
 }
@@ -95,8 +95,8 @@ export function SectionTitle({ children }: PropsWithChildren) {
 
 export function SummaryRow({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: 'green' }) {
   return <View style={styles.summaryRow}>
-    <Text style={[styles.summaryLabel, strong && { color: colors.text, fontSize: 18, fontFamily: fonts.serif }]}>{label}</Text>
-    <Text style={[styles.summaryValue, strong && { fontSize: 22, fontFamily: fonts.serif, fontWeight: '400' }, tone === 'green' && { color: colors.green }]}>{value}</Text>
+    <Text style={[styles.summaryLabel, strong && { color: colors.text, fontSize: 21, fontFamily: fonts.serif }]}>{label}</Text>
+    <Text style={[styles.summaryValue, strong && { fontSize: 22, fontFamily: fonts.serifMedium, fontWeight: '500' }, tone === 'green' && { color: colors.green }]}>{value}</Text>
   </View>;
 }
 
@@ -128,19 +128,19 @@ export function OptionCard({ selected, onPress, icon, title, description, right,
 
 const styles = StyleSheet.create({
   pageHeading: { flexDirection: 'row', alignItems: 'center', marginBottom: 22, marginTop: 6, gap: 12 },
-  title: { fontSize: 32, lineHeight: 40, fontFamily: fonts.serif, color: colors.text },
-  subtitle: { fontSize: 13, color: colors.muted, marginTop: 4, fontFamily: fonts.sans },
-  button: { minHeight: 54, paddingHorizontal: 24, paddingVertical: 15, backgroundColor: colors.green,
+  title: { fontSize: 31, lineHeight: 37, fontFamily: fonts.serif, color: colors.text, letterSpacing: -0.2 },
+  subtitle: { fontSize: 12.5, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
+  button: { minHeight: 50, paddingHorizontal: 24, paddingVertical: 13, backgroundColor: colors.green,
     borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  buttonText: { fontSize: 17, fontFamily: fonts.serif, color: '#fff', flexShrink: 1, textAlign: 'center' },
+  buttonText: { fontSize: 18.5, fontFamily: fonts.serif, color: '#fff', flexShrink: 1, textAlign: 'center', letterSpacing: 0.1 },
   secondary: { minHeight: 48, borderRadius: 999, borderWidth: 1, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   secondaryText: { fontSize: 14, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
   quantity: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.line, borderRadius: 999, backgroundColor: colors.surface },
-  step: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  quantityValue: { fontSize: 16, fontFamily: fonts.serif, minWidth: 22, textAlign: 'center', color: colors.text },
+  step: { width: 40, height: 46, alignItems: 'center', justifyContent: 'center' },
+  quantityValue: { fontSize: 18, fontFamily: fonts.serif, minWidth: 22, textAlign: 'center', color: colors.text },
   empty: { paddingTop: 64, alignItems: 'center', paddingHorizontal: 20 },
   emptyIcon: { width: 94, height: 94, borderRadius: 47, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 26, fontFamily: fonts.serif, color: colors.text, marginTop: 24, textAlign: 'center' },
+  emptyTitle: { fontSize: 28, fontFamily: fonts.serif, color: colors.text, marginTop: 24, textAlign: 'center' },
   emptyMessage: { fontSize: 14, lineHeight: 22, color: colors.muted, textAlign: 'center', marginTop: 10, fontFamily: fonts.sans },
   fieldLabel: { fontSize: 12, color: colors.muted, marginBottom: 6, fontFamily: fonts.sansMedium, fontWeight: '500' },
   input: { minHeight: 50, borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 14, fontSize: 15,
@@ -153,10 +153,10 @@ const styles = StyleSheet.create({
   notice: { borderRadius: 14, padding: 16, marginBottom: 12, gap: 6 },
   noticeTitle: { fontSize: 14, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
   noticeText: { fontSize: 13, lineHeight: 19, fontFamily: fonts.sans },
-  sectionTitle: { fontSize: 23, fontFamily: fonts.serif, marginTop: 28, marginBottom: 14, color: colors.text },
+  sectionTitle: { fontSize: 24, fontFamily: fonts.serif, marginTop: 28, marginBottom: 14, color: colors.text },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7, gap: 12 },
-  summaryLabel: { color: colors.muted, fontSize: 14, flex: 1, fontFamily: fonts.sans },
-  summaryValue: { color: colors.text, fontSize: 14, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  summaryLabel: { color: colors.muted, fontSize: 13.5, flex: 1, fontFamily: fonts.sans },
+  summaryValue: { color: colors.text, fontSize: 13.5, fontFamily: fonts.sansMedium, fontWeight: '500' },
   listRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, borderBottomWidth: 1, borderColor: colors.line, minHeight: 56 },
   listTitle: { fontSize: 15, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500' },
   listSubtitle: { fontSize: 12, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
@@ -166,5 +166,5 @@ const styles = StyleSheet.create({
   optionIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
   optionTitle: { fontSize: 15, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text },
   optionDescription: { fontSize: 12, color: colors.muted, marginTop: 3, lineHeight: 16, fontFamily: fonts.sans },
-  optionRight: { fontSize: 16, fontFamily: fonts.serif, color: colors.text },
+  optionRight: { fontSize: 17, fontFamily: fonts.serifMedium, color: colors.text },
 });

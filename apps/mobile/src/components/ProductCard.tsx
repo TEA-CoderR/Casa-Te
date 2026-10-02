@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
-import { formatEuro } from '@casa-te/shared';
+import { formatEuro } from '@/lib/price';
 import type { CatalogProduct } from '@/lib/api';
 import { colors, fonts } from '@/config/theme';
 import { useCartStore } from '@/store/cart';
@@ -26,7 +26,7 @@ export function FavoriteButton({ productId, name, size = 22, style }: { productI
   return <Pressable onPress={() => toggle(productId)} accessibilityRole="button" accessibilityState={{ selected: on }}
     accessibilityLabel={on ? `Rimuovi ${name} dai preferiti` : `Aggiungi ${name} ai preferiti`} hitSlop={6}
     style={({ pressed }) => [styles.heart, style, pressed && { opacity: 0.6 }]}>
-    <Icon name="heart" size={size} color={on ? colors.badge : colors.text} fill={on ? colors.badge : undefined} strokeWidth={1.5} />
+    <Icon name="heart" size={size} color={on ? colors.badge : colors.text} fill={on ? colors.badge : undefined} strokeWidth={1.3} />
   </Pressable>;
 }
 
@@ -41,7 +41,7 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
   const cartButton = <Pressable accessibilityRole="button" disabled={!canAdd} onPress={() => add(product.id)}
     accessibilityLabel={quantity ? `${product.name}: ${quantity} nel carrello, aggiungi un altro` : `Aggiungi ${product.name} al carrello`}
     style={({ pressed }) => [styles.add, { opacity: !canAdd ? 0.35 : pressed ? 0.75 : 1 }]}>
-    {quantity ? <Text style={styles.addCount}>{quantity}</Text> : <Icon name="cart" size={19} color="#fff" strokeWidth={1.7} />}
+    {quantity ? <Text style={styles.addCount}>{quantity}</Text> : <Icon name="cart" size={17} color="#fff" strokeWidth={1.6} />}
   </Pressable>;
   const price = <View style={styles.priceRow}>
     <Text style={styles.price}>{formatEuro(product.price_cents)}</Text>
@@ -73,29 +73,29 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
         {!!note && <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{note}</Text>}
       </View>
     </Pressable></Link>
-    <FavoriteButton productId={product.id} name={product.name} size={20} style={styles.heartCorner} />
+    <FavoriteButton productId={product.id} name={product.name} size={19} style={styles.heartCorner} />
     <View style={styles.bottom}>{price}{cartButton}</View>
   </View>;
 }
 
 const styles = StyleSheet.create({
-  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
+  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: '#EEE9E0', overflow: 'hidden' },
   media: { backgroundColor: colors.surface },
   heart: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 4, right: 4 },
-  badge: { position: 'absolute', left: 10, top: 10, backgroundColor: colors.green, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
-  badgeText: { fontSize: 11, color: '#fff', fontFamily: fonts.sansSemiBold, fontWeight: '600' },
+  badge: { position: 'absolute', left: 8, top: 8, backgroundColor: colors.green, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  badgeText: { fontSize: 10.5, color: '#fff', fontFamily: fonts.sansSemiBold, fontWeight: '600', letterSpacing: 0.2 },
   body: { paddingHorizontal: 10 },
-  name: { fontSize: 14, lineHeight: 17, fontFamily: fonts.serif, color: colors.text, minHeight: 34 },
-  meta: { fontSize: 12, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
+  name: { fontSize: 15.5, lineHeight: 18, fontFamily: fonts.serif, color: colors.text, minHeight: 36 },
+  meta: { fontSize: 11.5, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
   bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingTop: 4, paddingBottom: 8, gap: 6, marginTop: 'auto' },
   priceRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
-  price: { fontSize: 18, fontFamily: fonts.serif, color: colors.text },
-  compare: { fontSize: 13, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
-  add: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  price: { fontSize: 18.5, fontFamily: fonts.serifMedium, color: colors.text },
+  compare: { fontSize: 12, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
+  add: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   addCount: { color: '#fff', fontSize: 15, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
   row: { flexDirection: 'row', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.line, alignItems: 'center' },
   rowLink: { flex: 1, flexDirection: 'row', gap: 14, alignItems: 'center' },
-  rowMedia: { width: 92, borderRadius: 10, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, overflow: 'hidden' },
+  rowMedia: { width: 88, borderRadius: 10, borderWidth: 1, borderColor: '#EEE9E0', backgroundColor: colors.surface, overflow: 'hidden' },
   rowSide: { alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', gap: 8 },
 });

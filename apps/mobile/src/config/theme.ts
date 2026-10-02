@@ -28,10 +28,15 @@ export const colors = {
 const family = (name: string, fallback: string) => Platform.OS === 'web' ? `${name}, ${fallback}` : name;
 const serifFallback = 'Georgia, "Times New Roman", serif';
 const sansFallback = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+/**
+ * EB Garamond for names, titles and prices (fine strokes, normal lining figures for prices);
+ * Bodoni Moda only for the "Casa & Te" wordmark. Both are subset to Latin in assets/fonts (OFL).
+ */
 export const fonts = {
-  serif: family('LibreCaslonText_400Regular', serifFallback),
-  serifBold: family('LibreCaslonText_700Bold', serifFallback),
-  serifItalic: family('LibreCaslonText_400Regular_Italic', serifFallback),
+  serif: family('EBGaramond_400Regular', serifFallback),
+  serifMedium: family('EBGaramond_500Medium', serifFallback),
+  serifBold: family('EBGaramond_500Medium', serifFallback),
+  display: family('BodoniModa_600SemiBold', serifFallback),
   sans: family('HankenGrotesk_400Regular', sansFallback),
   sansMedium: family('HankenGrotesk_500Medium', sansFallback),
   sansSemiBold: family('HankenGrotesk_600SemiBold', sansFallback),

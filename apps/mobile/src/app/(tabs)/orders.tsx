@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { FULFILMENT_LABELS, formatEuro, orderStatusLabel } from '@casa-te/shared';
+import { FULFILMENT_LABELS, orderStatusLabel } from '@casa-te/shared';
+import { formatEuro } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { EmptyState, Loading, Notice, PageTitle, PrimaryButton } from '@/components/UI';
 import { Icon } from '@/components/Icon';

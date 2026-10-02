@@ -100,11 +100,11 @@ export default function CatalogScreen() {
       facets={facets.data ?? null} total={loading ? null : count} />
     <View style={[styles.header, wide && { marginTop: 8 }]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Indietro" style={styles.iconButton}
-        onPress={goBack}><Icon name="back" size={24} strokeWidth={1.6} /></Pressable>
+        onPress={goBack}><Icon name="back" size={23} strokeWidth={1.4} /></Pressable>
       <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={searchOpen ? 'Chiudi ricerca' : 'Cerca prodotti'} accessibilityState={{ expanded: searchOpen }}
         style={styles.iconButton} onPress={() => { if (searchOpen) setQuery(''); setSearchOpen(!searchOpen); }}>
-        <Icon name={searchOpen ? 'close' : 'search'} size={22} strokeWidth={1.6} /></Pressable>
+        <Icon name={searchOpen ? 'close' : 'search'} size={21} strokeWidth={1.4} /></Pressable>
     </View>
     {searchOpen && <View style={styles.search}><Icon name="search" size={19} color={colors.muted} />
       <TextInput value={query} onChangeText={setQuery} placeholder="Cerca per nome, marca o codice..." placeholderTextColor={colors.faint} autoFocus={!params.q}
@@ -112,7 +112,7 @@ export default function CatalogScreen() {
       {!!query && <Pressable accessibilityLabel="Cancella ricerca" onPress={() => setQuery('')} style={{ padding: 10 }}>
         <Icon name="close" size={16} /></Pressable>}
     </View>}
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs} contentContainerStyle={{ paddingHorizontal: 20, gap: 20 }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs} contentContainerStyle={{ paddingHorizontal: 20, gap: 18 }}>
       {tabs.map((item) => {
         const on = activeTab === item.id;
         return <Pressable key={item.id ?? 'all'} accessibilityRole="tab" accessibilityState={{ selected: on }}
@@ -155,23 +155,23 @@ export default function CatalogScreen() {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, marginTop: -8, gap: 8 },
   iconButton: { width: 44, height: 40, alignItems: 'center', justifyContent: 'center' },
-  title: { flex: 1, textAlign: 'center', fontSize: 23, fontFamily: fonts.serif, color: colors.text },
+  title: { flex: 1, textAlign: 'center', fontSize: 25, fontFamily: fonts.serif, color: colors.text },
   search: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: 999, paddingLeft: 18,
     minHeight: 46, borderWidth: 1, borderColor: colors.line, marginBottom: 6 },
   input: { flex: 1, minWidth: 0, paddingVertical: 13, fontSize: 15, color: colors.text, outlineWidth: 0, fontFamily: fonts.sans },
   tabs: { marginHorizontal: -20, borderBottomWidth: 1, borderColor: colors.line, flexGrow: 0 },
-  tab: { minHeight: 38, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 2, borderColor: 'transparent' },
+  tab: { minHeight: 36, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 1.5, borderColor: 'transparent' },
   tabOn: { borderColor: colors.text },
-  tabText: { fontSize: 14, color: colors.muted, fontFamily: fonts.sans },
+  tabText: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
   tabTextOn: { color: colors.text, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
-  pillsScroll: { marginHorizontal: -20, flexGrow: 0, marginTop: 8 },
+  pillsScroll: { marginHorizontal: -20, flexGrow: 0, marginTop: 10 },
   pills: { paddingHorizontal: 20, gap: 8 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 34, paddingHorizontal: 13, borderRadius: 999, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 32, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: '#E6DFD3', backgroundColor: colors.surface },
   pillOn: { borderColor: colors.text },
-  pillText: { fontSize: 13, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  pillText: { fontSize: 12, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500' },
   toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, marginBottom: 4 },
-  count: { fontSize: 14, color: colors.muted, fontFamily: fonts.sans },
-  viewButton: { width: 34, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  count: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans },
+  viewButton: { width: 32, height: 30, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   viewButtonOn: { backgroundColor: colors.cream },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 8 },
 });

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { formatEuro, friendlyError } from '@casa-te/shared';
+import { friendlyError } from '@casa-te/shared';
+import { formatEuro } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { Icon } from '@/components/Icon';
 import { EmptyState, Loading, PrimaryButton, SecondaryButton } from '@/components/UI';

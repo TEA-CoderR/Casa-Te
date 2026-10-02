@@ -1,5 +1,6 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { FULFILMENT_LABELS, formatShipping, type FulfilmentMethod, type Quote } from '@casa-te/shared';
+import { FULFILMENT_LABELS, type FulfilmentMethod, type Quote } from '@casa-te/shared';
+import { formatShipping } from '@/lib/price';
 import { colors, fonts } from '@/config/theme';
 import { usePreferences } from '@/store/preferences';
 import { Icon, type IconName } from './Icon';
