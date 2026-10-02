@@ -649,6 +649,7 @@ const dict: Record<string, string> = {
   "Spedizione gratis": "Free shipping",
   "Spedizione gratuita": "Free shipping",
   "Spedizione:": "Shipping:",
+  "Spedizioni e ritiro": "Shipping & pickup",
   "Spesa massima": "Max spend",
   "Spesa minima": "Min spend",
   "Spesa minima prodotti (€)": "Min product spend (€)",

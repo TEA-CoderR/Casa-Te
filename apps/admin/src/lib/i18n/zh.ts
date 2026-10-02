@@ -649,6 +649,7 @@ const dict: Record<string, string> = {
   "Spedizione gratis": "免运费",
   "Spedizione gratuita": "免运费",
   "Spedizione:": "物流：",
+  "Spedizioni e ritiro": "配送与自提",
   "Spesa massima": "最高消费",
   "Spesa minima": "最低消费",
   "Spesa minima prodotti (€)": "商品最低消费（€）",
