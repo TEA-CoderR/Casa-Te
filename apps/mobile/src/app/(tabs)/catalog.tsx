@@ -18,7 +18,7 @@ export default function CatalogScreen() {
   const { columns, wide } = useLayout();
   const [query, setQuery] = useState(params.q ?? '');
   const [debounced, setDebounced] = useState(query);
-  const [categoryId, setCategoryId] = useState<string | null>(params.category ?? null);
+  const [categoryId, setCategoryId] = useState<string | null>(params.category || null);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [sheet, setSheet] = useState<FilterSection | null>(null);
   const [searchOpen, setSearchOpen] = useState(Boolean(params.q || params.search));
@@ -79,6 +79,15 @@ export default function CatalogScreen() {
 
   const shown = filters.onlyAvailable ? items.filter((p) => p.stock === null || p.stock > 0) : items;
   const count = filters.onlyAvailable ? shown.length : total ?? shown.length;
+  // Keep the URL in step with the chosen category, so the home links (same id again) and reloads keep working.
+  const selectCategory = (id: string | null) => { setCategoryId(id); router.setParams({ category: id ?? undefined }); };
+  // Back steps out one level: close the search, subcategory → its department, department → all categories, then home.
+  const goBack = () => {
+    if (searchOpen && query) { setQuery(''); setSearchOpen(false); return; }
+    if (current?.parent_id) { selectCategory(current.parent_id); return; }
+    if (categoryId) { selectCategory(null); return; }
+    if (router.canGoBack()) router.back(); else router.replace('/');
+  };
   const pill = (section: FilterSection, label: string, active: boolean, icon?: 'filter') =>
     <Pressable key={section} onPress={() => setSheet(section)} style={[styles.pill, active && styles.pillOn]} accessibilityRole="button"
       accessibilityLabel={`${label}${active ? ' (attivo)' : ''}`}>
@@ -91,7 +100,7 @@ export default function CatalogScreen() {
       facets={facets.data ?? null} total={loading ? null : count} />
     <View style={[styles.header, wide && { marginTop: 8 }]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Indietro" style={styles.iconButton}
-        onPress={() => router.canGoBack() ? router.back() : router.replace('/')}><Icon name="back" size={24} strokeWidth={1.6} /></Pressable>
+        onPress={goBack}><Icon name="back" size={24} strokeWidth={1.6} /></Pressable>
       <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={searchOpen ? 'Chiudi ricerca' : 'Cerca prodotti'} accessibilityState={{ expanded: searchOpen }}
         style={styles.iconButton} onPress={() => { if (searchOpen) setQuery(''); setSearchOpen(!searchOpen); }}>
@@ -107,7 +116,7 @@ export default function CatalogScreen() {
       {tabs.map((item) => {
         const on = activeTab === item.id;
         return <Pressable key={item.id ?? 'all'} accessibilityRole="tab" accessibilityState={{ selected: on }}
-          style={[styles.tab, on && styles.tabOn]} onPress={() => setCategoryId(item.id)}>
+          style={[styles.tab, on && styles.tabOn]} onPress={() => selectCategory(item.id)}>
           <Text style={[styles.tabText, on && styles.tabTextOn]}>{item.name}</Text>
         </Pressable>;
       })}

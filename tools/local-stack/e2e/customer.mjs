@@ -11,6 +11,13 @@ step('Browse: home → catalogue → product');
 await page.goto(env.SHOP_URL, { waitUntil: 'networkidle' });
 await page.getByText('Categorie', { exact: true }).first().click();
 await page.getByText('Padella antiaderente 28 cm').last().waitFor();
+// Back inside a department returns to all categories, not to the home page.
+await page.getByRole('tab', { name: 'Cucina' }).click();
+await page.getByRole('heading', { name: 'Cucina' }).waitFor();
+await page.getByRole('button', { name: 'Indietro' }).click();
+await page.getByRole('heading', { name: 'Categorie' }).waitFor();
+if (!/\/catalog/.test(page.url())) throw new Error(`back left the catalogue: ${page.url()}`);
+await page.getByText('Padella antiaderente 28 cm').last().waitFor();
 await shot(page, 'catalogo');
 await page.getByText('Padella antiaderente 28 cm').last().click();
 await page.waitForURL(/\/product\//);
