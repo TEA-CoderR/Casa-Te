@@ -4,6 +4,11 @@ import { supabase, unwrap } from '../lib/supabase';
 import { errorText, useCategories } from '../lib/data';
 import { Field, Loading, Modal, Notice, PageHead } from '../components/ui';
 
+/** Top-level categories, each followed by its subcategories. */
+const ordered = (list: CategoryRow[]) => list.filter((c) => !c.parent_id)
+  .flatMap((p) => [p, ...list.filter((c) => c.parent_id === p.id)])
+  .concat(list.filter((c) => c.parent_id && !list.some((p) => p.id === c.parent_id)));
+
 const slugify = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 export function CategoriesPage() {
@@ -33,7 +38,7 @@ export function CategoriesPage() {
     {error && <Notice tone="error">{error}</Notice>}
     {!categories.data ? <Loading /> : <div className="table-wrap"><table>
       <thead><tr><th>Ordine</th><th>Nome</th><th>Slug</th><th>Padre</th><th>Stato</th><th></th></tr></thead>
-      <tbody>{categories.data.map((c) => <tr key={c.id}><td>{c.sort}</td><td><strong>{c.name}</strong></td><td className="muted">{c.slug}</td>
+      <tbody>{ordered(categories.data).map((c) => <tr key={c.id}><td>{c.sort}</td><td>{c.parent_id ? <span style={{ paddingLeft: 22 }}>↳ {c.name}</span> : <strong>{c.name}</strong>}</td><td className="muted">{c.slug}</td>
         <td>{categories.data?.find((p) => p.id === c.parent_id)?.name ?? '—'}</td>
         <td>{c.active ? <span className="badge">Visibile</span> : <span className="badge muted">Nascosta</span>}</td>
         <td className="num"><button className="ghost" onClick={() => setEdit(c)}>Modifica</button><button className="ghost danger" onClick={() => remove(c)}>Elimina</button></td></tr>)}</tbody>
@@ -43,7 +48,7 @@ export function CategoriesPage() {
         <Field label="Nome"><input value={edit.name ?? ''} onChange={(e) => setEdit({ ...edit, name: e.target.value })} autoFocus /></Field>
         <Field label="Slug" hint="Lascia vuoto per generarlo"><input value={edit.slug ?? ''} onChange={(e) => setEdit({ ...edit, slug: e.target.value })} /></Field>
         <Field label="Categoria padre"><select value={edit.parent_id ?? ''} onChange={(e) => setEdit({ ...edit, parent_id: e.target.value || null })}>
-          <option value="">— nessuna —</option>{categories.data?.filter((c) => c.id !== edit.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+          <option value="">— nessuna (categoria principale) —</option>{categories.data?.filter((c) => c.id !== edit.id && !c.parent_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
         <Field label="Ordine di visualizzazione"><input type="number" value={edit.sort ?? 0} onChange={(e) => setEdit({ ...edit, sort: Number(e.target.value) })} /></Field>
         <label className="check"><input type="checkbox" checked={edit.active ?? true} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> Visibile ai clienti</label>
         <button disabled={busy || !edit.name?.trim()} onClick={save}>Salva</button>

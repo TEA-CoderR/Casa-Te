@@ -5,22 +5,18 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
-import { ProductVisual } from '@/components/ProductVisual';
+import { ProductImage } from '@/components/ProductImage';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
 import { MenuSheet } from '@/components/MenuSheet';
 import { Loading, Notice } from '@/components/UI';
 import { demoHomeImage, productImageCells } from '@/data/productImages';
 import { cardShadow, colors, fonts } from '@/config/theme';
-import { fetchCategories, fetchProducts } from '@/lib/api';
+import { fetchCategories, fetchCategoryCovers, fetchProducts } from '@/lib/api';
 import { useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { cartItemCount, useCartStore } from '@/store/cart';
 
-/** Demo illustration per seeded category (placeholder imagery, see data/productImages.ts). */
-const CATEGORY_VISUAL: Record<string, string> = {
-  pulizia: 'detergente-lavatrice', cucina: 'padella-28', casa: 'lampada-tavolo', bagno: 'asciugamani-3', organizzazione: 'organizer-grande',
-};
 
 export default function HomeScreen() {
   const { selected } = useStores();
@@ -31,6 +27,7 @@ export default function HomeScreen() {
   const { columns, wide } = useLayout();
   const count = cartItemCount(useCartStore((s) => s.items));
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
+  const covers = useQuery('category-covers', fetchCategoryCovers);
   const featured = useQuery(selected ? `featured:${selected.id}` : null,
     () => fetchProducts({ storeId: selected?.id ?? null, featured: true, pageSize: columns * 2 }));
   const value = useQuery(selected ? `value:${selected.id}` : null,
@@ -50,14 +47,17 @@ export default function HomeScreen() {
   const heroImageStyle = heroWidth && heroWidth < photoWidth
     ? { width: photoWidth, height: heroHeight, left: heroWidth - photoWidth, borderRadius: wide ? 18 : 0 }
     : wide ? { borderRadius: 18 } : undefined;
+  // Cover photo: a product of the category itself, else of one of its subcategories.
+  const coverOf = (category: CategoryRow) => covers.data?.[category.id]
+    ?? (categories.data ?? []).filter((c) => c.parent_id === category.id).map((c) => covers.data?.[c.id]).find(Boolean);
   const categoryItem = (category: CategoryRow, width?: `${number}%`) => {
-    const visual = CATEGORY_VISUAL[category.slug];
+    const cover = coverOf(category);
     return <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`Categoria ${category.name}`}
       style={({ pressed }) => [styles.category, width ? { width } : { minWidth: 82 }, { opacity: pressed ? 0.7 : 1 }]}
       onPress={() => router.push({ pathname: '/catalog', params: { category: category.id } })}>
       <View style={[styles.circle, wide && { width: 112, height: 112, borderRadius: 56 }]}>
-        {visual && productImageCells[visual] !== undefined
-          ? <ProductVisual id={visual} inset={0.16} />
+        {cover && (cover.image || productImageCells[cover.sku] !== undefined)
+          ? <ProductImage uri={cover.image} sku={cover.sku} label="" inset={0.16} />
           : <Text style={styles.categoryInitial}>{category.name.slice(0, 1)}</Text>}
       </View>
       <Text style={[styles.categoryLabel, wide && { fontSize: 16 }]}>{category.name}</Text>
