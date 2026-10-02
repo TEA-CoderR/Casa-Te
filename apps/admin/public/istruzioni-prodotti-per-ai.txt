@@ -1,0 +1,49 @@
+CASA & TE – ISTRUZIONI PER COMPILARE IL FILE PRODOTTI (CSV)
+==========================================================
+Obiettivo: produrre UN file CSV con esattamente le intestazioni del file "modello-prodotti-casa-te.csv",
+nello stesso ordine, una riga per prodotto. Il file verrà caricato nel pannello CASA & TE (Importa prodotti).
+
+FORMATO
+- CSV in UTF-8, separatore virgola (,). Racchiudi tra virgolette doppie ogni cella che contiene una virgola,
+  un a capo o virgolette (le virgolette interne si raddoppiano: "").
+- Prima riga = intestazioni, identiche a quelle del modello. Nessuna riga vuota, nessun commento, nessun totale.
+- Numeri con il punto come separatore decimale: 79.00 / 0.9. Nessun simbolo € e nessun separatore delle migliaia.
+- Se un dato non è noto lascia la cella VUOTA. Non inventare prezzi, EAN, pesi, giacenze o link alle immagini.
+
+COLONNE (* = obbligatoria)
+sku*              Codice articolo univoco. Solo lettere, numeri, punto, trattino, underscore (max 40). Es. DIF-TES-500.
+                  Ogni riga deve avere uno sku diverso. Se lo sku esiste già nel negozio, il prodotto viene aggiornato.
+nome*             Nome mostrato ai clienti (max 200 caratteri), in italiano.
+categoria*        Categoria principale. Categorie esistenti: Pulizia, Cucina, Casa, Detersivo, Organizzazione.
+                  Un nome nuovo crea una nuova categoria.
+sottocategoria    Sottocategoria della categoria. Esistenti: Pulizia → Carta e monouso, Accessori pulizia;
+                  Cucina → Pentole e padelle, Conservazione, Stoviglie; Casa → Illuminazione, Decorazione, Tessili;
+                  Detersivo → Lavatrice; Organizzazione → Scatole e contenitori, Pattumiere. Un nome nuovo viene creato.
+prezzo*           Prezzo di vendita in euro IVA inclusa. Es. 14.90
+prezzo barrato    Prezzo precedente (deve essere maggiore di prezzo). Altrimenti vuoto.
+iva               Aliquota IVA: 22, 10, 5, 4 oppure 0. Vuoto = 22.
+peso kg*          Peso con imballo in chilogrammi (serve per la spedizione). Es. 0.45
+marca             Marca del prodotto.
+colore            Colore o materiale principale, una parola o due (es. Bianco, Verde salvia, Vetro). Max 40.
+confezione        Contenuto della confezione: numero + unità, con unità tra ml, l, g, kg, pz, m. Es. 500 ml, 1.5 l, 6 pz.
+                  Serve per il prezzo al litro/kg. Vuoto se non applicabile.
+descrizione       Descrizione del prodotto in italiano (qualche frase).
+punto di forza 1-4  Fino a 4 brevi punti di forza (max 40 caratteri ciascuno), mostrati con un'icona.
+                  Formato: "icona: testo". Icone ammesse: foglia, casa, diamante, goccia, sole, scudo, stella,
+                  riciclo, mano, scatola, cuore, scintilla. Es. "goccia: Fragranza italiana". Senza icona → stella.
+gruppo varianti   Per lo stesso articolo in più colori/fragranze/misure: ogni variante è una riga con il suo sku,
+                  prezzo e giacenze, e tutte hanno lo STESSO gruppo varianti (es. diffusore-500).
+titolo varianti   Tipo di variante, mostrato come "Varianti di …": es. fragranza, colore, misura, formato.
+nome variante     Nome breve di questa variante (es. Tessuto, Verde, 24 cm). Obbligatorio se c'è il gruppo varianti.
+ean               Codice a barre di 8–14 cifre, solo se noto.
+attivo            sì = visibile ai clienti, no = nascosto. Vuoto = sì.
+in evidenza       sì = mostrato in home tra "In evidenza". Vuoto = no.
+max per ordine    Numero massimo di pezzi per ordine (1–99). Vuoto = 99.
+immagine 1-5      Link alle foto che iniziano con https:// (la prima è la principale). Vuoto se non ci sono link:
+                  le foto si possono caricare dopo dal pannello.
+giacenza AR1      Pezzi disponibili nel negozio di Arezzo (numero intero ≥ 0).
+giacenza LU1-LU4  Pezzi disponibili nei negozi Lucca 1, Lucca 2, Lucca 3, Lucca 4.
+
+ESEMPIO (vedi anche "esempio-prodotti-casa-te.csv")
+sku,nome,categoria,sottocategoria,prezzo,prezzo barrato,iva,peso kg,marca,colore,confezione,descrizione,punto di forza 1,punto di forza 2,punto di forza 3,punto di forza 4,gruppo varianti,titolo varianti,nome variante,ean,attivo,in evidenza,max per ordine,immagine 1,immagine 2,immagine 3,immagine 4,immagine 5,giacenza AR1,giacenza LU1,giacenza LU2,giacenza LU3,giacenza LU4
+TOV-140,Tovaglia in cotone 140x180,Casa,Tessili,14.90,19.90,22,0.45,,Bianco,,,foglia: Puro cotone,,,,,,,8001234567890,sì,,,,,,,,10,4,4,,
