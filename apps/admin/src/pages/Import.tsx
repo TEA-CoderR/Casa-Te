@@ -57,7 +57,11 @@ export function ImportPage() {
   const preview: ImportRow[] = parsed?.rows.slice(0, 20) ?? [];
   return <>
     <PageHead title="Importa prodotti" subtitle="Crea o aggiorna prodotti, prezzi, schede e giacenze in blocco da Excel o CSV (chiave: SKU)"
-      actions={<a className="btn secondary" href={template} download>Scarica modello Excel</a>} />
+      actions={<div className="row">
+        <a className="btn secondary" href={template} download>Scarica modello Excel</a>
+        <a className="btn secondary" href={`${import.meta.env.BASE_URL}modello-prodotti-casa-te.csv`} download>Modello CSV</a>
+        <a className="btn secondary" href={`${import.meta.env.BASE_URL}istruzioni-prodotti-per-ai.txt`} download>Istruzioni (testo)</a>
+      </div>} />
     <div className="card">
       <p>Compila il foglio <strong>Prodotti</strong> del modello (le istruzioni sono nel foglio <strong>Istruzioni</strong>) e caricalo qui così com'è, in formato .xlsx.
         Vanno bene anche i CSV con le stesse intestazioni. Obbligatori: <code>sku, nome, prezzo, peso kg</code>. Le celle vuote non cancellano i dati già presenti.</p>

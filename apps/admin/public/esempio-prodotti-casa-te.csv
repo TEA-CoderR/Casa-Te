@@ -1,0 +1,4 @@
+sku,nome,categoria,sottocategoria,prezzo,prezzo barrato,iva,peso kg,marca,colore,confezione,descrizione,punto di forza 1,punto di forza 2,punto di forza 3,punto di forza 4,gruppo varianti,titolo varianti,nome variante,ean,attivo,in evidenza,max per ordine,immagine 1,immagine 2,immagine 3,immagine 4,immagine 5,giacenza AR1,giacenza LU1,giacenza LU2,giacenza LU3,giacenza LU4
+DIF-TES-500,Diffusore di fragranza Tessuto 500 ml,Casa,Profumatori,79.00,,22,0.9,Culti Milano,Ambra,500 ml,"Diffusore a bastoncini per l'ambiente, fragranza Tessuto.",goccia: Fragranza italiana,casa: Per ogni ambiente,,,diffusore-500,fragranza,Tessuto,,sì,sì,,,,,,,5,3,,,
+DIF-ARA-500,Diffusore di fragranza Aramara 500 ml,Casa,Profumatori,79.00,,22,0.9,Culti Milano,Ambra,500 ml,,goccia: Fragranza italiana,,,,diffusore-500,fragranza,Aramara,,sì,,,,,,,,2,,,,
+TOV-140,Tovaglia in cotone 140x180,Casa,Tessili,14.90,19.90,22,0.45,,Bianco,,,foglia: Puro cotone,,,,,,,8001234567890,sì,,,,,,,,10,4,4,,
