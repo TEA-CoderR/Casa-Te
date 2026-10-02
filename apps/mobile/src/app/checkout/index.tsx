@@ -6,12 +6,13 @@ import {
   type Address, type AddressRow, type CreateOrderInput, type FulfilmentMethod, type InvoiceDetails, type PickupPointRow,
 } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
-import { StoreSelector } from '@/components/StoreSelector';
-import type { IconName } from '@/components/Icon';
+import { Icon, type IconName } from '@/components/Icon';
+import { FulfilmentSheet } from '@/components/FulfilmentSheet';
+import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import {
   Checkbox, EmptyState, Loading, Notice, OptionCard, PrimaryButton, SecondaryButton, SectionTitle, SummaryRow, TextField,
 } from '@/components/UI';
-import { colors } from '@/config/theme';
+import { colors, fonts } from '@/config/theme';
 import { fetchAddresses, fetchPickupPoints, fetchProfile, saveAddress, startCheckout, updateProfile } from '@/lib/api';
 import { useCartQuote } from '@/lib/hooks';
 import { usePreferences } from '@/store/preferences';
@@ -19,11 +20,11 @@ import { openCheckout } from '@/lib/payments';
 import { useQuery } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
 
-const METHODS: Array<{ id: FulfilmentMethod; description: string; icon: IconName }> = [
-  { id: 'home', description: 'Consegna con corriere in 2–4 giorni lavorativi', icon: 'truck' },
-  { id: 'pickup', description: 'Ritira in un punto convenzionato, quando preferisci', icon: 'box' },
-  { id: 'store', description: 'Pronto in negozio, nessun costo in più', icon: 'store' },
-];
+const METHOD_INFO: Record<FulfilmentMethod, { description: string; icon: IconName }> = {
+  home: { description: 'Consegna con corriere in 2–4 giorni lavorativi', icon: 'truck' },
+  pickup: { description: 'Ritira in un punto convenzionato, quando preferisci', icon: 'pin' },
+  store: { description: "Gratuito, quando l'ordine è pronto", icon: 'store' },
+};
 
 const emptyAddress: Address = { fullName: '', line1: '', line2: '', city: '', province: '', postalCode: '', phone: '' };
 const fromRow = (a: AddressRow): Address => ({ fullName: a.full_name, line1: a.line1, line2: a.line2 ?? '', city: a.city,
@@ -31,10 +32,10 @@ const fromRow = (a: AddressRow): Address => ({ fullName: a.full_name, line1: a.l
 
 export default function CheckoutScreen() {
   const user = useUser();
-  const preferred = usePreferences((s) => s.fulfilment);
-  const savePreferred = usePreferences((s) => s.setFulfilment);
-  const [method, setMethodState] = useState<FulfilmentMethod>(preferred);
-  const setMethod = (m: FulfilmentMethod) => { setMethodState(m); savePreferred(m); };
+  // The delivery method is chosen in the cart; here it is only summarised (and can be changed in the same sheet).
+  const method = usePreferences((s) => s.fulfilment);
+  const [deliverySheet, setDeliverySheet] = useState(false);
+  const [storeSheet, setStoreSheet] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [coupon, setCoupon] = useState('');
   const [couponOpen, setCouponOpen] = useState(false);
@@ -176,15 +177,22 @@ export default function CheckoutScreen() {
       <Pressable onPress={() => router.back()}><Text style={{ color: colors.green, fontWeight: '600' }}>Torna al carrello</Text></Pressable>
     </Notice>}
 
-    <SectionTitle>Come vuoi ricevere l'ordine?</SectionTitle>
-    {METHODS.map((m) => {
-      const q = quote.shipping[m.id];
-      return <OptionCard key={m.id} selected={method === m.id} onPress={() => setMethod(m.id)} icon={m.icon} disabled={!q}
-        title={FULFILMENT_LABELS[m.id]} description={q ? (q.provisional ? `${m.description} · tariffa oltre 10 kg` : m.description) : 'Non disponibile per questo ordine'}
-        right={q ? formatShipping(q.price_cents) : undefined} />;
-    })}
-
-    <StoreSelector title={method === 'store' ? 'Negozio di ritiro' : 'Negozio che prepara il tuo ordine'} filter={method === 'store' ? 'pickup' : 'ships'} />
+    <FulfilmentSheet visible={deliverySheet} onClose={() => setDeliverySheet(false)} quote={quote} storeName={storeShortName(store) || 'negozio'}
+      onChangeStore={() => setStoreSheet(true)} />
+    <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
+    <SectionTitle>Consegna</SectionTitle>
+    <View style={[styles.delivery, !methodQuote && styles.deliveryError]} {...(!methodQuote ? ({ dataSet: { fieldError: 'true' } } as object) : {})}>
+      <View style={styles.deliveryIcon}><Icon name={METHOD_INFO[method].icon} size={22} strokeWidth={1.4} /></View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.deliveryTitle}>{method === 'store' ? `Ritiro a ${storeShortName(store) || 'negozio'}` : FULFILMENT_LABELS[method]}</Text>
+        <Text style={[styles.deliveryText, !methodQuote && { color: colors.danger }]}>{!methodQuote ? 'Non disponibile per questo ordine: scegline un altro'
+          : method === 'store' ? METHOD_INFO.store.description
+          : `${formatShipping(methodQuote.price_cents)} · ${methodQuote.provisional ? 'tariffa oltre 10 kg' : METHOD_INFO[method].description}`}</Text>
+        {method !== 'store' && !!store && <Text style={styles.deliveryText}>Preparato da {store.name}</Text>}
+      </View>
+      <Pressable onPress={() => setDeliverySheet(true)} accessibilityRole="button" accessibilityLabel="Modifica consegna" hitSlop={8}>
+        <Text style={styles.modify}>Modifica</Text></Pressable>
+    </View>
 
     {method === 'home' && <>
       <SectionTitle>Indirizzo di consegna</SectionTitle>
@@ -285,6 +293,12 @@ export default function CheckoutScreen() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
+  delivery: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 14, padding: 14 },
+  deliveryError: { borderColor: colors.danger },
+  deliveryIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
+  deliveryTitle: { fontSize: 16, fontFamily: fonts.serif, color: colors.text },
+  deliveryText: { fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
+  modify: { fontSize: 13, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium, fontWeight: '500' },
   checkText: { fontSize: 14, color: colors.text, lineHeight: 21 },
   link: { color: colors.green, textDecorationLine: 'underline', fontWeight: '600' },
   error: { color: colors.danger, fontSize: 13, marginBottom: 8 },
