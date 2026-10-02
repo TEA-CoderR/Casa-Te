@@ -7,6 +7,8 @@ import { useAuth } from '../lib/auth';
 import { addDays, daysBetween, isoDay, overviewRange } from '../lib/overview';
 import { Empty, Loading, Notice } from '../components/ui';
 import { Icon, type AdminIcon } from '../components/Icon';
+import { OPEN_PERIOD_EVENT } from '../components/Layout';
+import { downloadCsv, toCsv } from '../lib/csv';
 import { dateLocale, t } from '../lib/i18n';
 
 type Metric = 'revenue_cents' | 'orders' | 'customers';
@@ -41,7 +43,9 @@ const fmtStamp = (iso: string) => {
   const d = new Date(iso);
   return `${isoDay(d)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
-const fmtMetric = (m: Metric, v: number) => (m === 'revenue_cents' ? formatEuro(v) : v.toLocaleString(dateLocale()));
+/** € 2.580,60 — euro sign followed by a space, as in the design. */
+const euro = (cents: number) => formatEuro(cents).replace(/^(-?)€\s?/, '$1€ ');
+const fmtMetric = (m: Metric, v: number) => (m === 'revenue_cents' ? euro(v) : v.toLocaleString(dateLocale()));
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -66,7 +70,7 @@ function Delta({ value, label }: { value: number | null; label: string }) {
 function Spark({ values, label }: { values: number[]; label: string }) {
   const max = Math.max(1, ...values);
   return <div className="spark" role="img" aria-label={label}>
-    {values.map((v, i) => <span key={i} style={{ height: `${Math.max(8, (v / max) * 100)}%` }} className={i === values.length - 1 ? 'last' : ''} />)}
+    {values.map((v, i) => <span key={i} style={{ height: `${Math.max(10, (v / max) * 100)}%`, opacity: 0.35 + (0.65 * (i + 1)) / values.length }} />)}
   </div>;
 }
 
@@ -121,8 +125,11 @@ function TrendChart({ current, previous, metric }: { current: AdminOverviewDay[]
     const i = Math.round(((px - L) / (width - L - R)) * (n - 1));
     setHover(Math.min(n - 1, Math.max(0, i)));
   };
-  const h = hover !== null && current[hover] ? hover : null;
-  const tipLeft = h !== null ? Math.min(width - 170, Math.max(0, x(h) - 80)) : 0;
+  // Like the design, the latest day is highlighted until the pointer moves over the chart.
+  const h = hover !== null && current[hover] ? hover : current.length ? current.length - 1 : null;
+  const tipW = 176;
+  const tipLeft = h !== null ? Math.min(width - tipW - 4, Math.max(L, x(h) - tipW / 2)) : 0;
+  const tipTop = h !== null ? Math.max(0, y(cur[h]) - 86) : 0;
   const dayBefore = h !== null && h > 0 ? cur[h - 1] : h === 0 ? prev.at(-1) ?? 0 : 0;
 
   return <div className="trend" ref={wrap}>
@@ -133,7 +140,7 @@ function TrendChart({ current, previous, metric }: { current: AdminOverviewDay[]
       </linearGradient></defs>
       {[0, 1, 2, 3, 4].map((k) => <g key={k}>
         <line x1={L} x2={width - R} y1={y(step * k)} y2={y(step * k)} className="grid-line" />
-        <text x={L - 10} y={y(step * k) + 4} textAnchor="end" className="axis">{metric === 'revenue_cents' ? formatEuro(step * k).replace(',00', '') : step * k}</text>
+        <text x={L - 10} y={y(step * k) + 4} textAnchor="end" className="axis">{metric === 'revenue_cents' ? euro(step * k).replace(/,00$/, '') : (step * k).toLocaleString(dateLocale())}</text>
       </g>)}
       {current.map((d, i) => (i % labelEvery === 0 || i === n - 1) && (n - 1 - i >= labelEvery / 2 || i === n - 1)
         ? <text key={d.day} x={x(i)} y={H - 8} textAnchor="middle" className="axis">{fmtDay(d.day)}</text> : null)}
@@ -147,11 +154,10 @@ function TrendChart({ current, previous, metric }: { current: AdminOverviewDay[]
         <circle cx={x(h)} cy={y(cur[h])} r={6} className="dot cur focus" />
       </>}
     </svg>
-    {h !== null && <div className="trend-tip" style={{ left: tipLeft }}>
-      <div className="muted small">{fmtDay(current[h].day, { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+    {h !== null && <div className="trend-tip" style={{ left: tipLeft, top: tipTop, width: tipW }} aria-live="polite">
+      <div className="muted">{fmtDay(current[h].day)}</div>
       <strong>{fmtMetric(metric, cur[h])}</strong>
-      <div className="small"><Delta value={change(cur[h], dayBefore)} label={t('rispetto al giorno prima')} /></div>
-      {previous[h] && <div className="small muted">{t('Periodo precedente ({day}): {value}', { day: fmtDay(previous[h].day), value: fmtMetric(metric, prev[h]) })}</div>}
+      <Delta value={change(cur[h], dayBefore)} label={t('rispetto a ieri')} />
     </div>}
   </div>;
 }
@@ -159,7 +165,7 @@ function TrendChart({ current, previous, metric }: { current: AdminOverviewDay[]
 function Donut({ groups, total }: { groups: Array<{ label: string; color: string; value: number }>; total: number }) {
   const r = 70, c = 2 * Math.PI * r, gap = total ? 2 : 0;
   let offset = 0;
-  return <svg width={190} height={190} viewBox="0 0 190 190" role="img"
+  return <svg className="donut" viewBox="0 0 190 190" role="img"
     aria-label={`${t('Stato ordini')}: ${groups.map((g) => `${t(g.label)} ${g.value}`).join(', ')}`}>
     <circle cx={95} cy={95} r={r} fill="none" stroke="#EFECE6" strokeWidth={26} />
     {total > 0 && groups.filter((g) => g.value).map((g) => {
@@ -178,6 +184,32 @@ function StatusPill({ status }: { status: OrderStatus }) {
   return <span className={`status-pill s-${status}`}><Icon name={STATUS_ICON[status]} size={15} />{t(ORDER_STATUS_LABELS[status])}</span>;
 }
 
+/** "⋯" menu on a recent order. */
+function RowMenu({ order }: { order: RecentOrder }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(order.order_number); setCopied(true); setTimeout(() => { setCopied(false); setOpen(false); }, 900); } catch { setOpen(false); }
+  };
+  return <div className="row-menu" ref={ref} onClick={(e) => e.stopPropagation()}>
+    <button className="ghost icon-only" aria-haspopup="menu" aria-expanded={open} aria-label={t('Altre azioni per {n}', { n: order.order_number })} onClick={() => setOpen((v) => !v)}>
+      <Icon name="more" size={20} strokeWidth={2.4} /></button>
+    {open && <div className="row-menu-pop" role="menu">
+      <button role="menuitem" onClick={() => navigate(`/orders/${order.id}`)}>{t('Apri ordine')}</button>
+      {(order.status === 'paid' || order.status === 'picking') && <button role="menuitem" onClick={() => navigate('/picking')}>{t('Vai alla preparazione')}</button>}
+      <button role="menuitem" onClick={copy}>{copied ? t('Copiato') : t('Copia numero ordine')}</button>
+    </div>}
+  </div>;
+}
+
 export function DashboardPage() {
   const { staff, can } = useAuth();
   const manager = can('admin', 'manager');
@@ -188,6 +220,7 @@ export function DashboardPage() {
   const storeId = manager ? params.get('negozio') ?? '' : '';
   const [metric, setMetric] = useState<Metric>('revenue_cents');
   const [recentStatus, setRecentStatus] = useState<OrderStatus | ''>('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const overview = useAsync(async () => unwrap(await supabase.rpc('admin_overview', {
     p_from: from, p_to: to, p_store_id: storeId || null,
@@ -200,6 +233,16 @@ export function DashboardPage() {
     return unwrap(await q) as RecentOrder[];
   }, [storeId, recentStatus]);
   const refresh = () => { void overview.reload(); void recent.reload(); };
+  useEffect(() => { setSelected(new Set()); }, [recent.data]);
+  const toggle = (id: string) => setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const allChecked = !!recent.data?.length && recent.data.every((r) => selected.has(r.id));
+  const exportSelected = () => {
+    const rows = (recent.data ?? []).filter((r) => selected.has(r.id));
+    downloadCsv(`ordini-selezionati-${isoDay(new Date())}.csv`, toCsv(rows.map((r) => ({
+      ordine: r.order_number, cliente: r.customer_name ?? '', pezzi: r.order_items.reduce((n, it) => n + it.quantity, 0),
+      totale: (r.total_cents / 100).toFixed(2).replace('.', ','), stato: ORDER_STATUS_LABELS[r.status], data: fmtStamp(r.created_at),
+    })), ['ordine', 'cliente', 'pezzi', 'totale', 'stato', 'data']));
+  };
 
   const o = overview.data;
   const byDay = useMemo(() => new Map((o?.series ?? []).map((d) => [d.day, d])), [o]);
@@ -240,8 +283,8 @@ export function DashboardPage() {
     {overview.error && <Notice tone="error">{overview.error}</Notice>}
     {!o ? <Loading /> : <>
       <div className="kpi-row">
-        <KpiCard tone="green" icon="wallet" label="Vendite di oggi" value={formatEuro(todayRow.revenue_cents)}
-          delta={change(todayRow.revenue_cents, yesterday.revenue_cents)} before={formatEuro(yesterday.revenue_cents)} spark={week.map((d) => d.revenue_cents)} sparkLabel="Vendite degli ultimi 7 giorni" />
+        <KpiCard tone="green" icon="wallet" label="Vendite di oggi" value={euro(todayRow.revenue_cents)}
+          delta={change(todayRow.revenue_cents, yesterday.revenue_cents)} before={euro(yesterday.revenue_cents)} spark={week.map((d) => d.revenue_cents)} sparkLabel="Vendite degli ultimi 7 giorni" />
         <KpiCard tone="orange" icon="document" label="Numero ordini" value={String(todayRow.orders)}
           delta={change(todayRow.orders, yesterday.orders)} before={String(yesterday.orders)} spark={week.map((d) => d.orders)} sparkLabel="Ordini degli ultimi 7 giorni" />
         {signups
@@ -250,7 +293,8 @@ export function DashboardPage() {
           : <KpiCard tone="pink" icon="customers" label="Clienti di oggi" value={String(todayRow.customers)}
             delta={change(todayRow.customers, yesterday.customers)} before={String(yesterday.customers)} spark={week.map((d) => d.customers)} sparkLabel="Clienti degli ultimi 7 giorni" />}
         <KpiCard tone="sage" icon="package" label="Ordini da evadere" value={String(toPrepare)}
-          note={toPrepare ? t('di cui {n} da iniziare', { n: open.paid ?? 0 }) : t('Tutto evaso')} />
+          delta={change(toPrepare, yesterday.open ?? 0)} before={String(yesterday.open ?? 0)}
+          spark={week.map((d) => d.open ?? 0)} sparkLabel="Ordini da evadere negli ultimi 7 giorni" />
       </div>
 
       <div className="overview-grid">
@@ -260,7 +304,7 @@ export function DashboardPage() {
             <div className="presets" role="group" aria-label={t('Periodo')}>
               {PRESETS.map((d) => <button key={d} className={preset === d ? 'on' : ''} aria-pressed={preset === d} onClick={() => setPreset(d)}>{t('{n} giorni', { n: d })}</button>)}
               <button className={preset ? '' : 'on'} aria-pressed={!preset}
-                onClick={() => (document.querySelector<HTMLInputElement>('.date-range input')?.showPicker?.(), document.querySelector<HTMLInputElement>('.date-range input')?.focus())}>
+                onClick={() => window.dispatchEvent(new Event(OPEN_PERIOD_EVENT))}>
                 {t('Personalizzato')} <Icon name="chevronDown" size={14} /></button>
             </div>
           </div>
@@ -270,16 +314,13 @@ export function DashboardPage() {
           <div className="trend-body">
             <TrendChart current={current} previous={previous} metric={metric} />
             <div className="trend-legend">
-              <div><span className="key cur" />{t('Periodo attuale')}<strong>{fmtMetric(metric, sum(current))}</strong>
-                <small className="muted">{fmtDay(from)} – {fmtDay(to)}</small></div>
-              <div><span className="key prev" />{t('Periodo precedente')}<strong className="muted-strong">{fmtMetric(metric, sum(previous))}</strong>
-                <small className="muted">{fmtDay(o.prev_from)} – {fmtDay(addDays(from, -1))}</small></div>
-              {change(sum(current), sum(previous)) !== null && <Delta value={change(sum(current), sum(previous))} label={t('sul periodo precedente')} />}
+              <div title={`${fmtDay(from)} – ${fmtDay(to)}`}><span className="key cur" />{t('Periodo attuale')}<strong>{fmtMetric(metric, sum(current))}</strong></div>
+              <div title={`${fmtDay(o.prev_from)} – ${fmtDay(addDays(from, -1))}`}><span className="key prev" />{t('Periodo precedente')}<strong className="muted-strong">{fmtMetric(metric, sum(previous))}</strong></div>
             </div>
           </div>
         </section>
 
-        <section className="panel">
+        <section className="panel status-panel">
           <div className="panel-head"><h2>{t('Stato ordini')}</h2></div>
           <div className="donut-wrap">
             <Donut groups={groups} total={statusTotal} />
@@ -300,7 +341,7 @@ export function DashboardPage() {
               <span className={`top5-rank r${i + 1}`}>{i + 1}</span>
               <span className="top5-img">{src ? <img src={src} alt="" /> : <Icon name="package" size={22} />}</span>
               <span className="top5-text"><strong>{p.name}</strong><small className="muted">{p.category || p.sku}</small></span>
-              <span className="top5-num">{p.price_cents !== null && <strong>{formatEuro(p.price_cents)}</strong>}<small className="muted">{t('Venduti {n}', { n: p.quantity })}</small></span>
+              <span className="top5-num">{p.price_cents !== null && <strong>{euro(p.price_cents)}</strong>}<small className="muted">{t('Venduti {n}', { n: p.quantity })}</small></span>
             </>;
             return <li key={p.sku}>{manager && p.product_id ? <Link to={`/products/${p.product_id}`}>{body}</Link> : <div>{body}</div>}</li>;
           })}</ol> : <Empty>{t('Nessuna vendita nel periodo.')}</Empty>}
@@ -309,6 +350,9 @@ export function DashboardPage() {
         <section className="panel recent-panel">
           <div className="panel-head"><h2>{t('Ordini recenti')}</h2>
             <div className="row">
+              {selected.size > 0 && <span className="bulk-bar">{t('{n} selezionati', { n: selected.size })}
+                <button className="ghost" onClick={exportSelected}><Icon name="import" size={15} /> {t('Esporta CSV')}</button>
+                <button className="ghost" onClick={() => setSelected(new Set())}>{t('Annulla')}</button></span>}
               <select value={recentStatus} onChange={(e) => setRecentStatus(e.target.value as OrderStatus | '')} aria-label={t('Filtra per stato')} className="compact">
                 <option value="">{t('Tutti gli stati')}</option>
                 {(Object.keys(ORDER_STATUS_LABELS) as OrderStatus[]).map((s) => <option key={s} value={s}>{t(ORDER_STATUS_LABELS[s])}</option>)}
@@ -317,17 +361,21 @@ export function DashboardPage() {
             </div>
           </div>
           {recent.data?.length ? <div className="table-scroll"><table className="recent-table">
-            <thead><tr><th>{t('N. ordine')}</th><th>{t('Cliente')}</th><th className="num">{t('Quantità')}</th><th className="num">{t('Importo')}</th><th>{t('Stato')}</th><th>{t('Data ordine')}</th><th><span className="sr-only">{t('Azioni')}</span></th></tr></thead>
+            <thead><tr><th className="check-col"><input type="checkbox" checked={allChecked} aria-label={t('Seleziona tutti')}
+              onChange={() => setSelected(allChecked ? new Set() : new Set(recent.data!.map((r) => r.id)))} /></th><th>{t('N. ordine')}</th><th>{t('Cliente')}</th><th className="num col-qty">{t('Quantità')}</th><th className="num">{t('Importo')}</th><th>{t('Stato')}</th><th>{t('Data ordine')}</th><th className="col-view">{t('Azioni')}</th><th><span className="sr-only">{t('Altro')}</span></th></tr></thead>
             <tbody>{recent.data.map((r) => {
               const thumb = img(r.order_items.find((it) => it.image_path)?.image_path);
-              return <tr key={r.id} className="clickable" onClick={() => navigate(`/orders/${r.id}`)}>
+              return <tr key={r.id} className={`clickable ${selected.has(r.id) ? 'selected' : ''}`} onClick={() => navigate(`/orders/${r.id}`)}>
+                <td className="check-col" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)}
+                  aria-label={t('Seleziona {n}', { n: r.order_number })} /></td>
                 <td className="mono">{r.order_number}</td>
                 <td><span className="cust">{thumb ? <img src={thumb} alt="" /> : <span className="cust-ph"><Icon name="package" size={16} /></span>}{r.customer_name ?? '—'}</span></td>
-                <td className="num">{r.order_items.reduce((n, it) => n + it.quantity, 0)}</td>
-                <td className="num"><strong>{formatEuro(r.total_cents)}</strong></td>
+                <td className="num col-qty">{r.order_items.reduce((n, it) => n + it.quantity, 0)}</td>
+                <td className="num"><strong>{euro(r.total_cents)}</strong></td>
                 <td><StatusPill status={r.status} /></td>
                 <td className="muted">{fmtStamp(r.created_at)}</td>
-                <td><Link to={`/orders/${r.id}`} className="view-link" onClick={(e) => e.stopPropagation()}>{t('Visualizza')}</Link></td>
+                <td className="col-view"><Link to={`/orders/${r.id}`} className="view-link" onClick={(e) => e.stopPropagation()}>{t('Visualizza')}</Link></td>
+                <td className="menu-col"><RowMenu order={r} /></td>
               </tr>;
             })}</tbody></table></div>
             : <Empty>{recent.data ? t('Nessun ordine.') : t('Caricamento…')}</Empty>}
@@ -341,7 +389,7 @@ export function DashboardPage() {
             const store = storeIdByCode(l.store_code);
             return <li key={l.store_code + l.sku}>
               <span className="top5-img small">{src ? <img src={src} alt="" /> : <Icon name="package" size={18} />}</span>
-              <span className="top5-text"><strong>{l.name}</strong><small className="muted">SKU {l.sku} · {l.store_code}</small></span>
+              <span className="top5-text"><strong>{l.name}</strong><small className="muted">SKU: {l.sku} · {l.store_code}</small></span>
               <span className={`stock-qty ${l.quantity === 0 ? 'out' : ''}`}>{l.quantity === 0 ? t('Esaurito') : t('Scorte: {n}', { n: l.quantity })}</span>
               <Link className="btn secondary restock" to={`/inventory?q=${encodeURIComponent(l.sku)}${store ? `&negozio=${store}` : ''}`}>{t('Rifornisci')}</Link>
             </li>;

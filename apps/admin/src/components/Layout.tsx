@@ -3,9 +3,9 @@ import { NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'reac
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { useStores } from '../lib/data';
-import { overviewRange } from '../lib/overview';
+import { addDays, daysBetween, isoDay, overviewRange } from '../lib/overview';
 import { Icon, type AdminIcon } from './Icon';
-import { t } from '../lib/i18n';
+import { dateLocale, t } from '../lib/i18n';
 
 const ROLE_LABEL = { admin: 'Amministratore', manager: 'Responsabile', store_staff: 'Personale negozio' } as const;
 
@@ -78,21 +78,56 @@ function GlobalSearch({ manager }: { manager: boolean }) {
 }
 
 /** Period and store for the overview, kept in the URL so the page can be shared and reloaded. */
+/** Opens the period picker from elsewhere on the page (e.g. "Personalizzato" on the sales chart). */
+export const OPEN_PERIOD_EVENT = 'casa-te:open-period';
+
 function OverviewFilters({ manager }: { manager: boolean }) {
   const [params, setParams] = useSearchParams();
   const stores = useStores();
   const { from, to } = overviewRange(params);
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState({ from, to });
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (open) setDraft({ from, to }); }, [open, from, to]);
+  useEffect(() => {
+    const show = () => setOpen(true);
+    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener(OPEN_PERIOD_EVENT, show);
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => { window.removeEventListener(OPEN_PERIOD_EVENT, show); document.removeEventListener('mousedown', close); document.removeEventListener('keydown', esc); };
+  }, []);
   const set = (patch: Record<string, string>) => {
     const next = new URLSearchParams(params);
     for (const [k, v] of Object.entries(patch)) { if (v) next.set(k, v); else next.delete(k); }
     setParams(next, { replace: true });
   };
+  const today = isoDay(new Date());
+  const presets = [
+    { label: 'Oggi', from: today, to: today },
+    { label: 'Ieri', from: addDays(today, -1), to: addDays(today, -1) },
+    { label: 'Ultimi 7 giorni', from: addDays(today, -6), to: today },
+    { label: 'Ultimi 30 giorni', from: addDays(today, -29), to: today },
+    { label: 'Ultimi 90 giorni', from: addDays(today, -89), to: today },
+    { label: 'Questo mese', from: `${today.slice(0, 8)}01`, to: today },
+  ];
+  const apply = (r: { from: string; to: string }) => { set({ dal: r.from, al: r.to }); setOpen(false); };
+  const long = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
+  const valid = draft.from && draft.to && draft.from <= draft.to && daysBetween(draft.from, draft.to) <= 365;
   return <>
-    <div className="date-range">
-      <Icon name="calendar" size={18} />
-      <input type="date" value={from} max={to} aria-label={t('Dal giorno')} onChange={(e) => e.target.value && set({ dal: e.target.value, al: to })} />
-      <span aria-hidden="true">–</span>
-      <input type="date" value={to} min={from} aria-label={t('Al giorno')} onChange={(e) => e.target.value && set({ dal: from, al: e.target.value })} />
+    <div className="date-range-wrap" ref={ref}>
+      <button className="date-range" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <Icon name="calendar" size={18} /><span>{long(from)}</span><span aria-hidden="true">-</span><span>{long(to)}</span>
+      </button>
+      {open && <div className="period-pop" role="dialog" aria-label={t('Periodo')}>
+        <div className="period-presets">{presets.map((p) => <button key={p.label} className={p.from === from && p.to === to ? 'on' : ''} onClick={() => apply(p)}>{t(p.label)}</button>)}</div>
+        <div className="period-custom">
+          <label className="field">{t('Dal')}<input type="date" value={draft.from} max={draft.to || undefined} onChange={(e) => setDraft({ ...draft, from: e.target.value })} /></label>
+          <label className="field">{t('Al')}<input type="date" value={draft.to} min={draft.from || undefined} max={today} onChange={(e) => setDraft({ ...draft, to: e.target.value })} /></label>
+          <button disabled={!valid} onClick={() => apply(draft)}>{t('Applica')}</button>
+        </div>
+      </div>}
     </div>
     {manager && <select className="top-select" value={params.get('negozio') ?? ''} onChange={(e) => set({ negozio: e.target.value })} aria-label={t('Negozio')}>
       <option value="">{t('Tutti i negozi')}</option>{stores.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>}
