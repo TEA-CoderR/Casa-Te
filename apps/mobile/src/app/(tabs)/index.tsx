@@ -5,14 +5,14 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
-import { ProductImage } from '@/components/ProductImage';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
 import { MenuSheet } from '@/components/MenuSheet';
 import { Loading, Notice } from '@/components/UI';
-import { demoHomeImage, productImageCells } from '@/data/productImages';
+import { demoHomeImage } from '@/data/productImages';
 import { cardShadow, colors, fonts } from '@/config/theme';
-import { fetchCategories, fetchCategoryCovers, fetchProducts } from '@/lib/api';
+import { fetchCategories, fetchProducts } from '@/lib/api';
 import { useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { cartItemCount, useCartStore } from '@/store/cart';
@@ -27,7 +27,6 @@ export default function HomeScreen() {
   const { columns, wide } = useLayout();
   const count = cartItemCount(useCartStore((s) => s.items));
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
-  const covers = useQuery('category-covers', fetchCategoryCovers);
   const featured = useQuery(selected ? `featured:${selected.id}` : null,
     // Featured products first, then the rest of the catalogue, so the section is never empty.
     () => fetchProducts({ storeId: selected?.id ?? null, sort: 'featured', pageSize: columns * 2 }));
@@ -51,22 +50,17 @@ export default function HomeScreen() {
   const heroImageStyle = heroWidth && heroWidth < photoWidth
     ? { width: photoWidth, height: heroHeight, left: heroWidth - photoWidth, borderRadius: wide ? 18 : 0 }
     : wide ? { borderRadius: 18 } : undefined;
-  // Cover photo: a product of the category itself, else of one of its subcategories.
-  const coverOf = (category: CategoryRow) => covers.data?.[category.id]
-    ?? (categories.data ?? []).filter((c) => c.parent_id === category.id).map((c) => covers.data?.[c.id]).find(Boolean);
-  const categoryItem = (category: CategoryRow, width?: `${number}%`) => {
-    const cover = coverOf(category);
-    return <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`Categoria ${category.name}`}
+  // Each department gets a line drawing on a soft tone; the tones alternate so the grid reads as a set.
+  const tones = ['#E9EFE7', '#F4ECDD', '#F3E8E3', '#ECEDE4'];
+  const categoryItem = (category: CategoryRow, index: number, width?: `${number}%`) =>
+    <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`Categoria ${category.name}`}
       style={({ pressed }) => [styles.category, width ? { width } : { minWidth: 82 }, { opacity: pressed ? 0.7 : 1 }]}
       onPress={() => router.push({ pathname: '/catalog', params: { category: category.id } })}>
-      <View style={[styles.circle, wide && { width: 112, height: 112, borderRadius: 56 }]}>
-        {cover && (cover.image || productImageCells[cover.sku] !== undefined)
-          ? <ProductImage uri={cover.image} sku={cover.sku} label="" inset={0.16} />
-          : <Text style={styles.categoryInitial}>{category.name.slice(0, 1)}</Text>}
+      <View style={[styles.circle, { backgroundColor: tones[index % tones.length] }, wide && { width: 104, height: 104, borderRadius: 52 }]}>
+        <CategoryIcon slug={category.slug} name={category.name} size={wide ? 46 : 32} />
       </View>
-      <Text style={[styles.categoryLabel, wide && { fontSize: 16 }]}>{category.name}</Text>
+      <Text style={[styles.categoryLabel, wide && { fontSize: 16 }]} numberOfLines={1}>{category.name}</Text>
     </Pressable>;
-  };
 
   return <Screen refreshing={featured.loading && !!featured.data} onRefresh={refresh} contentContainerStyle={{ paddingTop: 6 }}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
@@ -114,8 +108,8 @@ export default function HomeScreen() {
     </View>
 
     {!!topCategories.length && (wide
-      ? <View style={[styles.categories, { marginTop: 40 }]}>{topCategories.map((c) => categoryItem(c, `${100 / topCategories.length}%`))}</View>
-      : <View style={[styles.categories, { marginTop: 18, rowGap: 14 }]}>{topCategories.map((c) => categoryItem(c, '25%'))}</View>)}
+      ? <View style={[styles.categories, { marginTop: 40 }]}>{topCategories.map((c, i) => categoryItem(c, i, `${100 / topCategories.length}%`))}</View>
+      : <View style={[styles.categories, { marginTop: 18, rowGap: 14 }]}>{topCategories.map((c, i) => categoryItem(c, i, '25%'))}</View>)}
 
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, wide && { fontSize: 30 }]} accessibilityRole="header">In evidenza</Text>
@@ -186,9 +180,8 @@ const styles = StyleSheet.create({
   searchText: { fontSize: 15, color: colors.muted, fontFamily: fonts.sans },
   categories: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   category: { alignItems: 'center', paddingHorizontal: 4, gap: 8 },
-  circle: { width: 68, height: 68, borderRadius: 34, backgroundColor: colors.cream, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  categoryInitial: { fontSize: 30, fontFamily: fonts.serif, color: colors.green },
-  categoryLabel: { fontSize: 12, letterSpacing: -0.2, fontFamily: fonts.serif, color: colors.text, textAlign: 'center' },
+  circle: { width: 66, height: 66, borderRadius: 33, alignItems: 'center', justifyContent: 'center' },
+  categoryLabel: { fontSize: 13, letterSpacing: -0.1, fontFamily: fonts.serif, color: colors.text, textAlign: 'center' },
   section: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 26, marginBottom: 12 },
   sectionTitle: { fontSize: 22, fontFamily: fonts.serif, color: colors.text },
   seeAll: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 8, marginRight: -8 },
