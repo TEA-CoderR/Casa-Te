@@ -17,10 +17,13 @@ export function CategoriesPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const homeCount = (categories.data ?? []).filter((c) => c.show_on_home && c.id !== edit?.id).length + (edit?.show_on_home && !edit.parent_id ? 1 : 0);
+
   const save = async () => {
     if (!edit?.name?.trim()) return;
     setBusy(true); setError('');
-    const row = { name: edit.name.trim(), slug: edit.slug?.trim() || slugify(edit.name), sort: Number(edit.sort ?? 0), active: edit.active ?? true, parent_id: edit.parent_id || null };
+    const row = { name: edit.name.trim(), slug: edit.slug?.trim() || slugify(edit.name), sort: Number(edit.sort ?? 0), active: edit.active ?? true, parent_id: edit.parent_id || null,
+      show_on_home: !edit.parent_id && (edit.show_on_home ?? false) };
     try {
       if (edit.id) unwrap(await supabase.from('categories').update(row).eq('id', edit.id));
       else unwrap(await supabase.from('categories').insert(row));
@@ -34,12 +37,13 @@ export function CategoriesPage() {
   };
 
   return <>
-    <PageHead title="Categorie" actions={<button onClick={() => setEdit({ active: true, sort: (categories.data?.length ?? 0) + 1 })}>+ Nuova categoria</button>} />
+    <PageHead title="Categorie" subtitle="Con la spunta «Mostra in home» scegli le 8 categorie principali mostrate nella home del negozio." actions={<button onClick={() => setEdit({ active: true, sort: (categories.data?.length ?? 0) + 1 })}>+ Nuova categoria</button>} />
     {error && <Notice tone="error">{error}</Notice>}
     {!categories.data ? <Loading /> : <div className="table-wrap"><table>
-      <thead><tr><th>Ordine</th><th>Nome</th><th>Slug</th><th>Padre</th><th>Stato</th><th></th></tr></thead>
+      <thead><tr><th>Ordine</th><th>Nome</th><th>Slug</th><th>Padre</th><th>Home</th><th>Stato</th><th></th></tr></thead>
       <tbody>{ordered(categories.data).map((c) => <tr key={c.id}><td>{c.sort}</td><td>{c.parent_id ? <span style={{ paddingLeft: 22 }}>↳ {c.name}</span> : <strong>{c.name}</strong>}</td><td className="muted">{c.slug}</td>
         <td>{categories.data?.find((p) => p.id === c.parent_id)?.name ?? '—'}</td>
+        <td>{c.show_on_home ? <span className="badge">In home</span> : ''}</td>
         <td>{c.active ? <span className="badge">Visibile</span> : <span className="badge muted">Nascosta</span>}</td>
         <td className="num"><button className="ghost" onClick={() => setEdit(c)}>Modifica</button><button className="ghost danger" onClick={() => remove(c)}>Elimina</button></td></tr>)}</tbody>
     </table></div>}
@@ -51,6 +55,8 @@ export function CategoriesPage() {
           <option value="">— nessuna (categoria principale) —</option>{categories.data?.filter((c) => c.id !== edit.id && !c.parent_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
         <Field label="Ordine di visualizzazione"><input type="number" value={edit.sort ?? 0} onChange={(e) => setEdit({ ...edit, sort: Number(e.target.value) })} /></Field>
         <label className="check"><input type="checkbox" checked={edit.active ?? true} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> Visibile ai clienti</label>
+        {!edit.parent_id && <label className="check"><input type="checkbox" checked={edit.show_on_home ?? false} onChange={(e) => setEdit({ ...edit, show_on_home: e.target.checked })} />
+          Mostra in home ({homeCount}/8 scelte; l'ordine segue il campo "Ordine")</label>}
         <button disabled={busy || !edit.name?.trim()} onClick={save}>Salva</button>
       </div>
     </Modal>}
