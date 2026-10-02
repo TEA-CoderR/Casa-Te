@@ -30,6 +30,10 @@ await page.waitForTimeout(500);
 await page.goto(`${env.SHOP_URL}/cart`, { waitUntil: 'networkidle' });
 await page.getByText('Accedi e continua').last().waitFor();
 await page.waitForLoadState('networkidle');
+await page.getByLabel('Modifica consegna').last().click();
+await page.getByRole('radio', { name: /Consegna a domicilio/ }).last().click();
+await page.getByText('Consegna a domicilio').first().waitFor();
+await page.waitForLoadState('networkidle');
 await shot(page, 'carrello');
 console.log('  cart:', (await page.innerText('body')).replace(/\s+/g, ' ').match(/Carrello.{0,400}/)?.[0]);
 
@@ -48,11 +52,10 @@ await shot(page, 'codice-otp');
 await page.getByLabel('Codice a 6 cifre').last().fill(code);
 await page.getByText('Accedi', { exact: true }).last().click();
 await page.waitForURL(/\/checkout$/);
-await page.getByText("Come vuoi ricevere l'ordine?").last().waitFor();
+await page.getByText('Indirizzo di consegna').last().waitFor();
 await page.waitForLoadState('networkidle');
 
 step('Checkout form: home delivery');
-await page.getByRole('radio', { name: /Consegna a domicilio/ }).last().click();
 await page.getByLabel('Nome e cognome').last().fill('Mario Rossi');
 await page.getByLabel('Via e numero civico').last().fill('Via di Prova 1');
 await page.getByLabel('Città').last().fill('Lucca');

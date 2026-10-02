@@ -19,12 +19,10 @@ export function useStores() {
 }
 
 /** Server-side price quote for the current cart, debounced while quantities change. */
-export function useCartQuote(options: { fulfilment?: FulfilmentMethod; couponCode?: string; allLines?: boolean } = {}) {
+export function useCartQuote(options: { fulfilment?: FulfilmentMethod; couponCode?: string } = {}) {
   const items = useCartStore((s) => s.items);
-  const excluded = useCartStore((s) => s.excluded);
   const { selected } = useStores();
-  // Checkout and totals use the ticked lines only; the cart list shows every line.
-  const input = useMemo(() => cartItemsInput(items, options.allLines ? {} : excluded), [items, excluded, options.allLines]);
+  const input = useMemo(() => cartItemsInput(items), [items]);
   const key = selected && input.length
     ? JSON.stringify([selected.id, input, options.fulfilment ?? null, options.couponCode ?? null]) : null;
   const [quote, setQuote] = useState<Quote | null>(null);

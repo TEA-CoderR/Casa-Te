@@ -9,10 +9,7 @@ import { MAX_LINE_QUANTITY, type CartItemInput } from '@casa-te/shared';
  */
 type CartState = {
   items: Record<string, number>;
-  /** Lines the customer unticked: they stay in the cart but are left out of this order. */
-  excluded: Record<string, true>;
-  setIncluded: (productId: string, included: boolean) => void;
-  /** After an order is paid: drop the lines that were ordered, keep the unticked ones. */
+  /** After an order is paid: drop the lines that were ordered (anything added meanwhile stays). */
   removeMany: (productIds: string[]) => void;
   add: (productId: string, quantity?: number) => void;
   setQuantity: (productId: string, quantity: number) => void;
@@ -26,17 +23,10 @@ export const useCartStore = create<CartState>()(
   persist(
     (set) => ({
       items: {},
-      excluded: {},
-      setIncluded: (productId, included) => set((state) => {
-        const next = { ...state.excluded };
-        if (included) delete next[productId]; else next[productId] = true;
-        return { excluded: next };
-      }),
       removeMany: (productIds) => set((state) => {
         const items = { ...state.items };
-        const excluded = { ...state.excluded };
-        for (const id of productIds) { delete items[id]; delete excluded[id]; }
-        return { items, excluded };
+        for (const id of productIds) delete items[id];
+        return { items };
       }),
       add: (productId, quantity = 1) => set((state) => {
         if (!Number.isFinite(quantity) || quantity <= 0) return state;
@@ -52,11 +42,9 @@ export const useCartStore = create<CartState>()(
       remove: (productId) => set((state) => {
         const next = { ...state.items };
         delete next[productId];
-        const excluded = { ...state.excluded };
-        delete excluded[productId];
-        return { items: next, excluded };
+        return { items: next };
       }),
-      clear: () => set({ items: {}, excluded: {} }),
+      clear: () => set({ items: {} }),
     }),
     {
       name: 'casa-te-cart-v2',
@@ -68,5 +56,5 @@ export const useCartStore = create<CartState>()(
 
 export const cartItemCount = (items: Record<string, number>) => Object.values(items).reduce((s, q) => s + q, 0);
 
-export const cartItemsInput = (items: Record<string, number>, excluded: Record<string, true> = {}): CartItemInput[] =>
-  Object.entries(items).filter(([id, q]) => q > 0 && !excluded[id]).map(([product_id, quantity]) => ({ product_id, quantity }));
+export const cartItemsInput = (items: Record<string, number>): CartItemInput[] =>
+  Object.entries(items).filter(([, q]) => q > 0).map(([product_id, quantity]) => ({ product_id, quantity }));
