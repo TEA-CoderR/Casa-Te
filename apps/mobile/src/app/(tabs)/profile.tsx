@@ -8,11 +8,10 @@ import { Icon, type IconName } from '@/components/Icon';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { PrimaryButton } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
-import { fetchAddresses, fetchOrders, fetchProfile, updateProfile, type OrderWithItems } from '@/lib/api';
+import { fetchOrders, fetchProfile, updateProfile, type OrderWithItems } from '@/lib/api';
 import { useStores } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
-import { useFavorites } from '@/store/favorites';
 import { usePreferences } from '@/store/preferences';
 import { useUser } from '@/store/session';
 
@@ -44,11 +43,9 @@ export default function ProfileScreen() {
   const user = useUser();
   const storeId = usePreferences((s) => s.storeId);
   const { selected } = useStores();
-  const favorites = useFavorites((s) => s.ids.length);
   const [storeSheet, setStoreSheet] = useState(false);
   const profile = useQuery(user ? `profile:${user.id}` : null, () => fetchProfile(user!.id));
   const orders = useQuery<OrderWithItems[]>(user ? `orders:list:${user.id}` : null, fetchOrders);
-  const addresses = useQuery(user ? `addresses:${user.id}` : null, fetchAddresses);
   useRefetchOnFocus(orders.refetch);
 
   // Keep the preferred store in the profile (used for marketing/analytics and on other devices).
@@ -61,13 +58,7 @@ export default function ProfileScreen() {
   const name = profile.data?.full_name?.trim() || '';
   const member = !!profile.data?.club_member_since;
   const active = (orders.data ?? []).find((o) => ACTIVE.has(o.status));
-  const orderCount = orders.data?.length ?? 0;
   const go = (href: Href) => router.push(href);
-  const tiles: Array<{ icon: IconName; label: string; value?: string; href: Href }> = [
-    { icon: 'box', label: 'Ordini', value: user ? String(orderCount) : undefined, href: '/orders' },
-    { icon: 'heart', label: 'Preferiti', value: user ? String(favorites) : undefined, href: '/favorites' },
-    { icon: 'pin', label: 'Indirizzi', value: user ? String(addresses.data?.length ?? 0) : undefined, href: user ? '/account/addresses' : { pathname: '/auth/sign-in', params: { next: '/account/addresses' } } },
-  ];
 
   return <Screen>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
@@ -86,15 +77,6 @@ export default function ProfileScreen() {
       <Text style={styles.welcomeText}>Accedi per seguire i tuoi ordini, salvare gli indirizzi e iscriverti al Club. Ti basta l'email: niente password.</Text>
       <PrimaryButton title="Accedi o registrati" onPress={() => go('/auth/sign-in')} />
     </View>}
-
-    <View style={styles.tiles}>
-      {tiles.map((t) => <Pressable key={t.label} onPress={() => go(t.href)} accessibilityRole="button"
-        accessibilityLabel={t.value !== undefined ? `${t.label}: ${t.value}` : t.label} style={({ pressed }) => [styles.tile, pressed && { opacity: 0.7 }]}>
-        <View style={styles.tileIcon}><Icon name={t.icon} size={20} strokeWidth={1.5} /></View>
-        {t.value !== undefined && <Text style={styles.tileValue}>{t.value}</Text>}
-        <Text style={styles.tileLabel}>{t.label}</Text>
-      </Pressable>)}
-    </View>
 
     {active && <Pressable onPress={() => go(`/order/${active.id}`)} accessibilityRole="link" style={styles.activeOrder}>
       <View style={styles.pulse} />
@@ -123,7 +105,7 @@ export default function ProfileScreen() {
     {user && <Group title="Account">
       <Row icon="user" title="Dati personali" subtitle={[name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono'} onPress={() => go('/account/edit')} />
       <Row icon="pin" title="Indirizzi di consegna" onPress={() => go('/account/addresses')} />
-      <Row icon="box" title="I miei ordini" subtitle={orderCount ? `${orderCount} ${orderCount === 1 ? 'ordine' : 'ordini'}` : undefined} onPress={() => go('/orders')} last />
+      <Row icon="box" title="I miei ordini" subtitle="Stato, ritiri e consegne" onPress={() => go('/orders')} last />
     </Group>}
 
     <Group title="Assistenza e informazioni">
@@ -157,16 +139,11 @@ const styles = StyleSheet.create({
   welcome: { backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.line, padding: 22, gap: 12, marginTop: 8 },
   welcomeTitle: { fontSize: 30, lineHeight: 35, fontFamily: fonts.serif, color: colors.text },
   welcomeText: { fontSize: 14, lineHeight: 21, color: colors.muted, fontFamily: fonts.sans, marginBottom: 4 },
-  tiles: { flexDirection: 'row', gap: 10, marginTop: 22 },
-  tile: { flex: 1, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.line, paddingVertical: 14, alignItems: 'center', gap: 4 },
-  tileIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  tileValue: { fontSize: 20, fontFamily: fonts.serif, color: colors.text },
-  tileLabel: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans },
-  activeOrder: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#E8EFE6', borderRadius: 14, padding: 16, marginTop: 14 },
+  activeOrder: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#E8EFE6', borderRadius: 14, padding: 16, marginTop: 22 },
   pulse: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.green },
   activeLabel: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans },
   activeStatus: { fontSize: 17, fontFamily: fonts.serif, color: colors.text, marginTop: 1 },
-  club: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.sand, borderRadius: 14, padding: 16, marginTop: 14 },
+  club: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.sand, borderRadius: 14, padding: 16, marginTop: 22 },
   clubTitle: { fontSize: 18, fontFamily: fonts.serif, color: colors.text },
   clubText: { fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
   groupTitle: { fontSize: 19, fontFamily: fonts.serif, color: colors.text, marginBottom: 10 },
