@@ -9,12 +9,39 @@ import { t } from '../lib/i18n';
 
 const ROLE_LABEL = { admin: 'Amministratore', manager: 'Responsabile', store_staff: 'Personale negozio' } as const;
 
-/** The customer shop: VITE_SHOP_URL, else the site the admin is published under (…/admin/ → …/). */
-const BASE = import.meta.env.BASE_URL;
-const SHOP_URL: string = import.meta.env.VITE_SHOP_URL || (BASE.endsWith('/admin/') ? BASE.slice(0, -'admin/'.length) : '');
 
-function Item({ to, icon, children, end }: { to: string; icon: AdminIcon; children: string; end?: boolean }) {
-  return <NavLink to={to} end={end}><Icon name={icon} size={20} strokeWidth={1.6} /><span>{children}</span></NavLink>;
+type Role = 'admin' | 'manager' | 'store_staff';
+type Tab = { to: string; label: string; roles?: Role[] };
+
+/**
+ * Pages that belong together share one menu entry; the page shows them as tabs.
+ * Detail pages (e.g. /products/:id) keep their own header and show no tabs.
+ */
+const SECTIONS: Array<{ tabs: Tab[] }> = [
+  { tabs: [{ to: '/orders', label: 'Tutti gli ordini' }, { to: '/picking', label: 'Preparazione ordini' }] },
+  { tabs: [{ to: '/products', label: 'Prodotti' }, { to: '/import', label: 'Importa prodotti' }, { to: '/reviews', label: 'Recensioni' }] },
+  { tabs: [{ to: '/coupons', label: 'Codici sconto' }, { to: '/loyalty', label: 'Programma fedeltà' }] },
+  { tabs: [{ to: '/stores', label: 'Negozi', roles: ['admin'] }, { to: '/shipping', label: 'Tariffe spedizione' }, { to: '/pickup-points', label: 'Punti di ritiro' }] },
+];
+const sectionOf = (pathname: string) => SECTIONS.find((s) => s.tabs.some((tab) => tab.to === pathname));
+
+function Item({ to, icon, children, end, also = [] }: { to: string; icon: AdminIcon; children: string; end?: boolean; also?: string[] }) {
+  const { pathname } = useLocation();
+  // Also highlighted on the other tabs of its section (and their detail pages).
+  const inSection = also.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  return <NavLink to={to} end={end} className={({ isActive }) => (isActive || inSection ? 'active' : '')}>
+    <Icon name={icon} size={20} strokeWidth={1.6} /><span>{children}</span></NavLink>;
+}
+
+function SectionTabs() {
+  const { pathname } = useLocation();
+  const { can } = useAuth();
+  const section = sectionOf(pathname);
+  const tabs = section?.tabs.filter((tab) => !tab.roles || can(...tab.roles)) ?? [];
+  if (tabs.length < 2) return null;
+  return <nav className="section-tabs" aria-label={t('Sezioni')}>
+    {tabs.map((tab) => <NavLink key={tab.to} to={tab.to} className={({ isActive }) => (isActive ? 'on' : '')}>{t(tab.label)}</NavLink>)}
+  </nav>;
 }
 
 /** Search in the top bar: Enter picks the obvious place (order numbers → orders), the menu offers the others. */
@@ -122,28 +149,17 @@ export function Layout() {
       </div>
       <nav className="nav" id="nav-principale" aria-label={t('Navigazione principale')}>
         <Item to="/" end icon="home">{t('Panoramica')}</Item>
-        <Item to="/orders" icon="clipboard">{t('Gestione ordini')}</Item>
-        <Item to="/picking" icon="picking">{t('Preparazione ordini')}</Item>
-        {manager && <Item to="/products" icon="bag">{t('Gestione prodotti')}</Item>}
+        <Item to="/orders" icon="clipboard" also={['/picking']}>{t('Gestione ordini')}</Item>
+        {manager && <Item to="/products" icon="bag" also={['/import', '/reviews']}>{t('Gestione prodotti')}</Item>}
         <Item to="/inventory" icon="warehouse">{t('Gestione inventario')}</Item>
         {manager && <>
           <Item to="/categories" icon="products">{t('Gestione categorie')}</Item>
-          <Item to="/coupons" icon="megaphone">{t('Marketing')}</Item>
+          <Item to="/coupons" icon="megaphone" also={['/loyalty']}>{t('Marketing')}</Item>
           <Item to="/customers" icon="customers">{t('Clienti')}</Item>
           <Item to="/analytics" icon="chart">{t('Analisi dati')}</Item>
         </>}
-        {manager && <>
-          <div className="group">{t('Canali di vendita')}</div>
-          {SHOP_URL && <a href={SHOP_URL} target="_blank" rel="noreferrer"><Icon name="monitor" size={20} strokeWidth={1.6} /><span>{t('Negozio online')}</span>
-            <span className="sr-only">{t('(si apre in una nuova scheda)')}</span></a>}
-          {can('admin') && <Item to="/stores" icon="stores">{t('Gestione negozi')}</Item>}
-          <Item to="/loyalty" icon="gift">{t('Programma fedeltà')}</Item>
-          <Item to="/reviews" icon="reviews">{t('Recensioni')}</Item>
-          <Item to="/shipping" icon="truck">{t('Tariffe spedizione')}</Item>
-          <Item to="/pickup-points" icon="pickup">{t('Punti di ritiro')}</Item>
-        </>}
         <div className="group">{t('Impostazioni di sistema')}</div>
-        {manager && <Item to="/import" icon="import">{t('Importa prodotti')}</Item>}
+        {manager && <Item to={can('admin') ? '/stores' : '/shipping'} icon="stores" also={['/stores', '/shipping', '/pickup-points']}>{t('Negozi e spedizioni')}</Item>}
         {can('admin') && <Item to="/staff" icon="staff">{t('Gestione staff')}</Item>}
         <Item to="/settings" icon="settings">{t('Impostazioni')}</Item>
         {manager && <Item to="/activity" icon="history">{t('Registro attività')}</Item>}
@@ -161,7 +177,7 @@ export function Layout() {
           <UserMenu />
         </div>
       </header>
-      <main className="main" id="contenuto" tabIndex={-1}><Outlet /></main>
+      <main className="main" id="contenuto" tabIndex={-1}><SectionTabs /><Outlet /></main>
     </div>
   </div>;
 }
