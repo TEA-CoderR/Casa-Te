@@ -12,7 +12,6 @@ insert into public.categories (slug, name, parent_id, sort)
 select v.slug, v.name, p.id, v.sort
 from (values
   ('carta-monouso', 'Carta e monouso', 'pulizia', 1),
-  ('accessori-pulizia', 'Accessori pulizia', 'pulizia', 2),
   ('pentole-padelle', 'Pentole e padelle', 'cucina', 1),
   ('conservazione', 'Conservazione', 'cucina', 2),
   ('stoviglie', 'Stoviglie', 'cucina', 3),
