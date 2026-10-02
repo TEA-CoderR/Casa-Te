@@ -6,12 +6,14 @@ import { cartItemCount, useCartStore } from '@/store/cart';
 import { Icon, type IconName } from '@/components/Icon';
 import { useLayout } from '@/lib/hooks';
 
-const tabs: Array<{ name: string; title: string; icon: IconName }> = [
+const tabs: Array<{ name: string; title: string; icon: IconName; hidden?: boolean }> = [
   { name: 'index', title: 'Home', icon: 'home' },
-  { name: 'catalog', title: 'Catalogo', icon: 'grid' },
+  { name: 'catalog', title: 'Categorie', icon: 'grid' },
+  { name: 'favorites', title: 'Preferiti', icon: 'heart' },
   { name: 'cart', title: 'Carrello', icon: 'cart' },
-  { name: 'orders', title: 'Ordini', icon: 'box' },
   { name: 'profile', title: 'Profilo', icon: 'user' },
+  // Orders stay a tab route (deep links, back stack) but are reached from Profilo and the menu.
+  { name: 'orders', title: 'Ordini', icon: 'box', hidden: true },
 ];
 
 export default function TabsLayout() {
@@ -32,7 +34,7 @@ export default function TabsLayout() {
     tabBarBadgeStyle: { backgroundColor: colors.badge, fontSize: 11, color: '#fff' },
   }}>
     {tabs.map((tab) => <Tabs.Screen key={tab.name} name={tab.name} options={{
-      title: tab.title, tabBarBadge: tab.name === 'cart' && count > 0 ? count : undefined,
+      title: tab.title, href: tab.hidden ? null : undefined, tabBarBadge: tab.name === 'cart' && count > 0 ? count : undefined,
       tabBarIcon: ({ color, focused }) => <View style={{ width: 48, height: 30, alignItems: 'center', justifyContent: 'center' }}>
         <Icon name={tab.icon} color={color} size={23} strokeWidth={focused ? 1.8 : 1.4} />
       </View>,

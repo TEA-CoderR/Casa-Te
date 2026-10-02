@@ -63,6 +63,8 @@ export type ProductQuery = {
   categoryId?: string | null;
   search?: string;
   featured?: boolean;
+  /** Only these products (favourites). */
+  ids?: string[];
   sort?: 'featured' | 'price_asc' | 'price_desc' | 'name';
   page?: number;
   pageSize?: number;
@@ -75,6 +77,7 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
   if (q.storeId) query = query.eq('inventory.store_id', q.storeId);
   if (q.categoryId) query = query.eq('category_id', q.categoryId);
   if (q.featured) query = query.eq('featured', true);
+  if (q.ids) query = query.in('id', q.ids.length ? q.ids : ['00000000-0000-0000-0000-000000000000']);
   const needle = q.search?.trim().toLowerCase().replace(/[%_,()]/g, ' ');
   if (needle) query = query.ilike('search_text', `%${needle}%`);
   switch (q.sort) {
