@@ -14,6 +14,7 @@ import {
 import { colors } from '@/config/theme';
 import { fetchAddresses, fetchPickupPoints, fetchProfile, saveAddress, startCheckout, updateProfile } from '@/lib/api';
 import { useCartQuote } from '@/lib/hooks';
+import { usePreferences } from '@/store/preferences';
 import { openCheckout } from '@/lib/payments';
 import { useQuery } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
@@ -30,7 +31,10 @@ const fromRow = (a: AddressRow): Address => ({ fullName: a.full_name, line1: a.l
 
 export default function CheckoutScreen() {
   const user = useUser();
-  const [method, setMethod] = useState<FulfilmentMethod>('home');
+  const preferred = usePreferences((s) => s.fulfilment);
+  const savePreferred = usePreferences((s) => s.setFulfilment);
+  const [method, setMethodState] = useState<FulfilmentMethod>(preferred);
+  const setMethod = (m: FulfilmentMethod) => { setMethodState(m); savePreferred(m); };
   const [couponInput, setCouponInput] = useState('');
   const [coupon, setCoupon] = useState('');
   const [couponOpen, setCouponOpen] = useState(false);

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { parseEuroInput, productImageUrl, type ProductImageRow, type ProductRow } from '@casa-te/shared';
+import {
+  HIGHLIGHT_ICONS, formatPackSize, parseEuroInput, productImageUrl, unitPriceLabel,
+  type HighlightIcon, type ProductImageRow, type ProductRow, type ProductUnit,
+} from '@casa-te/shared';
 import { SUPABASE_URL, supabase, unwrap } from '../lib/supabase';
 import { errorText, useAsync, useCategories, useStores } from '../lib/data';
 import { Field, Loading, Notice, PageHead, Success } from '../components/ui';
@@ -9,9 +12,32 @@ import { Icon } from '../components/Icon';
 type Form = {
   sku: string; name: string; slug: string; description: string; brand: string; category_id: string; price: string; compare: string;
   vat_rate: string; weight_g: string; barcode: string; max_per_order: string; active: boolean; featured: boolean;
+  unit_quantity: string; unit: '' | ProductUnit; color: string;
+  variant_group: string; variant_title: string; variant_label: string;
+  highlights: Array<{ icon: HighlightIcon; label: string }>;
 };
 const blank: Form = { sku: '', name: '', slug: '', description: '', brand: '', category_id: '', price: '', compare: '', vat_rate: '22',
-  weight_g: '', barcode: '', max_per_order: '99', active: false, featured: false };
+  weight_g: '', barcode: '', max_per_order: '99', active: false, featured: false,
+  unit_quantity: '', unit: '', color: '', variant_group: '', variant_title: '', variant_label: '',
+  highlights: [] };
+
+const UNITS: Array<{ id: ProductUnit; label: string }> = [
+  { id: 'ml', label: 'ml' }, { id: 'l', label: 'litri' }, { id: 'g', label: 'grammi' }, { id: 'kg', label: 'kg' }, { id: 'pz', label: 'pezzi' }, { id: 'm', label: 'metri' },
+];
+const ICON_LABELS: Record<HighlightIcon, string> = {
+  leaf: 'Foglia (naturale)', home: 'Casa (per ogni ambiente)', diamond: 'Diamante (design, qualità)', drop: 'Goccia (liquidi, fragranze)',
+  sun: 'Sole (luce, estate)', shield: 'Scudo (resistente, sicuro)', star: 'Stella (scelta, novità)', recycle: 'Riciclo (sostenibile)',
+  hand: 'Mano (fatto a mano)', box: 'Scatola (confezione)', heart: 'Cuore (preferito)', sparkle: 'Scintilla (pulito, brillante)',
+};
+
+const toForm = (p: ProductRow): Form => ({
+  sku: p.sku, name: p.name, slug: p.slug, description: p.description ?? '', brand: p.brand ?? '', category_id: p.category_id ?? '',
+  price: euros(p.price_cents), compare: euros(p.compare_at_price_cents), vat_rate: String(p.vat_rate), weight_g: String(p.weight_g),
+  barcode: p.barcode ?? '', max_per_order: String(p.max_per_order), active: p.active, featured: p.featured,
+  unit_quantity: p.unit_quantity === null ? '' : String(p.unit_quantity).replace('.', ','), unit: p.unit ?? '', color: p.color ?? '',
+  variant_group: p.variant_group ?? '', variant_title: p.variant_title ?? '', variant_label: p.variant_label ?? '',
+  highlights: (p.highlights ?? []).map((h) => ({ icon: h.icon, label: h.label })),
+});
 
 const slugify = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 const euros = (c: number | null) => (c === null ? '' : (c / 100).toFixed(2).replace('.', ','));
@@ -36,12 +62,7 @@ export function ProductEditPage() {
 
   useEffect(() => {
     const p = product.data;
-    if (p) setForm({ sku: p.sku, name: p.name, slug: p.slug, description: p.description ?? '', brand: p.brand ?? '', category_id: p.category_id ?? '',
-      price: euros(p.price_cents), compare: euros(p.compare_at_price_cents), vat_rate: String(p.vat_rate), weight_g: String(p.weight_g),
-      barcode: p.barcode ?? '', max_per_order: String(p.max_per_order), active: p.active, featured: p.featured });
-    if (p) setLoaded({ sku: p.sku, name: p.name, slug: p.slug, description: p.description ?? '', brand: p.brand ?? '', category_id: p.category_id ?? '',
-      price: euros(p.price_cents), compare: euros(p.compare_at_price_cents), vat_rate: String(p.vat_rate), weight_g: String(p.weight_g),
-      barcode: p.barcode ?? '', max_per_order: String(p.max_per_order), active: p.active, featured: p.featured });
+    if (p) { setForm(toForm(p)); setLoaded(toForm(p)); }
   }, [product.data]);
   // Unsaved changes (product fields or stock) must not vanish on navigation or tab close.
   const dirty = JSON.stringify(form) !== JSON.stringify(loaded) || Object.keys(stockEdits).length > 0;
@@ -66,11 +87,21 @@ export function ProductEditPage() {
     if (!price) return setError('Prezzo non valido.');
     if (form.compare.trim() && (!compare || compare <= price)) return setError('Il prezzo barrato deve essere maggiore del prezzo.');
     if (!Number.isInteger(weight) || weight <= 0) return setError('Il peso in grammi è obbligatorio (serve per la spedizione).');
+    const unitQty = form.unit_quantity.trim() ? Number(form.unit_quantity.trim().replace(',', '.')) : null;
+    if ((unitQty === null) !== (form.unit === '')) return setError('Per il prezzo al litro/kg indica sia la quantità sia l’unità (oppure lascia vuoti entrambi).');
+    if (unitQty !== null && (!Number.isFinite(unitQty) || unitQty <= 0)) return setError('Quantità della confezione non valida.');
+    const group = slugify(form.variant_group);
+    if (group && !form.variant_label.trim()) return setError('Indica il nome della variante (es. "Tessuto") per questo prodotto.');
+    const highlights = form.highlights.map((h) => ({ icon: h.icon, label: h.label.trim() })).filter((h) => h.label);
+    if (highlights.some((h) => h.label.length > 40)) return setError('Ogni punto di forza può avere al massimo 40 caratteri.');
     const row = {
       sku: form.sku.trim(), name: form.name.trim(), slug: form.slug.trim() || `${slugify(form.name)}-${slugify(form.sku)}`,
       description: form.description.trim() || null, brand: form.brand.trim() || null, category_id: form.category_id || null,
       price_cents: price, compare_at_price_cents: compare, vat_rate: Number(form.vat_rate), weight_g: weight,
       barcode: form.barcode.trim() || null, max_per_order: Number(form.max_per_order) || 99, active: form.active, featured: form.featured,
+      unit_quantity: unitQty, unit: form.unit || null, color: form.color.trim() || null,
+      variant_group: group || null, variant_title: group ? form.variant_title.trim() || null : null, variant_label: group ? form.variant_label.trim() : null,
+      highlights,
     };
     setBusy(true);
     try {
@@ -166,6 +197,36 @@ export function ProductEditPage() {
               <input value={form.weight_g} onChange={(e) => set('weight_g', e.target.value.replace(/\D/g, ''))} inputMode="numeric" required /></Field>
             <Field label="Max pezzi per ordine"><input type="number" min={1} max={99} value={form.max_per_order} onChange={(e) => set('max_per_order', e.target.value)} /></Field>
             <Field label="Indirizzo pagina (slug)"><input value={form.slug} onChange={(e) => set('slug', e.target.value)} placeholder="generato dal nome" /></Field>
+          </div>
+        </fieldset>
+        <fieldset className="card">
+          <legend>Scheda nel negozio online</legend>
+          <div className="form-grid">
+            <Field label="Contenuto confezione" hint="Per il prezzo al litro/kg obbligatorio per legge (es. 500 ml)">
+              <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                <input value={form.unit_quantity} onChange={(e) => set('unit_quantity', e.target.value.replace(/[^\d,.]/g, ''))} inputMode="decimal" placeholder="500" style={{ width: 110 }} aria-label="Quantità" />
+                <select value={form.unit} onChange={(e) => set('unit', e.target.value as Form['unit'])} aria-label="Unità">
+                  <option value="">—</option>{UNITS.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</select>
+              </div></Field>
+            <Field label="Colore / materiale" hint="Usato dal filtro Colore"><input value={form.color} onChange={(e) => set('color', e.target.value)} maxLength={40} placeholder="es. Beige" /></Field>
+          </div>
+          {(() => { const q = Number(form.unit_quantity.replace(',', '.')); const pr = parseEuroInput(form.price);
+            const label = pr && form.unit && q > 0 ? unitPriceLabel(pr, q, form.unit) : null;
+            return label ? <p className="small muted" style={{ marginTop: 6 }}>Il cliente vedrà: {label} · {formatPackSize(q, form.unit)}</p> : null; })()}
+          <h3 style={{ margin: '18px 0 6px', fontSize: 15 }}>Punti di forza <span className="muted small">(fino a 4, sotto il prezzo)</span></h3>
+          {form.highlights.map((h, i) => <div key={i} className="row" style={{ gap: 6, marginBottom: 6, flexWrap: 'nowrap' }}>
+            <select value={h.icon} aria-label={`Icona ${i + 1}`} onChange={(e) => set('highlights', form.highlights.map((x, j) => j === i ? { ...x, icon: e.target.value as HighlightIcon } : x))}>
+              {HIGHLIGHT_ICONS.map((ic) => <option key={ic} value={ic}>{ICON_LABELS[ic]}</option>)}</select>
+            <input value={h.label} maxLength={40} placeholder="es. Fatto in Italia" aria-label={`Testo ${i + 1}`} style={{ flex: 1 }}
+              onChange={(e) => set('highlights', form.highlights.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} />
+            <button type="button" className="ghost danger" aria-label={`Rimuovi punto ${i + 1}`} onClick={() => set('highlights', form.highlights.filter((_, j) => j !== i))}><Icon name="close" size={16} /></button>
+          </div>)}
+          {form.highlights.length < 4 && <button type="button" className="secondary" onClick={() => set('highlights', [...form.highlights, { icon: 'leaf', label: '' }])}>Aggiungi punto di forza</button>}
+          <h3 style={{ margin: '18px 0 6px', fontSize: 15 }}>Varianti <span className="muted small">(es. stesse candele in fragranze diverse)</span></h3>
+          <div className="form-grid">
+            <Field label="Gruppo varianti" hint="Stesso nome su tutti i prodotti del gruppo"><input value={form.variant_group} onChange={(e) => set('variant_group', e.target.value)} placeholder="es. diffusore-tessuto" /></Field>
+            <Field label="Titolo" hint={'Mostrato come “Varianti di …”'}><input value={form.variant_title} onChange={(e) => set('variant_title', e.target.value)} maxLength={40} placeholder="es. fragranza" disabled={!form.variant_group.trim()} /></Field>
+            <Field label="Questa variante *" hint="Nome breve sotto la miniatura"><input value={form.variant_label} onChange={(e) => set('variant_label', e.target.value)} maxLength={40} placeholder="es. Tessuto" disabled={!form.variant_group.trim()} /></Field>
           </div>
         </fieldset>
       </div>

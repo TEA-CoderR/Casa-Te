@@ -36,6 +36,8 @@ export default function ProfileScreen() {
       <ListRow icon="pin" title="Indirizzi di consegna" onPress={() => router.push('/account/addresses')} />
       <ListRow icon="box" title="I miei ordini" onPress={() => router.push('/orders')} />
     </>}
+    <ListRow icon="crown" title="Casa & Te Club" subtitle={profile.data?.club_member_since ? 'Sei membro · vedi le tue offerte' : 'Vantaggi e offerte dedicate'} onPress={() => router.push('/club')} />
+    <ListRow icon="heart" title="Preferiti" onPress={() => router.push('/favorites')} />
 
     <SectionTitle>Informazioni</SectionTitle>
     <ListRow icon="truck" title="Spedizioni e ritiro" subtitle="Tariffe, tempi e ritiro in negozio" onPress={() => router.push('/legal/shipping')} />

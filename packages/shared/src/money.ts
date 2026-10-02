@@ -43,3 +43,28 @@ export function parseEuroInput(value: string): Cents | null {
 export function vatIncluded(grossCents: Cents, ratePercent: number): Cents {
   return Math.round(grossCents - grossCents / (1 + ratePercent / 100));
 }
+
+const UNIT_BASE: Record<string, { per: number; label: string }> = {
+  ml: { per: 1000, label: 'l' }, l: { per: 1, label: 'l' },
+  g: { per: 1000, label: 'kg' }, kg: { per: 1, label: 'kg' },
+  pz: { per: 1, label: 'pz' }, m: { per: 1, label: 'm' },
+};
+
+/**
+ * Reference price per litre / kilogram / piece / metre (prezzo per unità di misura), for display
+ * next to the selling price. Never charged; the charged price is always price_cents.
+ */
+export function unitPriceLabel(priceCents: Cents, unitQuantity: number | null, unit: string | null): string | null {
+  const base = unit ? UNIT_BASE[unit] : undefined;
+  if (!base || !unitQuantity || unitQuantity <= 0) return null;
+  if (unit === 'pz' && unitQuantity === 1) return null;
+  const perBase = priceCents * base.per / unitQuantity;
+  return `${formatEuro(Math.round(perBase))} / ${base.label}`;
+}
+
+/** Pack size as shown to customers, e.g. "500 ml", "1,5 l", "6 pz". */
+export function formatPackSize(unitQuantity: number | null, unit: string | null): string | null {
+  if (!unit || !unitQuantity) return null;
+  const n = Number(unitQuantity).toLocaleString('it-IT', { maximumFractionDigits: 3 });
+  return `${n} ${unit}`;
+}

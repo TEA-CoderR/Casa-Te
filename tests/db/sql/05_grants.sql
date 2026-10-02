@@ -11,8 +11,8 @@ begin
            where n.nspname = 'public' and c.relkind = 'r' loop
     perform tests.ok(has_table_privilege('service_role', 'public.' || t, 'select,insert,update,delete'), 'service_role full access: ' || t);
     if t <> 'stripe_events' then
-      perform tests.ok(has_table_privilege('authenticated', 'public.' || t, 'select'), 'authenticated can select (RLS filters): ' || t);
-      perform tests.ok(has_table_privilege('anon', 'public.' || t, 'select'), 'anon can select (RLS filters): ' || t);
+      perform tests.ok(has_any_column_privilege('authenticated', 'public.' || t, 'select'), 'authenticated can select (RLS filters): ' || t);
+      perform tests.ok(has_any_column_privilege('anon', 'public.' || t, 'select'), 'anon can select (RLS filters): ' || t);
     end if;
   end loop;
 end $$;
@@ -29,5 +29,8 @@ select tests.ok(has_column_privilege('authenticated', 'public.order_items', 'pic
 select tests.ok(not has_column_privilege('authenticated', 'public.order_items', 'unit_price_cents', 'update'), 'prices on order lines are read-only');
 select tests.ok(has_column_privilege('authenticated', 'public.profiles', 'phone', 'update'), 'customers update their phone');
 select tests.ok(not has_column_privilege('authenticated', 'public.profiles', 'email', 'update'), 'profile email follows auth.users');
+select tests.ok(not has_column_privilege('anon', 'public.product_reviews', 'user_id', 'select'), 'reviewer ids are not public');
+select tests.ok(not has_table_privilege('authenticated', 'public.product_reviews', 'insert'), 'reviews only via submit_review');
+select tests.ok(not has_column_privilege('authenticated', 'public.profiles', 'club_member_since', 'update'), 'club membership only via RPC');
 
 rollback;

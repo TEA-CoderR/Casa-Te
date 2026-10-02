@@ -54,6 +54,7 @@ export default function RootLayout() {
         <Stack.Screen name="account/addresses" options={{ title: 'Indirizzi' }} />
         <Stack.Screen name="account/delete" options={{ title: 'Elimina account' }} />
         <Stack.Screen name="legal/[doc]" options={{ title: 'Informazioni legali' }} />
+        <Stack.Screen name="club" options={{ title: 'Casa & Te Club' }} />
       </Stack>
     </PersistenceGate>
   );

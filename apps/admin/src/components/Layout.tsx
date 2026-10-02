@@ -36,6 +36,7 @@ export function Layout() {
           <Item to="/import" icon="import">Importa CSV</Item>
           <Item to="/categories" icon="categories">Categorie</Item>
           <div className="group">Vendite</div>
+          <Item to="/reviews" icon="reviews">Recensioni</Item>
           <Item to="/coupons" icon="coupons">Codici sconto</Item>
           <Item to="/shipping" icon="shipping">Tariffe spedizione</Item>
           <Item to="/pickup-points" icon="pickup">Punti di ritiro</Item>

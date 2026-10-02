@@ -16,7 +16,7 @@ import { useSession } from '@/store/session';
 export default function CheckoutReturnScreen() {
   const { order: orderId, result } = useLocalSearchParams<{ order?: string; result?: string }>();
   const ready = useSession((s) => s.ready);
-  const clearCart = useCartStore((s) => s.clear);
+  const removeOrdered = useCartStore((s) => s.removeMany);
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [polling, setPolling] = useState(true);
   const [error, setError] = useState('');
@@ -46,8 +46,12 @@ export default function CheckoutReturnScreen() {
 
   const paid = order && order.payment_status !== 'unpaid' && order.status !== 'cancelled';
   useEffect(() => {
-    if (paid && !cleared.current) { cleared.current = true; clearCart(); invalidate('orders'); invalidate('featured'); }
-  }, [paid, clearCart]);
+    if (paid && order && !cleared.current) {
+      cleared.current = true;
+      removeOrdered(order.order_items.map((i) => i.product_id).filter((id): id is string => !!id));
+      invalidate('orders'); invalidate('featured');
+    }
+  }, [paid, order, removeOrdered]);
 
   if (!orderId) return <Screen stack><EmptyState title="Link non valido" message="Torna alla home per continuare." icon="close">
     <PrimaryButton title="Vai alla home" onPress={() => router.replace('/')} /></EmptyState></Screen>;
