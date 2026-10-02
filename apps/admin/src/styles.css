@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Libre+Caslon+Text:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Libre+Caslon+Text:wght@400;700&family=Playfair+Display:wght@600;700&display=swap');
 :root {
   /* Same "bottega" palette as the shop: forest green, warm paper, serif for titles and figures. */
-  --green: #1F5A3C; --green-dark: #17402B; --lime: #B9D6A3; --bg: #F7F5F0; --surface: #fff;
+  --green: #1F5A3C; --green-dark: #17402B; --lime: #d9ee2f; --bg: #F7F5F0; --surface: #fff;
   --text: #1B1F1C; --muted: #5F625D; --line: #E8E4DC; --danger: #B3261E; --warn: #8A5300; --warn-bg: #FCF0DC;
   --radius: 14px; --shadow: 0 1px 2px rgba(40, 32, 20, .04), 0 6px 18px rgba(40, 32, 20, .05);
   --side: #1F4A33; --side-2: #173A28;
@@ -19,15 +19,15 @@ h2 { font-size: 17px; margin: 24px 0 12px; }
 
 .shell { display: grid; grid-template-columns: 256px 1fr; min-height: 100vh; }
 .sidebar { background: linear-gradient(180deg, var(--side) 0%, var(--side-2) 100%); color: #E4ECE3; padding: 24px 16px; position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
-.brand { font-family: var(--serif); font-weight: 400; font-size: 27px; color: #fff; letter-spacing: 1px; padding: 0 10px 26px; line-height: 1.1; }
-.brand small { display: block; font-family: "Hanken Grotesk", system-ui; font-size: 11px; letter-spacing: 3.4px; color: #9FC79A; font-weight: 600; margin-top: 8px; }
+.brand { font-family: "Playfair Display", Georgia, serif; font-weight: 700; font-size: 24px; color: #fff; letter-spacing: 1px; padding: 0 10px 22px; }
+.brand small { display: block; font-family: "Hanken Grotesk", system-ui; font-size: 10px; letter-spacing: 2px; color: var(--lime); font-weight: 600; margin-top: 2px; }
 .nav { flex: 1; }
-.nav a { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 10px; color: #E4ECE3; text-decoration: none; font-weight: 500; font-size: 15px; margin-bottom: 3px; transition: background .15s, color .15s; }
+.nav a { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 10px; color: #c9d8c1; text-decoration: none; font-weight: 500; font-size: 14.5px; margin-bottom: 2px; transition: background .15s, color .15s; }
 .nav a svg { opacity: .8; flex-shrink: 0; }
 .nav a:hover { background: rgba(255, 255, 255, .06); color: #fff; }
-.nav a.active { background: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .09)); color: #fff; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), 0 4px 12px rgba(0, 0, 0, .12); }
-.nav a.active svg { opacity: 1; color: #fff; }
-.nav .group { font-size: 13px; color: #CFDCCD; margin: 16px 6px 10px; padding: 18px 8px 0; border-top: 1px solid rgba(255, 255, 255, .14); font-weight: 500; }
+.nav a.active { background: rgba(255, 255, 255, .1); color: #fff; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.nav a.active svg { opacity: 1; color: var(--lime); }
+.nav .group { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #a9c1a0; margin: 16px 4px 8px; padding: 16px 8px 0; border-top: 1px solid rgba(255, 255, 255, .1); font-weight: 600; }
 .who { border-top: 1px solid rgba(255, 255, 255, .1); margin-top: 18px; padding: 14px 4px 0; font-size: 12px; display: flex; align-items: center; gap: 10px; }
 .avatar { width: 34px; height: 34px; border-radius: 17px; background: var(--lime); color: var(--side); display: grid; place-items: center; font-weight: 700; flex-shrink: 0; }
 .who-name { color: #fff; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -403,3 +403,30 @@ select.compact { min-height: 34px; padding: 5px 30px 5px 10px; font-size: 13px; 
   .presets { flex-wrap: wrap; }
   .table-scroll { margin: 0 -20px; }
 }
+
+/* Loyalty, settings, activity log */
+.offer-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.offer-list li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.offer-list code { font-size: 13px; font-weight: 700; background: #F4F2ED; padding: 4px 8px; }
+.lang-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 4px; }
+.lang-option { white-space: nowrap; justify-content: flex-start; gap: 10px; background: #fff; color: var(--text); border: 1px solid var(--line); min-height: 52px; font-weight: 500; }
+.lang-option:hover { border-color: #B9C9AD; filter: none; }
+.lang-option.on { border-color: var(--green); box-shadow: 0 0 0 1px var(--green); background: #F3F7F1; }
+.lang-option svg { margin-left: auto; color: var(--green); }
+.lang-code { width: 30px; height: 30px; border-radius: 8px; background: #EEEBE4; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--muted); }
+.lang-option.on .lang-code { background: var(--green); color: #fff; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
+.sub-title { font-size: 15px; margin: 6px 0 0; }
+.settings-links { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.settings-links a { display: grid; grid-template-columns: 22px 1fr; column-gap: 10px; align-items: center; padding: 10px; border-radius: 10px; color: var(--text); text-decoration: none; font-weight: 500; }
+.settings-links a small { grid-column: 2; font-weight: 400; }
+.settings-links a:hover { background: #F7F5F0; }
+.settings-links svg { color: var(--green); }
+.changes { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
+.badge.act-insert { background: #E5F2DC; color: #1F4A24; }
+.badge.act-update { background: #E6EEF8; color: #234A78; }
+.badge.act-delete { background: #F8E9E7; color: var(--danger); }
+td.nowrap { white-space: nowrap; }
+@media (max-width: 860px) { .lang-grid { grid-template-columns: 1fr; } }

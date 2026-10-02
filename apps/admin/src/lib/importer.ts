@@ -3,6 +3,7 @@
 // validates again.
 import { HIGHLIGHT_ICONS, type HighlightIcon, type ImportRow, type ProductHighlight, type ProductUnit } from '@casa-te/shared';
 import { parseCsvObjects } from './csv';
+import { t } from './i18n';
 
 /** Accepted header aliases → canonical field. */
 type Field = keyof ImportRow | 'price' | 'compare_at_price' | 'weight_kg' | 'pack';
@@ -108,14 +109,14 @@ export function normaliseRows(records: Array<Record<string, string>>): ParsedImp
       if (stockMatch) {
         if (value.trim() === '') continue;
         const q = Number(value.trim());
-        if (!Number.isInteger(q) || q < 0) problems.push(`giacenza ${stockMatch[1].toUpperCase()} non valida`);
+        if (!Number.isInteger(q) || q < 0) problems.push(t('giacenza {store} non valida', { store: stockMatch[1].toUpperCase() }));
         else stock[stockMatch[1].toUpperCase()] = q;
         continue;
       }
       const highlight = key.match(/^(?:punto di forza|punti di forza|highlight|caratteristica)\s*(\d)$/);
       if (highlight) {
         const h = parseHighlight(value);
-        if (h === 'invalid') problems.push(`punto di forza ${highlight[1]} non valido (max 40 caratteri; icona tra: ${Object.keys(ICON_WORDS).slice(0, 12).join(', ')})`);
+        if (h === 'invalid') problems.push(t('punto di forza {n} non valido (max 40 caratteri; icona tra: {icons})', { n: highlight[1], icons: Object.keys(ICON_WORDS).slice(0, 12).join(', ') }));
         else if (h) highlights.push(h);
         continue;
       }
@@ -125,29 +126,29 @@ export function normaliseRows(records: Array<Record<string, string>>): ParsedImp
       if (canonical) fields[canonical] = value.trim();
     }
     const sku = fields.sku ?? '';
-    if (!/^[A-Za-z0-9._-]{1,40}$/.test(sku)) problems.push('SKU mancante o non valido (lettere, numeri, . _ -)');
-    if (sku && seen.has(sku)) problems.push('SKU duplicato nel file');
-    if (!fields.name) problems.push('nome mancante');
+    if (!/^[A-Za-z0-9._-]{1,40}$/.test(sku)) problems.push(t('SKU mancante o non valido (lettere, numeri, . _ -)'));
+    if (sku && seen.has(sku)) problems.push(t('SKU duplicato nel file'));
+    if (!fields.name) problems.push(t('nome mancante'));
     const price = parseNumber(fields.price ?? '');
-    if (price === null || price <= 0) problems.push('prezzo non valido');
+    if (price === null || price <= 0) problems.push(t('prezzo non valido'));
     const compare = parseNumber(fields.compare_at_price ?? '');
-    if (compare !== null && price !== null && compare <= price) problems.push('prezzo barrato deve essere maggiore del prezzo');
+    if (compare !== null && price !== null && compare <= price) problems.push(t('prezzo barrato deve essere maggiore del prezzo'));
     let weightG: number | null = null;
     if (fields.weight_g) weightG = parseNumber(fields.weight_g);
     else if (fields.weight_kg) { const kg = parseNumber(fields.weight_kg); weightG = kg === null ? null : Math.round(kg * 1000); }
-    if (weightG === null || weightG <= 0) problems.push('peso mancante (necessario per il calcolo della spedizione)');
+    if (weightG === null || weightG <= 0) problems.push(t('peso mancante (necessario per il calcolo della spedizione)'));
     const vat = fields.vat_rate ? parseNumber(fields.vat_rate.replace('%', '')) : 22;
-    if (vat === null || ![0, 4, 5, 10, 22].includes(vat)) problems.push('aliquota IVA non valida (0, 4, 5, 10, 22)');
-    if (fields.barcode && !/^\d{8,14}$/.test(fields.barcode)) problems.push('EAN non valido');
+    if (vat === null || ![0, 4, 5, 10, 22].includes(vat)) problems.push(t('aliquota IVA non valida (0, 4, 5, 10, 22)'));
+    if (fields.barcode && !/^\d{8,14}$/.test(fields.barcode)) problems.push(t('EAN non valido'));
     if (fields.image_url) images.unshift(fields.image_url);
-    if (images.some((u) => !/^https:\/\/\S+$/.test(u))) problems.push("ogni immagine deve essere un link che inizia con https://");
-    if (images.length > 10) problems.push('massimo 10 immagini');
-    if (highlights.length > 4) problems.push('massimo 4 punti di forza');
+    if (images.some((u) => !/^https:\/\/\S+$/.test(u))) problems.push(t('ogni immagine deve essere un link che inizia con https://'));
+    if (images.length > 10) problems.push(t('massimo 10 immagini'));
+    if (highlights.length > 4) problems.push(t('massimo 4 punti di forza'));
     const pack = parsePack(fields.pack ?? '');
-    if (pack === 'invalid') problems.push('confezione non valida (es. 500 ml, 1,5 l, 250 g, 6 pz)');
-    if (fields.subcategory && !fields.category) problems.push('indica anche la categoria della sottocategoria');
-    if (fields.variant_group && !fields.variant_label) problems.push('indica il nome della variante (es. Tessuto)');
-    if ((fields.color ?? '').length > 40 || (fields.variant_title ?? '').length > 40 || (fields.variant_label ?? '').length > 40) problems.push('colore e varianti: massimo 40 caratteri');
+    if (pack === 'invalid') problems.push(t('confezione non valida (es. 500 ml, 1,5 l, 250 g, 6 pz)'));
+    if (fields.subcategory && !fields.category) problems.push(t('indica anche la categoria della sottocategoria'));
+    if (fields.variant_group && !fields.variant_label) problems.push(t('indica il nome della variante (es. Tessuto)'));
+    if ((fields.color ?? '').length > 40 || (fields.variant_title ?? '').length > 40 || (fields.variant_label ?? '').length > 40) problems.push(t('colore e varianti: massimo 40 caratteri'));
 
     if (problems.length) { errors.push({ line, sku, message: problems.join('; ') }); return; }
     seen.add(sku);

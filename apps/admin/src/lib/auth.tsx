@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type PropsWithChildren 
 import type { Session } from '@supabase/supabase-js';
 import type { StaffMemberRow, StaffRole } from '@casa-te/shared';
 import { supabase } from './supabase';
+import { setLocale } from './i18n';
 
 type AuthState = {
   session: Session | null;
@@ -24,6 +25,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setSession(s);
       if (!s) { setStaff(null); setLoading(false); return; }
       const { data } = await supabase.from('staff_members').select('*').eq('user_id', s.user.id).eq('active', true).maybeSingle();
+      // The staff member's saved language wins over the one cached on this device.
+      if (data && (data as StaffMemberRow).locale) setLocale((data as StaffMemberRow).locale);
       if (active) { setStaff((data as StaffMemberRow | null) ?? null); setLoading(false); }
     };
     supabase.auth.getSession().then(({ data }) => load(data.session));

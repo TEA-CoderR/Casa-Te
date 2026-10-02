@@ -7,6 +7,7 @@ import { useAuth } from '../lib/auth';
 import { addDays, daysBetween, isoDay, overviewRange } from '../lib/overview';
 import { Empty, Loading, Notice } from '../components/ui';
 import { Icon, type AdminIcon } from '../components/Icon';
+import { dateLocale, t } from '../lib/i18n';
 
 type Metric = 'revenue_cents' | 'orders' | 'customers';
 const METRICS: Array<{ id: Metric; label: string }> = [
@@ -35,16 +36,16 @@ type RecentOrder = {
 
 const img = (path: string | null | undefined) => productImageUrl(SUPABASE_URL, path);
 const fmtDay = (day: string, opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit' }) =>
-  new Date(`${day}T12:00:00`).toLocaleDateString('it-IT', opts);
+  new Date(`${day}T12:00:00`).toLocaleDateString(dateLocale(), opts);
 const fmtStamp = (iso: string) => {
   const d = new Date(iso);
   return `${isoDay(d)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
-const fmtMetric = (m: Metric, v: number) => (m === 'revenue_cents' ? formatEuro(v) : v.toLocaleString('it-IT'));
+const fmtMetric = (m: Metric, v: number) => (m === 'revenue_cents' ? formatEuro(v) : v.toLocaleString(dateLocale()));
 
 function greeting(): string {
   const h = new Date().getHours();
-  return h < 12 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera';
+  return h < 12 ? t('Buongiorno') : h < 18 ? t('Buon pomeriggio') : t('Buonasera');
 }
 
 /** Change against a reference value: null when there is nothing to compare with. */
@@ -76,11 +77,11 @@ function KpiCard({ tone, icon, label, value, delta, before, spark, sparkLabel, n
   return <div className={`kpi2 ${tone}`}>
     <span className="kpi2-icon"><Icon name={icon} size={24} strokeWidth={1.6} /></span>
     <div className="kpi2-body">
-      <div className="kpi2-label">{label}</div>
+      <div className="kpi2-label">{t(label)}</div>
       <div className="kpi2-value">{value}</div>
-      {note !== undefined ? <span className="delta muted">{note}</span> : <Delta value={delta ?? null} label={delta === null || delta === undefined ? `ieri ${before ?? '—'}` : 'rispetto a ieri'} />}
+      {note !== undefined ? <span className="delta muted">{note}</span> : <Delta value={delta ?? null} label={delta === null || delta === undefined ? t('ieri {value}', { value: before ?? '—' }) : t('rispetto a ieri')} />}
     </div>
-    {spark && <Spark values={spark} label={sparkLabel ?? ''} />}
+    {spark && <Spark values={spark} label={t(sparkLabel ?? '')} />}
   </div>;
 }
 
@@ -126,7 +127,7 @@ function TrendChart({ current, previous, metric }: { current: AdminOverviewDay[]
 
   return <div className="trend" ref={wrap}>
     <svg width={width} height={H} viewBox={`0 0 ${width} ${H}`} onMouseMove={onMove} onMouseLeave={() => setHover(null)} role="img"
-      aria-label={`Andamento ${METRICS.find((m) => m.id === metric)?.label.toLowerCase()}: periodo attuale ${fmtMetric(metric, cur.reduce((a, b) => a + b, 0))}, periodo precedente ${fmtMetric(metric, prev.reduce((a, b) => a + b, 0))}`}>
+      aria-label={t('Andamento {metric}: periodo attuale {current}, periodo precedente {previous}', { metric: t(METRICS.find((m) => m.id === metric)?.label ?? '').toLowerCase(), current: fmtMetric(metric, cur.reduce((a, b) => a + b, 0)), previous: fmtMetric(metric, prev.reduce((a, b) => a + b, 0)) })}>
       <defs><linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stopColor="#2F7A4D" stopOpacity="0.16" /><stop offset="1" stopColor="#2F7A4D" stopOpacity="0" />
       </linearGradient></defs>
@@ -149,8 +150,8 @@ function TrendChart({ current, previous, metric }: { current: AdminOverviewDay[]
     {h !== null && <div className="trend-tip" style={{ left: tipLeft }}>
       <div className="muted small">{fmtDay(current[h].day, { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
       <strong>{fmtMetric(metric, cur[h])}</strong>
-      <div className="small"><Delta value={change(cur[h], dayBefore)} label="rispetto al giorno prima" /></div>
-      {previous[h] && <div className="small muted">Periodo precedente ({fmtDay(previous[h].day)}): {fmtMetric(metric, prev[h])}</div>}
+      <div className="small"><Delta value={change(cur[h], dayBefore)} label={t('rispetto al giorno prima')} /></div>
+      {previous[h] && <div className="small muted">{t('Periodo precedente ({day}): {value}', { day: fmtDay(previous[h].day), value: fmtMetric(metric, prev[h]) })}</div>}
     </div>}
   </div>;
 }
@@ -159,7 +160,7 @@ function Donut({ groups, total }: { groups: Array<{ label: string; color: string
   const r = 70, c = 2 * Math.PI * r, gap = total ? 2 : 0;
   let offset = 0;
   return <svg width={190} height={190} viewBox="0 0 190 190" role="img"
-    aria-label={`Stato ordini: ${groups.map((g) => `${g.label} ${g.value}`).join(', ')}`}>
+    aria-label={`${t('Stato ordini')}: ${groups.map((g) => `${t(g.label)} ${g.value}`).join(', ')}`}>
     <circle cx={95} cy={95} r={r} fill="none" stroke="#EFECE6" strokeWidth={26} />
     {total > 0 && groups.filter((g) => g.value).map((g) => {
       const len = (g.value / total) * c;
@@ -168,13 +169,13 @@ function Donut({ groups, total }: { groups: Array<{ label: string; color: string
       offset += len;
       return seg;
     })}
-    <text x={95} y={88} textAnchor="middle" className="donut-label">Totale ordini</text>
+    <text x={95} y={88} textAnchor="middle" className="donut-label">{t('Totale ordini')}</text>
     <text x={95} y={118} textAnchor="middle" className="donut-total">{total}</text>
   </svg>;
 }
 
 function StatusPill({ status }: { status: OrderStatus }) {
-  return <span className={`status-pill s-${status}`}><Icon name={STATUS_ICON[status]} size={15} />{ORDER_STATUS_LABELS[status]}</span>;
+  return <span className={`status-pill s-${status}`}><Icon name={STATUS_ICON[status]} size={15} />{t(ORDER_STATUS_LABELS[status])}</span>;
 }
 
 export function DashboardPage() {
@@ -224,16 +225,16 @@ export function DashboardPage() {
   };
   const storeIdByCode = (code: string) => stores.data?.find((s) => s.code === code)?.id ?? '';
   const firstName = (staff?.display_name ?? '').split(' ')[0];
-  const todayLong = new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+  const todayLong = new Date().toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
 
   return <>
     <div className="overview-head">
       <div>
         <h1 className="serif-title">{greeting()}{firstName ? `, ${firstName}` : ''}</h1>
-        <p className="muted overview-sub">Oggi è {todayLong} — insieme rendiamo la vita quotidiana ancora più bella.</p>
+        <p className="muted overview-sub">{t('Oggi è {date} — insieme rendiamo la vita quotidiana ancora più bella.', { date: todayLong })}</p>
       </div>
       <button className="secondary refresh-btn" onClick={refresh} disabled={overview.loading}>
-        <Icon name="refresh" size={18} /> {overview.loading ? 'Aggiornamento…' : 'Aggiorna dati'}</button>
+        <Icon name="refresh" size={18} /> {overview.loading ? t('Aggiornamento…') : t('Aggiorna dati')}</button>
     </div>
 
     {overview.error && <Notice tone="error">{overview.error}</Notice>}
@@ -249,74 +250,74 @@ export function DashboardPage() {
           : <KpiCard tone="pink" icon="customers" label="Clienti di oggi" value={String(todayRow.customers)}
             delta={change(todayRow.customers, yesterday.customers)} before={String(yesterday.customers)} spark={week.map((d) => d.customers)} sparkLabel="Clienti degli ultimi 7 giorni" />}
         <KpiCard tone="sage" icon="package" label="Ordini da evadere" value={String(toPrepare)}
-          note={toPrepare ? `di cui ${open.paid ?? 0} da iniziare` : 'Tutto evaso'} />
+          note={toPrepare ? t('di cui {n} da iniziare', { n: open.paid ?? 0 }) : t('Tutto evaso')} />
       </div>
 
       <div className="overview-grid">
         <section className="panel trend-panel">
           <div className="panel-head">
-            <h2>Andamento vendite</h2>
-            <div className="presets" role="group" aria-label="Periodo">
-              {PRESETS.map((d) => <button key={d} className={preset === d ? 'on' : ''} aria-pressed={preset === d} onClick={() => setPreset(d)}>{d} giorni</button>)}
+            <h2>{t('Andamento vendite')}</h2>
+            <div className="presets" role="group" aria-label={t('Periodo')}>
+              {PRESETS.map((d) => <button key={d} className={preset === d ? 'on' : ''} aria-pressed={preset === d} onClick={() => setPreset(d)}>{t('{n} giorni', { n: d })}</button>)}
               <button className={preset ? '' : 'on'} aria-pressed={!preset}
                 onClick={() => (document.querySelector<HTMLInputElement>('.date-range input')?.showPicker?.(), document.querySelector<HTMLInputElement>('.date-range input')?.focus())}>
-                Personalizzato <Icon name="chevronDown" size={14} /></button>
+                {t('Personalizzato')} <Icon name="chevronDown" size={14} /></button>
             </div>
           </div>
           <div className="metric-tabs" role="tablist">
-            {METRICS.map((m) => <button key={m.id} role="tab" aria-selected={metric === m.id} className={metric === m.id ? 'on' : ''} onClick={() => setMetric(m.id)}>{m.label}</button>)}
+            {METRICS.map((m) => <button key={m.id} role="tab" aria-selected={metric === m.id} className={metric === m.id ? 'on' : ''} onClick={() => setMetric(m.id)}>{t(m.label)}</button>)}
           </div>
           <div className="trend-body">
             <TrendChart current={current} previous={previous} metric={metric} />
             <div className="trend-legend">
-              <div><span className="key cur" />Periodo attuale<strong>{fmtMetric(metric, sum(current))}</strong>
+              <div><span className="key cur" />{t('Periodo attuale')}<strong>{fmtMetric(metric, sum(current))}</strong>
                 <small className="muted">{fmtDay(from)} – {fmtDay(to)}</small></div>
-              <div><span className="key prev" />Periodo precedente<strong className="muted-strong">{fmtMetric(metric, sum(previous))}</strong>
+              <div><span className="key prev" />{t('Periodo precedente')}<strong className="muted-strong">{fmtMetric(metric, sum(previous))}</strong>
                 <small className="muted">{fmtDay(o.prev_from)} – {fmtDay(addDays(from, -1))}</small></div>
-              {change(sum(current), sum(previous)) !== null && <Delta value={change(sum(current), sum(previous))} label="sul periodo precedente" />}
+              {change(sum(current), sum(previous)) !== null && <Delta value={change(sum(current), sum(previous))} label={t('sul periodo precedente')} />}
             </div>
           </div>
         </section>
 
         <section className="panel">
-          <div className="panel-head"><h2>Stato ordini</h2></div>
+          <div className="panel-head"><h2>{t('Stato ordini')}</h2></div>
           <div className="donut-wrap">
             <Donut groups={groups} total={statusTotal} />
             <ul className="donut-legend">{groups.map((g) => <li key={g.label}>
-              <Link to={`/orders?status=${g.statuses[0]}`}><i style={{ background: g.color }} />{g.label}</Link>
+              <Link to={`/orders?status=${g.statuses[0]}`}><i style={{ background: g.color }} />{t(g.label)}</Link>
               <strong>{g.value}</strong><span className="muted">{statusTotal ? Math.round((g.value / statusTotal) * 100) : 0}%</span>
             </li>)}</ul>
           </div>
-          <Link to="/orders" className="panel-link">Visualizza tutti gli ordini <Icon name="arrow" size={16} /></Link>
+          <Link to="/orders" className="panel-link">{t('Visualizza tutti gli ordini')} <Icon name="arrow" size={16} /></Link>
         </section>
 
         <section className="panel top-panel">
-          <div className="panel-head"><h2>Prodotti più venduti TOP 5</h2>
-            {manager && <Link to="/products" className="panel-link small-link">Tutti i prodotti <Icon name="arrow" size={15} /></Link>}</div>
+          <div className="panel-head"><h2>{t('Prodotti più venduti TOP 5')}</h2>
+            {manager && <Link to="/products" className="panel-link small-link">{t('Tutti i prodotti')} <Icon name="arrow" size={15} /></Link>}</div>
           {o.top_products.length ? <ol className="top5">{o.top_products.map((p, i) => {
             const src = img(p.image);
             const body = <>
               <span className={`top5-rank r${i + 1}`}>{i + 1}</span>
               <span className="top5-img">{src ? <img src={src} alt="" /> : <Icon name="package" size={22} />}</span>
               <span className="top5-text"><strong>{p.name}</strong><small className="muted">{p.category || p.sku}</small></span>
-              <span className="top5-num">{p.price_cents !== null && <strong>{formatEuro(p.price_cents)}</strong>}<small className="muted">Venduti {p.quantity}</small></span>
+              <span className="top5-num">{p.price_cents !== null && <strong>{formatEuro(p.price_cents)}</strong>}<small className="muted">{t('Venduti {n}', { n: p.quantity })}</small></span>
             </>;
             return <li key={p.sku}>{manager && p.product_id ? <Link to={`/products/${p.product_id}`}>{body}</Link> : <div>{body}</div>}</li>;
-          })}</ol> : <Empty>Nessuna vendita nel periodo.</Empty>}
+          })}</ol> : <Empty>{t('Nessuna vendita nel periodo.')}</Empty>}
         </section>
 
         <section className="panel recent-panel">
-          <div className="panel-head"><h2>Ordini recenti</h2>
+          <div className="panel-head"><h2>{t('Ordini recenti')}</h2>
             <div className="row">
-              <select value={recentStatus} onChange={(e) => setRecentStatus(e.target.value as OrderStatus | '')} aria-label="Filtra per stato" className="compact">
-                <option value="">Tutti gli stati</option>
-                {(Object.keys(ORDER_STATUS_LABELS) as OrderStatus[]).map((s) => <option key={s} value={s}>{ORDER_STATUS_LABELS[s]}</option>)}
+              <select value={recentStatus} onChange={(e) => setRecentStatus(e.target.value as OrderStatus | '')} aria-label={t('Filtra per stato')} className="compact">
+                <option value="">{t('Tutti gli stati')}</option>
+                {(Object.keys(ORDER_STATUS_LABELS) as OrderStatus[]).map((s) => <option key={s} value={s}>{t(ORDER_STATUS_LABELS[s])}</option>)}
               </select>
-              <Link to="/orders" className="panel-link small-link">Visualizza tutti gli ordini <Icon name="arrow" size={15} /></Link>
+              <Link to="/orders" className="panel-link small-link">{t('Visualizza tutti gli ordini')} <Icon name="arrow" size={15} /></Link>
             </div>
           </div>
           {recent.data?.length ? <div className="table-scroll"><table className="recent-table">
-            <thead><tr><th>N. ordine</th><th>Cliente</th><th className="num">Quantità</th><th className="num">Importo</th><th>Stato</th><th>Data ordine</th><th><span className="sr-only">Azioni</span></th></tr></thead>
+            <thead><tr><th>{t('N. ordine')}</th><th>{t('Cliente')}</th><th className="num">{t('Quantità')}</th><th className="num">{t('Importo')}</th><th>{t('Stato')}</th><th>{t('Data ordine')}</th><th><span className="sr-only">{t('Azioni')}</span></th></tr></thead>
             <tbody>{recent.data.map((r) => {
               const thumb = img(r.order_items.find((it) => it.image_path)?.image_path);
               return <tr key={r.id} className="clickable" onClick={() => navigate(`/orders/${r.id}`)}>
@@ -326,26 +327,26 @@ export function DashboardPage() {
                 <td className="num"><strong>{formatEuro(r.total_cents)}</strong></td>
                 <td><StatusPill status={r.status} /></td>
                 <td className="muted">{fmtStamp(r.created_at)}</td>
-                <td><Link to={`/orders/${r.id}`} className="view-link" onClick={(e) => e.stopPropagation()}>Visualizza</Link></td>
+                <td><Link to={`/orders/${r.id}`} className="view-link" onClick={(e) => e.stopPropagation()}>{t('Visualizza')}</Link></td>
               </tr>;
             })}</tbody></table></div>
-            : <Empty>{recent.data ? 'Nessun ordine.' : 'Caricamento…'}</Empty>}
+            : <Empty>{recent.data ? t('Nessun ordine.') : t('Caricamento…')}</Empty>}
         </section>
 
         <section className="panel stock-panel">
-          <div className="panel-head"><h2>Avviso scorte</h2>
-            <Link to="/inventory?basse=1" className="panel-link small-link">Visualizza tutto <Icon name="arrow" size={15} /></Link></div>
+          <div className="panel-head"><h2>{t('Avviso scorte')}</h2>
+            <Link to="/inventory?basse=1" className="panel-link small-link">{t('Visualizza tutto')} <Icon name="arrow" size={15} /></Link></div>
           {o.low_stock.length ? <ul className="stock-alerts">{o.low_stock.map((l) => {
             const src = img(l.image);
             const store = storeIdByCode(l.store_code);
             return <li key={l.store_code + l.sku}>
               <span className="top5-img small">{src ? <img src={src} alt="" /> : <Icon name="package" size={18} />}</span>
-              <span className="top5-text"><strong>{l.name}</strong><small className="muted">SKU: {l.sku} · {l.store_code}</small></span>
-              <span className={`stock-qty ${l.quantity === 0 ? 'out' : ''}`}>{l.quantity === 0 ? 'Esaurito' : `Scorte: ${l.quantity}`}</span>
-              <Link className="btn secondary restock" to={`/inventory?q=${encodeURIComponent(l.sku)}${store ? `&negozio=${store}` : ''}`}>Rifornisci</Link>
+              <span className="top5-text"><strong>{l.name}</strong><small className="muted">SKU {l.sku} · {l.store_code}</small></span>
+              <span className={`stock-qty ${l.quantity === 0 ? 'out' : ''}`}>{l.quantity === 0 ? t('Esaurito') : t('Scorte: {n}', { n: l.quantity })}</span>
+              <Link className="btn secondary restock" to={`/inventory?q=${encodeURIComponent(l.sku)}${store ? `&negozio=${store}` : ''}`}>{t('Rifornisci')}</Link>
             </li>;
           })}</ul> : <div className="all-good"><span className="kpi-icon"><Icon name="checkCircle" /></span>
-            <div><strong>Magazzino in ordine</strong><div className="small muted">Nessun prodotto sotto le 3 unità.</div></div></div>}
+            <div><strong>{t('Magazzino in ordine')}</strong><div className="small muted">{t('Nessun prodotto con {n} pezzi o meno.', { n: o.low_stock_threshold ?? 3 })}</div></div></div>}
         </section>
       </div>
     </>}

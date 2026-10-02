@@ -6,6 +6,7 @@ import { useAsync, useDebounced, useStores } from '../lib/data';
 import { downloadCsv, toCsv } from '../lib/csv';
 import { useAuth } from '../lib/auth';
 import { Empty, Loading, Notice, PageHead, Pager, PaymentBadge, StatusBadge, fmtDate } from '../components/ui';
+import { t } from '../lib/i18n';
 
 const PAGE = 50;
 
@@ -79,31 +80,31 @@ export function OrdersPage() {
   };
 
   return <>
-    <PageHead title="Ordini" subtitle={orders.data ? `${orders.data.count} ordini` : undefined}
-      actions={<button className="secondary" onClick={exportCsv} disabled={exporting}>{exporting ? 'Esportazione…' : 'Esporta CSV'}</button>} />
+    <PageHead title={t('Ordini')} subtitle={orders.data ? t('{n} ordini', { n: orders.data.count }) : undefined}
+      actions={<button className="secondary" onClick={exportCsv} disabled={exporting}>{exporting ? t('Esportazione…') : t('Esporta CSV')}</button>} />
     <div className="toolbar">
-      <input type="search" placeholder="Numero, email, nome, telefono" value={search} onChange={(e) => setSearch(e.target.value)} style={{ minWidth: 260 }} aria-label="Cerca ordini" />
-      <select value={status} onChange={(e) => set('status', e.target.value)} aria-label="Stato">
-        <option value="">Tutti (esclusi non pagati)</option>
-        {(Object.keys(ORDER_STATUS_LABELS) as OrderStatus[]).map((s) => <option key={s} value={s}>{ORDER_STATUS_LABELS[s]}</option>)}
+      <input type="search" placeholder={t('Numero, email, nome, telefono')} value={search} onChange={(e) => setSearch(e.target.value)} style={{ minWidth: 260 }} aria-label={t('Cerca ordini')} />
+      <select value={status} onChange={(e) => set('status', e.target.value)} aria-label={t('Stato')}>
+        <option value="">{t('Tutti (esclusi non pagati)')}</option>
+        {(Object.keys(ORDER_STATUS_LABELS) as OrderStatus[]).map((s) => <option key={s} value={s}>{t(ORDER_STATUS_LABELS[s])}</option>)}
       </select>
-      <select value={fulfilment} onChange={(e) => set('fulfilment', e.target.value)} aria-label="Consegna">
-        <option value="">Tutte le consegne</option>
-        {(Object.keys(FULFILMENT_LABELS) as FulfilmentMethod[]).map((f) => <option key={f} value={f}>{FULFILMENT_LABELS[f]}</option>)}
+      <select value={fulfilment} onChange={(e) => set('fulfilment', e.target.value)} aria-label={t('Consegna')}>
+        <option value="">{t('Tutte le consegne')}</option>
+        {(Object.keys(FULFILMENT_LABELS) as FulfilmentMethod[]).map((f) => <option key={f} value={f}>{t(FULFILMENT_LABELS[f])}</option>)}
       </select>
-      {can('admin', 'manager') && <select value={storeId} onChange={(e) => set('store', e.target.value)} aria-label="Negozio">
-        <option value="">Tutti i negozi</option>{stores.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>}
-      <label className="inline-field">Dal <input type="date" value={from} onChange={(e) => set('dal', e.target.value)} /></label>
-      <label className="inline-field">Al <input type="date" value={to} onChange={(e) => set('al', e.target.value)} /></label>
-      {(status || storeId || fulfilment || from || to || q) && <button className="ghost" onClick={() => { setSearch(''); setParams(new URLSearchParams()); }}>Azzera filtri</button>}
+      {can('admin', 'manager') && <select value={storeId} onChange={(e) => set('store', e.target.value)} aria-label={t('Negozio')}>
+        <option value="">{t('Tutti i negozi')}</option>{stores.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>}
+      <label className="inline-field">{t('Dal')} <input type="date" value={from} onChange={(e) => set('dal', e.target.value)} /></label>
+      <label className="inline-field">{t('Al')} <input type="date" value={to} onChange={(e) => set('al', e.target.value)} /></label>
+      {(status || storeId || fulfilment || from || to || q) && <button className="ghost" onClick={() => { setSearch(''); setParams(new URLSearchParams()); }}>{t('Azzera filtri')}</button>}
     </div>
     {orders.error && <Notice tone="error">{orders.error}</Notice>}
-    {!orders.data ? <Loading /> : !orders.data.rows.length ? <Empty>Nessun ordine con questi filtri.</Empty> : <div className="table-wrap"><table>
-      <thead><tr><th>Ordine</th><th>Data</th><th>Cliente</th><th>Negozio</th><th>Consegna</th><th>Stato</th><th>Pagamento</th><th className="num">Totale</th></tr></thead>
+    {!orders.data ? <Loading /> : !orders.data.rows.length ? <Empty>{t('Nessun ordine con questi filtri.')}</Empty> : <div className="table-wrap"><table>
+      <thead><tr><th>{t('Ordine')}</th><th>{t('Data')}</th><th>{t('Cliente')}</th><th>{t('Negozio')}</th><th>{t('Consegna')}</th><th>{t('Stato')}</th><th>{t('Pagamento')}</th><th className="num">{t('Totale')}</th></tr></thead>
       <tbody>{orders.data.rows.map((o) => <tr key={o.id} className="clickable" onClick={() => navigate(`/orders/${o.id}`)}>
         <td><Link to={`/orders/${o.id}`} className="row-link" onClick={(e) => e.stopPropagation()}>{o.order_number}</Link></td><td>{fmtDate(o.created_at)}</td>
         <td>{o.customer_name}<div className="small muted">{o.customer_email}</div></td>
-        <td>{storeName(o.store_id)}</td><td>{FULFILMENT_LABELS[o.fulfilment]}</td>
+        <td>{storeName(o.store_id)}</td><td>{t(FULFILMENT_LABELS[o.fulfilment])}</td>
         <td><StatusBadge status={o.status} /></td><td><PaymentBadge status={o.payment_status} /></td>
         <td className="num">{formatEuro(o.total_cents)}</td></tr>)}</tbody></table></div>}
     {orders.data && <Pager page={page} hasMore={(page + 1) * PAGE < orders.data.count} onPage={setPage} />}
