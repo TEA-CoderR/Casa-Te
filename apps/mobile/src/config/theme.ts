@@ -10,7 +10,8 @@ export const colors = {
   lime: '#F3E9D6',
   cream: '#F4EFE6',
   sand: '#F6EEDF',
-  background: '#FBF9F5',
+  /** Pages are white like the design; warm tones stay on accents (chips, banners, photo backdrop). */
+  background: '#FFFFFF',
   surface: '#FFFFFF',
   text: '#1B2620',
   muted: '#5E625A',

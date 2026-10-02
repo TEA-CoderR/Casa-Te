@@ -27,7 +27,7 @@ export default function TabsLayout() {
     tabBarVariant: wide ? 'material' : 'uikit',
     tabBarStyle: wide
       ? { backgroundColor: '#FFFFFF', borderRightColor: colors.line, minWidth: 200, paddingTop: 24 }
-      : { backgroundColor: '#FFFFFF', borderTopColor: colors.line, height: 64 + Math.max(insets.bottom, 8),
+      : { backgroundColor: '#FFFFFF', borderTopColor: '#EEE9E0', borderTopWidth: 1, height: 60 + Math.max(insets.bottom, 8),
           paddingBottom: Math.max(insets.bottom, 8), paddingTop: 6, elevation: 0 },
     tabBarLabelStyle: { fontSize: wide ? 17 : 10.5, fontFamily: wide ? fonts.serif : fonts.sansMedium, marginTop: wide ? 0 : 2 },
     tabBarBadgeStyle: { backgroundColor: colors.badge, fontSize: 11, color: '#fff' },
@@ -35,7 +35,8 @@ export default function TabsLayout() {
     {tabs.map((tab) => <Tabs.Screen key={tab.name} name={tab.name} options={{
       title: tab.title, href: tab.hidden ? null : undefined,
       tabBarIcon: ({ color, focused }) => <View style={{ width: 48, height: 30, alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name={tab.icon} color={color} size={22} strokeWidth={focused ? 1.6 : 1.25} />
+        {/* Active tab: solid green icon, like the design. */}
+        <Icon name={tab.icon} color={color} size={22} strokeWidth={focused ? 1.4 : 1.25} fill={focused && !wide ? color : undefined} />
       </View>,
     }} />)}
   </Tabs>;
