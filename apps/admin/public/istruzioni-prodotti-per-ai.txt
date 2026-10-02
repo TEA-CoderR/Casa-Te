@@ -14,11 +14,9 @@ COLONNE (* = obbligatoria)
 sku*              Codice articolo univoco. Solo lettere, numeri, punto, trattino, underscore (max 40). Es. DIF-TES-500.
                   Ogni riga deve avere uno sku diverso. Se lo sku esiste già nel negozio, il prodotto viene aggiornato.
 nome*             Nome mostrato ai clienti (max 200 caratteri), in italiano.
-categoria*        Categoria principale. Categorie esistenti: Pulizia, Cucina, Casa, Detersivo, Organizzazione.
-                  Un nome nuovo crea una nuova categoria.
-sottocategoria    Sottocategoria della categoria. Esistenti: Pulizia → Carta e monouso, Accessori pulizia;
-                  Cucina → Pentole e padelle, Conservazione, Stoviglie; Casa → Illuminazione, Decorazione, Tessili;
-                  Detersivo → Lavatrice; Organizzazione → Scatole e contenitori, Pattumiere. Un nome nuovo viene creato.
+categoria*        Reparto del negozio. Usa SOLO uno di questi: Detersivi, Casalinghi, Tessile, Bagno, Idraulica, Ferramenta, Monouso, Giardinaggio, Stagionale, Pets, Giocattoli, Cartoleria, Profumeria.
+sottocategoria    Facoltativa, dentro il reparto. Esistenti: Pets → Cibo gatto, Cibo cane, Accessori.
+                  Un nome nuovo viene creato sotto il reparto (es. Detersivi → Lavatrice). Usa nomi brevi e coerenti.
 prezzo*           Prezzo di vendita in euro IVA inclusa. Es. 14.90
 prezzo barrato    Prezzo precedente (deve essere maggiore di prezzo). Altrimenti vuoto.
 iva               Aliquota IVA: 22, 10, 5, 4 oppure 0. Vuoto = 22.
@@ -46,4 +44,4 @@ giacenza LU1-LU4  Pezzi disponibili nei negozi Lucca 1, Lucca 2, Lucca 3, Lucca 
 
 ESEMPIO (vedi anche "esempio-prodotti-casa-te.csv")
 sku,nome,categoria,sottocategoria,prezzo,prezzo barrato,iva,peso kg,marca,colore,confezione,descrizione,punto di forza 1,punto di forza 2,punto di forza 3,punto di forza 4,gruppo varianti,titolo varianti,nome variante,ean,attivo,in evidenza,max per ordine,immagine 1,immagine 2,immagine 3,immagine 4,immagine 5,giacenza AR1,giacenza LU1,giacenza LU2,giacenza LU3,giacenza LU4
-TOV-140,Tovaglia in cotone 140x180,Casa,Tessili,14.90,19.90,22,0.45,,Bianco,,,foglia: Puro cotone,,,,,,,8001234567890,sì,,,,,,,,10,4,4,,
+TOV-140,Tovaglia in cotone 140x180,Tessile,Tavola,14.90,19.90,22,0.45,,Bianco,,,foglia: Puro cotone,,,,,,,8001234567890,sì,,,,,,,,10,4,4,,

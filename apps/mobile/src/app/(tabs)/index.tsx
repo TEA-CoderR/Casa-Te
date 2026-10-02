@@ -29,7 +29,8 @@ export default function HomeScreen() {
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
   const covers = useQuery('category-covers', fetchCategoryCovers);
   const featured = useQuery(selected ? `featured:${selected.id}` : null,
-    () => fetchProducts({ storeId: selected?.id ?? null, featured: true, pageSize: columns * 2 }));
+    // Featured products first, then the rest of the catalogue, so the section is never empty.
+    () => fetchProducts({ storeId: selected?.id ?? null, sort: 'featured', pageSize: columns * 2 }));
   const value = useQuery(selected ? `value:${selected.id}` : null,
     () => fetchProducts({ storeId: selected?.id ?? null, sort: 'price_asc', pageSize: columns * 3 }));
   // Rows end on a full line, and the second rail never repeats products already featured above.
