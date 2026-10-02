@@ -43,7 +43,7 @@ export function ProductsPage() {
   return <>
     <PageHead title="Prodotti" subtitle={products.data ? `${products.data.count} prodotti` : undefined} actions={<>
       <button className="secondary" onClick={exportCatalog}>Esporta CSV</button>
-      <Link to="/import" className="btn secondary">Importa CSV</Link>
+      <Link to="/import" className="btn secondary">Importa da Excel</Link>
       <Link to="/products/new" className="btn">Nuovo prodotto</Link>
     </>} />
     <div className="toolbar">

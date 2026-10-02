@@ -33,7 +33,7 @@ export function Layout() {
         {manager && <>
           <div className="group">Catalogo</div>
           <Item to="/products" icon="products">Prodotti</Item>
-          <Item to="/import" icon="import">Importa CSV</Item>
+          <Item to="/import" icon="import">Importa prodotti</Item>
           <Item to="/categories" icon="categories">Categorie</Item>
           <div className="group">Vendite</div>
           <Item to="/reviews" icon="reviews">Recensioni</Item>

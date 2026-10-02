@@ -192,6 +192,9 @@ export type ImportRow = {
   sku: string; name: string; category?: string; price_cents: number; compare_at_price_cents?: number | null;
   vat_rate?: number; weight_g: number; barcode?: string; brand?: string; description?: string;
   active?: boolean; featured?: boolean; max_per_order?: number; image_url?: string; stock?: Record<string, number>;
+  /** Import v2 (all optional; empty cells keep existing values). */
+  subcategory?: string; color?: string; unit?: ProductUnit; unit_quantity?: number;
+  highlights?: ProductHighlight[]; variant_group?: string; variant_title?: string; variant_label?: string; image_urls?: string[];
 };
 
 export type ImportReport = {
