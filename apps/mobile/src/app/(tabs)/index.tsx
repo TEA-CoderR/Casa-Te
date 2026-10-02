@@ -41,7 +41,10 @@ export default function HomeScreen() {
   const productGrid = (items: NonNullable<typeof featured.data>['items']) => <View style={styles.grid}>{items.map((product) =>
     <View key={product.id} style={{ width: `${100 / columns}%`, paddingHorizontal: 6, flexDirection: 'row' }}>
       <ProductCard product={product} /></View>)}</View>;
-  const topCategories = (categories.data ?? []).filter((c) => !c.parent_id);
+  // Up to 8 departments chosen in the admin ("Mostra in home"); the first 8 when none is chosen.
+  const allTop = (categories.data ?? []).filter((c) => !c.parent_id);
+  const chosen = allTop.filter((c) => c.show_on_home);
+  const topCategories = (chosen.length ? chosen : allTop).slice(0, 8);
   // The photo is 3:2 with the objects on the right: on narrow screens anchor it right instead of centring on the wall.
   const heroHeight = wide ? 520 : 330;
   const photoWidth = heroHeight * 1.5;
