@@ -21,6 +21,8 @@ begin
   perform tests.eq((v_day ->> 'orders')::int, 1, 'today counts the paid order');
   perform tests.ok((v_day ->> 'revenue_cents')::int > 0, 'today has revenue');
   perform tests.eq((v_day ->> 'customers')::int, 1, 'one distinct customer today');
+  perform tests.eq((v_day ->> 'open')::int, 1, 'the paid order is still to fulfil at the end of today');
+  perform tests.eq((select (x ->> 'open')::int from jsonb_array_elements(d -> 'series') x where (x ->> 'day')::date = v_today - 1), 0, 'nothing to fulfil yesterday');
   perform tests.ok((v_day ->> 'new_customers') is not null, 'managers see sign-ups');
   perform tests.eq((d -> 'status' ->> 'paid')::int, 1, 'status counts for the period');
   perform tests.eq((d -> 'open' ->> 'paid')::int, 1, 'open orders waiting for preparation');

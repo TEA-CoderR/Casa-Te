@@ -208,7 +208,11 @@ export type DashboardStats = {
 };
 
 /** admin_overview(): the back-office "Panoramica" page. Days are Europe/Rome dates (YYYY-MM-DD). */
-export type AdminOverviewDay = { day: string; revenue_cents: number; orders: number; customers: number; new_customers: number | null };
+export type AdminOverviewDay = {
+  day: string; revenue_cents: number; orders: number; customers: number; new_customers: number | null;
+  /** Orders still to fulfil at the end of the day (only the last 8 days; null before). */
+  open?: number | null;
+};
 export type AdminOverview = {
   today: string; from: string; to: string; prev_from: string; low_stock_threshold: number;
   series: AdminOverviewDay[];
