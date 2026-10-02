@@ -2,6 +2,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { router, type Href } from 'expo-router';
 import { colors, fonts } from '@/config/theme';
 import { Icon, type IconName } from './Icon';
+import { useClubSettings } from '@/lib/hooks';
 
 const LINKS: Array<{ icon: IconName; label: string; href: Href }> = [
   { icon: 'grid', label: 'Categorie', href: '/catalog' },
@@ -20,6 +21,8 @@ const INFO: Array<{ label: string; doc: 'shipping' | 'terms' | 'privacy' }> = [
 /** Side menu opened from the home header (hamburger). */
 export function MenuSheet({ visible, onClose, onStores }: { visible: boolean; onClose: () => void; onStores: () => void }) {
   const go = (href: Href) => { onClose(); router.push(href); };
+  const club = useClubSettings();
+  const links = LINKS.filter((l) => club.enabled || l.href !== '/club');
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Chiudi menu" />
     <View style={styles.panel} accessibilityViewIsModal>
@@ -28,7 +31,7 @@ export function MenuSheet({ visible, onClose, onStores }: { visible: boolean; on
         <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Chiudi menu" style={styles.close}><Icon name="close" size={20} /></Pressable>
       </View>
       <ScrollView>
-        {LINKS.map((l) => <Pressable key={l.label} onPress={() => go(l.href)} accessibilityRole="link" style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}>
+        {links.map((l) => <Pressable key={l.label} onPress={() => go(l.href)} accessibilityRole="link" style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}>
           <Icon name={l.icon} size={21} strokeWidth={1.4} /><Text style={styles.label}>{l.label}</Text>
         </Pressable>)}
         <Pressable onPress={() => { onClose(); onStores(); }} accessibilityRole="button" style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}>

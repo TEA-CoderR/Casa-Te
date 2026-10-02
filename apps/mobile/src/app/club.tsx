@@ -8,6 +8,7 @@ import { Loading, Notice, PrimaryButton, SecondaryButton } from '@/components/UI
 import { colors, fonts } from '@/config/theme';
 import { fetchClubOffers, fetchProfile, setClubMembership } from '@/lib/api';
 import { useQuery } from '@/lib/useQuery';
+import { useClubSettings } from '@/lib/hooks';
 import { useUser } from '@/store/session';
 
 const PERKS: Array<{ icon: IconName; title: string; text: string }> = [
@@ -24,6 +25,7 @@ export default function ClubScreen() {
   const profile = useQuery(user ? `profile:${user.id}` : null, () => fetchProfile(user!.id));
   const member = !!profile.data?.club_member_since;
   const offers = useQuery(user && member ? `club-offers:${user.id}` : null, fetchClubOffers);
+  const club = useClubSettings();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -37,7 +39,7 @@ export default function ClubScreen() {
     <View style={styles.hero}>
       <Icon name="crown" size={40} color="#B07A1E" strokeWidth={1.3} />
       <Text style={styles.title} accessibilityRole="header">Casa & Te Club</Text>
-      <Text style={styles.lead}>Vantaggi esclusivi e offerte dedicate ai nostri clienti.</Text>
+      <Text style={styles.lead}>{club.tagline}</Text>
       {member && <Text style={styles.since}>Membro dal {new Date(profile.data!.club_member_since!).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>}
     </View>
 
@@ -49,7 +51,8 @@ export default function ClubScreen() {
     {!!error && <Notice tone="error" message={error} />}
     {!user ? <View style={{ marginTop: 20 }}><PrimaryButton title="Accedi per iscriverti" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/club' } })} /></View>
       : profile.loading && !profile.data ? <Loading />
-      : !member ? <View style={{ marginTop: 20 }}><PrimaryButton title="Iscriviti gratis" onPress={() => toggle(true)} loading={busy} /></View>
+      : !member ? (club.enabled ? <View style={{ marginTop: 20 }}><PrimaryButton title="Iscriviti gratis" onPress={() => toggle(true)} loading={busy} /></View>
+        : <View style={{ marginTop: 20 }}><Notice message="Al momento il Club non accetta nuove iscrizioni." /></View>)
       : <>
           <Text style={styles.section} accessibilityRole="header">Le tue offerte</Text>
           {offers.loading && !offers.data ? <Loading /> : !offers.data?.length

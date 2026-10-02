@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useWindowDimensions, Platform } from 'react-native';
 import type { FulfilmentMethod, Quote, StoreRow } from '@casa-te/shared';
-import { fetchQuote, fetchStores } from './api';
+import { fetchAppSettings, fetchQuote, fetchStores } from './api';
 import { useQuery } from './useQuery';
 import { cartItemsInput, useCartStore } from '@/store/cart';
 import { usePreferences } from '@/store/preferences';
 
 /** Active stores plus the customer's selected store (defaults to the first one). */
+/** Club on/off and tagline from the back office (assumed on while loading). */
+export function useClubSettings() {
+  const q = useQuery('app-settings', fetchAppSettings);
+  return { enabled: q.data?.club_enabled ?? true, tagline: q.data?.club_tagline ?? 'Vantaggi esclusivi e offerte dedicate ai nostri clienti.' };
+}
+
 export function useStores() {
   const { data: stores = [], loading, error, refetch } = useQuery<StoreRow[]>('stores', fetchStores);
   const storeId = usePreferences((s) => s.storeId);

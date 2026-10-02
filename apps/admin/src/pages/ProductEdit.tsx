@@ -8,6 +8,7 @@ import { SUPABASE_URL, supabase, unwrap } from '../lib/supabase';
 import { errorText, useAsync, useCategories, useStores } from '../lib/data';
 import { Field, Loading, Notice, PageHead, Success } from '../components/ui';
 import { Icon } from '../components/Icon';
+import { t } from '../lib/i18n';
 
 type Form = {
   sku: string; name: string; slug: string; description: string; brand: string; category_id: string; price: string; compare: string;
@@ -72,7 +73,7 @@ export function ProductEditPage() {
     window.addEventListener('beforeunload', onUnload);
     return () => window.removeEventListener('beforeunload', onUnload);
   }, [dirty]);
-  const leave = () => { if (!dirty || window.confirm('Ci sono modifiche non salvate. Uscire senza salvare?')) navigate('/products'); };
+  const leave = () => { if (!dirty || window.confirm(t('Ci sono modifiche non salvate. Uscire senza salvare?'))) navigate('/products'); };
 
   if (!isNew && !product.data) return product.error ? <Notice tone="error">{product.error}</Notice> : <Loading />;
 
@@ -84,16 +85,16 @@ export function ProductEditPage() {
     const price = parseEuroInput(form.price);
     const compare = form.compare.trim() ? parseEuroInput(form.compare) : null;
     const weight = Number(form.weight_g);
-    if (!price) return setError('Prezzo non valido.');
-    if (form.compare.trim() && (!compare || compare <= price)) return setError('Il prezzo barrato deve essere maggiore del prezzo.');
-    if (!Number.isInteger(weight) || weight <= 0) return setError('Il peso in grammi è obbligatorio (serve per la spedizione).');
+    if (!price) return setError(t('Prezzo non valido.'));
+    if (form.compare.trim() && (!compare || compare <= price)) return setError(t('Il prezzo barrato deve essere maggiore del prezzo.'));
+    if (!Number.isInteger(weight) || weight <= 0) return setError(t('Il peso in grammi è obbligatorio (serve per la spedizione).'));
     const unitQty = form.unit_quantity.trim() ? Number(form.unit_quantity.trim().replace(',', '.')) : null;
-    if ((unitQty === null) !== (form.unit === '')) return setError('Per il prezzo al litro/kg indica sia la quantità sia l’unità (oppure lascia vuoti entrambi).');
-    if (unitQty !== null && (!Number.isFinite(unitQty) || unitQty <= 0)) return setError('Quantità della confezione non valida.');
+    if ((unitQty === null) !== (form.unit === '')) return setError(t('Per il prezzo al litro/kg indica sia la quantità sia l’unità (oppure lascia vuoti entrambi).'));
+    if (unitQty !== null && (!Number.isFinite(unitQty) || unitQty <= 0)) return setError(t('Quantità della confezione non valida.'));
     const group = slugify(form.variant_group);
-    if (group && !form.variant_label.trim()) return setError('Indica il nome della variante (es. "Tessuto") per questo prodotto.');
+    if (group && !form.variant_label.trim()) return setError(t('Indica il nome della variante (es. "Tessuto") per questo prodotto.'));
     const highlights = form.highlights.map((h) => ({ icon: h.icon, label: h.label.trim() })).filter((h) => h.label);
-    if (highlights.some((h) => h.label.length > 40)) return setError('Ogni punto di forza può avere al massimo 40 caratteri.');
+    if (highlights.some((h) => h.label.length > 40)) return setError(t('Ogni punto di forza può avere al massimo 40 caratteri.'));
     const row = {
       sku: form.sku.trim(), name: form.name.trim(), slug: form.slug.trim() || `${slugify(form.name)}-${slugify(form.sku)}`,
       description: form.description.trim() || null, brand: form.brand.trim() || null, category_id: form.category_id || null,
@@ -111,7 +112,7 @@ export function ProductEditPage() {
       } else {
         unwrap(await supabase.from('products').update(row).eq('id', id!));
         const stockCount = await writeStock();
-        setSaved(stockCount ? `Prodotto e ${stockCount} giacenze salvati.` : 'Prodotto salvato.');
+        setSaved(stockCount ? t('Prodotto e {n} giacenze salvati.', { n: stockCount }) : t('Prodotto salvato.'));
         setLoaded(form);
         await product.reload();
       }
@@ -124,8 +125,8 @@ export function ProductEditPage() {
     try {
       let sort = (images.data?.length ?? 0);
       for (const file of Array.from(files)) {
-        if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error('Formati accettati: JPG, PNG, WEBP.');
-        if (file.size > 5 * 1024 * 1024) throw new Error('Immagine troppo grande (max 5 MB).');
+        if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error(t('Formati accettati: JPG, PNG, WEBP.'));
+        if (file.size > 5 * 1024 * 1024) throw new Error(t('Immagine troppo grande (max 5 MB).'));
         const ext = file.type.split('/')[1].replace('jpeg', 'jpg');
         const path = `${id}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage.from('product-images').upload(path, file, { contentType: file.type, cacheControl: '31536000' });
@@ -137,7 +138,7 @@ export function ProductEditPage() {
   };
 
   const removeImage = async (img: ProductImageRow) => {
-    if (!window.confirm('Eliminare questa immagine dal prodotto?')) return;
+    if (!window.confirm(t('Eliminare questa immagine dal prodotto?'))) return;
     setBusy(true);
     try {
       unwrap(await supabase.from('product_images').delete().eq('id', img.id));
@@ -160,7 +161,7 @@ export function ProductEditPage() {
     const entries = Object.entries(stockEdits);
     for (const [storeId, value] of entries) {
       const q = Number(value);
-      if (!Number.isInteger(q) || q < 0) throw new Error('Giacenza non valida: usa un numero intero da 0 in su.');
+      if (!Number.isInteger(q) || q < 0) throw new Error(t('Giacenza non valida: usa un numero intero da 0 in su.'));
       unwrap(await supabase.rpc('staff_set_stock', { p_store_id: storeId, p_product_id: id, p_quantity: q, p_reason: 'manual' }));
     }
     if (entries.length) { setStockEdits({}); await stock.reload(); }
@@ -169,94 +170,94 @@ export function ProductEditPage() {
 
   const pendingStock = Object.keys(stockEdits).length;
   return <>
-    <PageHead title={isNew ? 'Nuovo prodotto' : form.name || 'Prodotto'} subtitle={isNew ? 'Dopo la creazione potrai aggiungere immagini e giacenze.' : `SKU ${form.sku}`}
-      actions={<button className="secondary" onClick={leave}><Icon name="back" size={16} /> Prodotti</button>} />
+    <PageHead title={isNew ? t('Nuovo prodotto') : form.name || t('Prodotto')} subtitle={isNew ? t('Dopo la creazione potrai aggiungere immagini e giacenze.') : t('SKU {sku}', { sku: form.sku })}
+      actions={<button className="secondary" onClick={leave}><Icon name="back" size={16} /> {t('Prodotti')}</button>} />
     {error && <Notice tone="error">{error}</Notice>}
     {saved && <Success onDismiss={() => setSaved('')}>{saved}</Success>}
     <form onSubmit={save} id="product-form" className="edit-layout">
       <div className="grid" style={{ alignContent: 'start' }}>
         <fieldset className="card">
-          <legend>Prodotto</legend>
+          <legend>{t('Prodotto')}</legend>
           <div className="form-grid">
-            <Field label="Nome *"><input value={form.name} onChange={(e) => set('name', e.target.value)} required maxLength={200} /></Field>
-            <Field label="SKU / codice articolo *"><input value={form.sku} onChange={(e) => set('sku', e.target.value)} required pattern="[A-Za-z0-9._\-]{1,40}" /></Field>
-            <Field label="Categoria"><select value={form.category_id} onChange={(e) => set('category_id', e.target.value)}>
-              <option value="">Nessuna</option>{(categories.data ?? []).filter((c) => !c.parent_id).flatMap((p) => [p, ...(categories.data ?? []).filter((c) => c.parent_id === p.id)])
+            <Field label={t('Nome *')}><input value={form.name} onChange={(e) => set('name', e.target.value)} required maxLength={200} /></Field>
+            <Field label={t('SKU / codice articolo *')}><input value={form.sku} onChange={(e) => set('sku', e.target.value)} required pattern="[A-Za-z0-9._\-]{1,40}" /></Field>
+            <Field label={t('Categoria')}><select value={form.category_id} onChange={(e) => set('category_id', e.target.value)}>
+              <option value="">{t('Nessuna')}</option>{(categories.data ?? []).filter((c) => !c.parent_id).flatMap((p) => [p, ...(categories.data ?? []).filter((c) => c.parent_id === p.id)])
                 .map((c) => <option key={c.id} value={c.id}>{c.parent_id ? `${categories.data?.find((p) => p.id === c.parent_id)?.name} › ${c.name}` : c.name}</option>)}</select></Field>
-            <Field label="Marca"><input value={form.brand} onChange={(e) => set('brand', e.target.value)} /></Field>
-            <Field label="EAN / codice a barre"><input value={form.barcode} onChange={(e) => set('barcode', e.target.value.replace(/\D/g, ''))} maxLength={14} inputMode="numeric" /></Field>
+            <Field label={t('Marca')}><input value={form.brand} onChange={(e) => set('brand', e.target.value)} /></Field>
+            <Field label={t('EAN / codice a barre')}><input value={form.barcode} onChange={(e) => set('barcode', e.target.value.replace(/\D/g, ''))} maxLength={14} inputMode="numeric" /></Field>
           </div>
-          <div style={{ marginTop: 14 }}><Field label="Descrizione"><textarea value={form.description} onChange={(e) => set('description', e.target.value)} /></Field></div>
+          <div style={{ marginTop: 14 }}><Field label={t('Descrizione')}><textarea value={form.description} onChange={(e) => set('description', e.target.value)} /></Field></div>
         </fieldset>
         <fieldset className="card">
-          <legend>Prezzo e spedizione</legend>
+          <legend>{t('Prezzo e spedizione')}</legend>
           <div className="form-grid">
-            <Field label="Prezzo € (IVA inclusa) *"><input value={form.price} onChange={(e) => set('price', e.target.value)} inputMode="decimal" required placeholder="0,00" /></Field>
-            <Field label="Prezzo barrato €" hint="Prezzo più basso degli ultimi 30 giorni (Omnibus)"><input value={form.compare} onChange={(e) => set('compare', e.target.value)} inputMode="decimal" /></Field>
-            <Field label="IVA"><select value={form.vat_rate} onChange={(e) => set('vat_rate', e.target.value)}>{[22, 10, 5, 4, 0].map((v) => <option key={v} value={v}>{v}%</option>)}</select></Field>
-            <Field label="Peso in grammi *" hint={form.weight_g ? `${(Number(form.weight_g) / 1000).toFixed(2).replace('.', ',')} kg · serve per calcolare la spedizione` : 'Serve per calcolare la spedizione'}>
+            <Field label={t('Prezzo € (IVA inclusa) *')}><input value={form.price} onChange={(e) => set('price', e.target.value)} inputMode="decimal" required placeholder="0,00" /></Field>
+            <Field label={t('Prezzo barrato €')} hint={t('Prezzo più basso degli ultimi 30 giorni (Omnibus)')}><input value={form.compare} onChange={(e) => set('compare', e.target.value)} inputMode="decimal" /></Field>
+            <Field label={t('IVA')}><select value={form.vat_rate} onChange={(e) => set('vat_rate', e.target.value)}>{[22, 10, 5, 4, 0].map((v) => <option key={v} value={v}>{v}%</option>)}</select></Field>
+            <Field label={t('Peso in grammi *')} hint={form.weight_g ? t('{kg} kg · serve per calcolare la spedizione', { kg: (Number(form.weight_g) / 1000).toFixed(2).replace('.', ',') }) : t('Serve per calcolare la spedizione')}>
               <input value={form.weight_g} onChange={(e) => set('weight_g', e.target.value.replace(/\D/g, ''))} inputMode="numeric" required /></Field>
-            <Field label="Max pezzi per ordine"><input type="number" min={1} max={99} value={form.max_per_order} onChange={(e) => set('max_per_order', e.target.value)} /></Field>
-            <Field label="Indirizzo pagina (slug)"><input value={form.slug} onChange={(e) => set('slug', e.target.value)} placeholder="generato dal nome" /></Field>
+            <Field label={t('Max pezzi per ordine')}><input type="number" min={1} max={99} value={form.max_per_order} onChange={(e) => set('max_per_order', e.target.value)} /></Field>
+            <Field label={t('Indirizzo pagina (slug)')}><input value={form.slug} onChange={(e) => set('slug', e.target.value)} placeholder={t('generato dal nome')} /></Field>
           </div>
         </fieldset>
         <fieldset className="card">
-          <legend>Scheda nel negozio online</legend>
+          <legend>{t('Scheda nel negozio online')}</legend>
           <div className="form-grid">
-            <Field label="Contenuto confezione" hint="Per il prezzo al litro/kg obbligatorio per legge (es. 500 ml)">
+            <Field label={t('Contenuto confezione')} hint={t('Per il prezzo al litro/kg obbligatorio per legge (es. 500 ml)')}>
               <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
-                <input value={form.unit_quantity} onChange={(e) => set('unit_quantity', e.target.value.replace(/[^\d,.]/g, ''))} inputMode="decimal" placeholder="500" style={{ width: 110 }} aria-label="Quantità" />
-                <select value={form.unit} onChange={(e) => set('unit', e.target.value as Form['unit'])} aria-label="Unità">
-                  <option value="">—</option>{UNITS.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</select>
+                <input value={form.unit_quantity} onChange={(e) => set('unit_quantity', e.target.value.replace(/[^\d,.]/g, ''))} inputMode="decimal" placeholder="500" style={{ width: 110 }} aria-label={t('Quantità')} />
+                <select value={form.unit} onChange={(e) => set('unit', e.target.value as Form['unit'])} aria-label={t('Unità')}>
+                  <option value="">—</option>{UNITS.map((u) => <option key={u.id} value={u.id}>{t(u.label)}</option>)}</select>
               </div></Field>
-            <Field label="Colore / materiale" hint="Usato dal filtro Colore"><input value={form.color} onChange={(e) => set('color', e.target.value)} maxLength={40} placeholder="es. Beige" /></Field>
+            <Field label={t('Colore / materiale')} hint={t('Usato dal filtro Colore')}><input value={form.color} onChange={(e) => set('color', e.target.value)} maxLength={40} placeholder={t('es. Beige')} /></Field>
           </div>
           {(() => { const q = Number(form.unit_quantity.replace(',', '.')); const pr = parseEuroInput(form.price);
             const label = pr && form.unit && q > 0 ? unitPriceLabel(pr, q, form.unit) : null;
-            return label ? <p className="small muted" style={{ marginTop: 6 }}>Il cliente vedrà: {label} · {formatPackSize(q, form.unit)}</p> : null; })()}
-          <h3 style={{ margin: '18px 0 6px', fontSize: 15 }}>Punti di forza <span className="muted small">(fino a 4, sotto il prezzo)</span></h3>
+            return label ? <p className="small muted" style={{ marginTop: 6 }}>{t('Il cliente vedrà: {label} · {pack}', { label, pack: formatPackSize(q, form.unit) ?? '' })}</p> : null; })()}
+          <h3 style={{ margin: '18px 0 6px', fontSize: 15 }}>{t('Punti di forza')} <span className="muted small">{t('(fino a 4, sotto il prezzo)')}</span></h3>
           {form.highlights.map((h, i) => <div key={i} className="row" style={{ gap: 6, marginBottom: 6, flexWrap: 'nowrap' }}>
-            <select value={h.icon} aria-label={`Icona ${i + 1}`} onChange={(e) => set('highlights', form.highlights.map((x, j) => j === i ? { ...x, icon: e.target.value as HighlightIcon } : x))}>
-              {HIGHLIGHT_ICONS.map((ic) => <option key={ic} value={ic}>{ICON_LABELS[ic]}</option>)}</select>
-            <input value={h.label} maxLength={40} placeholder="es. Fatto in Italia" aria-label={`Testo ${i + 1}`} style={{ flex: 1 }}
+            <select value={h.icon} aria-label={t('Icona {n}', { n: i + 1 })} onChange={(e) => set('highlights', form.highlights.map((x, j) => j === i ? { ...x, icon: e.target.value as HighlightIcon } : x))}>
+              {HIGHLIGHT_ICONS.map((ic) => <option key={ic} value={ic}>{t(ICON_LABELS[ic])}</option>)}</select>
+            <input value={h.label} maxLength={40} placeholder={t('es. Fatto in Italia')} aria-label={t('Testo {n}', { n: i + 1 })} style={{ flex: 1 }}
               onChange={(e) => set('highlights', form.highlights.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} />
-            <button type="button" className="ghost danger" aria-label={`Rimuovi punto ${i + 1}`} onClick={() => set('highlights', form.highlights.filter((_, j) => j !== i))}><Icon name="close" size={16} /></button>
+            <button type="button" className="ghost danger" aria-label={t('Rimuovi punto {n}', { n: i + 1 })} onClick={() => set('highlights', form.highlights.filter((_, j) => j !== i))}><Icon name="close" size={16} /></button>
           </div>)}
-          {form.highlights.length < 4 && <button type="button" className="secondary" onClick={() => set('highlights', [...form.highlights, { icon: 'leaf', label: '' }])}>Aggiungi punto di forza</button>}
-          <h3 style={{ margin: '18px 0 6px', fontSize: 15 }}>Varianti <span className="muted small">(es. stesse candele in fragranze diverse)</span></h3>
+          {form.highlights.length < 4 && <button type="button" className="secondary" onClick={() => set('highlights', [...form.highlights, { icon: 'leaf', label: '' }])}>{t('Aggiungi punto di forza')}</button>}
+          <h3 style={{ margin: '18px 0 6px', fontSize: 15 }}>{t('Varianti')} <span className="muted small">{t('(es. stesse candele in fragranze diverse)')}</span></h3>
           <div className="form-grid">
-            <Field label="Gruppo varianti" hint="Stesso nome su tutti i prodotti del gruppo"><input value={form.variant_group} onChange={(e) => set('variant_group', e.target.value)} placeholder="es. diffusore-tessuto" /></Field>
-            <Field label="Titolo" hint={'Mostrato come “Varianti di …”'}><input value={form.variant_title} onChange={(e) => set('variant_title', e.target.value)} maxLength={40} placeholder="es. fragranza" disabled={!form.variant_group.trim()} /></Field>
-            <Field label="Questa variante *" hint="Nome breve sotto la miniatura"><input value={form.variant_label} onChange={(e) => set('variant_label', e.target.value)} maxLength={40} placeholder="es. Tessuto" disabled={!form.variant_group.trim()} /></Field>
+            <Field label={t('Gruppo varianti')} hint={t('Stesso nome su tutti i prodotti del gruppo')}><input value={form.variant_group} onChange={(e) => set('variant_group', e.target.value)} placeholder={t('es. diffusore-tessuto')} /></Field>
+            <Field label={t('Titolo')} hint={t('Mostrato come “Varianti di …”')}><input value={form.variant_title} onChange={(e) => set('variant_title', e.target.value)} maxLength={40} placeholder={t('es. fragranza')} disabled={!form.variant_group.trim()} /></Field>
+            <Field label={t('Questa variante *')} hint={t('Nome breve sotto la miniatura')}><input value={form.variant_label} onChange={(e) => set('variant_label', e.target.value)} maxLength={40} placeholder={t('es. Tessuto')} disabled={!form.variant_group.trim()} /></Field>
           </div>
         </fieldset>
       </div>
 
       <div className="grid" style={{ alignContent: 'start' }}>
         <fieldset className="card">
-          <legend>Visibilità</legend>
-          <label className="check"><input type="checkbox" checked={form.active} onChange={(e) => set('active', e.target.checked)} /> Pubblicato, visibile ai clienti</label>
-          <label className="check" style={{ marginTop: 8 }}><input type="checkbox" checked={form.featured} onChange={(e) => set('featured', e.target.checked)} /> In evidenza nella home</label>
+          <legend>{t('Visibilità')}</legend>
+          <label className="check"><input type="checkbox" checked={form.active} onChange={(e) => set('active', e.target.checked)} /> {t('Pubblicato, visibile ai clienti')}</label>
+          <label className="check" style={{ marginTop: 8 }}><input type="checkbox" checked={form.featured} onChange={(e) => set('featured', e.target.checked)} /> {t('In evidenza nella home')}</label>
         </fieldset>
         {!isNew && <fieldset className="card">
-          <legend>Immagini</legend>
+          <legend>{t('Immagini')}</legend>
           <div className="row">{(images.data ?? []).map((img, i) => <figure key={img.id} className="img-tile">
             <img src={productImageUrl(SUPABASE_URL, img.path) ?? ''} alt={img.alt ?? ''} />
             <figcaption className="row" style={{ justifyContent: 'center', gap: 2 }}>
-              {i === 0 ? <span className="badge">Principale</span> : <button type="button" className="ghost" onClick={() => makeMain(img)} disabled={busy}>Rendi principale</button>}
-              <button type="button" className="ghost danger" onClick={() => removeImage(img)} disabled={busy} aria-label="Elimina immagine"><Icon name="close" size={16} /></button>
+              {i === 0 ? <span className="badge">{t('Principale')}</span> : <button type="button" className="ghost" onClick={() => makeMain(img)} disabled={busy}>{t('Rendi principale')}</button>}
+              <button type="button" className="ghost danger" onClick={() => removeImage(img)} disabled={busy} aria-label={t('Elimina immagine')}><Icon name="close" size={16} /></button>
             </figcaption>
           </figure>)}</div>
           <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { void upload(e.target.files); e.target.value = ''; }} />
-          <button type="button" className="secondary" style={{ marginTop: 10 }} onClick={() => fileInput.current?.click()} disabled={busy}>Carica immagini</button>
-          <p className="small muted">JPG, PNG o WEBP fino a 5 MB. Sfondo chiaro, formato quadrato (1200 × 1200).</p>
+          <button type="button" className="secondary" style={{ marginTop: 10 }} onClick={() => fileInput.current?.click()} disabled={busy}>{t('Carica immagini')}</button>
+          <p className="small muted">{t('JPG, PNG o WEBP fino a 5 MB. Sfondo chiaro, formato quadrato (1200 × 1200).')}</p>
         </fieldset>}
         {!isNew && <fieldset className="card">
-          <legend>Giacenze per negozio</legend>
+          <legend>{t('Giacenze per negozio')}</legend>
           <table><tbody>{stores.data?.map((s) => {
             const current = stock.data?.find((x) => x.store_id === s.id)?.quantity ?? 0;
             return <tr key={s.id}><td>{s.name}</td><td className="num" style={{ width: 120 }}>
-              <input type="number" min={0} inputMode="numeric" onWheel={(e) => e.currentTarget.blur()} value={stockEdits[s.id] ?? String(current)} style={{ width: 100 }} aria-label={`Giacenza ${s.name}`}
+              <input type="number" min={0} inputMode="numeric" onWheel={(e) => e.currentTarget.blur()} value={stockEdits[s.id] ?? String(current)} style={{ width: 100 }} aria-label={t('Giacenza {store}', { store: s.name })}
                 className={stockEdits[s.id] !== undefined ? 'edited' : undefined}
                 onChange={(e) => setStockEdits({ ...stockEdits, [s.id]: e.target.value })} /></td></tr>;
           })}</tbody></table>
@@ -264,9 +265,9 @@ export function ProductEditPage() {
       </div>
     </form>
     <div className="savebar">
-      <span className={dirty && !isNew ? '' : 'muted'}>{isNew ? 'Compila i campi con * e crea il prodotto.' : dirty ? <><strong>Modifiche non salvate</strong>{pendingStock ? ` · ${pendingStock} giacenze incluse` : ''}</> : 'Tutto salvato.'}</span>
+      <span className={dirty && !isNew ? '' : 'muted'}>{isNew ? t('Compila i campi con * e crea il prodotto.') : dirty ? <><strong>{t('Modifiche non salvate')}</strong>{pendingStock ? ` · ${t('{n} giacenze incluse', { n: pendingStock })}` : ''}</> : t('Tutto salvato.')}</span>
       <span className="spacer" />
-      <button type="submit" form="product-form" disabled={busy}>{busy ? 'Salvataggio…' : isNew ? 'Crea prodotto' : 'Salva'}</button>
+      <button type="submit" form="product-form" disabled={busy}>{busy ? t('Salvataggio…') : isNew ? t('Crea prodotto') : t('Salva')}</button>
     </div>
   </>;
 }

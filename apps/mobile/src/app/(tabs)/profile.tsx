@@ -9,7 +9,7 @@ import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { PrimaryButton } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
 import { fetchOrders, fetchProfile, updateProfile, type OrderWithItems } from '@/lib/api';
-import { useStores } from '@/lib/hooks';
+import { useClubSettings, useStores } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { usePreferences } from '@/store/preferences';
@@ -59,6 +59,7 @@ export default function ProfileScreen() {
   const member = !!profile.data?.club_member_since;
   const active = (orders.data ?? []).find((o) => ACTIVE.has(o.status));
   const go = (href: Href) => router.push(href);
+  const club = useClubSettings();
 
   return <Screen>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
@@ -87,14 +88,14 @@ export default function ProfileScreen() {
       <Text style={styles.edit}>Segui</Text>
     </Pressable>}
 
-    <Pressable onPress={() => go('/club')} accessibilityRole="link" style={styles.club}>
+    {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={styles.club}>
       <Icon name="crown" size={30} color="#B07A1E" strokeWidth={1.4} />
       <View style={{ flex: 1 }}>
         <Text style={styles.clubTitle}>Casa & Te Club</Text>
-        <Text style={styles.clubText}>{member ? 'Sei membro: guarda le offerte a te riservate.' : 'Scopri vantaggi esclusivi e offerte dedicate ai nostri clienti.'}</Text>
+        <Text style={styles.clubText}>{member ? 'Sei membro: guarda le offerte a te riservate.' : club.tagline}</Text>
       </View>
       <Icon name="chevron" size={18} />
-    </Pressable>
+    </Pressable>}
 
     <Group title="Il mio negozio">
       <Row icon="store" title={selected ? `CASA & TE ${storeShortName(selected)}` : 'Scegli il negozio'}

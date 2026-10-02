@@ -15,7 +15,7 @@ import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
 import { colors, fonts } from '@/config/theme';
 import { fetchProducts, imageUrl } from '@/lib/api';
-import { useCartQuote, useLayout } from '@/lib/hooks';
+import { useCartQuote, useClubSettings, useLayout } from '@/lib/hooks';
 import { cartItemCount, useCartStore } from '@/store/cart';
 import { useUser } from '@/store/session';
 
@@ -26,6 +26,7 @@ const ISSUE_TEXT: Record<NonNullable<QuoteLine['issue']>, string> = {
 };
 
 export default function CartScreen() {
+  const { enabled: clubOn, tagline: clubTagline } = useClubSettings();
   const items = useCartStore((s) => s.items);
   const setQuantity = useCartStore((s) => s.setQuantity);
   const remove = useCartStore((s) => s.remove);
@@ -82,7 +83,7 @@ export default function CartScreen() {
     <Icon name="crown" size={30} color="#B07A1E" strokeWidth={1.4} />
     <View style={{ flex: 1 }}>
       <Text style={styles.bannerTitle}>Casa & Te Club</Text>
-      <Text style={styles.bannerText}>Scopri vantaggi esclusivi e offerte dedicate ai nostri clienti.</Text>
+      <Text style={styles.bannerText}>{clubTagline}</Text>
     </View>
     <Icon name="chevron" size={18} color={colors.text} />
   </Pressable>;
@@ -139,9 +140,9 @@ export default function CartScreen() {
       </View>;
     })}
     </View>
-    {!wide && <>{delivery}{club}{summary}</>}
+    {!wide && <>{delivery}{clubOn && club}{summary}</>}
     </View>
-    {wide && <View style={styles.summaryCard}>{delivery}{club}{summary}<View style={{ marginTop: 18 }}>{cta}</View></View>}
+    {wide && <View style={styles.summaryCard}>{delivery}{clubOn && club}{summary}<View style={{ marginTop: 18 }}>{cta}</View></View>}
     </View>
   </Screen>;
 }

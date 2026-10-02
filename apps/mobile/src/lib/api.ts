@@ -1,7 +1,7 @@
 // Data access for the customer app. All prices/stock/shipping come from the database; the app
 // never computes an amount that is charged.
 import {
-  productImageUrl, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
+  productImageUrl, type AppSettingsRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
   type CreateOrderInput, type OrderEventRow, type OrderItemRow, type OrderRow, type PickupPointRow,
   type ClubOffer, type ProductReviewRow, type ProductRow, type ProfileRow, type Quote, type QuoteInput,
   type ReviewEligibility, type StoreRow,
@@ -159,6 +159,14 @@ export async function submitReview(productId: string, rating: number, comment: s
 
 export async function setClubMembership(join: boolean): Promise<string | null> {
   return unwrap(await supabase.rpc('set_club_membership', { p_join: join })) as string | null;
+}
+
+const CLUB_TAGLINE = 'Vantaggi esclusivi e offerte dedicate ai nostri clienti.';
+
+/** Public shop settings (club on/off and tagline). */
+export async function fetchAppSettings(): Promise<Pick<AppSettingsRow, 'club_enabled' | 'club_tagline'>> {
+  const row = unwrap(await supabase.from('app_settings').select('club_enabled,club_tagline').maybeSingle()) as Pick<AppSettingsRow, 'club_enabled' | 'club_tagline'> | null;
+  return row ?? { club_enabled: true, club_tagline: CLUB_TAGLINE };
 }
 
 export async function fetchClubOffers(): Promise<ClubOffer[]> {

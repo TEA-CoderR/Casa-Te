@@ -3,6 +3,7 @@ import type { CategoryRow } from '@casa-te/shared';
 import { supabase, unwrap } from '../lib/supabase';
 import { errorText, useCategories } from '../lib/data';
 import { Field, Loading, Modal, Notice, PageHead } from '../components/ui';
+import { t } from '../lib/i18n';
 
 /** Top-level categories, each followed by its subcategories. */
 const ordered = (list: CategoryRow[]) => list.filter((c) => !c.parent_id)
@@ -32,32 +33,32 @@ export function CategoriesPage() {
   };
 
   const remove = async (c: CategoryRow) => {
-    if (!window.confirm(`Eliminare la categoria "${c.name}"? I prodotti resteranno senza categoria.`)) return;
+    if (!window.confirm(t('Eliminare la categoria "{name}"? I prodotti resteranno senza categoria.', { name: c.name }))) return;
     try { unwrap(await supabase.from('categories').delete().eq('id', c.id)); await categories.reload(); } catch (e) { setError(errorText(e)); }
   };
 
   return <>
-    <PageHead title="Categorie" subtitle="Con la spunta «Mostra in home» scegli le 8 categorie principali mostrate nella home del negozio." actions={<button onClick={() => setEdit({ active: true, sort: (categories.data?.length ?? 0) + 1 })}>+ Nuova categoria</button>} />
+    <PageHead title={t('Categorie')} subtitle={t('Con la spunta «Mostra in home» scegli le 8 categorie principali mostrate nella home del negozio.')} actions={<button onClick={() => setEdit({ active: true, sort: (categories.data?.length ?? 0) + 1 })}>{t('+ Nuova categoria')}</button>} />
     {error && <Notice tone="error">{error}</Notice>}
     {!categories.data ? <Loading /> : <div className="table-wrap"><table>
-      <thead><tr><th>Ordine</th><th>Nome</th><th>Slug</th><th>Padre</th><th>Home</th><th>Stato</th><th></th></tr></thead>
+      <thead><tr><th>{t('Ordine##posizione')}</th><th>{t('Nome')}</th><th>{t('Slug')}</th><th>{t('Padre')}</th><th>{t('Home')}</th><th>{t('Stato')}</th><th></th></tr></thead>
       <tbody>{ordered(categories.data).map((c) => <tr key={c.id}><td>{c.sort}</td><td>{c.parent_id ? <span style={{ paddingLeft: 22 }}>↳ {c.name}</span> : <strong>{c.name}</strong>}</td><td className="muted">{c.slug}</td>
         <td>{categories.data?.find((p) => p.id === c.parent_id)?.name ?? '—'}</td>
-        <td>{c.show_on_home ? <span className="badge">In home</span> : ''}</td>
-        <td>{c.active ? <span className="badge">Visibile</span> : <span className="badge muted">Nascosta</span>}</td>
-        <td className="num"><button className="ghost" onClick={() => setEdit(c)}>Modifica</button><button className="ghost danger" onClick={() => remove(c)}>Elimina</button></td></tr>)}</tbody>
+        <td>{c.show_on_home ? <span className="badge">{t('In home')}</span> : ''}</td>
+        <td>{c.active ? <span className="badge">{t('Visibile')}</span> : <span className="badge muted">{t('Nascosta')}</span>}</td>
+        <td className="num"><button className="ghost" onClick={() => setEdit(c)}>{t('Modifica')}</button><button className="ghost danger" onClick={() => remove(c)}>{t('Elimina')}</button></td></tr>)}</tbody>
     </table></div>}
-    {edit && <Modal title={edit.id ? 'Modifica categoria' : 'Nuova categoria'} onClose={() => setEdit(null)}>
+    {edit && <Modal title={edit.id ? t('Modifica categoria') : t('Nuova categoria')} onClose={() => setEdit(null)}>
       <div className="grid">
-        <Field label="Nome"><input value={edit.name ?? ''} onChange={(e) => setEdit({ ...edit, name: e.target.value })} autoFocus /></Field>
-        <Field label="Slug" hint="Lascia vuoto per generarlo"><input value={edit.slug ?? ''} onChange={(e) => setEdit({ ...edit, slug: e.target.value })} /></Field>
-        <Field label="Categoria padre"><select value={edit.parent_id ?? ''} onChange={(e) => setEdit({ ...edit, parent_id: e.target.value || null })}>
-          <option value="">— nessuna (categoria principale) —</option>{categories.data?.filter((c) => c.id !== edit.id && !c.parent_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
-        <Field label="Ordine di visualizzazione"><input type="number" value={edit.sort ?? 0} onChange={(e) => setEdit({ ...edit, sort: Number(e.target.value) })} /></Field>
-        <label className="check"><input type="checkbox" checked={edit.active ?? true} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> Visibile ai clienti</label>
+        <Field label={t('Nome')}><input value={edit.name ?? ''} onChange={(e) => setEdit({ ...edit, name: e.target.value })} autoFocus /></Field>
+        <Field label={t('Slug')} hint={t('Lascia vuoto per generarlo')}><input value={edit.slug ?? ''} onChange={(e) => setEdit({ ...edit, slug: e.target.value })} /></Field>
+        <Field label={t('Categoria padre')}><select value={edit.parent_id ?? ''} onChange={(e) => setEdit({ ...edit, parent_id: e.target.value || null })}>
+          <option value="">{t('— nessuna (categoria principale) —')}</option>{categories.data?.filter((c) => c.id !== edit.id && !c.parent_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+        <Field label={t('Ordine di visualizzazione')}><input type="number" value={edit.sort ?? 0} onChange={(e) => setEdit({ ...edit, sort: Number(e.target.value) })} /></Field>
+        <label className="check"><input type="checkbox" checked={edit.active ?? true} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> {t('Visibile ai clienti')}</label>
         {!edit.parent_id && <label className="check"><input type="checkbox" checked={edit.show_on_home ?? false} onChange={(e) => setEdit({ ...edit, show_on_home: e.target.checked })} />
-          Mostra in home ({homeCount}/8 scelte; l'ordine segue il campo "Ordine")</label>}
-        <button disabled={busy || !edit.name?.trim()} onClick={save}>Salva</button>
+          {t('Mostra in home ({n}/8 scelte; l\'ordine segue il campo "Ordine")', { n: homeCount })}</label>}
+        <button disabled={busy || !edit.name?.trim()} onClick={save}>{t('Salva')}</button>
       </div>
     </Modal>}
   </>;

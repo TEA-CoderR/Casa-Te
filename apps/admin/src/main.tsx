@@ -1,4 +1,5 @@
-import { StrictMode, type ReactNode } from 'react';
+import { StrictMode, useEffect, useState, type ReactNode } from 'react';
+import { getLocale, onLocaleChange, t } from './lib/i18n';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import './styles.css';
@@ -24,6 +25,9 @@ import { CustomersPage } from './pages/Customers';
 import { StoresPage } from './pages/Stores';
 import { StaffPage } from './pages/Staff';
 import { AnalyticsPage } from './pages/Analytics';
+import { LoyaltyPage } from './pages/Loyalty';
+import { SettingsPage } from './pages/Settings';
+import { ActivityPage } from './pages/Activity';
 
 function Guard({ roles, children }: { roles?: Array<'admin' | 'manager' | 'store_staff'>; children: ReactNode }) {
   const { can } = useAuth();
@@ -33,16 +37,16 @@ function Guard({ roles, children }: { roles?: Array<'admin' | 'manager' | 'store
 
 function Root() {
   const { session, staff, loading } = useAuth();
-  if (!isConfigured) return <div className="login"><div className="card"><h1>Configurazione mancante</h1>
-    <p className="muted">Copia apps/admin/.env.example in apps/admin/.env con URL e chiave anon di Supabase.</p></div></div>;
+  if (!isConfigured) return <div className="login"><div className="card"><h1>{t('Configurazione mancante')}</h1>
+    <p className="muted">{t('Copia apps/admin/.env.example in apps/admin/.env con URL e chiave anon di Supabase.')}</p></div></div>;
   if (loading) return <div className="login"><Loading /></div>;
   if (!session) return <Routes><Route path="/reset-password" element={<ResetPasswordPage />} /><Route path="*" element={<LoginPage />} /></Routes>;
   // Setting a password must work before the account is enabled as staff: the first administrator
   // sets it from the email link and is granted the admin role afterwards (docs/DEPLOYMENT.md).
   if (!staff) return <Routes>
     <Route path="/reset-password" element={<ResetPasswordPage />} />
-    <Route path="*" element={<div className="login"><div className="card"><h1>Accesso non autorizzato</h1>
-      <p className="muted">Il tuo account non è abilitato alla gestione. Contatta un amministratore.</p>
+    <Route path="*" element={<div className="login"><div className="card"><h1>{t('Accesso non autorizzato')}</h1>
+      <p className="muted">{t('Il tuo account non è abilitato alla gestione. Contatta un amministratore.')}</p>
       <ResetLogout /></div></div>} />
   </Routes>;
   const M = ['admin', 'manager'] as Array<'admin' | 'manager'>;
@@ -62,6 +66,9 @@ function Root() {
       <Route path="reviews" element={<Guard roles={M}><ReviewsPage /></Guard>} />
       <Route path="shipping" element={<Guard roles={M}><ShippingPage /></Guard>} />
       <Route path="pickup-points" element={<Guard roles={M}><PickupPointsPage /></Guard>} />
+      <Route path="loyalty" element={<Guard roles={M}><LoyaltyPage /></Guard>} />
+      <Route path="activity" element={<Guard roles={M}><ActivityPage /></Guard>} />
+      <Route path="settings" element={<SettingsPage />} />
       <Route path="analytics" element={<Guard roles={M}><AnalyticsPage /></Guard>} />
       <Route path="customers" element={<Guard roles={M}><CustomersPage /></Guard>} />
       <Route path="stores" element={<Guard roles={['admin']}><StoresPage /></Guard>} />
@@ -73,11 +80,18 @@ function Root() {
 
 function ResetLogout() {
   const { signOut } = useAuth();
-  return <button className="secondary" onClick={signOut}>Esci</button>;
+  return <button className="secondary" onClick={signOut}>{t('Esci')}</button>;
+}
+
+/** Re-renders the whole console in the new language (t() reads the current locale). */
+function LocaleGate() {
+  const [locale, setLocaleState] = useState(getLocale());
+  useEffect(() => onLocaleChange(setLocaleState), []);
+  return <Root key={locale} />;
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}><AuthProvider><Root /></AuthProvider></BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}><AuthProvider><LocaleGate /></AuthProvider></BrowserRouter>
   </StrictMode>,
 );

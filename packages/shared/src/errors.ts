@@ -23,6 +23,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   coupon_already_used: 'Hai già utilizzato questo codice sconto.',
   home_max_8: 'In home si possono mostrare al massimo 8 categorie: togli prima la spunta da un\'altra.',
   home_only_top_level: 'In home si mostrano solo le categorie principali, non le sottocategorie.',
+  club_disabled: 'Il CASA & TE Club al momento non accetta nuove iscrizioni.',
+  invalid_locale: 'Lingua non disponibile.',
   coupon_club_only: 'Codice riservato ai membri del CASA & TE Club.',
   review_not_allowed: 'Puoi recensire solo i prodotti che hai acquistato.',
   invalid_rating: 'Scegli da 1 a 5 stelle.',

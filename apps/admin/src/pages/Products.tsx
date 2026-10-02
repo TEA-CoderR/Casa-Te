@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { formatEuro, formatWeight, productImageUrl, type ProductRow } from '@casa-te/shared';
 import { SUPABASE_URL, supabase, unwrap } from '../lib/supabase';
-import { useAsync, useCategories, useDebounced } from '../lib/data';
+import { useAsync, useCategories, useDebounced, useLowStockThreshold } from '../lib/data';
 import { downloadCsv, toCsv } from '../lib/csv';
 import { Empty, Loading, Notice, PageHead, Pager } from '../components/ui';
+import { t } from '../lib/i18n';
 
 type Row = ProductRow & { product_images: Array<{ path: string; sort: number }>; inventory: Array<{ quantity: number }> };
 const PAGE = 50;
@@ -13,6 +14,7 @@ export function ProductsPage() {
   const navigate = useNavigate();
   const categories = useCategories();
   const [params] = useSearchParams();
+  const threshold = useLowStockThreshold();
   const [search, setSearch] = useState(params.get('q') ?? '');
   const q = useDebounced(search.trim().toLowerCase());
   const [categoryId, setCategoryId] = useState('');
@@ -42,22 +44,22 @@ export function ProductsPage() {
   };
 
   return <>
-    <PageHead title="Prodotti" subtitle={products.data ? `${products.data.count} prodotti` : undefined} actions={<>
-      <button className="secondary" onClick={exportCatalog}>Esporta CSV</button>
-      <Link to="/import" className="btn secondary">Importa da Excel</Link>
-      <Link to="/products/new" className="btn">Nuovo prodotto</Link>
+    <PageHead title={t('Prodotti')} subtitle={products.data ? t('{n} prodotti', { n: products.data.count }) : undefined} actions={<>
+      <button className="secondary" onClick={exportCatalog}>{t('Esporta CSV')}</button>
+      <Link to="/import" className="btn secondary">{t('Importa da Excel')}</Link>
+      <Link to="/products/new" className="btn">{t('Nuovo prodotto')}</Link>
     </>} />
     <div className="toolbar">
-      <input placeholder="Cerca nome, marca, SKU, EAN" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} style={{ minWidth: 260 }} aria-label="Cerca" />
-      <select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setPage(0); }} aria-label="Categoria">
-        <option value="">Tutte le categorie</option>{categories.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
-      <select value={status} onChange={(e) => { setStatus(e.target.value as typeof status); setPage(0); }} aria-label="Stato">
-        <option value="all">Tutti</option><option value="active">Pubblicati</option><option value="inactive">Non pubblicati</option></select>
+      <input placeholder={t('Cerca nome, marca, SKU, EAN')} value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} style={{ minWidth: 260 }} aria-label={t('Cerca')} />
+      <select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setPage(0); }} aria-label={t('Categoria')}>
+        <option value="">{t('Tutte le categorie')}</option>{categories.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+      <select value={status} onChange={(e) => { setStatus(e.target.value as typeof status); setPage(0); }} aria-label={t('Stato')}>
+        <option value="all">{t('Tutti')}</option><option value="active">{t('Pubblicati')}</option><option value="inactive">{t('Non pubblicati')}</option></select>
     </div>
     {products.error && <Notice tone="error">{products.error}</Notice>}
-    {!products.data ? <Loading /> : !products.data.rows.length ? <Empty>Nessun prodotto. Importa il catalogo da CSV o crea un prodotto.</Empty> :
+    {!products.data ? <Loading /> : !products.data.rows.length ? <Empty>{t('Nessun prodotto. Importa il catalogo da CSV o crea un prodotto.')}</Empty> :
       <div className="table-wrap"><table>
-        <thead><tr><th></th><th>Prodotto</th><th>Categoria</th><th className="num">Prezzo</th><th className="num">Peso</th><th className="num">Stock totale</th><th>Stato</th></tr></thead>
+        <thead><tr><th></th><th>{t('Prodotto')}</th><th>{t('Categoria')}</th><th className="num">{t('Prezzo')}</th><th className="num">{t('Peso')}</th><th className="num">{t('Stock totale')}</th><th>{t('Stato')}</th></tr></thead>
         <tbody>{products.data.rows.map((p) => {
           const img = productImageUrl(SUPABASE_URL, [...p.product_images].sort((a, b) => a.sort - b.sort)[0]?.path);
           const stock = p.inventory.reduce((s, i) => s + i.quantity, 0);
@@ -67,8 +69,8 @@ export function ProductsPage() {
             <td>{catName(p.category_id)}</td>
             <td className="num">{formatEuro(p.price_cents)}{p.compare_at_price_cents ? <div className="small muted" style={{ textDecoration: 'line-through' }}>{formatEuro(p.compare_at_price_cents)}</div> : null}</td>
             <td className="num">{formatWeight(p.weight_g)}</td>
-            <td className="num"><span className={`badge ${stock === 0 ? 'bad' : stock <= 3 ? 'warn' : 'muted'}`}>{stock}</span></td>
-            <td>{p.active ? <span className="badge">Pubblicato</span> : <span className="badge muted">Non pubblicato</span>}{p.featured && <span className="badge flag" style={{ marginLeft: 4 }}>In evidenza</span>}</td>
+            <td className="num"><span className={`badge ${stock === 0 ? 'bad' : stock <= threshold ? 'warn' : 'muted'}`}>{stock}</span></td>
+            <td>{p.active ? <span className="badge">{t('Pubblicato')}</span> : <span className="badge muted">{t('Non pubblicato')}</span>}{p.featured && <span className="badge flag" style={{ marginLeft: 4 }}>{t('In evidenza')}</span>}</td>
           </tr>;
         })}</tbody></table></div>}
     {products.data && <Pager page={page} hasMore={(page + 1) * PAGE < products.data.count} onPage={setPage} />}

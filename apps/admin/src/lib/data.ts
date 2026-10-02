@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { StoreRow, CategoryRow } from '@casa-te/shared';
 import { supabase, unwrap } from './supabase';
+import { t } from './i18n';
 
 export type Async<T> = { data: T | undefined; error: string | null; loading: boolean; reload: () => Promise<void> };
 
@@ -37,6 +38,15 @@ export function loadStores(force = false): Promise<StoreRow[]> {
 
 export function useStores() { return useAsync(() => loadStores(), []); }
 
+/** Low-stock threshold from Impostazioni (3 until loaded). */
+export function useLowStockThreshold(): number {
+  const s = useAsync(async () => {
+    const { data } = await supabase.from('app_settings').select('low_stock_threshold').maybeSingle();
+    return (data as { low_stock_threshold: number } | null)?.low_stock_threshold ?? 3;
+  }, []);
+  return s.data ?? 3;
+}
+
 export function useCategories() {
   return useAsync(async () => unwrap(await supabase.from('categories').select('*').order('sort').order('name')) as CategoryRow[], []);
 }
@@ -57,17 +67,20 @@ export const ERROR_TEXT: Record<string, string> = {
   user_exists: 'Utente già esistente.',
   invalid_email: 'Email non valida.',
   invalid_range: 'Intervallo di date non valido (al massimo un anno).',
+  club_disabled: 'Il Club al momento non accetta nuove iscrizioni.',
+  invalid_locale: 'Lingua non disponibile.',
+  not_found: 'Elemento non trovato.',
   store_required: 'Seleziona il negozio per il personale di negozio.',
 };
 
 export function errorText(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
   const code = Object.keys(ERROR_TEXT).find((k) => msg.includes(k));
-  if (code) return ERROR_TEXT[code];
-  if (/duplicate key.*sku/.test(msg)) return 'SKU già esistente.';
-  if (/duplicate key.*slug/.test(msg)) return 'Slug già esistente.';
-  if (/duplicate key.*code/.test(msg)) return 'Codice già esistente.';
-  if (/row-level security|permission denied/.test(msg)) return 'Non hai i permessi per questa operazione.';
-  if (/check constraint/.test(msg)) return 'Valori non validi: controlla i campi.';
+  if (code) return t(ERROR_TEXT[code]);
+  if (/duplicate key.*sku/.test(msg)) return t('SKU già esistente.');
+  if (/duplicate key.*slug/.test(msg)) return t('Slug già esistente.');
+  if (/duplicate key.*code/.test(msg)) return t('Codice già esistente.');
+  if (/row-level security|permission denied/.test(msg)) return t('Non hai i permessi per questa operazione.');
+  if (/check constraint/.test(msg)) return t('Valori non validi: controlla i campi.');
   return msg;
 }

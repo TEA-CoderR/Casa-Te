@@ -89,6 +89,23 @@ export type AddressRow = {
 export type StaffMemberRow = {
   user_id: Uuid; role: StaffRole; store_id: Uuid | null; display_name: string | null; email: string | null;
   active: boolean; created_at: Timestamp; updated_at: Timestamp;
+  /** Back-office language. */
+  locale: StaffLocale;
+};
+
+export type StaffLocale = 'it' | 'en' | 'zh';
+
+/** Single-row shop settings (everyone reads, managers write). */
+export type AppSettingsRow = {
+  id: true; low_stock_threshold: number; club_enabled: boolean; club_tagline: string;
+  updated_at: Timestamp; updated_by: Uuid | null;
+};
+
+/** Back-office audit trail, written by triggers. */
+export type ActivityLogRow = {
+  id: number; created_at: Timestamp; actor_id: Uuid | null; actor_name: string | null;
+  entity: string; entity_id: string | null; label: string | null; action: 'insert' | 'update' | 'delete';
+  changes: string[]; details: Record<string, [unknown, unknown]>;
 };
 
 export type ShippingAddressSnapshot = {
@@ -193,7 +210,7 @@ export type DashboardStats = {
 /** admin_overview(): the back-office "Panoramica" page. Days are Europe/Rome dates (YYYY-MM-DD). */
 export type AdminOverviewDay = { day: string; revenue_cents: number; orders: number; customers: number; new_customers: number | null };
 export type AdminOverview = {
-  today: string; from: string; to: string; prev_from: string;
+  today: string; from: string; to: string; prev_from: string; low_stock_threshold: number;
   series: AdminOverviewDay[];
   status: Partial<Record<OrderStatus, number>>;
   open: Partial<Record<OrderStatus, number>>;

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useStores } from '../lib/data';
 import { overviewRange } from '../lib/overview';
 import { Icon, type AdminIcon } from './Icon';
+import { t } from '../lib/i18n';
 
 const ROLE_LABEL = { admin: 'Amministratore', manager: 'Responsabile', store_staff: 'Personale negozio' } as const;
 
@@ -29,8 +30,8 @@ function GlobalSearch({ manager }: { manager: boolean }) {
   }, []);
   const q = text.trim();
   const targets = [
-    { label: 'Ordini', path: '/orders' },
-    ...(manager ? [{ label: 'Prodotti', path: '/products' }, { label: 'Clienti', path: '/customers' }] : [{ label: 'Magazzino', path: '/inventory' }]),
+    { label: t('Ordini'), path: '/orders' },
+    ...(manager ? [{ label: t('Prodotti'), path: '/products' }, { label: t('Clienti'), path: '/customers' }] : [{ label: t('Magazzino'), path: '/inventory' }]),
   ];
   const go = (path: string) => { setOpen(false); setText(''); navigate(`${path}?q=${encodeURIComponent(q)}`); };
   const submit = (e: FormEvent) => {
@@ -41,10 +42,10 @@ function GlobalSearch({ manager }: { manager: boolean }) {
   return <form className="top-search" role="search" ref={box} onSubmit={submit}>
     <Icon name="search" size={19} />
     <input value={text} onChange={(e) => { setText(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)}
-      placeholder={manager ? 'Cerca ordini, prodotti, clienti…' : 'Cerca ordini, prodotti…'} aria-label="Cerca" />
+      placeholder={manager ? t('Cerca ordini, prodotti, clienti…') : t('Cerca ordini, prodotti…')} aria-label={t('Cerca')} />
     {open && q && <div className="search-menu" role="listbox">
-      {targets.map((t) => <button type="button" key={t.path} role="option" aria-selected={false} onClick={() => go(t.path)}>
-        Cerca «<strong>{q}</strong>» in {t.label}</button>)}
+      {targets.map((item) => <button type="button" key={item.path} role="option" aria-selected={false} onClick={() => go(item.path)}>
+        {t('Cerca')} «<strong>{q}</strong>» {t('in')} {item.label}</button>)}
     </div>}
   </form>;
 }
@@ -62,12 +63,12 @@ function OverviewFilters({ manager }: { manager: boolean }) {
   return <>
     <div className="date-range">
       <Icon name="calendar" size={18} />
-      <input type="date" value={from} max={to} aria-label="Dal giorno" onChange={(e) => e.target.value && set({ dal: e.target.value, al: to })} />
+      <input type="date" value={from} max={to} aria-label={t('Dal giorno')} onChange={(e) => e.target.value && set({ dal: e.target.value, al: to })} />
       <span aria-hidden="true">–</span>
-      <input type="date" value={to} min={from} aria-label="Al giorno" onChange={(e) => e.target.value && set({ dal: from, al: e.target.value })} />
+      <input type="date" value={to} min={from} aria-label={t('Al giorno')} onChange={(e) => e.target.value && set({ dal: from, al: e.target.value })} />
     </div>
-    {manager && <select className="top-select" value={params.get('negozio') ?? ''} onChange={(e) => set({ negozio: e.target.value })} aria-label="Negozio">
-      <option value="">Tutti i negozi</option>{stores.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>}
+    {manager && <select className="top-select" value={params.get('negozio') ?? ''} onChange={(e) => set({ negozio: e.target.value })} aria-label={t('Negozio')}>
+      <option value="">{t('Tutti i negozi')}</option>{stores.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>}
   </>;
 }
 
@@ -84,12 +85,12 @@ function UserMenu() {
   return <div className="user-menu" ref={ref}>
     <button className="user-btn" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen((v) => !v)}>
       <span className="avatar" aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
-      <span className="user-text"><strong>{name}</strong><small>{staff ? ROLE_LABEL[staff.role] : ''}</small></span>
+      <span className="user-text"><strong>{name}</strong><small>{staff ? t(ROLE_LABEL[staff.role]) : ''}</small></span>
       <Icon name="chevronDown" size={16} />
     </button>
     {open && <div className="user-pop" role="menu">
       <div className="small muted" style={{ padding: '6px 10px' }}>{session?.user.email}</div>
-      <button role="menuitem" className="ghost" onClick={signOut}><Icon name="logout" size={16} /> Esci</button>
+      <button role="menuitem" className="ghost" onClick={signOut}><Icon name="logout" size={16} /> {t('Esci')}</button>
     </div>}
   </div>;
 }
@@ -112,37 +113,40 @@ export function Layout() {
   }, [pathname]);
 
   return <div className="shell">
-    <a className="skip-link" href="#contenuto">Vai al contenuto</a>
+    <a className="skip-link" href="#contenuto">{t('Vai al contenuto')}</a>
     <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
       <div className="sidebar-top">
         <div className="brand">CASA &amp; TE<small>GESTIONE ONLINE</small></div>
         <button className="ghost icon-btn menu-toggle" aria-expanded={menuOpen} aria-controls="nav-principale"
-          onClick={() => setMenuOpen((v) => !v)} aria-label={menuOpen ? 'Chiudi menu' : 'Apri menu'}><Icon name={menuOpen ? 'close' : 'menu'} size={22} /></button>
+          onClick={() => setMenuOpen((v) => !v)} aria-label={menuOpen ? t('Chiudi menu') : t('Apri menu')}><Icon name={menuOpen ? 'close' : 'menu'} size={22} /></button>
       </div>
-      <nav className="nav" id="nav-principale" aria-label="Navigazione principale">
-        <Item to="/" end icon="home">Panoramica</Item>
-        <Item to="/orders" icon="clipboard">Gestione ordini</Item>
-        <Item to="/picking" icon="picking">Preparazione ordini</Item>
-        {manager && <Item to="/products" icon="bag">Gestione prodotti</Item>}
-        <Item to="/inventory" icon="warehouse">Gestione inventario</Item>
+      <nav className="nav" id="nav-principale" aria-label={t('Navigazione principale')}>
+        <Item to="/" end icon="home">{t('Panoramica')}</Item>
+        <Item to="/orders" icon="clipboard">{t('Gestione ordini')}</Item>
+        <Item to="/picking" icon="picking">{t('Preparazione ordini')}</Item>
+        {manager && <Item to="/products" icon="bag">{t('Gestione prodotti')}</Item>}
+        <Item to="/inventory" icon="warehouse">{t('Gestione inventario')}</Item>
         {manager && <>
-          <Item to="/categories" icon="products">Gestione categorie</Item>
-          <Item to="/coupons" icon="megaphone">Marketing</Item>
-          <Item to="/customers" icon="customers">Clienti</Item>
-          <Item to="/analytics" icon="chart">Analisi dati</Item>
+          <Item to="/categories" icon="products">{t('Gestione categorie')}</Item>
+          <Item to="/coupons" icon="megaphone">{t('Marketing')}</Item>
+          <Item to="/customers" icon="customers">{t('Clienti')}</Item>
+          <Item to="/analytics" icon="chart">{t('Analisi dati')}</Item>
         </>}
         {manager && <>
-          <div className="group">Canali di vendita</div>
-          {SHOP_URL && <a href={SHOP_URL} target="_blank" rel="noreferrer"><Icon name="monitor" size={20} strokeWidth={1.6} /><span>Negozio online</span>
-            <span className="sr-only">(si apre in una nuova scheda)</span></a>}
-          {can('admin') && <Item to="/stores" icon="stores">Gestione negozi</Item>}
-          <Item to="/reviews" icon="reviews">Recensioni</Item>
-          <Item to="/shipping" icon="truck">Tariffe spedizione</Item>
-          <Item to="/pickup-points" icon="pickup">Punti di ritiro</Item>
-          <div className="group">Impostazioni di sistema</div>
-          <Item to="/import" icon="import">Importa prodotti</Item>
-          {can('admin') && <Item to="/staff" icon="staff">Gestione staff</Item>}
+          <div className="group">{t('Canali di vendita')}</div>
+          {SHOP_URL && <a href={SHOP_URL} target="_blank" rel="noreferrer"><Icon name="monitor" size={20} strokeWidth={1.6} /><span>{t('Negozio online')}</span>
+            <span className="sr-only">{t('(si apre in una nuova scheda)')}</span></a>}
+          {can('admin') && <Item to="/stores" icon="stores">{t('Gestione negozi')}</Item>}
+          <Item to="/loyalty" icon="gift">{t('Programma fedeltà')}</Item>
+          <Item to="/reviews" icon="reviews">{t('Recensioni')}</Item>
+          <Item to="/shipping" icon="truck">{t('Tariffe spedizione')}</Item>
+          <Item to="/pickup-points" icon="pickup">{t('Punti di ritiro')}</Item>
         </>}
+        <div className="group">{t('Impostazioni di sistema')}</div>
+        {manager && <Item to="/import" icon="import">{t('Importa prodotti')}</Item>}
+        {can('admin') && <Item to="/staff" icon="staff">{t('Gestione staff')}</Item>}
+        <Item to="/settings" icon="settings">{t('Impostazioni')}</Item>
+        {manager && <Item to="/activity" icon="history">{t('Registro attività')}</Item>}
       </nav>
     </aside>
     <div className="workspace">
@@ -150,8 +154,8 @@ export function Layout() {
         <GlobalSearch manager={manager} />
         <div className="topbar-right">
           {pathname === '/' && <OverviewFilters manager={manager} />}
-          <NavLink to="/picking" className="bell" aria-label={toPrepare ? `${toPrepare} ordini da preparare` : 'Nessun ordine da preparare'}
-            title={toPrepare ? `${toPrepare} ordini da preparare` : 'Nessun ordine da preparare'}>
+          <NavLink to="/picking" className="bell" aria-label={toPrepare ? t('{n} ordini da preparare', { n: toPrepare }) : t('Nessun ordine da preparare')}
+            title={toPrepare ? t('{n} ordini da preparare', { n: toPrepare }) : t('Nessun ordine da preparare')}>
             <Icon name="bell" size={22} strokeWidth={1.6} />{toPrepare > 0 && <span className="bell-badge">{toPrepare > 99 ? '99+' : toPrepare}</span>}
           </NavLink>
           <UserMenu />
