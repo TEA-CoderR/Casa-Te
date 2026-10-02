@@ -19,8 +19,7 @@ type Tab = { to: string; label: string; roles?: Role[] };
  */
 const SECTIONS: Array<{ tabs: Tab[] }> = [
   { tabs: [{ to: '/orders', label: 'Tutti gli ordini' }, { to: '/picking', label: 'Preparazione ordini' }] },
-  { tabs: [{ to: '/products', label: 'Prodotti' }, { to: '/import', label: 'Importa prodotti' }, { to: '/reviews', label: 'Recensioni' }] },
-  { tabs: [{ to: '/coupons', label: 'Codici sconto' }, { to: '/loyalty', label: 'Programma fedeltà' }] },
+  { tabs: [{ to: '/products', label: 'Prodotti' }, { to: '/import', label: 'Importa prodotti' }] },
   { tabs: [{ to: '/stores', label: 'Negozi', roles: ['admin'] }, { to: '/shipping', label: 'Tariffe spedizione' }, { to: '/pickup-points', label: 'Punti di ritiro' }] },
 ];
 const sectionOf = (pathname: string) => SECTIONS.find((s) => s.tabs.some((tab) => tab.to === pathname));
@@ -185,16 +184,20 @@ export function Layout() {
       <nav className="nav" id="nav-principale" aria-label={t('Navigazione principale')}>
         <Item to="/" end icon="home">{t('Panoramica')}</Item>
         <Item to="/orders" icon="clipboard" also={['/picking']}>{t('Gestione ordini')}</Item>
-        {manager && <Item to="/products" icon="bag" also={['/import', '/reviews']}>{t('Gestione prodotti')}</Item>}
+        {manager && <Item to="/products" icon="bag" also={['/import']}>{t('Gestione prodotti')}</Item>}
         <Item to="/inventory" icon="warehouse">{t('Gestione inventario')}</Item>
         {manager && <>
           <Item to="/categories" icon="products">{t('Gestione categorie')}</Item>
-          <Item to="/coupons" icon="megaphone" also={['/loyalty']}>{t('Marketing')}</Item>
+          <Item to="/coupons" icon="megaphone">{t('Marketing')}</Item>
           <Item to="/customers" icon="customers">{t('Clienti')}</Item>
           <Item to="/analytics" icon="chart">{t('Analisi dati')}</Item>
+          <div className="group">{t('Canali di vendita')}</div>
+          <Item to={can('admin') ? '/stores' : '/shipping'} icon="stores" also={['/stores', '/shipping', '/pickup-points']}>
+            {can('admin') ? t('Gestione negozi') : t('Spedizioni e ritiro')}</Item>
+          <Item to="/loyalty" icon="gift">{t('Programma fedeltà')}</Item>
+          <Item to="/reviews" icon="reviews">{t('Recensioni')}</Item>
         </>}
         <div className="group">{t('Impostazioni di sistema')}</div>
-        {manager && <Item to={can('admin') ? '/stores' : '/shipping'} icon="stores" also={['/stores', '/shipping', '/pickup-points']}>{t('Negozi e spedizioni')}</Item>}
         {can('admin') && <Item to="/staff" icon="staff">{t('Gestione staff')}</Item>}
         <Item to="/settings" icon="settings">{t('Impostazioni')}</Item>
         {manager && <Item to="/activity" icon="history">{t('Registro attività')}</Item>}
