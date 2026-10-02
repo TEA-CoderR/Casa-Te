@@ -284,7 +284,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .kpi2-icon { width: 52px; height: 52px; border-radius: 26px; display: grid; place-items: center; background: var(--tone-soft); color: var(--tone); flex-shrink: 0; }
 .kpi2-body { flex: 1; min-width: 0; }
 .kpi2-label { font-size: 15px; font-weight: 500; }
-.kpi2-value { font-family: var(--serif); font-weight: 700; font-size: 31px; margin: 6px 0 8px; font-variant-numeric: tabular-nums; letter-spacing: -0.5px; white-space: nowrap; }
+.kpi2-value { font-family: var(--serif); font-weight: 700; font-size: clamp(24px, 2.1vw, 31px); margin: 6px 0 8px; font-variant-numeric: tabular-nums; letter-spacing: -0.5px; white-space: nowrap; }
 .delta { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
 .delta.up strong, .delta.up svg { color: #2F7A4D; }
 .delta.down strong, .delta.down svg { color: var(--danger); }
@@ -387,6 +387,8 @@ select.compact { min-height: 34px; padding: 5px 30px 5px 10px; font-size: 13px; 
   .trend-panel { grid-column: span 2; }
   .recent-panel, .stock-panel { grid-column: 1 / span 2; }
   .stock-alerts { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); column-gap: 24px; }
+}
+@media (max-width: 1180px) {
   .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 860px) {
@@ -430,3 +432,11 @@ select.compact { min-height: 34px; padding: 5px 30px 5px 10px; font-size: 13px; 
 .badge.act-delete { background: #F8E9E7; color: var(--danger); }
 td.nowrap { white-space: nowrap; }
 @media (max-width: 860px) { .lang-grid { grid-template-columns: 1fr; } }
+
+/* Section tabs: pages that share one menu entry */
+.section-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: -6px 0 22px; overflow-x: auto; scrollbar-width: none; }
+.section-tabs a { padding: 10px 14px; color: var(--muted); text-decoration: none; font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.section-tabs a:hover { color: var(--text); }
+.section-tabs a.on { color: var(--green); border-bottom-color: var(--green); font-weight: 600; }
+@media (max-width: 1500px) { .kpi2 .spark { display: none; } .kpi2 { padding: 18px; gap: 12px; } .kpi2-icon { width: 44px; height: 44px; } }
+@media (max-width: 1180px) { .kpi2 .spark { display: flex; } }

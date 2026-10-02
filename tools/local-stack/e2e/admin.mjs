@@ -41,7 +41,7 @@ await sql(`insert into public.staff_members (user_id, role, email, display_name)
   select id, 'admin', email, 'Amministratore' from auth.users where email = '${ADMIN}'`);
 await admin.goto(env.ADMIN_URL, { waitUntil: 'networkidle' });
 await admin.reload({ waitUntil: 'networkidle' });
-await admin.getByText('Preparazione').first().waitFor();
+await admin.getByRole('link', { name: 'Gestione ordini' }).first().waitFor();
 await shot(admin, 'admin-dashboard');
 
 // ---------------------------------------------------------------------------------------------
