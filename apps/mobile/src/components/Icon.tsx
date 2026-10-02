@@ -23,13 +23,18 @@ const paths = {
   trash: 'M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6',
   sort: 'M4 6h16M7 12h10M10 18h4',
   back: 'm15 5-7 7 7 7',
+  heart: 'M12 20.5s-8-4.6-8-11A4.5 4.5 0 0 1 12 6.6a4.5 4.5 0 0 1 8 2.9c0 6.4-8 11-8 11Z',
+  share: 'M12 3v12M7.5 7.5 12 3l4.5 4.5M5 12v8h14v-8',
+  menu: 'M4 6.5h16M4 12h16M4 17.5h16',
+  list: 'M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01',
+  filter: 'M3 5h18l-7 8v6l-4 2v-8L3 5Z',
   weight: 'M4 7h16l2 14H2L4 7Zm5 0V5a3 3 0 1 1 6 0v2',
 } as const;
 export type IconName = keyof typeof paths;
-export function Icon({ name, size = 22, color = colors.text, strokeWidth = 1.65 }: {
-  name: IconName; size?: number; color?: ColorValue; strokeWidth?: number;
+export function Icon({ name, size = 22, color = colors.text, strokeWidth = 1.65, fill }: {
+  name: IconName; size?: number; color?: ColorValue; strokeWidth?: number; fill?: ColorValue;
 }) {
   return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-    <Path d={paths[name]} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    <Path d={paths[name]} stroke={color} fill={fill ?? 'none'} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>;
 }

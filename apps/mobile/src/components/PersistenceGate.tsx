@@ -2,9 +2,10 @@ import { useEffect, useState, type PropsWithChildren } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useCartStore } from '@/store/cart';
 import { usePreferences } from '@/store/preferences';
+import { useFavorites } from '@/store/favorites';
 import { colors } from '@/config/theme';
 
-const stores = [useCartStore, usePreferences];
+const stores = [useCartStore, usePreferences, useFavorites];
 
 /** Waits for the locally persisted cart and store choice before rendering routes. */
 export function PersistenceGate({ children }: PropsWithChildren) {

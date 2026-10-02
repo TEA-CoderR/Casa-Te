@@ -31,16 +31,17 @@ export function SecondaryButton({ title, onPress, disabled, icon, danger }: {
   </Pressable>;
 }
 
-export function QuantityControl({ value, onChange, label = '', min = 0, max = 99 }: {
-  value: number; onChange: (value: number) => void; label?: string; min?: number; max?: number;
+export function QuantityControl({ value, onChange, label = '', min = 0, max = 99, compact }: {
+  value: number; onChange: (value: number) => void; label?: string; min?: number; max?: number; compact?: boolean;
 }) {
+  const step = compact ? [styles.step, { width: 34, height: 36 }] : styles.step;
   return <View style={styles.quantity}>
     <Pressable accessibilityRole="button" accessibilityLabel={`Riduci quantità${label ? ` ${label}` : ''}`}
-      disabled={value <= min} onPress={() => onChange(value - 1)} style={styles.step}>
+      disabled={value <= min} onPress={() => onChange(value - 1)} style={step}>
       <Icon name="minus" size={16} color={value <= min ? colors.line : colors.text} />
     </Pressable><Text style={styles.quantityValue} accessibilityLabel={`Quantità ${value}`}>{value}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={`Aumenta quantità${label ? ` ${label}` : ''}`}
-      disabled={value >= max} onPress={() => onChange(value + 1)} style={styles.step}>
+      disabled={value >= max} onPress={() => onChange(value + 1)} style={step}>
       <Icon name="plus" size={16} color={value >= max ? colors.line : colors.text} />
     </Pressable>
   </View>;

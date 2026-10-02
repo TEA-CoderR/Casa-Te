@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useLocalSearchParams, router, Stack } from 'expo-router';
 import { formatEuro, formatWeight } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
-import { ProductImage } from '@/components/ProductImage';
-import { stockLabel } from '@/components/ProductCard';
+import { ProductGallery } from '@/components/ProductGallery';
+import { FavoriteButton, stockLabel } from '@/components/ProductCard';
 import { Icon } from '@/components/Icon';
 import { EmptyState, Loading, PrimaryButton, QuantityControl } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
@@ -20,13 +21,27 @@ export default function ProductDetailScreen() {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(0);
   const [storeSheet, setStoreSheet] = useState(false);
+  const [shared, setShared] = useState(false);
   const { wide } = useLayout();
+  const insets = useSafeAreaInsets();
   const add = useCartStore((s) => s.add);
   const inCart = useCartStore((s) => s.items[id ?? ''] ?? 0);
   const { data: product, loading, error } = useQuery(id ? `product:${id}:${selected?.id}` : null, () => fetchProduct(id!, selected?.id ?? null));
 
-  if (loading && !product) return <Screen stack><Loading /></Screen>;
-  if (!product) return <Screen stack><EmptyState title={error ? 'Connessione assente' : 'Prodotto non trovato'}
+  const back = () => router.canGoBack() ? router.back() : router.replace('/');
+  const share = async (name: string) => {
+    const url = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.href : undefined;
+    try {
+      const nav = typeof navigator !== 'undefined' ? navigator as Navigator & { share?: unknown } : null;
+      if (Platform.OS === 'web' && nav && !nav.share && url) {
+        await nav.clipboard.writeText(url); setShared(true); setTimeout(() => setShared(false), 2500); return;
+      }
+      await Share.share({ title: name, message: url ? `${name} · CASA & TE\n${url}` : `${name} · CASA & TE`, url });
+    } catch { /* dismissed */ }
+  };
+
+  if (loading && !product) return <Screen stack><Stack.Screen options={{ headerShown: true }} /><Loading /></Screen>;
+  if (!product) return <Screen stack><Stack.Screen options={{ headerShown: true }} /><EmptyState title={error ? 'Connessione assente' : 'Prodotto non trovato'}
     message={error ? 'Controlla la rete e riprova.' : 'Scopri gli altri prodotti del catalogo.'} icon="search">
     <PrimaryButton title="Vai al catalogo" onPress={() => router.replace('/catalog')} />
   </EmptyState></Screen>;
@@ -68,32 +83,56 @@ export default function ProductDetailScreen() {
       <Text style={styles.change}>Cambia</Text>
     </Pressable>
     <View style={styles.features}>
-      {([['store', `Ritiro gratuito\na ${store}`], ['truck', 'Spedizione gratis\nda €66 · max 10 kg'], ['shield', 'Pagamento\nsicuro']] as const).map(([icon, text]) =>
+      {([['store', `Ritiro gratuito\na ${store}`], ['truck', 'Spedizione gratis\nda €66'], ['shield', 'Pagamento\nsicuro'], ['weight', `Peso\n${formatWeight(product.weight_g)}`]] as const).map(([icon, text]) =>
         <View key={icon} style={styles.feature}><Icon name={icon} size={24} color={colors.text} strokeWidth={1.3} />
           <Text style={styles.featureText}>{text}</Text></View>)}
     </View>
     {!!product.description && <Text style={styles.description}>{product.description}</Text>}
     {wide && <View style={{ marginTop: 24 }}>{buy}</View>}
-    <Text style={styles.sku}>Peso {formatWeight(product.weight_g)} · Codice articolo {product.sku}</Text>
+    <Text style={styles.sku}>Codice articolo {product.sku} · spedizione gratuita fino a 10 kg</Text>
   </>;
 
+  const actions = <>
+    <Pressable onPress={back} accessibilityRole="button" accessibilityLabel="Indietro" style={[styles.round, styles.roundLeft]}>
+      <Icon name="back" size={22} strokeWidth={1.7} /></Pressable>
+    <View style={styles.roundRight}>
+      <FavoriteButton productId={product.id} name={product.name} size={21} style={styles.round} />
+      <Pressable onPress={() => share(product.name)} accessibilityRole="button" accessibilityLabel={`Condividi ${product.name}`} style={styles.round}>
+        <Icon name="share" size={20} strokeWidth={1.6} /></Pressable>
+    </View>
+  </>;
+  const sharedNote = shared && <View style={styles.toast} accessibilityLiveRegion="polite"><Text style={styles.toastText}>Link copiato</Text></View>;
+
   return <Screen stack footer={wide ? undefined : buy}>
-    <Stack.Screen options={{ title: '' }} />
+    <Stack.Screen options={{ title: '', headerShown: false }} />
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-    {wide ? <View style={styles.wide}>
-      <View style={[styles.media, styles.mediaWide]}><ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.1} /></View>
+    {wide ? <View style={[styles.wide, { paddingTop: 16 + insets.top }]}>
+      <View style={[styles.media, styles.mediaWide]}>
+        <ProductGallery images={product.images} sku={product.sku} label={product.name} />
+        <View style={[styles.overlay, { top: 12 }]}>{actions}</View>
+      </View>
       <View style={{ flex: 1, maxWidth: 460 }}>{details}</View>
     </View> : <>
-      <View style={styles.media}><ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.1} /></View>
+      <View style={[styles.media, { paddingTop: insets.top + 8 }]}>
+        <ProductGallery images={product.images} sku={product.sku} label={product.name} />
+        <View style={[styles.overlay, { top: insets.top + 12 }]}>{actions}</View>
+      </View>
       {details}
     </>}
+    {sharedNote}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
   wide: { flexDirection: 'row', gap: 56, alignItems: 'flex-start', paddingTop: 8 },
-  media: { backgroundColor: colors.surface, marginHorizontal: -20, marginTop: -20, marginBottom: 22, borderBottomWidth: 1, borderColor: colors.line },
-  mediaWide: { flex: 1.1, marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
+  media: { backgroundColor: colors.surface, marginHorizontal: -20, marginTop: -20, marginBottom: 20 },
+  overlay: { position: 'absolute', left: 12, right: 12, flexDirection: 'row', justifyContent: 'space-between' },
+  round: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line },
+  roundLeft: { borderWidth: 0, backgroundColor: 'transparent' },
+  roundRight: { flexDirection: 'row', gap: 10 },
+  toast: { position: 'absolute', alignSelf: 'center', top: 80, backgroundColor: colors.text, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
+  toastText: { color: '#fff', fontSize: 13, fontFamily: fonts.sansMedium },
+  mediaWide: { flex: 1.1, marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 18, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
   brand: { fontSize: 12, letterSpacing: 2.4, textTransform: 'uppercase', color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500', marginBottom: 8 },
   title: { fontSize: 29, lineHeight: 36, fontFamily: fonts.serif, color: colors.text },
   price: { fontSize: 32, fontFamily: fonts.serif, color: colors.text },

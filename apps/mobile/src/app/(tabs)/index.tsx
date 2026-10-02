@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { CategoryRow } from '@casa-te/shared';
@@ -8,6 +8,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { ProductVisual } from '@/components/ProductVisual';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
+import { MenuSheet } from '@/components/MenuSheet';
 import { Loading, Notice } from '@/components/UI';
 import { demoHomeImage, productImageCells } from '@/data/productImages';
 import { cardShadow, colors, fonts } from '@/config/theme';
@@ -25,6 +26,7 @@ export default function HomeScreen() {
   const { selected } = useStores();
   const [storeSheet, setStoreSheet] = useState(false);
   const [heroWidth, setHeroWidth] = useState(0);
+  const [menu, setMenu] = useState(false);
   const storeName = storeShortName(selected);
   const { columns, wide } = useLayout();
   const count = cartItemCount(useCartStore((s) => s.items));
@@ -43,7 +45,7 @@ export default function HomeScreen() {
       <ProductCard product={product} /></View>)}</View>;
   const topCategories = (categories.data ?? []).filter((c) => !c.parent_id);
   // The photo is 3:2 with the objects on the right: on narrow screens anchor it right instead of centring on the wall.
-  const heroHeight = wide ? 520 : 400;
+  const heroHeight = wide ? 520 : 330;
   const photoWidth = heroHeight * 1.5;
   const heroImageStyle = heroWidth && heroWidth < photoWidth
     ? { width: photoWidth, height: heroHeight, left: heroWidth - photoWidth, borderRadius: wide ? 18 : 0 }
@@ -58,16 +60,17 @@ export default function HomeScreen() {
           ? <ProductVisual id={visual} inset={0.16} />
           : <Text style={styles.categoryInitial}>{category.name.slice(0, 1)}</Text>}
       </View>
-      <Text style={[styles.categoryLabel, wide && { fontSize: 16 }]} numberOfLines={1}>{category.name}</Text>
+      <Text style={[styles.categoryLabel, wide && { fontSize: 16 }]}>{category.name}</Text>
     </Pressable>;
   };
 
   return <Screen refreshing={featured.loading && !!featured.data} onRefresh={refresh} contentContainerStyle={{ paddingTop: 6 }}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
+    <MenuSheet visible={menu} onClose={() => setMenu(false)} onStores={() => setStoreSheet(true)} />
 
     <View style={styles.header}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Cerca prodotti" onPress={() => router.push('/catalog')} style={styles.iconButton}>
-        <Icon name="search" size={22} />
+      <Pressable accessibilityRole="button" accessibilityLabel="Apri menu" onPress={() => setMenu(true)} style={styles.iconButton}>
+        <Icon name="menu" size={24} strokeWidth={1.6} />
       </Pressable>
       <View style={styles.brand}>
         <Text style={[styles.wordmark, wide && { fontSize: 38 }]} accessibilityRole="header">Casa & Te</Text>
@@ -99,7 +102,7 @@ export default function HomeScreen() {
         <Text style={[styles.heroTitle, wide && styles.heroTitleWide]}>La casa,{'\n'}più semplice.</Text>
         <Text style={[styles.heroText, wide && { fontSize: 19, lineHeight: 27 }]}>Oggetti utili per ogni stanza.{'\n'}Ordina online, ritira gratis nel tuo negozio.</Text>
       </View>
-      <Pressable accessibilityRole="search" accessibilityLabel="Cerca prodotti" onPress={() => router.push('/catalog')}
+      <Pressable accessibilityRole="search" accessibilityLabel="Cerca prodotti" onPress={() => router.push({ pathname: '/catalog', params: { search: '1' } })}
         style={[styles.search, wide && { left: 48, right: undefined, width: 480, bottom: 40 }]}>
         <Icon name="search" color={colors.text} size={19} /><Text style={styles.searchText}>Cosa stai cercando?</Text>
       </Pressable>
@@ -108,8 +111,7 @@ export default function HomeScreen() {
 
     {!!topCategories.length && (wide
       ? <View style={[styles.categories, { marginTop: 40 }]}>{topCategories.map((c) => categoryItem(c, `${100 / topCategories.length}%`))}</View>
-      : <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, marginTop: 24, flexGrow: 0 }}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: 4 }}>{topCategories.map((c) => categoryItem(c))}</ScrollView>)}
+      : <View style={[styles.categories, { marginTop: 18, rowGap: 14 }]}>{topCategories.map((c) => categoryItem(c, '25%'))}</View>)}
 
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, wide && { fontSize: 30 }]} accessibilityRole="header">In evidenza</Text>
@@ -169,24 +171,24 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   badgeText: { color: '#fff', fontSize: 11, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
   hero: { backgroundColor: '#D9CBB4', overflow: 'hidden' },
-  heroPhone: { height: 400 },
+  heroPhone: { height: 330 },
   heroWide: { height: 520, borderRadius: 18 },
-  heroCopy: { padding: 22, paddingTop: 54 },
-  heroTitle: { fontSize: 44, lineHeight: 48, color: '#FFFFFF', fontFamily: fonts.serif, textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 12 },
+  heroCopy: { padding: 20, paddingTop: 52 },
+  heroTitle: { fontSize: 38, lineHeight: 41, color: '#FFFFFF', fontFamily: fonts.serif, textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 12 },
   heroTitleWide: { fontSize: 72, lineHeight: 76 },
-  heroText: { marginTop: 14, fontSize: 17, lineHeight: 24, color: '#FFFFFF', fontFamily: fonts.serif, textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 8 },
-  search: { position: 'absolute', left: 20, right: 20, bottom: 24, flexDirection: 'row', gap: 12, alignItems: 'center',
-    backgroundColor: '#FFFFFF', borderRadius: 999, paddingHorizontal: 20, height: 52, ...cardShadow },
+  heroText: { marginTop: 10, fontSize: 16, lineHeight: 21, color: '#FFFFFF', fontFamily: fonts.serif, textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 8 },
+  search: { position: 'absolute', left: 16, right: 16, bottom: 14, flexDirection: 'row', gap: 12, alignItems: 'center',
+    backgroundColor: '#FFFFFF', borderRadius: 999, paddingHorizontal: 18, height: 46, ...cardShadow },
   searchText: { fontSize: 15, color: colors.muted, fontFamily: fonts.sans },
-  categories: { flexDirection: 'row', marginHorizontal: -4 },
+  categories: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   category: { alignItems: 'center', paddingHorizontal: 4, gap: 8 },
-  circle: { width: 74, height: 74, borderRadius: 37, backgroundColor: colors.cream, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  circle: { width: 68, height: 68, borderRadius: 34, backgroundColor: colors.cream, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   categoryInitial: { fontSize: 30, fontFamily: fonts.serif, color: colors.green },
-  categoryLabel: { fontSize: 14, fontFamily: fonts.serif, color: colors.text },
-  section: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 38, marginBottom: 14 },
-  sectionTitle: { fontSize: 25, fontFamily: fonts.serif, color: colors.text },
+  categoryLabel: { fontSize: 12, letterSpacing: -0.2, fontFamily: fonts.serif, color: colors.text, textAlign: 'center' },
+  section: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 26, marginBottom: 12 },
+  sectionTitle: { fontSize: 22, fontFamily: fonts.serif, color: colors.text },
   seeAll: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 8, marginRight: -8 },
-  seeAllText: { color: colors.green, fontSize: 15, fontFamily: fonts.serif },
+  seeAllText: { color: colors.green, fontSize: 14, fontFamily: fonts.serif },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, rowGap: 12 },
   banner: { marginTop: 34, backgroundColor: colors.sand, borderRadius: 14, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14 },
   bannerIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },

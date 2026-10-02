@@ -9,7 +9,7 @@ watch(page, 'shop');
 
 step('Browse: home → catalogue → product');
 await page.goto(env.SHOP_URL, { waitUntil: 'networkidle' });
-await page.getByText('Catalogo', { exact: true }).first().click();
+await page.getByText('Categorie', { exact: true }).first().click();
 await page.getByText('Padella antiaderente 28 cm').last().waitFor();
 await shot(page, 'catalogo');
 await page.getByText('Padella antiaderente 28 cm').last().click();
