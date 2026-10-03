@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
-import { formatEuro } from '@/lib/price';
+import { discountLabel, formatEuro } from '@/lib/price';
 import type { CatalogProduct } from '@/lib/api';
 import { colors, fonts } from '@/config/theme';
 import { useCartStore } from '@/store/cart';
@@ -43,9 +43,10 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
     style={({ pressed }) => [styles.add, { opacity: !canAdd ? 0.35 : pressed ? 0.75 : 1 }]}>
     {quantity ? <Text style={styles.addCount}>{quantity}</Text> : <Icon name="cart" size={17} color="#fff" strokeWidth={1.6} />}
   </Pressable>;
+  const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
   const price = <View style={styles.priceRow}>
     <Text style={styles.price}>{formatEuro(product.price_cents)}</Text>
-    {!!product.compare_at_price_cents && <Text style={styles.compare}>{formatEuro(product.compare_at_price_cents)}</Text>}
+    {!!discount && <Text style={styles.compare}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
   </View>;
 
   if (variant === 'list') return <View style={styles.row}>
@@ -65,8 +66,8 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
   return <View style={styles.card}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={styles.media}>
-        <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.06} aspect={1.55} />
-        {!!product.compare_at_price_cents && <View style={styles.badge}><Text style={styles.badgeText}>Offerta</Text></View>}
+        <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.04} aspect={1.2} />
+        {!!discount && <Text style={styles.discount} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount}</Text>}
       </View>
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
@@ -83,8 +84,7 @@ const styles = StyleSheet.create({
   media: { backgroundColor: colors.surface },
   heart: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 4, right: 4 },
-  badge: { position: 'absolute', left: 8, top: 8, backgroundColor: colors.green, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
-  badgeText: { fontSize: 10.5, color: '#fff', fontFamily: fonts.sansSemiBold, fontWeight: '600', letterSpacing: 0.2 },
+  discount: { position: 'absolute', left: 10, top: 9, fontSize: 11.5, color: '#A84E2A', fontFamily: fonts.sansSemiBold, fontWeight: '600', letterSpacing: 0.3 },
   body: { paddingHorizontal: 10 },
   name: { fontSize: 15.5, lineHeight: 18, fontFamily: fonts.serif, color: colors.text, minHeight: 36 },
   meta: { fontSize: 11.5, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },

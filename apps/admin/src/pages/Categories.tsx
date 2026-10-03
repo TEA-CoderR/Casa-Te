@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import type { CategoryRow } from '@casa-te/shared';
-import { supabase, unwrap } from '../lib/supabase';
+import { useRef, useState } from 'react';
+import { productImageUrl, type CategoryRow } from '@casa-te/shared';
+import { SUPABASE_URL, supabase, unwrap } from '../lib/supabase';
 import { errorText, useCategories } from '../lib/data';
 import { Field, Loading, Modal, Notice, PageHead } from '../components/ui';
 import { t } from '../lib/i18n';
@@ -17,6 +17,7 @@ export function CategoriesPage() {
   const [edit, setEdit] = useState<Partial<CategoryRow> | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const homeCount = (categories.data ?? []).filter((c) => c.show_on_home && c.id !== edit?.id).length + (edit?.show_on_home && !edit.parent_id ? 1 : 0);
 
@@ -24,13 +25,29 @@ export function CategoriesPage() {
     if (!edit?.name?.trim()) return;
     setBusy(true); setError('');
     const row = { name: edit.name.trim(), slug: edit.slug?.trim() || slugify(edit.name), sort: Number(edit.sort ?? 0), active: edit.active ?? true, parent_id: edit.parent_id || null,
-      show_on_home: !edit.parent_id && (edit.show_on_home ?? false) };
+      show_on_home: !edit.parent_id && (edit.show_on_home ?? false), image_path: edit.parent_id ? null : edit.image_path ?? null };
     try {
       if (edit.id) unwrap(await supabase.from('categories').update(row).eq('id', edit.id));
       else unwrap(await supabase.from('categories').insert(row));
       setEdit(null); await categories.reload();
     } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   };
+
+  // Cover photo for the home circle: uploaded next to the product photos (folder categories/).
+  const uploadCover = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file || !edit) return;
+    setError('');
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { setError(t('Formati accettati: JPG, PNG, WEBP.')); return; }
+    if (file.size > 5 * 1024 * 1024) { setError(t('Immagine troppo grande (max 5 MB).')); return; }
+    setBusy(true);
+    const path = `categories/${crypto.randomUUID()}.${file.type.split('/')[1].replace('jpeg', 'jpg')}`;
+    const { error: upErr } = await supabase.storage.from('product-images').upload(path, file, { contentType: file.type, cacheControl: '31536000' });
+    setBusy(false);
+    if (upErr) { setError(errorText(upErr)); return; }
+    setEdit({ ...edit, image_path: path });
+  };
+  const cover = (c: Partial<CategoryRow>) => productImageUrl(SUPABASE_URL, c.image_path ?? null);
 
   const remove = async (c: CategoryRow) => {
     if (!window.confirm(t('Eliminare la categoria "{name}"? I prodotti resteranno senza categoria.', { name: c.name }))) return;
@@ -42,7 +59,7 @@ export function CategoriesPage() {
     {error && <Notice tone="error">{error}</Notice>}
     {!categories.data ? <Loading /> : <div className="table-wrap"><table>
       <thead><tr><th>{t('Ordine##posizione')}</th><th>{t('Nome')}</th><th>{t('Slug')}</th><th>{t('Padre')}</th><th>{t('Home')}</th><th>{t('Stato')}</th><th></th></tr></thead>
-      <tbody>{ordered(categories.data).map((c) => <tr key={c.id}><td>{c.sort}</td><td>{c.parent_id ? <span style={{ paddingLeft: 22 }}>↳ {c.name}</span> : <strong>{c.name}</strong>}</td><td className="muted">{c.slug}</td>
+      <tbody>{ordered(categories.data).map((c) => <tr key={c.id}><td>{c.sort}</td><td>{c.parent_id ? <span style={{ paddingLeft: 22 }}>↳ {c.name}</span> : <span className="cat-name">{cover(c) ? <img className="cat-cover" src={cover(c)!} alt="" /> : <span className="cat-cover" />}<strong>{c.name}</strong></span>}</td><td className="muted">{c.slug}</td>
         <td>{categories.data?.find((p) => p.id === c.parent_id)?.name ?? '—'}</td>
         <td>{c.show_on_home ? <span className="badge">{t('In home')}</span> : ''}</td>
         <td>{c.active ? <span className="badge">{t('Visibile')}</span> : <span className="badge muted">{t('Nascosta')}</span>}</td>
@@ -58,6 +75,15 @@ export function CategoriesPage() {
         <label className="check"><input type="checkbox" checked={edit.active ?? true} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> {t('Visibile ai clienti')}</label>
         {!edit.parent_id && <label className="check"><input type="checkbox" checked={edit.show_on_home ?? false} onChange={(e) => setEdit({ ...edit, show_on_home: e.target.checked })} />
           {t('Mostra in home ({n}/8 scelte; l\'ordine segue il campo "Ordine")', { n: homeCount })}</label>}
+        {!edit.parent_id && <div className="field">{t('Foto di copertina (cerchio in home)')}
+          <div className="row">
+            {cover(edit) ? <img className="cat-cover big" src={cover(edit)!} alt="" /> : <span className="cat-cover big" />}
+            <button type="button" className="secondary" disabled={busy} onClick={() => fileInput.current?.click()}>{cover(edit) ? t('Cambia foto') : t('Carica foto')}</button>
+            {!!edit.image_path && <button type="button" className="ghost danger" onClick={() => setEdit({ ...edit, image_path: null })}>{t('Rimuovi')}</button>}
+          </div>
+          <span className="small muted">{t('Quadrata, almeno 400×400 px. Senza foto il cerchio mostra l’icona del reparto.')}</span>
+          <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { void uploadCover(e.target.files); e.target.value = ''; }} />
+        </div>}
         <button disabled={busy || !edit.name?.trim()} onClick={save}>{t('Salva')}</button>
       </div>
     </Modal>}

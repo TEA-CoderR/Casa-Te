@@ -1,5 +1,6 @@
 // Minimal stroke icon set for the console (no icon-font dependency).
 const PATHS = {
+  star: 'm12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z',
   crown: 'M3 8l4.5 4L12 5l4.5 7L21 8l-2 10H5zM5 21h14',
   gift: 'M4 11h16v10H4zM3 7h18v4H3zM12 7v14M12 7S10.5 3 8 3a2 2 0 0 0 0 4M12 7s1.5-4 4-4a2 2 0 0 1 0 4',
   history: 'M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5M12 7v5l3.5 2',

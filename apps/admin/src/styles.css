@@ -456,3 +456,12 @@ td.nowrap { white-space: nowrap; }
   .period-custom { border-left: none; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
   .date-range { font-size: 13px; padding: 0 10px; }
 }
+
+/* Category covers and featured star */
+.cat-name { display: inline-flex; align-items: center; gap: 10px; }
+.cat-cover { width: 34px; height: 34px; border-radius: 17px; background: #F1ECE4; object-fit: cover; display: inline-block; flex-shrink: 0; }
+.cat-cover.big { width: 72px; height: 72px; border-radius: 36px; }
+.star-btn { background: transparent; border: none; color: #C9C2B6; min-height: 32px; padding: 4px; }
+.star-btn:hover { color: #C99416; filter: none; }
+.star-btn.on { color: #C99416; }
+.star-btn.on svg { fill: currentColor; }

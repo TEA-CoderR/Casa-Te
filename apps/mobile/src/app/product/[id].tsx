@@ -3,7 +3,7 @@ import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useLocalSearchParams, router, Stack } from 'expo-router';
 import { formatPackSize, formatWeight } from '@casa-te/shared';
-import { formatEuro, unitPriceLabel } from '@/lib/price';
+import { discountLabel, formatEuro, unitPriceLabel } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { ProductGallery } from '@/components/ProductGallery';
 import { FavoriteButton, stockLabel } from '@/components/ProductCard';
@@ -87,6 +87,7 @@ export default function ProductDetailScreen() {
     <View style={styles.priceRow}>
       <Text style={styles.price}>{formatEuro(product.price_cents)}</Text>
       {!!product.compare_at_price_cents && <Text style={styles.compare}>{formatEuro(product.compare_at_price_cents)}</Text>}
+      {!!discountLabel(product.price_cents, product.compare_at_price_cents) && <Text style={styles.discount}>{discountLabel(product.price_cents, product.compare_at_price_cents)}</Text>}
       {unitPrice ? <Text style={styles.vat}>{unitPrice}{pack ? ` · ${pack}` : ''}</Text> : <Text style={styles.vat}>IVA inclusa</Text>}
     </View>
     <View style={styles.ratingRow} accessibilityLabel={product.rating_count ? `Valutazione ${product.rating_avg} su 5, ${product.rating_count} recensioni` : 'Nessuna recensione'}>
@@ -156,6 +157,7 @@ const styles = StyleSheet.create({
   mediaWide: { flex: 1.1, marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 18, overflow: 'hidden' },
   brand: { fontSize: 11, letterSpacing: 2.6, textTransform: 'uppercase', color: colors.text, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginBottom: 6 },
   title: { fontSize: 30, lineHeight: 33, fontFamily: fonts.serif, color: colors.text, letterSpacing: -0.2 },
+  discount: { fontSize: 13, color: '#A84E2A', fontFamily: fonts.sansSemiBold, fontWeight: '600', letterSpacing: 0.3 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 10 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
   ratingText: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans },

@@ -19,6 +19,8 @@ export type CategoryRow = {
   id: Uuid; slug: string; name: string; parent_id: Uuid | null; sort: number; active: boolean;
   /** Shown among the (max 8) departments on the shop's home page. */
   show_on_home: boolean;
+  /** Cover photo for the home circle (storage path in product-images, or https URL). */
+  image_path: string | null;
   created_at: Timestamp; updated_at: Timestamp;
 };
 

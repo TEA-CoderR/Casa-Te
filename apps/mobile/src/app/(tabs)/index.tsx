@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { CategoryRow } from '@casa-te/shared';
@@ -12,7 +12,7 @@ import { MenuSheet } from '@/components/MenuSheet';
 import { Loading, Notice } from '@/components/UI';
 import { demoHomeImage } from '@/data/productImages';
 import { cardShadow, colors, fonts } from '@/config/theme';
-import { fetchCategories, fetchProducts } from '@/lib/api';
+import { fetchCategories, fetchProducts, imageUrl } from '@/lib/api';
 import { useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { cartItemCount, useCartStore } from '@/store/cart';
@@ -28,8 +28,11 @@ export default function HomeScreen() {
   const count = cartItemCount(useCartStore((s) => s.items));
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
   const featured = useQuery(selected ? `featured:${selected.id}` : null,
-    // Featured products first, then the rest of the catalogue, so the section is never empty.
-    () => fetchProducts({ storeId: selected?.id ?? null, sort: 'featured', pageSize: columns * 2 }));
+    // Products starred "In evidenza" in the admin; while none is starred, the start of the catalogue.
+    async () => {
+      const picked = await fetchProducts({ storeId: selected?.id ?? null, featured: true, sort: 'featured', pageSize: columns * 2 });
+      return picked.items.length ? picked : fetchProducts({ storeId: selected?.id ?? null, sort: 'featured', pageSize: columns * 2 });
+    });
   const value = useQuery(selected ? `value:${selected.id}` : null,
     () => fetchProducts({ storeId: selected?.id ?? null, sort: 'price_asc', pageSize: columns * 3 }));
   // Rows end on a full line, and the second rail never repeats products already featured above.
@@ -57,7 +60,11 @@ export default function HomeScreen() {
       style={({ pressed }) => [styles.category, width ? { width } : { minWidth: 82 }, { opacity: pressed ? 0.7 : 1 }]}
       onPress={() => router.push({ pathname: '/catalog', params: { category: category.id } })}>
       <View style={[styles.circle, { backgroundColor: tones[index % tones.length] }, wide && { width: 104, height: 104, borderRadius: 52 }]}>
-        <CategoryIcon slug={category.slug} name={category.name} size={wide ? 44 : 30} strokeWidth={1.25} />
+        {category.image_path
+          // Cover photo from the admin; white studio backgrounds melt into the stone tone.
+          ? <Image source={{ uri: imageUrl(category.image_path) ?? undefined }} resizeMode="cover" accessibilityIgnoresInvertColors
+              style={[StyleSheet.absoluteFill, { mixBlendMode: 'multiply' } as object]} />
+          : <CategoryIcon slug={category.slug} name={category.name} size={wide ? 44 : 30} strokeWidth={1.25} />}
       </View>
       <Text style={[styles.categoryLabel, wide && { fontSize: 16 }]} numberOfLines={1}>{category.name}</Text>
     </Pressable>;
@@ -180,7 +187,7 @@ const styles = StyleSheet.create({
   searchText: { fontSize: 15, color: colors.muted, fontFamily: fonts.sans },
   categories: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   category: { alignItems: 'center', paddingHorizontal: 4, gap: 8 },
-  circle: { width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E9E2D6' },
+  circle: { width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E9E2D6', overflow: 'hidden' },
   categoryLabel: { fontSize: 14.5, fontFamily: fonts.serif, color: colors.text, textAlign: 'center' },
   section: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 26, marginBottom: 12 },
   sectionTitle: { fontSize: 25, fontFamily: fonts.serif, color: colors.text },
