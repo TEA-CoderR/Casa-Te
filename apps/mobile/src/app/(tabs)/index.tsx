@@ -47,12 +47,15 @@ export default function HomeScreen() {
   const allTop = (categories.data ?? []).filter((c) => !c.parent_id);
   const chosen = allTop.filter((c) => c.show_on_home);
   const topCategories = (chosen.length ? chosen : allTop).slice(0, 8);
-  // The photo is 3:2 with the objects on the right: on narrow screens anchor it right instead of centring on the wall.
+  // The photo is 4:3 with the table and the view on the right: on narrow screens anchor it right instead of centring on the wall.
   const heroHeight = wide ? 520 : 330;
-  const photoWidth = heroHeight * 1.5;
+  const photoWidth = heroHeight * (1448 / 1086);
+  // On wide screens the photo is cropped top and bottom: keep the skyline (upper third) and the table in view.
   const heroImageStyle = heroWidth && heroWidth < photoWidth
     ? { width: photoWidth, height: heroHeight, left: heroWidth - photoWidth, borderRadius: wide ? 18 : 0 }
-    : wide ? { borderRadius: 18 } : undefined;
+    : heroWidth
+      ? { width: heroWidth, height: heroWidth * (1086 / 1448), top: -(heroWidth * (1086 / 1448) - heroHeight) * 0.3, borderRadius: wide ? 18 : 0 }
+      : wide ? { borderRadius: 18 } : undefined;
   // Each department gets a line drawing on the same warm stone tone, like the photo tiles of the design.
   const tones = ['#F1ECE4'];
   const categoryItem = (category: CategoryRow, index: number, width?: `${number}%`) =>
