@@ -20,8 +20,12 @@ export const colors = {
   line: '#ECE6DB',
   /** Desktop print rules (hairlines between catalogue rows and sections). */
   rule: '#E4DCCD',
-  /** Warm stone plate behind product photographs. */
+  /** Warm stone ground (footer, closing tiles, hover fills). */
   stone: '#F4EFE6',
+  /** Product photographs always sit on white, like their studio backgrounds (owner's choice). */
+  photo: '#FFFFFF',
+  /** Thin frame around white photo plates on white pages. */
+  photoLine: '#ECE7DF',
   badge: '#B3261E',
   /** Discounts: solid red label and red sale price, meant to stand out. */
   sale: '#D62828',
