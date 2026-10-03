@@ -18,6 +18,8 @@ import { SiteFooter } from './SiteFooter';
 import { homeDepartments, transition, Wrap, type WebState } from './shared';
 
 const PHOTO_RATIO = 1086 / 1448;
+/** Department tiles are hidden for now (owner is trying the home without them); flip to bring them back. */
+const SHOW_DEPARTMENTS = false;
 const articles = (n: number) => `${n} ${n === 1 ? 'articolo' : 'articoli'}`;
 
 /** Desktop home as a printed catalogue: cover, department tiles, then product spreads. */
@@ -94,7 +96,7 @@ export function HomeDesktop() {
       </Wrap>
     </ImageBackground>
 
-    {!!departments.length && <Departments departments={departments} total={total} countsReady={!!counts.data}
+    {SHOW_DEPARTMENTS && !!departments.length && <Departments departments={departments} total={total} countsReady={!!counts.data}
       cover={(d) => d.image_path ? imageUrl(d.image_path) : covers.data?.[d.id]?.image ?? null}
       sku={(d) => covers.data?.[d.id]?.sku ?? null} />}
 
