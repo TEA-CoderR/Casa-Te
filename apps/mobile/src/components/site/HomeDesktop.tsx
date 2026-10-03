@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useState } from 'react';
+import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { CategoryRow } from '@casa-te/shared';
@@ -20,7 +20,7 @@ import { homeDepartments, transition, Wrap, type WebState } from './shared';
 const PHOTO_RATIO = 1086 / 1448;
 const articles = (n: number) => `${n} ${n === 1 ? 'articolo' : 'articoli'}`;
 
-/** Desktop home as a printed catalogue: cover, contents of the departments, then product spreads. */
+/** Desktop home as a printed catalogue: cover, department tiles, then product spreads. */
 export function HomeDesktop() {
   const { width } = useLayout();
   const { height } = useWindowDimensions();
@@ -29,7 +29,6 @@ export function HomeDesktop() {
   const store = storeShortName(selected);
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
   const counts = useQuery('category-counts', fetchCategoryCounts);
-  const covers = useQuery('category-covers', fetchCategoryCovers);
   const featured = useQuery(selected ? `featured-desk:${selected.id}` : null, async () => {
     // Products starred "In evidenza" in the admin; while none is starred, the start of the catalogue.
     const picked = await fetchProducts({ storeId: selected?.id ?? null, featured: true, sort: 'featured', pageSize: 5 });
@@ -43,12 +42,15 @@ export function HomeDesktop() {
   const total = (d: CategoryRow) => (counts.data?.[d.id] ?? 0)
     + all.filter((c) => c.parent_id === d.id).reduce((s, c) => s + (counts.data?.[c.id] ?? 0), 0);
   const featuredItems = featured.data?.items ?? [];
+  // Department photos avoid the products already shown in "In evidenza".
+  const featuredSkus = featuredItems.map((p) => p.sku);
+  const covers = useQuery(featured.data ? `category-covers:${featuredSkus.join(',')}` : null, () => fetchCategoryCovers(featuredSkus));
   const featuredIds = new Set(featuredItems.map((p) => p.id));
   const perRow = width >= 1280 ? 5 : 4;
   const valueItems = (value.data?.items ?? []).filter((p) => !featuredIds.has(p.id)).slice(0, perRow);
 
   // Cover: the owner's photograph edge to edge, cropped to keep the skyline and the table.
-  // The cover fills the window under the masthead, so the fold falls cleanly before the contents.
+  // The cover fills the window under the masthead, so the fold falls cleanly before the departments.
   const coverHeight = Math.round(Math.max(460, Math.min(720, height - 133)));
   const photoHeight = width * PHOTO_RATIO;
   const coverImage = photoHeight > coverHeight
@@ -92,7 +94,7 @@ export function HomeDesktop() {
       </Wrap>
     </ImageBackground>
 
-    {!!departments.length && <Contents departments={departments} total={total} countsReady={!!counts.data}
+    {!!departments.length && <Departments departments={departments} total={total} countsReady={!!counts.data}
       cover={(d) => d.image_path ? imageUrl(d.image_path) : covers.data?.[d.id]?.image ?? null}
       sku={(d) => covers.data?.[d.id]?.sku ?? null} />}
 
@@ -161,57 +163,50 @@ function MoreLink({ label, onPress }: { label: string; onPress: () => void }) {
   </Pressable>;
 }
 
-/** The contents page: one line per department, the stone plate beside it shows the line under the pointer. */
-function Contents({ departments, total, countsReady, cover, sku }: {
+/** Departments as photo tiles on stone plates, in one row when they fit. */
+function Departments({ departments, total, countsReady, cover, sku }: {
   departments: CategoryRow[]; total: (d: CategoryRow) => number; countsReady: boolean;
   cover: (d: CategoryRow) => string | null; sku: (d: CategoryRow) => string | null;
 }) {
-  const [activeId, setActiveId] = useState(departments[0].id);
-  const active = departments.find((d) => d.id === activeId) ?? departments[0];
-  const fade = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    fade.setValue(0.15);
-    Animated.timing(fade, { toValue: 1, duration: 420, useNativeDriver: false }).start();
-  }, [activeId, fade]);
   const open = (d: CategoryRow) => router.push({ pathname: '/catalog', params: { category: d.id } });
-  const image = cover(active);
-  const all = departments.reduce((s, d) => s + total(d), 0);
+  const tile = (d: CategoryRow) => {
+    const image = cover(d);
+    return <Pressable key={d.id} onPress={() => open(d)} accessibilityRole="link"
+      accessibilityLabel={`${d.name}${countsReady ? `, ${articles(total(d))}` : ''}`} style={{ flex: 1 }}>
+      {({ hovered }: WebState) => <View style={{ flex: 1 }}>
+        <View style={styles.tilePlate}>
+          <View style={[StyleSheet.absoluteFill, styles.tileInner, hovered && { transform: [{ scale: 1.04 }] }, transition('transform', 700)]}>
+            {image
+              ? <Image source={{ uri: image }} resizeMode={d.image_path ? 'cover' : 'contain'} accessibilityIgnoresInvertColors
+                  style={[d.image_path ? StyleSheet.absoluteFill : { width: '72%', height: '72%' },
+                    { mixBlendMode: 'multiply' } as object]} />
+              : sku(d)
+                ? <View style={{ width: '70%' }}><ProductImage uri={null} sku={sku(d)} label={d.name} inset={0} blend /></View>
+                : <CategoryIcon slug={d.slug} name={d.name} size={72} strokeWidth={0.9} />}
+          </View>
+        </View>
+        <View style={styles.tileCaption}>
+          <Text style={[styles.tileName, hovered && { color: colors.green }, transition('color')]} numberOfLines={1}>{d.name}</Text>
+          <View style={[{ opacity: hovered ? 1 : 0.35 }, hovered && { transform: [{ translateX: 3 }] }, transition('opacity, transform')]}>
+            <Icon name="arrow" size={18} color={colors.green} strokeWidth={1.5} /></View>
+        </View>
+        {countsReady && <Text style={styles.tileCount}>{articles(total(d))}</Text>}
+      </View>}
+    </Pressable>;
+  };
+  const rows = (list: CategoryRow[], perRow: number) => Array.from({ length: Math.ceil(list.length / perRow) }, (_, r) =>
+    <View key={r} style={styles.tileRow}>
+      {list.slice(r * perRow, r * perRow + perRow).map((d) => tile(d))}
+      {Array.from({ length: perRow - list.slice(r * perRow, r * perRow + perRow).length }, (_, k) => <View key={`pad${k}`} style={{ flex: 1 }} />)}
+    </View>);
 
   return <Wrap style={styles.section}>
     <View style={styles.sectionHead}>
-      <Text style={styles.h2} accessibilityRole="header">Reparti</Text>
-      {countsReady && <Text style={styles.headNote}>{departments.length} reparti · {articles(all)}</Text>}
+      <Text style={styles.h2} accessibilityRole="header">Scegli il reparto</Text>
+      <MoreLink label="Tutti i prodotti" onPress={() => router.push('/catalog')} />
     </View>
-    <View style={styles.contents}>
-      <Pressable onPress={() => open(active)} accessibilityRole="link" accessibilityLabel={`Apri ${active.name}`} style={styles.contentsPlate}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.plateInner, { opacity: fade }]}>
-          {image
-            ? <Image source={{ uri: image }} resizeMode={active.image_path ? 'cover' : 'contain'} accessibilityIgnoresInvertColors
-                style={[active.image_path ? StyleSheet.absoluteFill : styles.plateImage, { mixBlendMode: 'multiply' } as object]} />
-            : sku(active)
-              ? <View style={{ width: '76%' }}><ProductImage uri={null} sku={sku(active)} label={active.name} inset={0} blend /></View>
-              : <CategoryIcon slug={active.slug} name={active.name} size={120} strokeWidth={0.8} />}
-        </Animated.View>
-        <View style={styles.plateCaption}>
-          <Text style={styles.plateName}>{active.name}</Text>
-          <Text style={styles.plateCount}>{countsReady ? `Vedi ${articles(total(active))}` : 'Apri il reparto'}  →</Text>
-        </View>
-      </Pressable>
-      <View style={styles.contentsList} accessibilityRole="list">
-        {departments.map((d, i) => {
-          const on = d.id === active.id;
-          return <Pressable key={d.id} onPress={() => open(d)} onHoverIn={() => setActiveId(d.id)} onFocus={() => setActiveId(d.id)}
-            accessibilityRole="link" accessibilityLabel={`${d.name}${countsReady ? `, ${articles(total(d))}` : ''}`}
-            style={[styles.line, i === departments.length - 1 && { borderBottomWidth: 1 }]}>
-            <Text style={[styles.lineName, on && styles.lineNameOn, transition('color, transform', 320)]} numberOfLines={1}>{d.name}</Text>
-            <View style={styles.lineEnd}>
-              {countsReady && <Text style={[styles.lineCount, on && { color: colors.green }]}>{articles(total(d))}</Text>}
-              <View style={[{ opacity: on ? 1 : 0 }, transition('opacity')]}><Icon name="arrow" size={20} color={colors.green} strokeWidth={1.4} /></View>
-            </View>
-          </Pressable>;
-        })}
-      </View>
-    </View>
+    {/* One row up to six departments (unlike the featured spread below), rows of four beyond that. */}
+    <View style={{ gap: 40 }}>{rows(departments, departments.length <= 6 ? departments.length : 4)}</View>
   </Wrap>;
 }
 
@@ -250,20 +245,12 @@ const styles = StyleSheet.create({
   more: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 6 },
   moreText: { fontSize: 14, color: colors.green, fontFamily: fonts.sansSemiBold, fontWeight: '600', letterSpacing: 0.2 },
 
-  contents: { flexDirection: 'row', gap: 56, alignItems: 'stretch' },
-  contentsPlate: { flex: 5, minHeight: 560, backgroundColor: colors.stone, borderRadius: 4, overflow: 'hidden' },
-  plateInner: { alignItems: 'center', justifyContent: 'center' },
-  plateImage: { width: '72%', height: '72%' },
-  plateCaption: { position: 'absolute', left: 28, right: 28, bottom: 24, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  plateName: { fontSize: 30, fontFamily: fonts.serif, color: colors.text },
-  plateCount: { fontSize: 13.5, color: colors.green, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
-  contentsList: { flex: 7, justifyContent: 'center' },
-  line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 92, borderTopWidth: 1, borderColor: colors.rule },
-  lineName: { flexShrink: 1, fontSize: 50, lineHeight: 58, letterSpacing: -0.6, fontFamily: fonts.serif, color: colors.text },
-  lineNameOn: { color: colors.green, transform: [{ translateX: 10 }] },
-  lineEnd: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingLeft: 24 },
-  lineCount: { fontSize: 13.5, color: colors.muted, fontFamily: fonts.sans, fontVariant: ['tabular-nums'] },
-
+  tileRow: { flexDirection: 'row', gap: 28 },
+  tilePlate: { backgroundColor: colors.stone, borderRadius: 4, overflow: 'hidden', aspectRatio: 0.88 },
+  tileInner: { alignItems: 'center', justifyContent: 'center' },
+  tileCaption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, gap: 12 },
+  tileName: { flexShrink: 1, fontSize: 26, lineHeight: 30, fontFamily: fonts.serif, color: colors.text },
+  tileCount: { fontSize: 13.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
   spread: { flexDirection: 'row', gap: 40 },
   closer: { backgroundColor: colors.stone, borderRadius: 4, padding: 36, justifyContent: 'space-between', minHeight: 260 },
   closerTitle: { fontSize: 34, lineHeight: 38, letterSpacing: -0.5, fontFamily: fonts.serif, color: colors.text },
