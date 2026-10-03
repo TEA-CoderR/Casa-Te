@@ -19,3 +19,10 @@ export function formatShipping(cents: number): string {
 export function unitPriceLabel(priceCents: number, unitQuantity: number | null, unit: string | null): string | null {
   return spaced(unitPriceLabelShared(priceCents, unitQuantity, unit));
 }
+
+/** Discount shown next to a struck-through price, e.g. "-34%" (display only; rounded down, never overstated). */
+export function discountLabel(priceCents: number, compareAtCents: number | null | undefined): string | null {
+  if (!compareAtCents || compareAtCents <= priceCents) return null;
+  const pct = Math.floor(((compareAtCents - priceCents) * 100) / compareAtCents);
+  return pct >= 1 ? `-${pct}%` : null;
+}

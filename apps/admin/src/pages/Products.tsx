@@ -5,6 +5,7 @@ import { SUPABASE_URL, supabase, unwrap } from '../lib/supabase';
 import { useAsync, useCategories, useDebounced, useLowStockThreshold } from '../lib/data';
 import { downloadCsv, toCsv } from '../lib/csv';
 import { Empty, Loading, Notice, PageHead, Pager } from '../components/ui';
+import { Icon } from '../components/Icon';
 import { t } from '../lib/i18n';
 
 type Row = ProductRow & { product_images: Array<{ path: string; sort: number }>; inventory: Array<{ quantity: number }> };
@@ -30,6 +31,11 @@ export function ProductsPage() {
     return { rows: unwrap(res) as Row[], count: res.count ?? 0 };
   }, [q, categoryId, status, page]);
 
+  // Star toggles "In evidenza" (shown first on the shop's home page) without opening the product.
+  const toggleFeatured = async (p: Row) => {
+    const { error: err } = await supabase.from('products').update({ featured: !p.featured }).eq('id', p.id);
+    if (!err) void products.reload();
+  };
   const catName = (id: string | null) => categories.data?.find((c) => c.id === id)?.name ?? '—';
 
   const exportCatalog = async () => {
@@ -59,11 +65,14 @@ export function ProductsPage() {
     {products.error && <Notice tone="error">{products.error}</Notice>}
     {!products.data ? <Loading /> : !products.data.rows.length ? <Empty>{t('Nessun prodotto. Importa il catalogo da CSV o crea un prodotto.')}</Empty> :
       <div className="table-wrap"><table>
-        <thead><tr><th></th><th>{t('Prodotto')}</th><th>{t('Categoria')}</th><th className="num">{t('Prezzo')}</th><th className="num">{t('Peso')}</th><th className="num">{t('Stock totale')}</th><th>{t('Stato')}</th></tr></thead>
+        <thead><tr><th><span className="sr-only">{t('In evidenza')}</span></th><th></th><th>{t('Prodotto')}</th><th>{t('Categoria')}</th><th className="num">{t('Prezzo')}</th><th className="num">{t('Peso')}</th><th className="num">{t('Stock totale')}</th><th>{t('Stato')}</th></tr></thead>
         <tbody>{products.data.rows.map((p) => {
           const img = productImageUrl(SUPABASE_URL, [...p.product_images].sort((a, b) => a.sort - b.sort)[0]?.path);
           const stock = p.inventory.reduce((s, i) => s + i.quantity, 0);
           return <tr key={p.id} className="clickable" onClick={() => navigate(`/products/${p.id}`)}>
+            <td style={{ width: 40 }} onClick={(e) => e.stopPropagation()}><button className={`star-btn ${p.featured ? 'on' : ''}`} aria-pressed={p.featured}
+              title={p.featured ? t('Togli da «In evidenza»') : t('Metti «In evidenza» nella home')} aria-label={p.featured ? t('Togli da «In evidenza»') : t('Metti «In evidenza» nella home')}
+              onClick={() => toggleFeatured(p)}><Icon name="star" size={18} /></button></td>
             <td style={{ width: 56 }}>{img ? <img className="thumb" src={img} alt="" /> : <div className="thumb" />}</td>
             <td><Link to={`/products/${p.id}`} className="row-link" onClick={(e) => e.stopPropagation()}>{p.name}</Link><div className="small muted">{p.sku}{p.barcode ? ` · ${p.barcode}` : ''}{p.brand ? ` · ${p.brand}` : ''}</div></td>
             <td>{catName(p.category_id)}</td>
