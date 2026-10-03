@@ -12,6 +12,7 @@ import { fetchCategories, fetchFacets, fetchProducts, type CatalogProduct } from
 import { useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { SiteFooter } from '@/components/site/SiteFooter';
+import { useRecentSearches } from '@/store/recentSearches';
 import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared';
 
 export default function CatalogScreen() {
@@ -32,6 +33,7 @@ export default function CatalogScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
+  const recent = useRecentSearches();
 
   useEffect(() => { if (params.category !== undefined) setCategoryId(params.category || null); }, [params.category]);
   useEffect(() => { if (params.search) setSearchOpen(true); }, [params.search]);
@@ -133,9 +135,25 @@ export default function CatalogScreen() {
     </View>}
     {searchOpen && !wide && <View style={styles.search}><Icon name="search" size={19} color={colors.muted} />
       <TextInput value={query} onChangeText={setQuery} placeholder="Cerca per nome, marca o codice..." placeholderTextColor={colors.faint} autoFocus={!params.q}
-        accessibilityLabel="Cerca prodotti" style={styles.input} returnKeyType="search" autoCorrect={false} />
+        accessibilityLabel="Cerca prodotti" style={styles.input} returnKeyType="search" autoCorrect={false}
+        // A search counts as "recent" once confirmed or left with results (e.g. tapping a product).
+        onSubmitEditing={() => recent.remember(query)} onBlur={() => { if (shown.length) recent.remember(query); }} />
       {!!query && <Pressable accessibilityLabel="Cancella ricerca" onPress={() => setQuery('')} style={{ padding: 10 }}>
         <Icon name="close" size={16} /></Pressable>}
+    </View>}
+    {searchOpen && !wide && !query && recent.terms.length > 0 && <View style={styles.recent}>
+      <View style={styles.recentHead}>
+        <Text style={styles.recentTitle}>Ricerche recenti</Text>
+        <Pressable onPress={recent.clear} accessibilityRole="button" hitSlop={8}><Text style={styles.recentClear}>Cancella</Text></Pressable>
+      </View>
+      {recent.terms.map((t) => <View key={t} style={styles.recentRow}>
+        <Pressable onPress={() => { setQuery(t); setDebounced(t); recent.remember(t); }} accessibilityRole="button"
+          accessibilityLabel={`Cerca ancora ${t}`} style={styles.recentTerm}>
+          <Icon name="search" size={16} color={colors.muted} /><Text style={styles.recentText} numberOfLines={1}>{t}</Text>
+        </Pressable>
+        <Pressable onPress={() => recent.forget(t)} accessibilityRole="button" accessibilityLabel={`Rimuovi ${t} dalle ricerche recenti`} hitSlop={6} style={{ padding: 8 }}>
+          <Icon name="close" size={14} color={colors.muted} /></Pressable>
+      </View>)}
     </View>}
     {(!wide || children.length > 0) && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.tabs, wide && styles.tabsWide]} contentContainerStyle={{ paddingHorizontal: wide ? 0 : 20, gap: wide ? 28 : 18 }}>
       {tabs.map((item) => {
@@ -199,6 +217,13 @@ const styles = StyleSheet.create({
   viewButton: { width: 32, height: 30, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   viewButtonOn: { backgroundColor: colors.cream },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 8 },
+  recent: { marginTop: 4, marginBottom: 10 },
+  recentHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
+  recentTitle: { fontSize: 13, color: colors.muted, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  recentClear: { fontSize: 13, color: colors.green, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  recentRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: colors.line },
+  recentTerm: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 46 },
+  recentText: { flex: 1, fontSize: 15, color: colors.text, fontFamily: fonts.sans },
   deskHead: { paddingTop: 36, paddingBottom: 8, gap: 14 },
   crumbs: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   crumb: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
