@@ -16,7 +16,7 @@ import { useRecentSearches } from '@/store/recentSearches';
 import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared';
 
 export default function CatalogScreen() {
-  const params = useLocalSearchParams<{ category?: string; q?: string; search?: string; sort?: string }>();
+  const params = useLocalSearchParams<{ category?: string; q?: string; search?: string; sort?: string; offerte?: string }>();
   const { selected } = useStores();
   const { columns, wide } = useLayout();
   const [query, setQuery] = useState(params.q ?? '');
@@ -36,6 +36,9 @@ export default function CatalogScreen() {
   const recent = useRecentSearches();
 
   useEffect(() => { if (params.category !== undefined) setCategoryId(params.category || null); }, [params.category]);
+  // ?offerte=1: only discounted products ("In offerta"), within the chosen category.
+  const [onSale, setOnSale] = useState(params.offerte === '1');
+  useEffect(() => { setOnSale(params.offerte === '1'); }, [params.offerte]);
   useEffect(() => { if (params.search) setSearchOpen(true); }, [params.search]);
   useEffect(() => { if (params.sort === 'price_asc') setFilters((f) => ({ ...f, sort: 'price_asc' })); }, [params.sort]);
   // The desktop masthead searches by changing ?q=.
@@ -56,14 +59,14 @@ export default function CatalogScreen() {
     if (current.parent_id) return [current.id];
     return [current.id, ...all.filter((c) => c.parent_id === current.id).map((c) => c.id)];
   }, [current, all]);
-  const title = parent?.name ?? 'Categorie';
+  const title = onSale ? (parent ? `Offerte · ${parent.name}` : 'In offerta') : parent?.name ?? 'Categorie';
   const facets = useQuery(`facets:${scopeIds?.join(',') ?? 'all'}`, () => fetchFacets(scopeIds));
 
   const request = (p: number) => fetchProducts({
-    storeId: selected?.id ?? null, categoryIds: scopeIds ?? undefined, search: debounced, sort: filters.sort, page: p,
+    storeId: selected?.id ?? null, categoryIds: scopeIds ?? undefined, search: debounced, sort: filters.sort, page: p, onSale,
     brands: filters.brands, colors: filters.colors, priceMin: filters.price.min, priceMax: filters.price.max,
   });
-  const key = JSON.stringify([selected?.id, scopeIds, debounced, filters.sort, filters.brands, filters.colors, filters.price]);
+  const key = JSON.stringify([selected?.id, scopeIds, debounced, onSale, filters.sort, filters.brands, filters.colors, filters.price]);
   // Reload from page 0 whenever the filters change.
   useEffect(() => {
     let active = true;
@@ -108,13 +111,14 @@ export default function CatalogScreen() {
       <Pressable onPress={() => router.push('/')} accessibilityRole="link">
         {({ hovered }: WebState) => <Text style={[styles.crumb, hovered && { color: colors.green }]}>Home</Text>}</Pressable>
       <Text style={styles.crumbSep}>/</Text>
-      <Pressable onPress={() => { setQuery(''); selectCategory(null); }} accessibilityRole="link">
-        {({ hovered }: WebState) => <Text style={[styles.crumb, hovered && { color: colors.green }, !parent && !searching && styles.crumbOn]}>Catalogo</Text>}</Pressable>
+      <Pressable onPress={() => { setQuery(''); setOnSale(false); router.setParams({ offerte: undefined }); selectCategory(null); }} accessibilityRole="link">
+        {({ hovered }: WebState) => <Text style={[styles.crumb, hovered && { color: colors.green }, !parent && !searching && !onSale && styles.crumbOn]}>Catalogo</Text>}</Pressable>
+      {onSale && !searching && <><Text style={styles.crumbSep}>/</Text><Text style={[styles.crumb, styles.crumbOn]}>In offerta</Text></>}
       {!!parent && !searching && <><Text style={styles.crumbSep}>/</Text><Text style={[styles.crumb, styles.crumbOn]}>{parent.name}</Text></>}
     </View>
     <View style={styles.deskTitleRow}>
       <Text style={styles.deskTitle} accessibilityRole="header" numberOfLines={1}>
-        {searching ? `«${debounced.trim()}»` : parent?.name ?? 'Tutti i prodotti'}</Text>
+        {searching ? `«${debounced.trim()}»` : onSale ? title : parent?.name ?? 'Tutti i prodotti'}</Text>
       <Text style={styles.deskCount}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}`}</Text>
     </View>
     {searching && <Pressable onPress={() => { setQuery(''); setSearchOpen(false); router.setParams({ q: undefined }); }} accessibilityRole="button" style={{ alignSelf: 'flex-start' }}>

@@ -20,7 +20,7 @@ import { Overlay } from './Overlay';
  */
 export function SiteHeader() {
   const pathname = usePathname();
-  const params = useGlobalSearchParams<{ category?: string; q?: string }>();
+  const params = useGlobalSearchParams<{ category?: string; q?: string; offerte?: string }>();
   const { selected } = useStores();
   const count = cartItemCount(useCartStore((s) => s.items));
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
@@ -111,9 +111,14 @@ export function SiteHeader() {
     <View nativeID="site-nav" style={[styles.navBand, { zIndex: 1 }]}>
       <Wrap style={styles.nav}>
         <View style={styles.navLinks} accessibilityRole="menubar">
-          {navLink('all', 'Tutti i prodotti', onCatalog && !activeId && !params.q, () => router.push({ pathname: '/catalog', params: { category: '' } }))}
+          {navLink('all', 'Tutti i prodotti', onCatalog && !activeId && !params.q && params.offerte !== '1', () => router.push({ pathname: '/catalog', params: { category: '' } }))}
           {departments.map((d) => navLink(d.id, d.name, activeId === d.id,
             () => router.push({ pathname: '/catalog', params: { category: d.id } }), d.id))}
+          <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1', category: '' } })} accessibilityRole="link"
+            onHoverIn={() => hoverMenu(null)} onHoverOut={cancelSwitch}
+            style={({ hovered }: WebState) => [styles.navLink, (hovered || params.offerte === '1') && { borderColor: colors.sale }, transition('border-color')]}>
+            <Text style={[styles.navText, { color: colors.sale, fontFamily: fonts.sansSemiBold, fontWeight: '600' }]}>Offerte</Text>
+          </Pressable>
         </View>
         <Pressable onPress={() => setStoreSheet(true)} accessibilityRole="button"
           accessibilityLabel={`Negozio per il ritiro: ${storeShortName(selected) || 'nessuno'}. Cambia negozio`} style={styles.store}>
