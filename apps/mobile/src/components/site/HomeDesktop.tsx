@@ -11,7 +11,7 @@ import { CategoryIcon } from '@/components/CategoryIcon';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Loading, Notice } from '@/components/UI';
 import { demoHomeImage } from '@/data/productImages';
-import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchProducts, imageUrl, type CatalogProduct } from '@/lib/api';
+import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchOffers, fetchProducts, imageUrl, type CatalogProduct } from '@/lib/api';
 import { useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { SiteFooter } from './SiteFooter';
@@ -36,8 +36,8 @@ export function HomeDesktop() {
     const picked = await fetchProducts({ storeId: selected?.id ?? null, featured: true, sort: 'featured', pageSize: 5 });
     return picked.items.length >= 3 ? picked : fetchProducts({ storeId: selected?.id ?? null, sort: 'featured', pageSize: 5 });
   });
-  const value = useQuery(selected ? `value-desk:${selected.id}` : null,
-    () => fetchProducts({ storeId: selected?.id ?? null, sort: 'price_asc', pageSize: 12 }));
+  const perRow = width >= 1280 ? 5 : 4;
+  const offers = useQuery(selected ? `offers-desk:${selected.id}:${perRow}` : null, () => fetchOffers(selected?.id ?? null, perRow));
 
   const all = categories.data ?? [];
   const departments = homeDepartments(all);
@@ -47,9 +47,7 @@ export function HomeDesktop() {
   // Department photos avoid the products already shown in "In evidenza".
   const featuredSkus = featuredItems.map((p) => p.sku);
   const covers = useQuery(featured.data ? `category-covers:${featuredSkus.join(',')}` : null, () => fetchCategoryCovers(featuredSkus));
-  const featuredIds = new Set(featuredItems.map((p) => p.id));
-  const perRow = width >= 1280 ? 5 : 4;
-  const valueItems = (value.data?.items ?? []).filter((p) => !featuredIds.has(p.id)).slice(0, perRow);
+  const offerItems = offers.data ?? [];
 
   // Cover: the owner's photograph edge to edge, cropped to keep the skyline and the table.
   // The cover fills the window under the masthead, so the fold falls cleanly before the departments.
@@ -136,17 +134,21 @@ export function HomeDesktop() {
       </Wrap>
     </View>
 
-    {valueItems.length >= 3 && <Wrap style={styles.section}>
+    {/* Discounts: the biggest first; the section disappears when nothing is on offer. */}
+    {offerItems.length > 0 && <Wrap style={styles.section}>
       <View style={styles.sectionHead}>
-        <Text style={styles.h2} accessibilityRole="header">Piccoli prezzi</Text>
-        {valueItems.length >= perRow && <MoreLink label="Dal prezzo più basso" onPress={() => router.push({ pathname: '/catalog', params: { sort: 'price_asc' } })} />}
+        <View style={styles.offerHead}>
+          <Text style={styles.h2} accessibilityRole="header">In offerta</Text>
+          <View style={styles.offerTag}><Text style={styles.offerTagText}>Sconti</Text></View>
+        </View>
+        {offerItems.length >= perRow && <MoreLink label="Tutte le offerte" onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1' } })} />}
       </View>
       <View style={styles.row}>
-        {valueItems.map((p) => <View key={p.id} style={{ flex: 1, flexDirection: 'row' }}><ProductCard product={p} /></View>)}
-        {valueItems.length < perRow && <Pressable onPress={() => router.push({ pathname: '/catalog', params: { sort: 'price_asc' } })} accessibilityRole="link"
-          style={({ hovered }: WebState) => [styles.closer, { flex: perRow - valueItems.length }, hovered && { backgroundColor: '#EDE6DA' }, transition('background-color')]}>
-          <Text style={styles.closerTitle}>Tutto il catalogo,{'\n'}dal prezzo più basso.</Text>
-          <View style={styles.more}><Text style={styles.moreText}>Sfoglia</Text><Icon name="arrow" size={16} color={colors.green} strokeWidth={1.6} /></View>
+        {offerItems.map((p) => <View key={p.id} style={{ flex: 1, flexDirection: 'row' }}><ProductCard product={p} /></View>)}
+        {offerItems.length < perRow && <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1' } })} accessibilityRole="link"
+          style={({ hovered }: WebState) => [styles.closer, { flex: perRow - offerItems.length }, hovered && { backgroundColor: '#F7E3E1' }, transition('background-color')]}>
+          <Text style={styles.closerTitle}>Tutte le offerte{'\n'}del momento.</Text>
+          <View style={styles.more}><Text style={[styles.moreText, { color: colors.sale }]}>Scopri</Text><Icon name="arrow" size={16} color={colors.sale} strokeWidth={1.6} /></View>
         </Pressable>}
       </View>
     </Wrap>}
@@ -254,7 +256,10 @@ const styles = StyleSheet.create({
   tileName: { flexShrink: 1, fontSize: 26, lineHeight: 30, fontFamily: fonts.serif, color: colors.text },
   tileCount: { fontSize: 13.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
   spread: { flexDirection: 'row', gap: 40 },
-  closer: { backgroundColor: colors.stone, borderRadius: 4, padding: 36, justifyContent: 'space-between', minHeight: 260 },
+  closer: { backgroundColor: '#FBEDEB', borderRadius: 4, padding: 36, justifyContent: 'space-between', minHeight: 260 },
+  offerHead: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  offerTag: { backgroundColor: colors.sale, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4, marginTop: 8 },
+  offerTagText: { color: '#FFFFFF', fontSize: 14, fontFamily: fonts.sansSemiBold, fontWeight: '700', letterSpacing: 0.3 },
   closerTitle: { fontSize: 34, lineHeight: 38, letterSpacing: -0.5, fontFamily: fonts.serif, color: colors.text },
   row: { flexDirection: 'row', gap: 28 },
 

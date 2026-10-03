@@ -73,12 +73,21 @@ export type ProductQuery = {
   priceMax?: number | null;
   search?: string;
   featured?: boolean;
+  /** Only products with a crossed-out "before" price (discounted). */
+  onSale?: boolean;
   /** Only these products (favourites). */
   ids?: string[];
   sort?: 'featured' | 'price_asc' | 'price_desc' | 'name';
   page?: number;
   pageSize?: number;
 };
+
+/** Discounted products for the "In offerta" rows, biggest discount first (display only). */
+export async function fetchOffers(storeId: string | null, limit: number): Promise<CatalogProduct[]> {
+  const { items } = await fetchProducts({ storeId, onSale: true, pageSize: 60 });
+  const pct = (p: CatalogProduct) => p.compare_at_price_cents ? (p.compare_at_price_cents - p.price_cents) / p.compare_at_price_cents : 0;
+  return items.filter((p) => pct(p) > 0).sort((a, b) => pct(b) - pct(a)).slice(0, limit);
+}
 
 export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogProduct[]; hasMore: boolean; total: number | null }> {
   const pageSize = q.pageSize ?? 40;
@@ -92,6 +101,7 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
   if (q.priceMin != null) query = query.gte('price_cents', q.priceMin);
   if (q.priceMax != null) query = query.lte('price_cents', q.priceMax);
   if (q.featured) query = query.eq('featured', true);
+  if (q.onSale) query = query.not('compare_at_price_cents', 'is', null);
   if (q.ids) query = query.in('id', q.ids.length ? q.ids : ['00000000-0000-0000-0000-000000000000']);
   const needle = q.search?.trim().toLowerCase().replace(/[%_,()]/g, ' ');
   if (needle) query = query.ilike('search_text', `%${needle}%`);

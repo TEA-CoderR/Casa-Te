@@ -12,7 +12,7 @@ import { MenuSheet } from '@/components/MenuSheet';
 import { Loading, Notice } from '@/components/UI';
 import { demoHomeImage } from '@/data/productImages';
 import { cardShadow, colors, fonts } from '@/config/theme';
-import { fetchCategories, fetchProducts, imageUrl } from '@/lib/api';
+import { fetchCategories, fetchOffers, fetchProducts, imageUrl } from '@/lib/api';
 import { useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { cartItemCount, useCartStore } from '@/store/cart';
@@ -40,13 +40,11 @@ function HomePhone() {
       const picked = await fetchProducts({ storeId: selected?.id ?? null, featured: true, sort: 'featured', pageSize: columns * 2 });
       return picked.items.length ? picked : fetchProducts({ storeId: selected?.id ?? null, sort: 'featured', pageSize: columns * 2 });
     });
-  const value = useQuery(selected ? `value:${selected.id}` : null,
-    () => fetchProducts({ storeId: selected?.id ?? null, sort: 'price_asc', pageSize: columns * 3 }));
+  const offers = useQuery(selected ? `offers:${selected.id}:${columns}` : null, () => fetchOffers(selected?.id ?? null, columns * 2));
   // Rows end on a full line, and the second rail never repeats products already featured above.
   const fullRows = <T,>(list: T[]) => list.length >= columns ? list.slice(0, list.length - (list.length % columns)) : list;
-  const featuredIds = new Set((featured.data?.items ?? []).map((p) => p.id));
-  const valueItems = fullRows((value.data?.items ?? []).filter((p) => !featuredIds.has(p.id)).slice(0, columns));
-  const refresh = () => { void categories.refetch(); void featured.refetch(); void value.refetch(); };
+  const offerItems = offers.data ?? [];
+  const refresh = () => { void categories.refetch(); void featured.refetch(); void offers.refetch(); };
   const productGrid = (items: NonNullable<typeof featured.data>['items']) => <View style={styles.grid}>{items.map((product) =>
     <View key={product.id} style={{ width: `${100 / columns}%`, paddingHorizontal: 6, flexDirection: 'row' }}>
       <ProductCard product={product} /></View>)}</View>;
@@ -145,11 +143,16 @@ function HomePhone() {
       <Icon name="chevron" size={18} color={colors.text} />
     </Pressable>
 
-    {valueItems.length >= Math.min(columns, 2) && <>
+    {offerItems.length > 0 && <>
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, wide && { fontSize: 30 }]} accessibilityRole="header">Piccoli prezzi</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={[styles.sectionTitle, wide && { fontSize: 30 }]} accessibilityRole="header">In offerta</Text>
+          <View style={styles.offerTag}><Text style={styles.offerTagText}>Sconti</Text></View>
+        </View>
+        <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1' } })} style={styles.seeAll} accessibilityRole="link">
+          <Text style={[styles.seeAllText, { color: colors.sale }]}>Tutte</Text><Icon name="chevron" color={colors.sale} size={14} strokeWidth={2} /></Pressable>
       </View>
-      {productGrid(valueItems)}
+      {productGrid(offerItems)}
     </>}
 
     <View style={styles.footer}>
@@ -201,6 +204,8 @@ const styles = StyleSheet.create({
   categoryLabel: { fontSize: 14.5, fontFamily: fonts.serif, color: colors.text, textAlign: 'center' },
   section: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 26, marginBottom: 12 },
   sectionTitle: { fontSize: 25, fontFamily: fonts.serif, color: colors.text },
+  offerTag: { backgroundColor: colors.sale, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 },
+  offerTagText: { color: '#FFFFFF', fontSize: 11.5, fontFamily: fonts.sansSemiBold, fontWeight: '700' },
   seeAll: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 8, marginRight: -8 },
   seeAllText: { color: colors.green, fontSize: 13, fontFamily: fonts.sansMedium, fontWeight: '500' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, rowGap: 12 },
