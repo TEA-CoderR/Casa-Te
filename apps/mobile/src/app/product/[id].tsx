@@ -16,9 +16,12 @@ import { ProductReviews } from '@/components/ProductReviews';
 import { ProductVariants } from '@/components/ProductVariants';
 import { invalidate } from '@/lib/useQuery';
 import { useLayout, useStores } from '@/lib/hooks';
-import { StoreSheet, storeShortName } from '@/components/StoreSheet';
+import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { useQuery } from '@/lib/useQuery';
 import { useCartStore } from '@/store/cart';
+import { SiteHeader } from '@/components/site/SiteHeader';
+import { SiteFooter } from '@/components/site/SiteFooter';
+import { SITE_WIDTH, type WebState } from '@/components/site/shared';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -80,21 +83,21 @@ export default function ProductDetailScreen() {
   const pack = formatPackSize(product.unit_quantity, product.unit);
   const features: Array<{ icon: IconName; text: string }> = product.highlights.length
     ? product.highlights.map((h) => ({ icon: h.icon as IconName, text: h.label }))
-    : [{ icon: 'store', text: `Ritiro gratuito\na ${store}` }, { icon: 'truck', text: 'Spedizione gratis\nda €66' },
+    : [{ icon: 'store', text: `Ritiro gratuito\n${atPlace(store)}` }, { icon: 'truck', text: 'Spedizione gratis\nda €66' },
        { icon: 'shield', text: 'Pagamento\nsicuro' }, { icon: 'weight', text: `Peso\n${formatWeight(product.weight_g)}` }];
   const details = <>
     {!!product.brand && <Text style={styles.brand}>{product.brand}</Text>}
-    <Text style={styles.title} accessibilityRole="header">{product.name}</Text>
+    <Text style={[styles.title, wide && styles.titleWide]} accessibilityRole="header">{product.name}</Text>
     <View style={styles.priceRow}>
-      <Text style={[styles.price, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
+      <Text style={[styles.price, wide && { fontSize: 36 }, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
       {!!product.compare_at_price_cents && <Text style={styles.compare}>{formatEuro(product.compare_at_price_cents)}</Text>}
       {!!discount && <View style={styles.discount}><Text style={styles.discountText}>{discount}</Text></View>}
       {unitPrice ? <Text style={styles.vat}>{unitPrice}{pack ? ` · ${pack}` : ''}</Text> : <Text style={styles.vat}>IVA inclusa</Text>}
     </View>
-    <View style={styles.ratingRow} accessibilityLabel={product.rating_count ? `Valutazione ${product.rating_avg} su 5, ${product.rating_count} recensioni` : 'Nessuna recensione'}>
+    {(!wide || !!product.rating_count) && <View style={styles.ratingRow} accessibilityLabel={product.rating_count ? `Valutazione ${product.rating_avg} su 5, ${product.rating_count} recensioni` : 'Nessuna recensione'}>
       <Stars value={product.rating_avg ?? 0} size={15} />
       <Text style={styles.ratingText}>{product.rating_count ? `(${product.rating_count})` : 'Nessuna recensione'}</Text>
-    </View>
+    </View>}
     <Pressable style={styles.availability} onPress={() => setStoreSheet(true)} accessibilityRole="button"
       accessibilityLabel={`${stock.text}. Cambia negozio`}>
       <View style={[styles.dot, !stock.available && { backgroundColor: colors.danger }]} />
@@ -103,7 +106,7 @@ export default function ProductDetailScreen() {
     </Pressable>
     <View style={styles.features}>
       {features.map((f) => <View key={f.icon + f.text} style={styles.feature}><Icon name={f.icon} size={23} color={colors.text} strokeWidth={1.15} />
-        <Text style={styles.featureText}>{f.text}</Text></View>)}
+        <Text style={[styles.featureText, wide && styles.featureTextWide]}>{f.text}</Text></View>)}
     </View>
     {!!product.description && <Text style={styles.description}>{product.description}</Text>}
     {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
@@ -114,25 +117,35 @@ export default function ProductDetailScreen() {
   </>;
 
   const actions = <>
-    <Pressable onPress={back} accessibilityRole="button" accessibilityLabel="Indietro" style={[styles.round, styles.roundLeft]}>
-      <Icon name="back" size={22} strokeWidth={1.5} /></Pressable>
+    {wide ? <View /> : <Pressable onPress={back} accessibilityRole="button" accessibilityLabel="Indietro" style={[styles.round, styles.roundLeft]}>
+      <Icon name="back" size={22} strokeWidth={1.5} /></Pressable>}
     <View style={styles.roundRight}>
       <FavoriteButton productId={product.id} name={product.name} size={20} style={styles.round} />
-      <Pressable onPress={() => share(product.name)} accessibilityRole="button" accessibilityLabel={`Condividi ${product.name}`} style={[styles.round, styles.roundBare]}>
+      <Pressable onPress={() => share(product.name)} accessibilityRole="button" accessibilityLabel={`Condividi ${product.name}`} style={[styles.round, !wide && styles.roundBare]}>
         <Icon name="share" size={21} strokeWidth={1.4} /></Pressable>
     </View>
   </>;
   const sharedNote = shared && <View style={styles.toast} accessibilityLiveRegion="polite"><Text style={styles.toastText}>Link copiato</Text></View>;
 
-  return <Screen stack footer={wide ? undefined : buy}>
-    <Stack.Screen options={{ title: '', headerShown: false }} />
+  const crumb = (label: string, onPress?: () => void) => onPress
+    ? <Pressable onPress={onPress} accessibilityRole="link">{({ hovered }: WebState) =>
+        <Text style={[styles.crumb, hovered && { color: colors.green }]}>{label}</Text>}</Pressable>
+    : <Text style={[styles.crumb, { color: colors.text }]} numberOfLines={1}>{label}</Text>;
+  return <Screen stack footer={wide ? undefined : buy} maxWidth={wide ? SITE_WIDTH - 80 : undefined}
+    contentContainerStyle={wide ? { paddingHorizontal: 40, paddingTop: 0 } : undefined} after={wide ? <SiteFooter /> : undefined} bleed={40}>
+    <Stack.Screen options={wide ? { title: product.name, headerShown: true, header: () => <SiteHeader /> } : { title: '', headerShown: false }} />
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-    {wide ? <View style={[styles.wide, { paddingTop: 16 + insets.top }]}>
+    {wide && <View style={styles.crumbs}>
+      {crumb('Home', () => router.push('/'))}<Text style={styles.crumbSep}>/</Text>
+      {crumb('Catalogo', () => router.push('/catalog'))}<Text style={styles.crumbSep}>/</Text>
+      {crumb(product.name)}
+    </View>}
+    {wide ? <View style={styles.wide}>
       <View style={[styles.media, styles.mediaWide]}>
         <ProductGallery images={product.images} sku={product.sku} label={product.name} blend />
         <View style={[styles.overlay, { top: 12 }]}>{actions}</View>
       </View>
-      <View style={{ flex: 1, maxWidth: 460 }}>{details}</View>
+      <View style={{ flex: 1, maxWidth: 500, paddingTop: 8 }}>{details}</View>
     </View> : <>
       <View style={[styles.media, { paddingTop: insets.top + 8 }]}>
         <ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0.12} blend />
@@ -145,7 +158,11 @@ export default function ProductDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  wide: { flexDirection: 'row', gap: 56, alignItems: 'flex-start', paddingTop: 8 },
+  wide: { flexDirection: 'row', gap: 72, alignItems: 'flex-start', paddingTop: 8 },
+  crumbs: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 28, paddingBottom: 24 },
+  crumb: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
+  crumbSep: { fontSize: 13, color: colors.rule, fontFamily: fonts.sans },
+  titleWide: { fontSize: 48, lineHeight: 52, letterSpacing: -0.8 },
   media: { backgroundColor: '#F2EEE8', marginHorizontal: -20, marginTop: -20, marginBottom: 22 },
   overlay: { position: 'absolute', left: 12, right: 12, flexDirection: 'row', justifyContent: 'space-between' },
   round: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
@@ -155,7 +172,7 @@ const styles = StyleSheet.create({
   roundRight: { flexDirection: 'row', gap: 6 },
   toast: { position: 'absolute', alignSelf: 'center', top: 80, backgroundColor: colors.text, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
   toastText: { color: '#fff', fontSize: 13, fontFamily: fonts.sansMedium },
-  mediaWide: { flex: 1.1, marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 18, overflow: 'hidden' },
+  mediaWide: { flex: 1.25, marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 4, overflow: 'hidden', backgroundColor: colors.stone },
   brand: { fontSize: 11, letterSpacing: 2.6, textTransform: 'uppercase', color: colors.text, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginBottom: 6 },
   title: { fontSize: 30, lineHeight: 33, fontFamily: fonts.serif, color: colors.text, letterSpacing: -0.2 },
   discount: { alignSelf: 'center', backgroundColor: colors.sale, borderRadius: 6, paddingHorizontal: 9, paddingVertical: 3 },
@@ -172,6 +189,7 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.green },
   features: { flexDirection: 'row', marginTop: 14, paddingVertical: 16, borderTopWidth: 1, borderColor: '#EEE9E0' },
   feature: { flex: 1, alignItems: 'center', gap: 7, paddingHorizontal: 3 },
+  featureTextWide: { fontSize: 13, lineHeight: 17, color: colors.text },
   featureText: { fontSize: 11, lineHeight: 14, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans },
   description: { fontSize: 13.5, lineHeight: 21, color: colors.muted, marginTop: 6, maxWidth: 560, fontFamily: fonts.sans },
   buyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

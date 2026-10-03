@@ -6,6 +6,8 @@ import { usePreferences } from '@/store/preferences';
 import { Icon } from './Icon';
 
 export const storeShortName = (s: Pick<StoreRow, 'name'> | null | undefined) => s?.name.replace(/^CASA & TE\s*/, '') ?? '';
+/** Italian "a" before a place, "ad" before a vowel: "a Lucca", "ad Arezzo". */
+export const atPlace = (place: string) => `${/^[aeiouàèéìòù]/i.test(place) ? 'ad' : 'a'} ${place}`;
 
 /**
  * Store picker. Stock, picking and pickup all depend on the chosen store, so the choice is made

@@ -6,7 +6,7 @@ import { formatEuro, formatShipping } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { Icon, type IconName } from '@/components/Icon';
 import { FulfilmentSheet } from '@/components/FulfilmentSheet';
-import { StoreSheet, storeShortName } from '@/components/StoreSheet';
+import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import {
   Checkbox, EmptyState, Loading, Notice, OptionCard, PrimaryButton, SecondaryButton, SectionTitle, SummaryRow, TextField,
 } from '@/components/UI';
@@ -182,7 +182,7 @@ export default function CheckoutScreen() {
     <View style={[styles.delivery, !methodQuote && styles.deliveryError]} {...(!methodQuote ? ({ dataSet: { fieldError: 'true' } } as object) : {})}>
       <View style={styles.deliveryIcon}><Icon name={METHOD_INFO[method].icon} size={22} strokeWidth={1.4} /></View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.deliveryTitle}>{method === 'store' ? `Ritiro a ${storeShortName(store) || 'negozio'}` : FULFILMENT_LABELS[method]}</Text>
+        <Text style={styles.deliveryTitle}>{method === 'store' ? storeShortName(store) ? `Ritiro ${atPlace(storeShortName(store))}` : 'Ritiro in negozio' : FULFILMENT_LABELS[method]}</Text>
         <Text style={[styles.deliveryText, !methodQuote && { color: colors.danger }]}>{!methodQuote ? 'Non disponibile per questo ordine: scegline un altro'
           : method === 'store' ? METHOD_INFO.store.description
           : `${formatShipping(methodQuote.price_cents)} · ${methodQuote.provisional ? 'tariffa oltre 10 kg' : METHOD_INFO[method].description}`}</Text>

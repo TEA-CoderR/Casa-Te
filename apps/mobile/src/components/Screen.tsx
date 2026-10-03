@@ -11,15 +11,20 @@ type Props = PropsWithChildren<{
   onRefresh?: () => void;
   /** Max content width on the web shop (desktop). */
   maxWidth?: number;
+  /** Full-width content after the page column (the desktop footer). */
+  after?: ReactNode;
+  /** Horizontal page padding the `after` content bleeds through (it runs edge to edge). */
+  bleed?: number;
 }>;
 
-export function Screen({ children, contentContainerStyle, footer, stack = false, refreshing, onRefresh, maxWidth = 1120 }: Props) {
+export function Screen({ children, contentContainerStyle, footer, stack = false, refreshing, onRefresh, maxWidth = 1120, after, bleed = 20 }: Props) {
   return <SafeAreaView style={styles.safe} edges={stack ? ['bottom'] : ['top']}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={stack ? 88 : 0}>
       <ScrollView contentContainerStyle={[styles.content, contentContainerStyle]}
         showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
         refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={colors.green} /> : undefined}>
         <View style={{ width: '100%', maxWidth, alignSelf: 'center' }}>{children}</View>
+        {after && <View style={{ marginHorizontal: -bleed, marginBottom: -40 }}>{after}</View>}
       </ScrollView>
       {footer && <View style={styles.footer}><View style={{ width: '100%', maxWidth, alignSelf: 'center' }}>{footer}</View></View>}
     </KeyboardAvoidingView>

@@ -7,12 +7,13 @@ import { useCartStore } from '@/store/cart';
 import { useFavorites } from '@/store/favorites';
 import { ProductImage } from './ProductImage';
 import { Icon } from './Icon';
-import { storeShortName } from './StoreSheet';
-import { useStores } from '@/lib/hooks';
+import { atPlace, storeShortName } from './StoreSheet';
+import { useLayout, useStores } from '@/lib/hooks';
+import { transition, type WebState } from './site/shared';
 
 /** Availability is always about one store; name it so the customer knows which. */
 export function stockLabel(stock: number | null, store?: string): { text: string; available: boolean } {
-  const at = store ? ` a ${store}` : '';
+  const at = store ? ` ${atPlace(store)}` : '';
   if (stock === null) return { text: '', available: true };
   if (stock <= 0) return { text: `Esaurito${at}`, available: false };
   if (stock <= 3) return { text: `Ultimi ${stock}${at}`, available: true };
@@ -30,7 +31,8 @@ export function FavoriteButton({ productId, name, size = 22, style }: { productI
   </Pressable>;
 }
 
-export function ProductCard({ product, variant = 'grid' }: { product: CatalogProduct; variant?: 'grid' | 'list' }) {
+export function ProductCard({ product, variant = 'grid' }: { product: CatalogProduct; variant?: 'grid' | 'list' | 'feature' }) {
+  const { wide } = useLayout();
   const add = useCartStore((s) => s.add);
   const quantity = useCartStore((s) => s.items[product.id] ?? 0);
   const { selected } = useStores();
@@ -61,6 +63,37 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
     </Pressable></Link>
     <View style={styles.rowSide}><FavoriteButton productId={product.id} name={product.name} />{cartButton}</View>
   </View>;
+
+  // Desktop: borderless catalogue entry, the photo on a stone plate and the text set below it like print.
+  if (wide) {
+    const feature = variant === 'feature';
+    return <View style={styles.entry}>
+      <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
+        {({ hovered }: WebState) => <>
+          <View style={styles.plate}>
+            <View style={[hovered && { transform: [{ scale: 1.035 }] }, transition('transform', 600)]}>
+              <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={feature ? 0.1 : 0.09} aspect={feature ? 0.9 : 1.12} blend />
+            </View>
+            {!!discount && <View style={[styles.discount, feature && styles.discountBig]}>
+              <Text style={[styles.discountText, feature && { fontSize: 16 }]} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount}</Text></View>}
+          </View>
+          <View style={styles.entryText}>
+            {!!product.brand && <Text style={styles.entryBrand} numberOfLines={1}>{product.brand}</Text>}
+            <Text style={[styles.entryName, feature && styles.entryNameBig, hovered && { color: colors.green }, transition('color')]} numberOfLines={2}>{product.name}</Text>
+            {!!note && <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{note}</Text>}
+          </View>
+        </>}
+      </Pressable></Link>
+      <FavoriteButton productId={product.id} name={product.name} size={feature ? 22 : 19} style={styles.heartCorner} />
+      <View style={styles.entryBottom}>
+        <View style={styles.priceRow}>
+          <Text style={[styles.price, feature && { fontSize: 26 }, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
+          {!!discount && <Text style={[styles.compare, feature && { fontSize: 14 }]}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
+        </View>
+        {cartButton}
+      </View>
+    </View>;
+  }
 
   // The card is a real link (open in new tab, middle click, screen readers); heart and cart sit outside it.
   return <View style={styles.card}>
@@ -95,6 +128,14 @@ const styles = StyleSheet.create({
   compare: { fontSize: 12, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
   add: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   addCount: { color: '#fff', fontSize: 15, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
+  entry: { flex: 1 },
+  plate: { backgroundColor: colors.stone, borderRadius: 4, overflow: 'hidden' },
+  discountBig: { left: 16, top: 16, paddingHorizontal: 11, paddingVertical: 5 },
+  entryText: { paddingTop: 16, gap: 3 },
+  entryBrand: { fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  entryName: { fontSize: 19, lineHeight: 23, fontFamily: fonts.serif, color: colors.text },
+  entryNameBig: { fontSize: 28, lineHeight: 32 },
+  entryBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, gap: 8, marginTop: 'auto' },
   row: { flexDirection: 'row', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.line, alignItems: 'center' },
   rowLink: { flex: 1, flexDirection: 'row', gap: 14, alignItems: 'center' },
   rowMedia: { width: 88, borderRadius: 10, borderWidth: 1, borderColor: '#EEE9E0', backgroundColor: colors.surface, overflow: 'hidden' },

@@ -117,6 +117,15 @@ export async function fetchFacets(categoryIds: string[] | null): Promise<{ brand
     minCents: prices.length ? Math.min(...prices) : 0, maxCents: prices.length ? Math.max(...prices) : 0 };
 }
 
+/** Active products per category id (display only: the department index on the desktop home). */
+export async function fetchCategoryCounts(): Promise<Record<string, number>> {
+  const rows = unwrap(await supabase.from('products').select('category_id').eq('active', true)
+    .not('category_id', 'is', null).limit(5000)) as unknown as Array<{ category_id: string }>;
+  const counts: Record<string, number> = {};
+  for (const r of rows) counts[r.category_id] = (counts[r.category_id] ?? 0) + 1;
+  return counts;
+}
+
 /** One representative photo per category (featured products first), for the category circles. */
 export async function fetchCategoryCovers(): Promise<Record<string, { image: string | null; sku: string }>> {
   const rows = unwrap(await supabase.from('products').select('sku,category_id,featured,product_images(path,sort)')

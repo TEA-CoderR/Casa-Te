@@ -6,7 +6,7 @@ import type { CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryIcon } from '@/components/CategoryIcon';
-import { StoreSheet, storeShortName } from '@/components/StoreSheet';
+import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
 import { MenuSheet } from '@/components/MenuSheet';
 import { Loading, Notice } from '@/components/UI';
@@ -16,9 +16,16 @@ import { fetchCategories, fetchProducts, imageUrl } from '@/lib/api';
 import { useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { cartItemCount, useCartStore } from '@/store/cart';
+import { HomeDesktop } from '@/components/site/HomeDesktop';
 
 
+/** Desktop web gets the catalogue-style home; phones and the native app keep the phone home. */
 export default function HomeScreen() {
+  const { wide } = useLayout();
+  return wide ? <HomeDesktop /> : <HomePhone />;
+}
+
+function HomePhone() {
   const { selected } = useStores();
   const [storeSheet, setStoreSheet] = useState(false);
   const [heroWidth, setHeroWidth] = useState(0);
@@ -85,7 +92,7 @@ export default function HomeScreen() {
         <Pressable onPress={() => setStoreSheet(true)} accessibilityRole="button" style={styles.storeLink}
           accessibilityLabel={`Negozio selezionato: ${storeName}. Cambia negozio`}>
           <Icon name="pin" size={13} color={colors.green} strokeWidth={2} />
-          <Text style={styles.storeText} numberOfLines={1}>Ritiro a {storeName || 'scegli negozio'}</Text>
+          <Text style={styles.storeText} numberOfLines={1}>{storeName ? `Ritiro ${atPlace(storeName)}` : 'Scegli il negozio'}</Text>
           <Icon name="chevron" size={12} color={colors.text} strokeWidth={2} />
         </Pressable>
       </View>
@@ -133,7 +140,7 @@ export default function HomeScreen() {
       <View style={styles.bannerIcon}><Icon name="store" size={24} color={colors.green} /></View>
       <View style={{ flex: 1 }}>
         <Text style={styles.bannerTitle}>Ritiro gratuito in negozio</Text>
-        <Text style={styles.bannerText}>Ordina online e ritira a {storeName || 'Arezzo o Lucca'} quando è pronto. Spedizione a casa gratuita da €66 (fino a 10 kg).</Text>
+        <Text style={styles.bannerText}>Ordina online e ritira {atPlace(storeName || 'Arezzo o Lucca')} quando è pronto. Spedizione a casa gratuita da €66 (fino a 10 kg).</Text>
       </View>
       <Icon name="chevron" size={18} color={colors.text} />
     </Pressable>
