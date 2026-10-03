@@ -33,7 +33,12 @@ export default function TabsLayout() {
     tabBarLabelStyle: { fontSize: wide ? 17 : 10.5, fontFamily: wide ? fonts.serif : fonts.sansMedium, marginTop: wide ? 0 : 2 },
     tabBarBadgeStyle: { backgroundColor: colors.badge, fontSize: 11, color: '#fff' },
   }}>
-    {tabs.map((tab) => <Tabs.Screen key={tab.name} name={tab.name} options={{
+    {tabs.map((tab) => <Tabs.Screen key={tab.name} name={tab.name}
+      // The "Categorie" tab always opens the whole catalogue (not a filter left from "In offerta" or a department).
+      listeners={tab.name === 'catalog' ? ({ navigation }) => ({
+        tabPress: (e) => { e.preventDefault(); navigation.navigate('catalog', { offerte: '', category: '' }); },
+      }) : undefined}
+      options={{
       title: tab.title, href: tab.hidden ? null : undefined,
       tabBarIcon: ({ color, focused }) => <View style={{ width: 48, height: 30, alignItems: 'center', justifyContent: 'center' }}>
         {/* Active tab: solid green icon, like the design. */}
