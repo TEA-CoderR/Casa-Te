@@ -2,6 +2,11 @@ import type { PropsWithChildren, ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { colors, fonts } from '@/config/theme';
 import { Icon, type IconName } from './Icon';
+import { useLayout } from '@/lib/hooks';
+
+/** Desktop web: square-cut controls and sans labels, like the rest of the desktop catalogue. */
+const deskButton = { borderRadius: 4 } as const;
+const deskLabel = { fontSize: 15, fontFamily: fonts.sansSemiBold, fontWeight: '600', letterSpacing: 0.3 } as const;
 
 export function PageTitle({ title, subtitle, right }: { title: string; subtitle?: string; right?: ReactNode }) {
   return <View style={styles.pageHeading}><View style={{ flex: 1 }}>
@@ -13,10 +18,11 @@ export function PrimaryButton({ title, onPress, disabled, loading, icon = null }
   title: string; onPress: () => void; disabled?: boolean; loading?: boolean; icon?: IconName | null;
 }) {
   const off = disabled || loading;
+  const { wide } = useLayout();
   return <Pressable accessibilityRole="button" accessibilityState={{ disabled: off, busy: loading }} disabled={off} onPress={onPress}
-    style={({ pressed }) => [styles.button, { opacity: off ? 0.45 : pressed ? 0.8 : 1 }]}>
+    style={({ pressed }) => [styles.button, wide && deskButton, { opacity: off ? 0.45 : pressed ? 0.8 : 1 }]}>
     {loading ? <ActivityIndicator color="#fff" /> : icon ? <Icon name={icon} color="#fff" size={19} /> : null}
-    <Text style={styles.buttonText}>{title}</Text>
+    <Text style={[styles.buttonText, wide && deskLabel]}>{title}</Text>
   </Pressable>;
 }
 
@@ -24,8 +30,9 @@ export function SecondaryButton({ title, onPress, disabled, icon, danger }: {
   title: string; onPress: () => void; disabled?: boolean; icon?: IconName; danger?: boolean;
 }) {
   const color = danger ? colors.danger : colors.green;
+  const { wide } = useLayout();
   return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress}
-    style={({ pressed }) => [styles.secondary, { borderColor: color, opacity: disabled ? 0.45 : pressed ? 0.7 : 1 }]}>
+    style={({ pressed }) => [styles.secondary, wide && deskButton, { borderColor: color, opacity: disabled ? 0.45 : pressed ? 0.7 : 1 }]}>
     {icon && <Icon name={icon} color={color} size={18} />}
     <Text style={[styles.secondaryText, { color }]}>{title}</Text>
   </Pressable>;
@@ -34,8 +41,9 @@ export function SecondaryButton({ title, onPress, disabled, icon, danger }: {
 export function QuantityControl({ value, onChange, label = '', min = 0, max = 99, compact }: {
   value: number; onChange: (value: number) => void; label?: string; min?: number; max?: number; compact?: boolean;
 }) {
+  const { wide } = useLayout();
   const step = compact ? [styles.step, { width: 30, height: 32 }] : styles.step;
-  return <View style={styles.quantity}>
+  return <View style={[styles.quantity, wide && deskButton]}>
     <Pressable accessibilityRole="button" accessibilityLabel={`Riduci quantità${label ? ` ${label}` : ''}`}
       disabled={value <= min} onPress={() => onChange(value - 1)} style={step}>
       <Icon name="minus" size={compact ? 14 : 16} color={value <= min ? colors.line : colors.text} strokeWidth={1.5} />

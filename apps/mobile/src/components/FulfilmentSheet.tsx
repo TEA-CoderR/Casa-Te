@@ -1,4 +1,5 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { atPlace } from './StoreSheet';
 import { FULFILMENT_LABELS, type FulfilmentMethod, type Quote } from '@casa-te/shared';
 import { formatShipping } from '@/lib/price';
 import { colors, fonts } from '@/config/theme';
@@ -27,7 +28,7 @@ export function FulfilmentSheet({ visible, onClose, quote, storeName, onChangeSt
           const option = quote?.shipping[m];
           const unavailable = quote ? !option : false;
           return <OptionCard key={m} selected={fulfilment === m} disabled={unavailable} icon={ICONS[m]}
-            title={m === 'store' ? `${FULFILMENT_LABELS.store} a ${storeName}` : FULFILMENT_LABELS[m]}
+            title={m === 'store' ? `${FULFILMENT_LABELS.store} ${atPlace(storeName)}` : FULFILMENT_LABELS[m]}
             description={unavailable ? 'Non disponibile per questo ordine' : m === 'store' ? "Quando l'ordine è pronto" : m === 'home' ? 'Indirizzo al passo successivo' : 'Scegli il punto al passo successivo'}
             right={option ? formatShipping(option.price_cents) : undefined}
             onPress={() => { setFulfilment(m); onClose(); }} />;

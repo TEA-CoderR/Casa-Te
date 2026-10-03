@@ -9,14 +9,14 @@ watch(page, 'shop');
 
 step('Browse: home → catalogue → product');
 await page.goto(env.SHOP_URL, { waitUntil: 'networkidle' });
-await page.getByText('Categorie', { exact: true }).first().click();
+// Desktop masthead: department links; the breadcrumb leads back to the whole catalogue.
+await page.getByRole('link', { name: 'Tutti i prodotti' }).first().click();
 await page.getByText('Padella antiaderente 28 cm').last().waitFor();
-// Back inside a department returns to all categories, not to the home page.
-await page.getByRole('tab', { name: 'Cucina' }).click();
+await page.getByRole('link', { name: 'Cucina', exact: true }).first().click();
 await page.getByRole('heading', { name: 'Cucina' }).waitFor();
-await page.getByRole('button', { name: 'Indietro' }).click();
-await page.getByRole('heading', { name: 'Categorie' }).waitFor();
-if (!/\/catalog/.test(page.url())) throw new Error(`back left the catalogue: ${page.url()}`);
+await page.getByRole('link', { name: 'Catalogo', exact: true }).first().click();
+await page.getByRole('heading', { name: 'Tutti i prodotti' }).waitFor();
+if (!/\/catalog/.test(page.url())) throw new Error(`breadcrumb left the catalogue: ${page.url()}`);
 await page.getByText('Padella antiaderente 28 cm').last().waitFor();
 await shot(page, 'catalogo');
 await page.getByText('Padella antiaderente 28 cm').last().click();

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '@/config/theme';
 import { Icon, type IconName } from '@/components/Icon';
 import { useLayout } from '@/lib/hooks';
+import { SiteHeader } from '@/components/site/SiteHeader';
 
 const tabs: Array<{ name: string; title: string; icon: IconName; hidden?: boolean }> = [
   { name: 'index', title: 'Home', icon: 'home' },
@@ -19,11 +20,11 @@ const tabs: Array<{ name: string; title: string; icon: IconName; hidden?: boolea
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { wide } = useLayout();
-  return <Tabs screenOptions={{
+  // Desktop web shop: the catalogue masthead (search, wordmark, departments) replaces the tab bar.
+  return <Tabs tabBar={wide ? () => <SiteHeader /> : undefined} screenOptions={{
     headerShown: false, tabBarActiveTintColor: colors.green, tabBarInactiveTintColor: colors.faint,
     tabBarActiveBackgroundColor: wide ? colors.cream : undefined,
-    // Desktop web shop: navigation as a sidebar instead of a phone-style bottom bar.
-    tabBarPosition: wide ? 'left' : 'bottom',
+    tabBarPosition: wide ? 'top' : 'bottom',
     tabBarVariant: wide ? 'material' : 'uikit',
     tabBarStyle: wide
       ? { backgroundColor: '#FFFFFF', borderRightColor: colors.line, minWidth: 200, paddingTop: 24 }

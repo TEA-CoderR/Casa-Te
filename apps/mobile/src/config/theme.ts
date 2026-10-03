@@ -18,6 +18,10 @@ export const colors = {
   /** Secondary icons and inactive tabs: still ≥4.5:1 on white. */
   faint: '#686C64',
   line: '#ECE6DB',
+  /** Desktop print rules (hairlines between catalogue rows and sections). */
+  rule: '#E4DCCD',
+  /** Warm stone plate behind product photographs. */
+  stone: '#F4EFE6',
   badge: '#B3261E',
   /** Discounts: solid red label and red sale price, meant to stand out. */
   sale: '#D62828',

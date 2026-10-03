@@ -11,15 +11,17 @@ import { colors, fonts } from '@/config/theme';
 import { fetchCategories, fetchFacets, fetchProducts, type CatalogProduct } from '@/lib/api';
 import { useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
+import { SiteFooter } from '@/components/site/SiteFooter';
+import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared';
 
 export default function CatalogScreen() {
-  const params = useLocalSearchParams<{ category?: string; q?: string; search?: string }>();
+  const params = useLocalSearchParams<{ category?: string; q?: string; search?: string; sort?: string }>();
   const { selected } = useStores();
   const { columns, wide } = useLayout();
   const [query, setQuery] = useState(params.q ?? '');
   const [debounced, setDebounced] = useState(query);
   const [categoryId, setCategoryId] = useState<string | null>(params.category || null);
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<Filters>(params.sort === 'price_asc' ? { ...EMPTY_FILTERS, sort: 'price_asc' } : EMPTY_FILTERS);
   const [sheet, setSheet] = useState<FilterSection | null>(null);
   const [searchOpen, setSearchOpen] = useState(Boolean(params.q || params.search));
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -33,6 +35,9 @@ export default function CatalogScreen() {
 
   useEffect(() => { if (params.category !== undefined) setCategoryId(params.category || null); }, [params.category]);
   useEffect(() => { if (params.search) setSearchOpen(true); }, [params.search]);
+  useEffect(() => { if (params.sort === 'price_asc') setFilters((f) => ({ ...f, sort: 'price_asc' })); }, [params.sort]);
+  // The desktop masthead searches by changing ?q=.
+  useEffect(() => { if (params.q !== undefined) { setQuery(params.q); setDebounced(params.q); if (params.q) setSearchOpen(true); } }, [params.q]);
   useEffect(() => { const t = setTimeout(() => setDebounced(query), 300); return () => clearTimeout(t); }, [query]);
 
   // A top-level category is shown with its subcategories as tabs; a subcategory selects its tab.
@@ -89,48 +94,68 @@ export default function CatalogScreen() {
     if (router.canGoBack()) router.back(); else router.replace('/');
   };
   const pill = (section: FilterSection, label: string, active: boolean, icon?: 'filter') =>
-    <Pressable key={section} onPress={() => setSheet(section)} style={[styles.pill, active && styles.pillOn]} accessibilityRole="button"
+    <Pressable key={section} onPress={() => setSheet(section)} style={[styles.pill, wide && { borderRadius: 4, minHeight: 36 }, active && styles.pillOn]} accessibilityRole="button"
       accessibilityLabel={`${label}${active ? ' (attivo)' : ''}`}>
       {icon && <Icon name={icon} size={14} strokeWidth={1.6} />}
       <Text style={styles.pillText}>{label}</Text>{!icon && <Icon name="down" size={13} />}
     </Pressable>;
 
-  return <Screen contentContainerStyle={{ paddingTop: 4 }}>
+  const searching = !!debounced.trim();
+  const pageHead = <View style={styles.deskHead}>
+    <View style={styles.crumbs}>
+      <Pressable onPress={() => router.push('/')} accessibilityRole="link">
+        {({ hovered }: WebState) => <Text style={[styles.crumb, hovered && { color: colors.green }]}>Home</Text>}</Pressable>
+      <Text style={styles.crumbSep}>/</Text>
+      <Pressable onPress={() => { setQuery(''); selectCategory(null); }} accessibilityRole="link">
+        {({ hovered }: WebState) => <Text style={[styles.crumb, hovered && { color: colors.green }, !parent && !searching && styles.crumbOn]}>Catalogo</Text>}</Pressable>
+      {!!parent && !searching && <><Text style={styles.crumbSep}>/</Text><Text style={[styles.crumb, styles.crumbOn]}>{parent.name}</Text></>}
+    </View>
+    <View style={styles.deskTitleRow}>
+      <Text style={styles.deskTitle} accessibilityRole="header" numberOfLines={1}>
+        {searching ? `«${debounced.trim()}»` : parent?.name ?? 'Tutti i prodotti'}</Text>
+      <Text style={styles.deskCount}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}`}</Text>
+    </View>
+    {searching && <Pressable onPress={() => { setQuery(''); setSearchOpen(false); router.setParams({ q: undefined }); }} accessibilityRole="button" style={{ alignSelf: 'flex-start' }}>
+      <Text style={styles.clearSearch}>Cancella la ricerca</Text></Pressable>}
+  </View>;
+
+  return <Screen contentContainerStyle={wide ? { paddingTop: 0, paddingHorizontal: 40 } : { paddingTop: 4 }} maxWidth={wide ? SITE_WIDTH - 80 : undefined}
+    after={wide ? <SiteFooter /> : undefined} bleed={40}>
     <FilterSheet visible={sheet !== null} section={sheet ?? 'all'} filters={filters} onChange={setFilters} onClose={() => setSheet(null)}
       facets={facets.data ?? null} total={loading ? null : count} />
-    <View style={[styles.header, wide && { marginTop: 8 }]}>
+    {wide ? pageHead : <View style={styles.header}>
       <Pressable accessibilityRole="button" accessibilityLabel="Indietro" style={styles.iconButton}
         onPress={goBack}><Icon name="back" size={23} strokeWidth={1.4} /></Pressable>
       <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={searchOpen ? 'Chiudi ricerca' : 'Cerca prodotti'} accessibilityState={{ expanded: searchOpen }}
         style={styles.iconButton} onPress={() => { if (searchOpen) setQuery(''); setSearchOpen(!searchOpen); }}>
         <Icon name={searchOpen ? 'close' : 'search'} size={21} strokeWidth={1.4} /></Pressable>
-    </View>
-    {searchOpen && <View style={styles.search}><Icon name="search" size={19} color={colors.muted} />
+    </View>}
+    {searchOpen && !wide && <View style={styles.search}><Icon name="search" size={19} color={colors.muted} />
       <TextInput value={query} onChangeText={setQuery} placeholder="Cerca per nome, marca o codice..." placeholderTextColor={colors.faint} autoFocus={!params.q}
         accessibilityLabel="Cerca prodotti" style={styles.input} returnKeyType="search" autoCorrect={false} />
       {!!query && <Pressable accessibilityLabel="Cancella ricerca" onPress={() => setQuery('')} style={{ padding: 10 }}>
         <Icon name="close" size={16} /></Pressable>}
     </View>}
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs} contentContainerStyle={{ paddingHorizontal: 20, gap: 18 }}>
+    {(!wide || children.length > 0) && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.tabs, wide && styles.tabsWide]} contentContainerStyle={{ paddingHorizontal: wide ? 0 : 20, gap: wide ? 28 : 18 }}>
       {tabs.map((item) => {
         const on = activeTab === item.id;
         return <Pressable key={item.id ?? 'all'} accessibilityRole="tab" accessibilityState={{ selected: on }}
-          style={[styles.tab, on && styles.tabOn]} onPress={() => selectCategory(item.id)}>
-          <Text style={[styles.tabText, on && styles.tabTextOn]}>{item.name}</Text>
+          style={[styles.tab, wide && { minHeight: 48 }, on && styles.tabOn, on && wide && { borderColor: colors.green }]} onPress={() => selectCategory(item.id)}>
+          <Text style={[styles.tabText, wide && styles.tabTextWide, on && styles.tabTextOn, on && wide && { color: colors.green }]}>{item.name}</Text>
         </Pressable>;
       })}
-    </ScrollView>
+    </ScrollView>}
 
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillsScroll} contentContainerStyle={styles.pills}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.pillsScroll, wide && { marginHorizontal: 0, marginTop: 20 }]} contentContainerStyle={[styles.pills, wide && { paddingHorizontal: 0 }]}>
       {pill('all', 'Filtra', filters.sort !== 'featured' || filters.onlyAvailable, 'filter')}
       {pill('brand', filters.brands.length ? `Marca (${filters.brands.length})` : 'Marca', filters.brands.length > 0)}
       {pill('color', filters.colors.length ? `Colore (${filters.colors.length})` : 'Colore', filters.colors.length > 0)}
       {pill('price', 'Prezzo', filters.price.min !== null || filters.price.max !== null)}
     </ScrollView>
 
-    <View style={styles.toolbar}>
-      <Text style={styles.count}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}`}</Text>
+    <View style={[styles.toolbar, wide && { marginTop: -36, marginBottom: 28, justifyContent: 'flex-end' }]}>
+      {!wide && <Text style={styles.count}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}`}</Text>}
       <View style={{ flexDirection: 'row', gap: 2 }} accessibilityRole="radiogroup" accessibilityLabel="Vista">
         {(['grid', 'list'] as const).map((v) => <Pressable key={v} onPress={() => setView(v)} accessibilityRole="radio"
           accessibilityState={{ checked: view === v }} accessibilityLabel={v === 'grid' ? 'Vista a griglia' : 'Vista a elenco'}
@@ -144,7 +169,7 @@ export default function CatalogScreen() {
       <Text style={{ color: colors.muted, textAlign: 'center', lineHeight: 22, fontFamily: fonts.sans }}>Nessun prodotto trovato. Prova un'altra ricerca o togli qualche filtro.</Text>
     </View>}
     {view === 'grid'
-      ? <View style={styles.grid}>{shown.map((product) => <View key={product.id} style={{ width: `${100 / columns}%`, paddingHorizontal: 5, flexDirection: 'row' }}>
+      ? <View style={[styles.grid, wide && { marginHorizontal: -14, rowGap: 48 }]}>{shown.map((product) => <View key={product.id} style={{ width: `${100 / columns}%`, paddingHorizontal: wide ? 14 : 5, flexDirection: 'row' }}>
           <ProductCard product={product} /></View>)}</View>
       : <View style={wide ? { flexDirection: 'row', flexWrap: 'wrap', columnGap: 24 } : undefined}>{shown.map((product) =>
           <View key={product.id} style={wide ? { width: '48%' } : undefined}><ProductCard product={product} variant="list" /></View>)}</View>}
@@ -174,4 +199,15 @@ const styles = StyleSheet.create({
   viewButton: { width: 32, height: 30, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   viewButtonOn: { backgroundColor: colors.cream },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 8 },
+  deskHead: { paddingTop: 36, paddingBottom: 8, gap: 14 },
+  crumbs: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  crumb: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
+  crumbOn: { color: colors.text },
+  crumbSep: { fontSize: 13, color: colors.rule, fontFamily: fonts.sans },
+  deskTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 18 },
+  deskTitle: { flexShrink: 1, fontSize: 64, lineHeight: 70, letterSpacing: -1.2, fontFamily: fonts.serif, color: colors.text },
+  deskCount: { fontSize: 14, color: colors.muted, fontFamily: fonts.sans },
+  clearSearch: { fontSize: 13.5, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium },
+  tabsWide: { marginHorizontal: 0, marginTop: 18, borderColor: colors.rule },
+  tabTextWide: { fontSize: 14, color: colors.text },
 });

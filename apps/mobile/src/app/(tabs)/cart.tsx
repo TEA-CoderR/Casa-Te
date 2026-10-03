@@ -9,7 +9,7 @@ import { useQuery } from '@/lib/useQuery';
 import { Screen } from '@/components/Screen';
 import { ProductImage } from '@/components/ProductImage';
 import { EmptyState, Loading, Notice, PageTitle, PrimaryButton, QuantityControl, SummaryRow } from '@/components/UI';
-import { StoreSheet, storeShortName } from '@/components/StoreSheet';
+import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
 import { colors, fonts } from '@/config/theme';
 import { fetchProducts, imageUrl } from '@/lib/api';
@@ -70,7 +70,7 @@ export default function CartScreen() {
   const delivery = <View style={styles.delivery}>
     <Icon name={fulfilment === 'store' ? 'store' : fulfilment === 'home' ? 'truck' : 'pin'} size={26} strokeWidth={1.3} />
     <View style={{ flex: 1 }}>
-      <Text style={styles.deliveryTitle}>{fulfilment === 'store' ? `Ritiro a ${storeName || 'negozio'}` : FULFILMENT_LABELS[fulfilment]}</Text>
+      <Text style={styles.deliveryTitle}>{fulfilment === 'store' ? storeName ? `Ritiro ${atPlace(storeName)}` : 'Ritiro in negozio' : FULFILMENT_LABELS[fulfilment]}</Text>
       <Text style={styles.deliveryText}>{!methodOk ? 'Non disponibile per questo ordine: scegline un altro'
         : fulfilment === 'store' ? "Gratuito, quando l'ordine è pronto" : fulfilment === 'home' ? "Indirizzo al passo successivo" : 'Scegli il punto al passo successivo'}</Text>
     </View>
