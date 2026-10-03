@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   crumb: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
   crumbSep: { fontSize: 13, color: colors.rule, fontFamily: fonts.sans },
   titleWide: { fontSize: 48, lineHeight: 52, letterSpacing: -0.8 },
-  media: { backgroundColor: '#F2EEE8', marginHorizontal: -20, marginTop: -20, marginBottom: 22 },
+  media: { backgroundColor: colors.stone, marginHorizontal: -20, marginTop: -20, marginBottom: 22 },
   overlay: { position: 'absolute', left: 12, right: 12, flexDirection: 'row', justifyContent: 'space-between' },
   round: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
     shadowColor: '#3A2E1A', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2 },

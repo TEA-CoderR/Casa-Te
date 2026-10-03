@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
 
   tileRow: { flexDirection: 'row', gap: 28 },
   tilePlate: { backgroundColor: colors.stone, borderRadius: 4, overflow: 'hidden', aspectRatio: 0.88 },
-  tileInner: { alignItems: 'center', justifyContent: 'center' },
+  tileInner: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.stone },
   tileCaption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, gap: 12 },
   tileName: { flexShrink: 1, fontSize: 26, lineHeight: 30, fontFamily: fonts.serif, color: colors.text },
   tileCount: { fontSize: 13.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
