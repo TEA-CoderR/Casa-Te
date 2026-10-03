@@ -26,7 +26,7 @@ Items marked **[business]** need a decision or data from CASA & TE; **[legal]** 
 - [ ] Store addresses, phones and opening hours filled in.
 - [ ] Real pickup points entered or pickup-point delivery disabled; **demo pickup points deactivated**.
 - [ ] Demo seed data absent from production (`select count(*) from products where description = 'Prodotto dimostrativo.'` = 0).
-- [ ] Home hero image replaced with approved photography (`apps/mobile/assets/home-editorial-v2.png` is synthetic demo imagery).
+- [ ] Home hero image replaced with approved photography (`apps/mobile/assets/home-tuscany.jpg` was supplied by the owner for the demo; confirm usage rights).
 
 ## Payments
 - [ ] Stripe account verified, live keys set, live webhook created and receiving events.
