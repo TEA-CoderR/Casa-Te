@@ -45,7 +45,7 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
   </Pressable>;
   const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
   const price = <View style={styles.priceRow}>
-    <Text style={styles.price}>{formatEuro(product.price_cents)}</Text>
+    <Text style={[styles.price, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
     {!!discount && <Text style={styles.compare}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
   </View>;
 
@@ -67,7 +67,7 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={styles.media}>
         <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.04} aspect={1.2} />
-        {!!discount && <Text style={styles.discount} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount}</Text>}
+        {!!discount && <View style={styles.discount}><Text style={styles.discountText} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount}</Text></View>}
       </View>
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
@@ -84,7 +84,8 @@ const styles = StyleSheet.create({
   media: { backgroundColor: colors.surface },
   heart: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 4, right: 4 },
-  discount: { position: 'absolute', left: 10, top: 9, fontSize: 11.5, color: '#A84E2A', fontFamily: fonts.sansSemiBold, fontWeight: '600', letterSpacing: 0.3 },
+  discount: { position: 'absolute', left: 8, top: 8, backgroundColor: colors.sale, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  discountText: { fontSize: 13.5, color: '#fff', fontFamily: fonts.sansSemiBold, fontWeight: '700', letterSpacing: 0.2 },
   body: { paddingHorizontal: 10 },
   name: { fontSize: 15.5, lineHeight: 18, fontFamily: fonts.serif, color: colors.text, minHeight: 36 },
   meta: { fontSize: 11.5, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },

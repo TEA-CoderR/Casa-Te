@@ -75,6 +75,7 @@ export default function ProductDetailScreen() {
 
   const caption = inCart ? `Già ${inCart} nel carrello` : product.stock !== null && product.stock < product.max_per_order ? `${product.stock} disponibili` : '';
   const store = storeShortName(selected) || 'negozio';
+  const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
   const unitPrice = unitPriceLabel(product.price_cents, product.unit_quantity, product.unit);
   const pack = formatPackSize(product.unit_quantity, product.unit);
   const features: Array<{ icon: IconName; text: string }> = product.highlights.length
@@ -85,9 +86,9 @@ export default function ProductDetailScreen() {
     {!!product.brand && <Text style={styles.brand}>{product.brand}</Text>}
     <Text style={styles.title} accessibilityRole="header">{product.name}</Text>
     <View style={styles.priceRow}>
-      <Text style={styles.price}>{formatEuro(product.price_cents)}</Text>
+      <Text style={[styles.price, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
       {!!product.compare_at_price_cents && <Text style={styles.compare}>{formatEuro(product.compare_at_price_cents)}</Text>}
-      {!!discountLabel(product.price_cents, product.compare_at_price_cents) && <Text style={styles.discount}>{discountLabel(product.price_cents, product.compare_at_price_cents)}</Text>}
+      {!!discount && <View style={styles.discount}><Text style={styles.discountText}>{discount}</Text></View>}
       {unitPrice ? <Text style={styles.vat}>{unitPrice}{pack ? ` · ${pack}` : ''}</Text> : <Text style={styles.vat}>IVA inclusa</Text>}
     </View>
     <View style={styles.ratingRow} accessibilityLabel={product.rating_count ? `Valutazione ${product.rating_avg} su 5, ${product.rating_count} recensioni` : 'Nessuna recensione'}>
@@ -157,7 +158,8 @@ const styles = StyleSheet.create({
   mediaWide: { flex: 1.1, marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 18, overflow: 'hidden' },
   brand: { fontSize: 11, letterSpacing: 2.6, textTransform: 'uppercase', color: colors.text, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginBottom: 6 },
   title: { fontSize: 30, lineHeight: 33, fontFamily: fonts.serif, color: colors.text, letterSpacing: -0.2 },
-  discount: { fontSize: 13, color: '#A84E2A', fontFamily: fonts.sansSemiBold, fontWeight: '600', letterSpacing: 0.3 },
+  discount: { alignSelf: 'center', backgroundColor: colors.sale, borderRadius: 6, paddingHorizontal: 9, paddingVertical: 3 },
+  discountText: { fontSize: 15, color: '#fff', fontFamily: fonts.sansSemiBold, fontWeight: '700' },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 10 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
   ratingText: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans },

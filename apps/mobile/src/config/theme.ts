@@ -19,6 +19,8 @@ export const colors = {
   faint: '#686C64',
   line: '#ECE6DB',
   badge: '#B3261E',
+  /** Discounts: solid red label and red sale price, meant to stand out. */
+  sale: '#D62828',
   danger: '#A62F2F',
 } as const;
 
