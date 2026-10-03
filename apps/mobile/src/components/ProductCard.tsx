@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   add: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   addCount: { color: '#fff', fontSize: 15, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
   entry: { flex: 1 },
-  plate: { backgroundColor: colors.stone, borderRadius: 4, overflow: 'hidden' },
+  plate: { backgroundColor: colors.photo, borderRadius: 4, overflow: 'hidden', borderWidth: 1, borderColor: colors.photoLine },
   discountBig: { left: 16, top: 16, paddingHorizontal: 11, paddingVertical: 5 },
   entryText: { paddingTop: 16, gap: 3 },
   entryBrand: { fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, fontFamily: fonts.sansMedium, fontWeight: '500' },

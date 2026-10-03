@@ -119,7 +119,7 @@ components:
     rounded: "{rounded.badge}"
     padding: "3px 8px"
   product-plate:
-    backgroundColor: "{colors.stone}"
+    backgroundColor: "{colors.paper}"
     rounded: "{rounded.print}"
   product-card-phone:
     backgroundColor: "{colors.paper}"
@@ -158,12 +158,12 @@ components:
 
 **Creative North Star: "The Printed Home Catalogue"**
 
-Casa & Te is one system with two registers sharing a single token set (`src/config/theme.ts`). Below 900 px the phone register is the incumbent app: soft and touch-friendly, with pills, gently rounded cards, circular department icons and a bottom tab bar. At 900 px and wider (`useLayout().wide`) the desktop register reads like the chain's printed home catalogue: a cover, a row of department photo tiles, then product spreads set on white paper, with warm stone plates behind every photograph, hairline print rules between rows, square-cut 4 px corners and no shadows on content.
+Casa & Te is one system with two registers sharing a single token set (`src/config/theme.ts`). Below 900 px the phone register is the incumbent app: soft and touch-friendly, with pills, gently rounded cards, circular department icons and a bottom tab bar. At 900 px and wider (`useLayout().wide`) the desktop register reads like the chain's printed home catalogue: a cover, a row of department photo tiles, then product spreads set on white paper, with every product photograph on a white plate framed by a hairline, hairline print rules between rows, square-cut 4 px corners and no shadows on content.
 
 Both registers speak the same material language: white paper ground, warm stone neutrals, deep forest green as the one committed colour for actions and the store-pickup band, EB Garamond for names, titles and prices, Hanken Grotesk small for UI and figures, and the Bodoni Moda wordmark. The positioning is affordable everyday goods with design sense, so the system stays warm and elevated without turning exclusive: plain prices, honest per-store availability, photography before decoration. The single loud exception is the discount, which is a solid red badge and a red sale price on both registers by owner requirement.
 
 **Key Characteristics:**
-- White paper ground; warm stone (#F4EFE6 family) plates behind photographs, never behind text-only content on desktop.
+- White paper ground; product photographs always on white (owner's explicit choice), framed by a #ECE7DF hairline; warm stone (#F4EFE6) only for the footer, closing tiles and hover fills.
 - Forest green is the only committed field: primary actions, the pickup band, active navigation.
 - Serif for what the shopper reads (names, titles, prices); small sans for what the shopper operates (labels, filters, buttons on desktop, figures).
 - Desktop: hairline rules (#E4DCCD), 4 px corners, borderless product entries, no content shadows.
@@ -190,7 +190,7 @@ A warm, restrained palette: paper white and stone neutrals carry the page, one d
 - **Muted Olive Grey** (muted): secondary text, counts, captions, struck-through compare price, breadcrumbs.
 - **Faint Olive Grey** (faint): placeholders, inactive tabs and secondary icons (kept at 4.5:1 or better on white).
 - **Paper** (paper): page and surface background on both registers.
-- **Warm Stone** (stone): photo plates on desktop, the footer (colophon) ground, the "closer" tile, desktop hover fill for header tools.
+- **Warm Stone** (stone): the footer (colophon) ground, the "closer" tile, desktop hover fill for header tools.
 - **Sand** (sand) and **Cream** (cream): phone-register accent fills (info notices, empty-state and option icon circles, selected view toggle).
 - **Print Rule** (rule): desktop hairlines: masthead and nav band borders, footer base rule, breadcrumb separators.
 - **Line** (line): phone-register dividers, input and quantity borders, list row separators.
@@ -200,7 +200,7 @@ A warm, restrained palette: paper white and stone neutrals carry the page, one d
 
 **The Loud Discount Rule.** A discount always shows as a solid Sale Red badge with white bold sans text plus the price in Sale Red and the compare price struck through in muted grey. It is the one deliberately loud element, on phone and desktop alike, by owner requirement.
 
-**The Plate Rule.** Product photographs sit on a Warm Stone plate (multiply-blended where the image has a white ground), never on bare white or on a bordered box, on desktop.
+**The Plate Rule.** Product photographs sit on a white plate (`colors.photo`) with a 1 px `colors.photoLine` frame and 4 px corners on desktop; never on a tinted or beige backdrop (owner's explicit choice).
 
 ## Typography
 
@@ -230,13 +230,13 @@ A warm, restrained palette: paper white and stone neutrals carry the page, one d
 
 Two registers switch at **900 px** window width. Phone (<900 px) is a single column with a 20 px page padding, a horizontal circle row of departments, two-column product grid, sticky buy bar on the product page and a bottom tab bar. Desktop (≥900 px) centres content in a 1360 px measure with a 40 px gutter; full-bleed sections (cover photograph, pickup band, footer) put their colour outside the measure.
 
-Desktop rhythm is generous and print-like: 112 px between home sections (128 px before the pickup band, 120 px before the footer), 36 px under a section head, product grid gaps of 28 px with 48 px between rows, 4 columns below 1280 px and 5 at 1280 px and wider on the home "Piccoli prezzi" row. The featured spread pairs one feature-size entry with a 2 × 2 block (40 px gap). Department tiles sit in one row when there are up to six (rows of four beyond that), 28 px apart, each a 0.88 stone plate with the name and article count below. The product page is a two-column spread (media 1.25 : details max 500 px, 72 px gap) under a breadcrumb row.
+Desktop rhythm is generous and print-like: 112 px between home sections (128 px before the pickup band, 120 px before the footer), 36 px under a section head, product grid gaps of 28 px with 48 px between rows, 4 columns below 1280 px and 5 at 1280 px and wider on the home "Piccoli prezzi" row. The featured spread pairs one feature-size entry with a 2 × 2 block (40 px gap). Department tiles sit in one row when there are up to six (rows of four beyond that), 28 px apart, each a 0.88 white photo plate with the name and article count below. The product page is a two-column spread (media 1.25 : details max 500 px, 72 px gap) under a breadcrumb row.
 
 The phone spacing scale is 6 / 10 / 14 / 18 / 24 px.
 
 ## Elevation & Depth
 
-Desktop is flat: depth comes from tonal plates (stone on paper), the forest band, and hairline rules, never from shadows on content. The phone register keeps one soft ambient shadow for floating controls and cards.
+Desktop is flat: depth comes from hairline-framed white photo plates, the stone footer, the forest band, and hairline rules, never from shadows on content. The phone register keeps one soft ambient shadow for floating controls and cards.
 
 ### Shadow Vocabulary
 - **Soft card shadow** (`box-shadow: 0 4px 14px rgba(58,46,26,0.07)`): phone register only, floating search and raised cards.
@@ -264,7 +264,7 @@ Desktop is square-cut: 4 px on photo plates, primary and secondary buttons, quan
 - **State:** active filter switches the border to Ink.
 
 ### Cards / Containers
-- **Desktop product entry:** borderless. A 4 px stone plate holds the photo (slow 1.035 scale on hover, 600 ms); the uppercase brand line, Garamond name (turns green on hover) and scarcity note sit below like print; price and add-to-cart on the bottom line; heart top-right on the plate.
+- **Desktop product entry:** a 4 px white photo plate with a hairline frame holds the photo (slow 1.035 scale on hover, 600 ms); the uppercase brand line, Garamond name (turns green on hover) and scarcity note sit below like print; price and add-to-cart on the bottom line; heart top-right on the plate.
 - **Phone product card:** white, 1 px #EEE9E0 border, 10 px radius, photo on white, name 15.5 Garamond.
 - **Notices:** 14 px radius, tinted fills (sand info, #E8EFE6 success, #F8E9E7 error) with deep text.
 
@@ -278,7 +278,7 @@ Desktop is square-cut: 4 px on photo plates, primary and secondary buttons, quan
 - **Phone:** centred wordmark with the store line under it, menu and cart icons, bottom tab bar (Home, Categorie, Preferiti, Profilo) with green active state.
 
 ### Department tiles (desktop)
-Each department is a stone plate (aspect 0.88, 4 px corners) with its admin cover photo or a representative product (products already shown in "In evidenza" are avoided), the Garamond 26 px name with an arrow, and the article count beneath. Hover: the photo scales to 1.04 over 700 ms, the name turns green and the arrow brightens and nudges right.
+Each department is a white photo plate with a hairline frame (aspect 0.88, 4 px corners) with its admin cover photo or a representative product (products already shown in "In evidenza" are avoided), the Garamond 26 px name with an arrow, and the article count beneath. Hover: the photo scales to 1.04 over 700 ms, the name turns green and the arrow brightens and nudges right.
 
 ### Pickup band
 Full-bleed Forest Green section: Garamond 54 headline naming the chosen store, a translucent-outline button, and three facts (pickup, delivery, secure payment) separated by 22% white hairlines.
@@ -287,7 +287,7 @@ Full-bleed Forest Green section: Garamond 54 headline naming the chosen store, a
 
 ### Do:
 - **Do** branch on `useLayout().wide` (900 px) and keep phone and desktop on the same tokens from `src/config/theme.ts`.
-- **Do** set product photos on a Warm Stone plate with 4 px corners on desktop.
+- **Do** set product photos on white, framed by a hairline, with 4 px corners on desktop; never on beige.
 - **Do** separate desktop rows and sections with 1 px Print Rule (#E4DCCD) hairlines and a 1 px Ink rule under section heads.
 - **Do** use Garamond for names, headings and prices, and Hanken Grotesk for desktop controls and labels.
 - **Do** show every discount as a solid Sale Red badge plus a red price and struck-through compare price.

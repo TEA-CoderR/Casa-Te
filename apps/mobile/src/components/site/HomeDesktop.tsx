@@ -246,8 +246,8 @@ const styles = StyleSheet.create({
   moreText: { fontSize: 14, color: colors.green, fontFamily: fonts.sansSemiBold, fontWeight: '600', letterSpacing: 0.2 },
 
   tileRow: { flexDirection: 'row', gap: 28 },
-  tilePlate: { backgroundColor: colors.stone, borderRadius: 4, overflow: 'hidden', aspectRatio: 0.88 },
-  tileInner: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.stone },
+  tilePlate: { backgroundColor: colors.photo, borderRadius: 4, overflow: 'hidden', aspectRatio: 0.88, borderWidth: 1, borderColor: colors.photoLine },
+  tileInner: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.photo },
   tileCaption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, gap: 12 },
   tileName: { flexShrink: 1, fontSize: 26, lineHeight: 30, fontFamily: fonts.serif, color: colors.text },
   tileCount: { fontSize: 13.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },

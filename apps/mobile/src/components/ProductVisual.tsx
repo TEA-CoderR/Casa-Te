@@ -10,7 +10,7 @@ export function ProductVisual({ id, label, inset = 0.12, aspect = 1, blend }: { 
   return <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
     style={{ width: '100%', aspectRatio: aspect, alignItems: 'center', justifyContent: 'center' }}
     accessibilityLabel={label ? `${label} · immagine dimostrativa` : undefined}>
-    {width > 0 && cell !== undefined && <View style={{ width: size, height: size, overflow: 'hidden', backgroundColor: blend ? colors.stone : undefined }}>
+    {width > 0 && cell !== undefined && <View style={{ width: size, height: size, overflow: 'hidden', backgroundColor: blend ? colors.photo : undefined }}>
       <Image source={demoProductSheet} resizeMode="stretch" fadeDuration={0}
         style={[{ position: 'absolute', width: size * 4, height: size * 2,
           left: -(cell % 4) * size, top: -Math.floor(cell / 4) * size }, blend ? ({ mixBlendMode: 'multiply' } as object) : null]} />
