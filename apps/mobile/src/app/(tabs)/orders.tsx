@@ -11,6 +11,7 @@ import { colors } from '@/config/theme';
 import { fetchOrders, imageUrl, type OrderWithItems } from '@/lib/api';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
+import { ALL_PRODUCTS } from '@/lib/links';
 
 export default function OrdersScreen() {
   const user = useUser();
@@ -27,7 +28,7 @@ export default function OrdersScreen() {
     {error && !orders ? <Notice tone="error" message="Impossibile caricare gli ordini. Trascina verso il basso per riprovare." />
       : !orders ? <Loading />
       : !orders.length ? <EmptyState icon="box" title="Nessun ordine ancora" message="Quando farai il tuo primo ordine, lo ritroverai qui.">
-          <PrimaryButton title="Esplora il catalogo" onPress={() => router.push('/catalog')} /></EmptyState>
+          <PrimaryButton title="Esplora il catalogo" onPress={() => router.push(ALL_PRODUCTS)} /></EmptyState>
       : orders.map((order) => <Pressable key={order.id} style={styles.order} accessibilityRole="button"
           onPress={() => router.push(`/order/${order.id}`)}>
         <View style={styles.top}><View style={{ flex: 1 }}>

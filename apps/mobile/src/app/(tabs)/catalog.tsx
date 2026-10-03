@@ -16,7 +16,7 @@ import { useRecentSearches } from '@/store/recentSearches';
 import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared';
 
 export default function CatalogScreen() {
-  const params = useLocalSearchParams<{ category?: string; q?: string; search?: string; sort?: string; offerte?: string }>();
+  const params = useLocalSearchParams<{ category?: string; q?: string; search?: string; sort?: string; offerte?: string; evidenza?: string }>();
   const { selected } = useStores();
   const { columns, wide } = useLayout();
   const [query, setQuery] = useState(params.q ?? '');
@@ -39,6 +39,10 @@ export default function CatalogScreen() {
   // ?offerte=1: only discounted products ("In offerta"), within the chosen category.
   const [onSale, setOnSale] = useState(params.offerte === '1');
   useEffect(() => { setOnSale(params.offerte === '1'); }, [params.offerte]);
+  // ?evidenza=1: only the products starred "In evidenza" in the admin.
+  const [featuredOnly, setFeaturedOnly] = useState(params.evidenza === '1');
+  useEffect(() => { setFeaturedOnly(params.evidenza === '1'); }, [params.evidenza]);
+  const collection = onSale ? 'In offerta' : featuredOnly ? 'In evidenza' : null;
   useEffect(() => { if (params.search) setSearchOpen(true); }, [params.search]);
   useEffect(() => { if (params.sort === 'price_asc') setFilters((f) => ({ ...f, sort: 'price_asc' })); }, [params.sort]);
   // The desktop masthead searches by changing ?q=.
@@ -59,14 +63,14 @@ export default function CatalogScreen() {
     if (current.parent_id) return [current.id];
     return [current.id, ...all.filter((c) => c.parent_id === current.id).map((c) => c.id)];
   }, [current, all]);
-  const title = onSale ? (parent ? `Offerte · ${parent.name}` : 'In offerta') : parent?.name ?? 'Categorie';
+  const title = collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Categorie';
   const facets = useQuery(`facets:${scopeIds?.join(',') ?? 'all'}`, () => fetchFacets(scopeIds));
 
   const request = (p: number) => fetchProducts({
-    storeId: selected?.id ?? null, categoryIds: scopeIds ?? undefined, search: debounced, sort: filters.sort, page: p, onSale,
+    storeId: selected?.id ?? null, categoryIds: scopeIds ?? undefined, search: debounced, sort: filters.sort, page: p, onSale, featured: featuredOnly || undefined,
     brands: filters.brands, colors: filters.colors, priceMin: filters.price.min, priceMax: filters.price.max,
   });
-  const key = JSON.stringify([selected?.id, scopeIds, debounced, onSale, filters.sort, filters.brands, filters.colors, filters.price]);
+  const key = JSON.stringify([selected?.id, scopeIds, debounced, onSale, featuredOnly, filters.sort, filters.brands, filters.colors, filters.price]);
   // Reload from page 0 whenever the filters change.
   useEffect(() => {
     let active = true;
@@ -92,11 +96,11 @@ export default function CatalogScreen() {
   // Keep the URL in step with the chosen category, so the home links (same id again) and reloads keep working.
   const selectCategory = (id: string | null) => { setCategoryId(id); router.setParams({ category: id ?? undefined }); };
   // Back steps out one level: close the search, subcategory → its department, department → all categories, then home.
-  const leaveOffers = () => { setOnSale(false); router.setParams({ offerte: undefined }); };
+  const leaveOffers = () => { setOnSale(false); setFeaturedOnly(false); router.setParams({ offerte: undefined, evidenza: undefined }); };
   const goBack = () => {
     if (searchOpen && query) { setQuery(''); setSearchOpen(false); return; }
     // Out of "In offerta" first: back lands on the whole catalogue, not on the offers again.
-    if (onSale) { leaveOffers(); return; }
+    if (collection) { leaveOffers(); return; }
     if (current?.parent_id) { selectCategory(current.parent_id); return; }
     if (categoryId) { selectCategory(null); return; }
     if (router.canGoBack()) router.back(); else router.replace('/');
@@ -115,13 +119,13 @@ export default function CatalogScreen() {
         {({ hovered }: WebState) => <Text style={[styles.crumb, hovered && { color: colors.green }]}>Home</Text>}</Pressable>
       <Text style={styles.crumbSep}>/</Text>
       <Pressable onPress={() => { setQuery(''); leaveOffers(); selectCategory(null); }} accessibilityRole="link">
-        {({ hovered }: WebState) => <Text style={[styles.crumb, hovered && { color: colors.green }, !parent && !searching && !onSale && styles.crumbOn]}>Catalogo</Text>}</Pressable>
-      {onSale && !searching && <><Text style={styles.crumbSep}>/</Text><Text style={[styles.crumb, styles.crumbOn]}>In offerta</Text></>}
+        {({ hovered }: WebState) => <Text style={[styles.crumb, hovered && { color: colors.green }, !parent && !searching && !collection && styles.crumbOn]}>Catalogo</Text>}</Pressable>
+      {!!collection && !searching && <><Text style={styles.crumbSep}>/</Text><Text style={[styles.crumb, styles.crumbOn]}>{collection}</Text></>}
       {!!parent && !searching && <><Text style={styles.crumbSep}>/</Text><Text style={[styles.crumb, styles.crumbOn]}>{parent.name}</Text></>}
     </View>
     <View style={styles.deskTitleRow}>
       <Text style={styles.deskTitle} accessibilityRole="header" numberOfLines={1}>
-        {searching ? `«${debounced.trim()}»` : onSale ? title : parent?.name ?? 'Tutti i prodotti'}</Text>
+        {searching ? `«${debounced.trim()}»` : collection ? title : parent?.name ?? 'Tutti i prodotti'}</Text>
       <Text style={styles.deskCount}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}`}</Text>
     </View>
     {searching && <Pressable onPress={() => { setQuery(''); setSearchOpen(false); router.setParams({ q: undefined }); }} accessibilityRole="button" style={{ alignSelf: 'flex-start' }}>

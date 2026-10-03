@@ -20,7 +20,7 @@ import { Overlay } from './Overlay';
  */
 export function SiteHeader() {
   const pathname = usePathname();
-  const params = useGlobalSearchParams<{ category?: string; q?: string; offerte?: string }>();
+  const params = useGlobalSearchParams<{ category?: string; q?: string; offerte?: string; evidenza?: string }>();
   const { selected } = useStores();
   const count = cartItemCount(useCartStore((s) => s.items));
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
@@ -38,7 +38,7 @@ export function SiteHeader() {
 
   const search = () => {
     const q = query.trim();
-    router.push({ pathname: '/catalog', params: q ? { q, offerte: '' } : { search: '1', offerte: '' } });
+    router.push({ pathname: '/catalog', params: q ? { q, offerte: '', evidenza: '' } : { search: '1', offerte: '', evidenza: '' } });
   };
 
   // Department menu: hovering a department opens its subcategories under the nav band.
@@ -111,10 +111,10 @@ export function SiteHeader() {
     <View nativeID="site-nav" style={[styles.navBand, { zIndex: 1 }]}>
       <Wrap style={styles.nav}>
         <View style={styles.navLinks} accessibilityRole="menubar">
-          {navLink('all', 'Tutti i prodotti', onCatalog && !activeId && !params.q && params.offerte !== '1', () => router.push({ pathname: '/catalog', params: { offerte: '', category: '' } }))}
+          {navLink('all', 'Tutti i prodotti', onCatalog && !activeId && !params.q && params.offerte !== '1' && params.evidenza !== '1', () => router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: '' } }))}
           {departments.map((d) => navLink(d.id, d.name, activeId === d.id,
-            () => router.push({ pathname: '/catalog', params: { offerte: '', category: d.id } }), d.id))}
-          <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1', category: '' } })} accessibilityRole="link"
+            () => router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: d.id } }), d.id))}
+          <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1', evidenza: '', category: '' } })} accessibilityRole="link"
             onHoverIn={() => hoverMenu(null)} onHoverOut={cancelSwitch}
             style={({ hovered }: WebState) => [styles.navLink, (hovered || params.offerte === '1') && { borderColor: colors.sale }, transition('border-color')]}>
             <Text style={[styles.navText, { color: colors.sale, fontFamily: fonts.sansSemiBold, fontWeight: '600' }]}>Offerte</Text>
@@ -133,7 +133,7 @@ export function SiteHeader() {
       <Wrap style={styles.menuInner}>
         <View style={styles.menuHead}>
           <Text style={styles.menuTitle}>{menuDept.name}</Text>
-          <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '', category: menuDept.id } })} accessibilityRole="link">
+          <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: menuDept.id } })} accessibilityRole="link">
             {({ hovered }: WebState) => <View style={styles.menuAll}>
               <Text style={[styles.menuAllText, hovered && { textDecorationLine: 'underline' }]}>Vedi tutto {menuDept.name}</Text>
               <Icon name="arrow" size={15} color={colors.green} strokeWidth={1.6} /></View>}
@@ -141,7 +141,7 @@ export function SiteHeader() {
         </View>
         <View style={styles.menuList}>
           {menuChildren.map((c) => <Pressable key={c.id} accessibilityRole="menuitem" style={styles.menuItem}
-            onPress={() => router.push({ pathname: '/catalog', params: { offerte: '', category: c.id } })}>
+            onPress={() => router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: c.id } })}>
             {({ hovered }: WebState) => <Text style={[styles.menuItemText, hovered && styles.menuItemOn, transition('color')]}>{c.name}</Text>}
           </Pressable>)}
         </View>
@@ -169,7 +169,7 @@ function SearchBox({ query, setQuery, onSubmit, storeId, categories }: {
   const open = focused && enough;
   type Item = { key: string; go: () => void };
   const items: Item[] = [
-    ...depts.map((c) => ({ key: `c${c.id}`, go: () => router.push({ pathname: '/catalog', params: { offerte: '', category: c.id } }) })),
+    ...depts.map((c) => ({ key: `c${c.id}`, go: () => router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: c.id } }) })),
     ...products.map((p) => ({ key: `p${p.id}`, go: () => router.push(`/product/${p.id}`) })),
   ];
   // Opening a suggestion leaves the box empty; the full results page keeps the words in ?q=.

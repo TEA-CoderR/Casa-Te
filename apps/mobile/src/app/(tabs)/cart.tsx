@@ -16,6 +16,7 @@ import { fetchProducts, imageUrl } from '@/lib/api';
 import { useCartQuote, useClubSettings, useLayout } from '@/lib/hooks';
 import { cartItemCount, useCartStore } from '@/store/cart';
 import { useUser } from '@/store/session';
+import { ALL_PRODUCTS } from '@/lib/links';
 
 const ISSUE_TEXT: Record<NonNullable<QuoteLine['issue']>, string> = {
   unavailable: 'Non più disponibile',
@@ -43,7 +44,7 @@ export default function CartScreen() {
 
   if (empty) return <Screen><PageTitle title="Il tuo carrello" /><EmptyState title="Il carrello è vuoto"
     message="La tua casa aspetta nuove idee. Inizia da un piccolo essenziale.">
-    <PrimaryButton title="Vai al catalogo" onPress={() => router.push('/catalog')} />
+    <PrimaryButton title="Vai al catalogo" onPress={() => router.push(ALL_PRODUCTS)} />
   </EmptyState></Screen>;
 
   if (!quote) return <Screen><PageTitle title="Il tuo carrello" />

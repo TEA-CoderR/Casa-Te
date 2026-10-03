@@ -22,6 +22,7 @@ import { useCartStore } from '@/store/cart';
 import { SiteHeader } from '@/components/site/SiteHeader';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SITE_WIDTH, type WebState } from '@/components/site/shared';
+import { ALL_PRODUCTS } from '@/lib/links';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -53,7 +54,7 @@ export default function ProductDetailScreen() {
   if (loading && !product) return <Screen stack><Stack.Screen options={{ headerShown: true }} /><Loading /></Screen>;
   if (!product) return <Screen stack><Stack.Screen options={{ headerShown: true }} /><EmptyState title={error ? 'Connessione assente' : 'Prodotto non trovato'}
     message={error ? 'Controlla la rete e riprova.' : 'Scopri gli altri prodotti del catalogo.'} icon="search">
-    <PrimaryButton title="Vai al catalogo" onPress={() => router.replace('/catalog')} />
+    <PrimaryButton title="Vai al catalogo" onPress={() => router.replace(ALL_PRODUCTS)} />
   </EmptyState></Screen>;
 
   const stock = stockLabel(product.stock, storeShortName(selected));
@@ -137,7 +138,7 @@ export default function ProductDetailScreen() {
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
     {wide && <View style={styles.crumbs}>
       {crumb('Home', () => router.push('/'))}<Text style={styles.crumbSep}>/</Text>
-      {crumb('Catalogo', () => router.push('/catalog'))}<Text style={styles.crumbSep}>/</Text>
+      {crumb('Catalogo', () => router.push(ALL_PRODUCTS))}<Text style={styles.crumbSep}>/</Text>
       {crumb(product.name)}
     </View>}
     {wide ? <View style={styles.wide}>
