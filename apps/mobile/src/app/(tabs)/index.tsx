@@ -66,7 +66,7 @@ function HomePhone() {
   const categoryItem = (category: CategoryRow, index: number, width?: `${number}%`) =>
     <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`Categoria ${category.name}`}
       style={({ pressed }) => [styles.category, width ? { width } : { minWidth: 82 }, { opacity: pressed ? 0.7 : 1 }]}
-      onPress={() => router.push({ pathname: '/catalog', params: { category: category.id } })}>
+      onPress={() => router.push({ pathname: '/catalog', params: { offerte: '', category: category.id } })}>
       <View style={[styles.circle, { backgroundColor: tones[index % tones.length] }, wide && { width: 104, height: 104, borderRadius: 52 }]}>
         {category.image_path
           // Cover photo from the admin; white studio backgrounds melt into the stone tone.
@@ -115,7 +115,7 @@ function HomePhone() {
         <Text style={[styles.heroTitle, wide && styles.heroTitleWide]}>La bellezza{'\n'}vive con te.</Text>
         <Text style={[styles.heroText, wide && { fontSize: 19, lineHeight: 27 }]}>Casa, stile e ispirazione{'\n'}per ogni momento{'\n'}della tua vita.</Text>
       </View>
-      <Pressable accessibilityRole="search" accessibilityLabel="Cerca prodotti" onPress={() => router.push({ pathname: '/catalog', params: { search: '1' } })}
+      <Pressable accessibilityRole="search" accessibilityLabel="Cerca prodotti" onPress={() => router.push({ pathname: '/catalog', params: { offerte: '', search: '1' } })}
         style={[styles.search, wide && { left: 48, right: undefined, width: 480, bottom: 40 }]}>
         <Icon name="search" color={colors.text} size={19} /><Text style={styles.searchText}>Cosa stai cercando?</Text>
       </Pressable>

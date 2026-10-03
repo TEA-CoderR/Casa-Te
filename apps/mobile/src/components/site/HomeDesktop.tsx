@@ -172,7 +172,7 @@ function Departments({ departments, total, countsReady, cover, sku }: {
   departments: CategoryRow[]; total: (d: CategoryRow) => number; countsReady: boolean;
   cover: (d: CategoryRow) => string | null; sku: (d: CategoryRow) => string | null;
 }) {
-  const open = (d: CategoryRow) => router.push({ pathname: '/catalog', params: { category: d.id } });
+  const open = (d: CategoryRow) => router.push({ pathname: '/catalog', params: { offerte: '', category: d.id } });
   const tile = (d: CategoryRow) => {
     const image = cover(d);
     return <Pressable key={d.id} onPress={() => open(d)} accessibilityRole="link"

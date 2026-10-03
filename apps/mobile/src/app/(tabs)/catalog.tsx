@@ -92,8 +92,11 @@ export default function CatalogScreen() {
   // Keep the URL in step with the chosen category, so the home links (same id again) and reloads keep working.
   const selectCategory = (id: string | null) => { setCategoryId(id); router.setParams({ category: id ?? undefined }); };
   // Back steps out one level: close the search, subcategory → its department, department → all categories, then home.
+  const leaveOffers = () => { setOnSale(false); router.setParams({ offerte: undefined }); };
   const goBack = () => {
     if (searchOpen && query) { setQuery(''); setSearchOpen(false); return; }
+    // Out of "In offerta" first: back lands on the whole catalogue, not on the offers again.
+    if (onSale) { leaveOffers(); return; }
     if (current?.parent_id) { selectCategory(current.parent_id); return; }
     if (categoryId) { selectCategory(null); return; }
     if (router.canGoBack()) router.back(); else router.replace('/');
@@ -111,7 +114,7 @@ export default function CatalogScreen() {
       <Pressable onPress={() => router.push('/')} accessibilityRole="link">
         {({ hovered }: WebState) => <Text style={[styles.crumb, hovered && { color: colors.green }]}>Home</Text>}</Pressable>
       <Text style={styles.crumbSep}>/</Text>
-      <Pressable onPress={() => { setQuery(''); setOnSale(false); router.setParams({ offerte: undefined }); selectCategory(null); }} accessibilityRole="link">
+      <Pressable onPress={() => { setQuery(''); leaveOffers(); selectCategory(null); }} accessibilityRole="link">
         {({ hovered }: WebState) => <Text style={[styles.crumb, hovered && { color: colors.green }, !parent && !searching && !onSale && styles.crumbOn]}>Catalogo</Text>}</Pressable>
       {onSale && !searching && <><Text style={styles.crumbSep}>/</Text><Text style={[styles.crumb, styles.crumbOn]}>In offerta</Text></>}
       {!!parent && !searching && <><Text style={styles.crumbSep}>/</Text><Text style={[styles.crumb, styles.crumbOn]}>{parent.name}</Text></>}
