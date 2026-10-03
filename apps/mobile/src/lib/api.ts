@@ -126,13 +126,18 @@ export async function fetchCategoryCounts(): Promise<Record<string, number>> {
   return counts;
 }
 
-/** One representative photo per category (featured products first), for the category circles. */
-export async function fetchCategoryCovers(): Promise<Record<string, { image: string | null; sku: string }>> {
+/**
+ * One representative photo per category (featured products first). Products in `avoid` are used only
+ * when the category has nothing else, so a department tile does not repeat a product shown next to it.
+ */
+export async function fetchCategoryCovers(avoid: string[] = []): Promise<Record<string, { image: string | null; sku: string }>> {
   const rows = unwrap(await supabase.from('products').select('sku,category_id,featured,product_images(path,sort)')
     .eq('active', true).not('category_id', 'is', null).order('featured', { ascending: false }).order('created_at').limit(500)) as unknown as
     Array<{ sku: string; category_id: string; product_images: Array<{ path: string; sort: number }> }>;
   const covers: Record<string, { image: string | null; sku: string }> = {};
-  for (const r of rows) {
+  const skip = new Set(avoid);
+  const ordered = [...rows.filter((r) => !skip.has(r.sku)), ...rows.filter((r) => skip.has(r.sku))];
+  for (const r of ordered) {
     const path = [...(r.product_images ?? [])].sort((a, b) => a.sort - b.sort)[0]?.path;
     const cover = { image: imageUrl(path), sku: r.sku };
     // Keep the first one; upgrade a cover without a photo when a product with a photo comes along.

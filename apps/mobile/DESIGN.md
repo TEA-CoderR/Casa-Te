@@ -158,7 +158,7 @@ components:
 
 **Creative North Star: "The Printed Home Catalogue"**
 
-Casa & Te is one system with two registers sharing a single token set (`src/config/theme.ts`). Below 900 px the phone register is the incumbent app: soft and touch-friendly, with pills, gently rounded cards, circular department icons and a bottom tab bar. At 900 px and wider (`useLayout().wide`) the desktop register reads like the chain's printed home catalogue: a cover, a contents page of departments, then product spreads set on white paper, with warm stone plates behind every photograph, hairline print rules between rows, square-cut 4 px corners and no shadows on content.
+Casa & Te is one system with two registers sharing a single token set (`src/config/theme.ts`). Below 900 px the phone register is the incumbent app: soft and touch-friendly, with pills, gently rounded cards, circular department icons and a bottom tab bar. At 900 px and wider (`useLayout().wide`) the desktop register reads like the chain's printed home catalogue: a cover, a row of department photo tiles, then product spreads set on white paper, with warm stone plates behind every photograph, hairline print rules between rows, square-cut 4 px corners and no shadows on content.
 
 Both registers speak the same material language: white paper ground, warm stone neutrals, deep forest green as the one committed colour for actions and the store-pickup band, EB Garamond for names, titles and prices, Hanken Grotesk small for UI and figures, and the Bodoni Moda wordmark. The positioning is affordable everyday goods with design sense, so the system stays warm and elevated without turning exclusive: plain prices, honest per-store availability, photography before decoration. The single loud exception is the discount, which is a solid red badge and a red sale price on both registers by owner requirement.
 
@@ -192,7 +192,7 @@ A warm, restrained palette: paper white and stone neutrals carry the page, one d
 - **Paper** (paper): page and surface background on both registers.
 - **Warm Stone** (stone): photo plates on desktop, the footer (colophon) ground, the "closer" tile, desktop hover fill for header tools.
 - **Sand** (sand) and **Cream** (cream): phone-register accent fills (info notices, empty-state and option icon circles, selected view toggle).
-- **Print Rule** (rule): desktop hairlines: masthead and nav band borders, contents lines, footer base rule, breadcrumb separators.
+- **Print Rule** (rule): desktop hairlines: masthead and nav band borders, footer base rule, breadcrumb separators.
 - **Line** (line): phone-register dividers, input and quantity borders, list row separators.
 
 ### Named Rules
@@ -213,7 +213,7 @@ A warm, restrained palette: paper white and stone neutrals carry the page, one d
 ### Hierarchy
 - **Wordmark** (Bodoni 600, 40/46 desktop masthead, 46/52 in the footer): the brand name only.
 - **Display** (Garamond 400, 92/90, -2 px): the home cover line "La bellezza vive con te." on desktop, white on the photograph.
-- **Headline** (Garamond 400, 56/58, -1 px): desktop section heads ("Reparti", "In evidenza"), sitting on a 1 px ink rule. Close relatives: contents lines 50/58, catalogue page title 64/70, product title 48/52, pickup band title 54/58.
+- **Headline** (Garamond 400, 56/58, -1 px): desktop section heads ("Scegli il reparto", "In evidenza"), sitting on a 1 px ink rule. Close relatives: department tile names 26/30, catalogue page title 64/70, product title 48/52, pickup band title 54/58.
 - **Headline, phone** (Garamond 400, 31/37): page titles on phone; section titles 24; product title 30/33.
 - **Title** (Garamond 400, 19/23 desktop entry, 28/32 feature entry, 15.5/18 phone card): product names.
 - **Price** (Garamond 500, 18.5 on cards, 26 feature, 31 phone product page, 36 desktop product page): every displayed amount.
@@ -230,7 +230,7 @@ A warm, restrained palette: paper white and stone neutrals carry the page, one d
 
 Two registers switch at **900 px** window width. Phone (<900 px) is a single column with a 20 px page padding, a horizontal circle row of departments, two-column product grid, sticky buy bar on the product page and a bottom tab bar. Desktop (≥900 px) centres content in a 1360 px measure with a 40 px gutter; full-bleed sections (cover photograph, pickup band, footer) put their colour outside the measure.
 
-Desktop rhythm is generous and print-like: 112 px between home sections (128 px before the pickup band, 120 px before the footer), 36 px under a section head, product grid gaps of 28 px with 48 px between rows, 4 columns below 1280 px and 5 at 1280 px and wider on the home "Piccoli prezzi" row. The featured spread pairs one feature-size entry with a 2 × 2 block (40 px gap). The contents section splits 5 : 7 between the stone plate and the list. The product page is a two-column spread (media 1.25 : details max 500 px, 72 px gap) under a breadcrumb row.
+Desktop rhythm is generous and print-like: 112 px between home sections (128 px before the pickup band, 120 px before the footer), 36 px under a section head, product grid gaps of 28 px with 48 px between rows, 4 columns below 1280 px and 5 at 1280 px and wider on the home "Piccoli prezzi" row. The featured spread pairs one feature-size entry with a 2 × 2 block (40 px gap). Department tiles sit in one row when there are up to six (rows of four beyond that), 28 px apart, each a 0.88 stone plate with the name and article count below. The product page is a two-column spread (media 1.25 : details max 500 px, 72 px gap) under a breadcrumb row.
 
 The phone spacing scale is 6 / 10 / 14 / 18 / 24 px.
 
@@ -277,8 +277,8 @@ Desktop is square-cut: 4 px on photo plates, primary and secondary buttons, quan
 - **Desktop masthead:** 84 px row, search left, Bodoni wordmark centred, Preferiti / Account / Carrello right (icon + Hanken 500 label, stone fill on hover/active). Below, a 48 px department band between two Print Rules: text links with 30 px gaps and a 2 px Forest Green underline on hover/active; the store pickup line ("Ritiro gratuito ad Arezzo") at the right opens the store sheet.
 - **Phone:** centred wordmark with the store line under it, menu and cart icons, bottom tab bar (Home, Categorie, Preferiti, Profilo) with green active state.
 
-### Contents list (desktop signature)
-Departments as Garamond 50 px lines separated by Print Rules, each with its article count. Hovering or focusing a line turns it green, nudges it 10 px right, reveals an arrow, and crossfades the stone plate beside the list to that department's photo (420 ms).
+### Department tiles (desktop)
+Each department is a stone plate (aspect 0.88, 4 px corners) with its admin cover photo or a representative product (products already shown in "In evidenza" are avoided), the Garamond 26 px name with an arrow, and the article count beneath. Hover: the photo scales to 1.04 over 700 ms, the name turns green and the arrow brightens and nudges right.
 
 ### Pickup band
 Full-bleed Forest Green section: Garamond 54 headline naming the chosen store, a translucent-outline button, and three facts (pickup, delivery, secure payment) separated by 22% white hairlines.
