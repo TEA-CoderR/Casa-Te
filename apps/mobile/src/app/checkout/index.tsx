@@ -17,6 +17,7 @@ import { usePreferences } from '@/store/preferences';
 import { openCheckout } from '@/lib/payments';
 import { useQuery } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
+import { ALL_PRODUCTS } from '@/lib/links';
 
 const METHOD_INFO: Record<FulfilmentMethod, { description: string; icon: IconName }> = {
   home: { description: 'Consegna con corriere in 2–4 giorni lavorativi', icon: 'truck' },
@@ -81,7 +82,7 @@ export default function CheckoutScreen() {
     <PrimaryButton title="Accedi o registrati" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/checkout' } })} />
   </EmptyState></Screen>;
   if (empty) return <Screen stack><EmptyState title="Il carrello è vuoto" message="Aggiungi qualche prodotto per procedere.">
-    <PrimaryButton title="Vai al catalogo" onPress={() => router.replace('/catalog')} /></EmptyState></Screen>;
+    <PrimaryButton title="Vai al catalogo" onPress={() => router.replace(ALL_PRODUCTS)} /></EmptyState></Screen>;
   if (!quote) return <Screen stack>{quoteError ? <Notice tone="error" message={friendlyError(quoteError)} /> : <Loading />}</Screen>;
 
   const methodQuote = quote.shipping[method];

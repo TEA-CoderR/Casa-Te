@@ -36,7 +36,7 @@ export default function TabsLayout() {
     {tabs.map((tab) => <Tabs.Screen key={tab.name} name={tab.name}
       // The "Categorie" tab always opens the whole catalogue (not a filter left from "In offerta" or a department).
       listeners={tab.name === 'catalog' ? ({ navigation }) => ({
-        tabPress: (e) => { e.preventDefault(); navigation.navigate('catalog', { offerte: '', category: '' }); },
+        tabPress: (e) => { e.preventDefault(); navigation.navigate('catalog', { offerte: '', evidenza: '', category: '' }); },
       }) : undefined}
       options={{
       title: tab.title, href: tab.hidden ? null : undefined,

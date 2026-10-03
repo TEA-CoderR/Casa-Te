@@ -17,6 +17,7 @@ import { useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { cartItemCount, useCartStore } from '@/store/cart';
 import { HomeDesktop } from '@/components/site/HomeDesktop';
+import { ALL_PRODUCTS } from '@/lib/links';
 
 
 /** Desktop web gets the catalogue-style home; phones and the native app keep the phone home. */
@@ -38,7 +39,7 @@ function HomePhone() {
     // Products starred "In evidenza" in the admin; while none is starred, the start of the catalogue.
     async () => {
       const picked = await fetchProducts({ storeId: selected?.id ?? null, featured: true, sort: 'featured', pageSize: columns * 2 });
-      return picked.items.length ? picked : fetchProducts({ storeId: selected?.id ?? null, sort: 'featured', pageSize: columns * 2 });
+      return picked.items.length ? { ...picked, picked: true } : { ...await fetchProducts({ storeId: selected?.id ?? null, sort: 'featured', pageSize: columns * 2 }), picked: false };
     });
   const offers = useQuery(selected ? `offers:${selected.id}:${columns}` : null, () => fetchOffers(selected?.id ?? null, columns * 2));
   // Rows end on a full line, and the second rail never repeats products already featured above.
@@ -66,7 +67,7 @@ function HomePhone() {
   const categoryItem = (category: CategoryRow, index: number, width?: `${number}%`) =>
     <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`Categoria ${category.name}`}
       style={({ pressed }) => [styles.category, width ? { width } : { minWidth: 82 }, { opacity: pressed ? 0.7 : 1 }]}
-      onPress={() => router.push({ pathname: '/catalog', params: { offerte: '', category: category.id } })}>
+      onPress={() => router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: category.id } })}>
       <View style={[styles.circle, { backgroundColor: tones[index % tones.length] }, wide && { width: 104, height: 104, borderRadius: 52 }]}>
         {category.image_path
           // Cover photo from the admin; white studio backgrounds melt into the stone tone.
@@ -115,7 +116,7 @@ function HomePhone() {
         <Text style={[styles.heroTitle, wide && styles.heroTitleWide]}>La bellezza{'\n'}vive con te.</Text>
         <Text style={[styles.heroText, wide && { fontSize: 19, lineHeight: 27 }]}>Casa, stile e ispirazione{'\n'}per ogni momento{'\n'}della tua vita.</Text>
       </View>
-      <Pressable accessibilityRole="search" accessibilityLabel="Cerca prodotti" onPress={() => router.push({ pathname: '/catalog', params: { offerte: '', search: '1' } })}
+      <Pressable accessibilityRole="search" accessibilityLabel="Cerca prodotti" onPress={() => router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', search: '1' } })}
         style={[styles.search, wide && { left: 48, right: undefined, width: 480, bottom: 40 }]}>
         <Icon name="search" color={colors.text} size={19} /><Text style={styles.searchText}>Cosa stai cercando?</Text>
       </Pressable>
@@ -128,7 +129,9 @@ function HomePhone() {
 
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, wide && { fontSize: 30 }]} accessibilityRole="header">In evidenza</Text>
-      <Pressable onPress={() => router.push('/catalog')} style={styles.seeAll} accessibilityRole="link">
+      <Pressable onPress={() => featured.data?.picked
+        ? router.push({ pathname: '/catalog', params: { evidenza: '1', offerte: '', category: '' } }) : router.push(ALL_PRODUCTS)}
+        style={styles.seeAll} accessibilityRole="link">
         <Text style={styles.seeAllText}>Scopri tutto</Text><Icon name="chevron" color={colors.green} size={14} strokeWidth={2} /></Pressable>
     </View>
     {featured.error && !featured.data ? <Notice tone="error" message="Impossibile caricare i prodotti. Controlla la connessione e ricarica la pagina." />
@@ -149,7 +152,7 @@ function HomePhone() {
           <Text style={[styles.sectionTitle, wide && { fontSize: 30 }]} accessibilityRole="header">In offerta</Text>
           <View style={styles.offerTag}><Text style={styles.offerTagText}>Sconti</Text></View>
         </View>
-        <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1' } })} style={styles.seeAll} accessibilityRole="link">
+        <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1', evidenza: '' } })} style={styles.seeAll} accessibilityRole="link">
           <Text style={[styles.seeAllText, { color: colors.sale }]}>Tutte</Text><Icon name="chevron" color={colors.sale} size={14} strokeWidth={2} /></Pressable>
       </View>
       {productGrid(offerItems)}
@@ -163,8 +166,8 @@ function HomePhone() {
         </View>
         <View style={[styles.footerCol, wide && { flex: 1 }]}>
           <Text style={styles.footerHead}>Negozio online</Text>
-          {([['Catalogo', '/catalog'], ['Carrello', '/cart'], ['I miei ordini', '/orders']] as const).map(([label, href]) =>
-            <Pressable key={href} onPress={() => router.push(href)}><Text style={styles.footerLink}>{label}</Text></Pressable>)}
+          {([['Catalogo', ALL_PRODUCTS], ['Carrello', '/cart'], ['I miei ordini', '/orders']] as const).map(([label, href]) =>
+            <Pressable key={label} onPress={() => router.push(href)}><Text style={styles.footerLink}>{label}</Text></Pressable>)}
         </View>
         <View style={[styles.footerCol, wide && { flex: 1 }]}>
           <Text style={styles.footerHead}>Informazioni</Text>

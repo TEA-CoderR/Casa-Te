@@ -16,6 +16,7 @@ import { useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { SiteFooter } from './SiteFooter';
 import { homeDepartments, transition, Wrap, type WebState } from './shared';
+import { ALL_PRODUCTS } from '@/lib/links';
 
 const PHOTO_RATIO = 1086 / 1448;
 /** Department tiles are hidden for now (owner is trying the home without them); flip to bring them back. */
@@ -34,7 +35,7 @@ export function HomeDesktop() {
   const featured = useQuery(selected ? `featured-desk:${selected.id}` : null, async () => {
     // Products starred "In evidenza" in the admin; while none is starred, the start of the catalogue.
     const picked = await fetchProducts({ storeId: selected?.id ?? null, featured: true, sort: 'featured', pageSize: 5 });
-    return picked.items.length >= 3 ? picked : fetchProducts({ storeId: selected?.id ?? null, sort: 'featured', pageSize: 5 });
+    return picked.items.length >= 3 ? { ...picked, picked: true } : { ...await fetchProducts({ storeId: selected?.id ?? null, sort: 'featured', pageSize: 5 }), picked: false };
   });
   const perRow = width >= 1280 ? 5 : 4;
   const offers = useQuery(selected ? `offers-desk:${selected.id}:${perRow}` : null, () => fetchOffers(selected?.id ?? null, perRow));
@@ -81,7 +82,7 @@ export function HomeDesktop() {
         <Text style={styles.coverTitle} accessibilityRole="header">La bellezza{'\n'}vive con te.</Text>
         <Text style={styles.coverText}>Casa, stile e ispirazione per ogni momento della tua vita.</Text>
         <View style={styles.coverActions}>
-          <Pressable onPress={() => router.push('/catalog')} accessibilityRole="link"
+          <Pressable onPress={() => router.push(ALL_PRODUCTS)} accessibilityRole="link"
             style={({ hovered }: WebState) => [styles.coverButton, hovered && { backgroundColor: colors.stone }, transition('background-color')]}>
             <Text style={styles.coverButtonText}>Sfoglia il catalogo</Text>
             <Icon name="arrow" size={17} color={colors.green} strokeWidth={1.6} />
@@ -101,7 +102,9 @@ export function HomeDesktop() {
     <Wrap style={styles.section}>
       <View style={styles.sectionHead}>
         <Text style={styles.h2} accessibilityRole="header">In evidenza</Text>
-        <MoreLink label="Tutto il catalogo" onPress={() => router.push('/catalog')} />
+        {/* Starred products get their own page; while none is starred the link opens the catalogue. */}
+        <MoreLink label="Vedi tutti" onPress={() => featured.data?.picked
+          ? router.push({ pathname: '/catalog', params: { evidenza: '1', offerte: '', category: '' } }) : router.push(ALL_PRODUCTS)} />
       </View>
       {featured.error && !featured.data
         ? <Notice tone="error" message="Impossibile caricare i prodotti. Controlla la connessione e ricarica la pagina." />
@@ -141,11 +144,11 @@ export function HomeDesktop() {
           <Text style={styles.h2} accessibilityRole="header">In offerta</Text>
           <View style={styles.offerTag}><Text style={styles.offerTagText}>Sconti</Text></View>
         </View>
-        {offerItems.length >= perRow && <MoreLink label="Tutte le offerte" onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1' } })} />}
+        {offerItems.length >= perRow && <MoreLink label="Tutte le offerte" onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1', evidenza: '' } })} />}
       </View>
       <View style={styles.row}>
         {offerItems.map((p) => <View key={p.id} style={{ flex: 1, flexDirection: 'row' }}><ProductCard product={p} /></View>)}
-        {offerItems.length < perRow && <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1' } })} accessibilityRole="link"
+        {offerItems.length < perRow && <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1', evidenza: '' } })} accessibilityRole="link"
           style={({ hovered }: WebState) => [styles.closer, { flex: perRow - offerItems.length }, hovered && { backgroundColor: '#F7E3E1' }, transition('background-color')]}>
           <Text style={styles.closerTitle}>Tutte le offerte{'\n'}del momento.</Text>
           <View style={styles.more}><Text style={[styles.moreText, { color: colors.sale }]}>Scopri</Text><Icon name="arrow" size={16} color={colors.sale} strokeWidth={1.6} /></View>
@@ -172,7 +175,7 @@ function Departments({ departments, total, countsReady, cover, sku }: {
   departments: CategoryRow[]; total: (d: CategoryRow) => number; countsReady: boolean;
   cover: (d: CategoryRow) => string | null; sku: (d: CategoryRow) => string | null;
 }) {
-  const open = (d: CategoryRow) => router.push({ pathname: '/catalog', params: { offerte: '', category: d.id } });
+  const open = (d: CategoryRow) => router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: d.id } });
   const tile = (d: CategoryRow) => {
     const image = cover(d);
     return <Pressable key={d.id} onPress={() => open(d)} accessibilityRole="link"
@@ -207,7 +210,7 @@ function Departments({ departments, total, countsReady, cover, sku }: {
   return <Wrap style={styles.section}>
     <View style={styles.sectionHead}>
       <Text style={styles.h2} accessibilityRole="header">Scegli il reparto</Text>
-      <MoreLink label="Tutti i prodotti" onPress={() => router.push('/catalog')} />
+      <MoreLink label="Tutti i prodotti" onPress={() => router.push(ALL_PRODUCTS)} />
     </View>
     {/* One row up to six departments (unlike the featured spread below), rows of four beyond that. */}
     <View style={{ gap: 40 }}>{rows(departments, departments.length <= 6 ? departments.length : 4)}</View>

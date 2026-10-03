@@ -5,8 +5,9 @@ import { colors, fonts } from '@/config/theme';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { useStores } from '@/lib/hooks';
 import { transition, Wrap, type WebState } from './shared';
+import { ALL_PRODUCTS } from '@/lib/links';
 
-const SHOP: Array<[string, Href]> = [['Tutti i prodotti', '/catalog'], ['Preferiti', '/favorites'], ['Carrello', '/cart'], ['I miei ordini', '/orders']];
+const SHOP: Array<[string, Href]> = [['Tutti i prodotti', ALL_PRODUCTS], ['Preferiti', '/favorites'], ['Carrello', '/cart'], ['I miei ordini', '/orders']];
 const INFO: Array<[string, 'shipping' | 'terms' | 'privacy']> = [['Spedizioni e ritiro', 'shipping'], ['Condizioni di vendita', 'terms'], ['Privacy', 'privacy']];
 
 /** Desktop colophon: the back cover of the catalogue, on the warm stone ground. */

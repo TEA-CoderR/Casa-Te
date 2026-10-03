@@ -3,9 +3,10 @@ import { router, type Href } from 'expo-router';
 import { colors, fonts } from '@/config/theme';
 import { Icon, type IconName } from './Icon';
 import { useClubSettings } from '@/lib/hooks';
+import { ALL_PRODUCTS } from '@/lib/links';
 
 const LINKS: Array<{ icon: IconName; label: string; href: Href }> = [
-  { icon: 'grid', label: 'Categorie', href: '/catalog' },
+  { icon: 'grid', label: 'Categorie', href: ALL_PRODUCTS },
   { icon: 'heart', label: 'Preferiti', href: '/favorites' },
   { icon: 'cart', label: 'Carrello', href: '/cart' },
   { icon: 'box', label: 'I miei ordini', href: '/orders' },
