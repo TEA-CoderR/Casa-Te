@@ -1,14 +1,15 @@
 name: Build Android APK (preview)
 
 # Installable test APK of the customer app, connected to the staging Supabase project.
-# Run it from Actions → "Build Android APK (preview)" → Run workflow; the APK is attached to the run
-# as the artifact "casa-te-android-apk". Signed with the debug key: for testing only, not for Play.
+# Run it from Actions → "Build Android APK (preview)" → Run workflow. The APK is published as a GitHub
+# pre-release ("Android test build N"), so it can be downloaded straight from a phone browser, and is
+# also attached to the run. Signed with the debug key: for testing only, not for Google Play.
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   apk:
@@ -38,3 +39,9 @@ jobs:
           name: casa-te-android-apk
           path: casa-te-${{ github.run_number }}.apk
           retention-days: 30
+      - name: Publish as a pre-release (download from the phone)
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release create "android-test-${{ github.run_number }}" "casa-te-${{ github.run_number }}.apk" \
+            --target "${{ github.sha }}" --prerelease --title "Android test build ${{ github.run_number }}" \
+            --notes "APK di prova del negozio CASA & TE (collegato allo staging). Aprire questa pagina dal telefono Android, scaricare casa-te-${{ github.run_number }}.apk e installarlo (consentire l'installazione da questa fonte). Solo per test, non per Google Play."
