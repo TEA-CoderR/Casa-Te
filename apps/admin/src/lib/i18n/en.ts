@@ -744,6 +744,22 @@ const dict: Record<string, string> = {
   "Visualizza": "View",
   "Visualizza tutti gli ordini": "View all orders",
   "Visualizza tutto": "View all",
-  "Vuoto = nessun limite": "Empty = no limit"
+  "Vuoto = nessun limite": "Empty = no limit",
+  "I primi {n} sono quelli visibili in home.": "The first {n} are the ones shown on the home page.",
+  "In cima": "To top",
+  "In offerta": "On offer",
+  "Nessun prodotto in evidenza: aggiungi la stella ai prodotti in Gestione prodotti.": "No featured products: star products in Product management.",
+  "Nessun prodotto in offerta: imposta un prezzo barrato nella scheda del prodotto.": "No products on offer: set a crossed-out price on the product page.",
+  "Ordine salvato.": "Order saved.",
+  "Prodotti con la stella in Gestione prodotti. Trascina le righe o usa le frecce, poi salva.": "Products starred in Product management. Drag the rows or use the arrows, then save.",
+  "Prodotti con un prezzo barrato più alto del prezzo. Trascina le righe o usa le frecce, poi salva.": "Products with a crossed-out price higher than the price. Drag the rows or use the arrows, then save.",
+  "Salva ordine": "Save order",
+  "Scegli l'ordine dei prodotti nelle righe «In evidenza» e «In offerta» della home del negozio online.": "Choose the order of the products in the “In evidenza” and “In offerta” rows of the online shop home page.",
+  "Sposta giù": "Move down",
+  "Sposta su": "Move up",
+  "Torna all’ordine alfabetico": "Back to alphabetical order",
+  "Torna all’ordine per sconto": "Back to order by discount",
+  "Vetrina home": "Home showcase",
+  "in home": "on home",
 };
 export default dict;

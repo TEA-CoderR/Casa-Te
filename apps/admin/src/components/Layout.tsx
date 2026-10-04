@@ -20,6 +20,7 @@ type Tab = { to: string; label: string; roles?: Role[] };
 const SECTIONS: Array<{ tabs: Tab[] }> = [
   { tabs: [{ to: '/orders', label: 'Tutti gli ordini' }, { to: '/picking', label: 'Preparazione ordini' }] },
   { tabs: [{ to: '/products', label: 'Prodotti' }, { to: '/import', label: 'Importa prodotti' }] },
+  { tabs: [{ to: '/coupons', label: 'Codici sconto' }, { to: '/showcase', label: 'Vetrina home' }] },
   { tabs: [{ to: '/stores', label: 'Negozi', roles: ['admin'] }, { to: '/shipping', label: 'Tariffe spedizione' }, { to: '/pickup-points', label: 'Punti di ritiro' }] },
 ];
 const sectionOf = (pathname: string) => SECTIONS.find((s) => s.tabs.some((tab) => tab.to === pathname));
@@ -188,7 +189,7 @@ export function Layout() {
         <Item to="/inventory" icon="warehouse">{t('Gestione inventario')}</Item>
         {manager && <>
           <Item to="/categories" icon="products">{t('Gestione categorie')}</Item>
-          <Item to="/coupons" icon="megaphone">{t('Marketing')}</Item>
+          <Item to="/coupons" icon="megaphone" also={['/showcase']}>{t('Marketing')}</Item>
           <Item to="/customers" icon="customers">{t('Clienti')}</Item>
           <Item to="/analytics" icon="chart">{t('Analisi dati')}</Item>
           <div className="group">{t('Canali di vendita')}</div>

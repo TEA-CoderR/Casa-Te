@@ -465,3 +465,16 @@ td.nowrap { white-space: nowrap; }
 .star-btn:hover { color: #C99416; filter: none; }
 .star-btn.on { color: #C99416; }
 .star-btn.on svg { fill: currentColor; }
+
+/* Vetrina home: order of the shop's showcase rows */
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; background: #fff; }
+.seg button { background: transparent; color: var(--muted); border: none; min-height: 34px; padding: 6px 16px; border-radius: 7px; font-weight: 500; }
+.seg button.on { background: var(--green); color: #fff; }
+table.showcase tr[draggable] { cursor: grab; }
+table.showcase tr.dragging { opacity: 0.45; }
+table.showcase tr.home-cut td { border-bottom: 2px solid var(--green); }
+table.showcase .drag-handle { color: #B9B2A6; display: inline-flex; vertical-align: middle; margin-right: 8px; }
+table.showcase .row-actions { white-space: nowrap; text-align: right; }
+table.showcase .row-actions button { margin-left: 2px; }
+.flip { display: inline-flex; transform: rotate(180deg); }
+table.showcase td:first-child { white-space: nowrap; }
