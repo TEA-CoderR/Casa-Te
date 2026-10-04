@@ -1,0 +1,40 @@
+name: Build Android APK (preview)
+
+# Installable test APK of the customer app, connected to the staging Supabase project.
+# Run it from Actions → "Build Android APK (preview)" → Run workflow; the APK is attached to the run
+# as the artifact "casa-te-android-apk". Signed with the debug key: for testing only, not for Play.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL || 'https://kejjinbapxnjbceirrtv.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.STAGING_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_5owPpJOcvD_m6hcDD2Iv7Q_CCVylaXA' }}
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - run: npm ci
+      - name: Generate the Android project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install --clean
+      - name: Build release APK (64-bit ARM phones)
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+      - name: Name the APK
+        run: cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk casa-te-${{ github.run_number }}.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: casa-te-android-apk
+          path: casa-te-${{ github.run_number }}.apk
+          retention-days: 30
