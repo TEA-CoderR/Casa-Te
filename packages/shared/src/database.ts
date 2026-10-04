@@ -36,6 +36,8 @@ export type ProductRow = {
   variant_group: string | null; variant_title: string | null; variant_label: string | null;
   /** Maintained from visible product_reviews (read-only for clients). */
   rating_avg: number | null; rating_count: number;
+  /** Manual position in the home rows "In evidenza" / "In offerta" (1 = first; null = default order). */
+  featured_rank: number | null; offer_rank: number | null;
 };
 
 export type ProductUnit = 'ml' | 'l' | 'g' | 'kg' | 'pz' | 'm';

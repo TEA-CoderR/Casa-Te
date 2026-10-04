@@ -12,7 +12,7 @@ import { SUPABASE_URL, supabase } from './supabase';
 export type CatalogProduct = Pick<ProductRow,
   'id' | 'sku' | 'name' | 'description' | 'brand' | 'category_id' | 'price_cents' | 'compare_at_price_cents' |
   'weight_g' | 'max_per_order' | 'featured' | 'unit_quantity' | 'unit' | 'color' | 'highlights' |
-  'variant_group' | 'variant_title' | 'variant_label' | 'rating_avg' | 'rating_count'> & {
+  'variant_group' | 'variant_title' | 'variant_label' | 'rating_avg' | 'rating_count' | 'featured_rank' | 'offer_rank'> & {
   image: string | null;
   images: string[];
   /** Units available in the selected store (null when no store is selected). */
@@ -34,7 +34,7 @@ function unwrap<T>(result: { data: T | null; error: { message: string; code?: st
 export const imageUrl = (path: string | null | undefined) => productImageUrl(SUPABASE_URL, path);
 
 const PRODUCT_FIELDS =
-  'id,sku,name,description,brand,category_id,price_cents,compare_at_price_cents,weight_g,max_per_order,featured,' +
+  'id,sku,name,description,brand,category_id,price_cents,compare_at_price_cents,weight_g,max_per_order,featured,featured_rank,offer_rank,' +
   'unit_quantity,unit,color,highlights,variant_group,variant_title,variant_label,rating_avg,rating_count,' +
   'product_images(path,sort),inventory(quantity,store_id)';
 
@@ -82,11 +82,15 @@ export type ProductQuery = {
   pageSize?: number;
 };
 
-/** Discounted products for the "In offerta" rows, biggest discount first (display only). */
+/**
+ * Discounted products for the "In offerta" rows (display only): the order set in the admin first,
+ * then the biggest discount. Positioned products come first from the database, so none is missed.
+ */
 export async function fetchOffers(storeId: string | null, limit: number): Promise<CatalogProduct[]> {
   const { items } = await fetchProducts({ storeId, onSale: true, pageSize: 60 });
   const pct = (p: CatalogProduct) => p.compare_at_price_cents ? (p.compare_at_price_cents - p.price_cents) / p.compare_at_price_cents : 0;
-  return items.filter((p) => pct(p) > 0).sort((a, b) => pct(b) - pct(a)).slice(0, limit);
+  const rank = (p: CatalogProduct) => p.offer_rank ?? Number.MAX_SAFE_INTEGER;
+  return items.filter((p) => pct(p) > 0).sort((a, b) => rank(a) - rank(b) || pct(b) - pct(a)).slice(0, limit);
 }
 
 export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogProduct[]; hasMore: boolean; total: number | null }> {
@@ -105,6 +109,9 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
   if (q.ids) query = query.in('id', q.ids.length ? q.ids : ['00000000-0000-0000-0000-000000000000']);
   const needle = q.search?.trim().toLowerCase().replace(/[%_,()]/g, ' ');
   if (needle) query = query.ilike('search_text', `%${needle}%`);
+  // Default order of the two showcase collections: the manual positions set in the admin come first.
+  if ((q.sort ?? 'featured') === 'featured' && q.featured) query = query.order('featured_rank', { ascending: true, nullsFirst: false });
+  if ((q.sort ?? 'featured') === 'featured' && q.onSale) query = query.order('offer_rank', { ascending: true, nullsFirst: false });
   switch (q.sort) {
     case 'price_asc': query = query.order('price_cents', { ascending: true }); break;
     case 'price_desc': query = query.order('price_cents', { ascending: false }); break;

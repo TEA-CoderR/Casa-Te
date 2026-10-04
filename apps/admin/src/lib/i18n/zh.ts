@@ -744,6 +744,22 @@ const dict: Record<string, string> = {
   "Visualizza": "查看",
   "Visualizza tutti gli ordini": "查看全部订单",
   "Visualizza tutto": "查看全部",
-  "Vuoto = nessun limite": "留空 = 不限"
+  "Vuoto = nessun limite": "留空 = 不限",
+  "I primi {n} sono quelli visibili in home.": "前 {n} 个会显示在首页。",
+  "In cima": "置顶",
+  "In offerta": "特价商品",
+  "Nessun prodotto in evidenza: aggiungi la stella ai prodotti in Gestione prodotti.": "还没有精选商品：请在商品管理中给商品加星标。",
+  "Nessun prodotto in offerta: imposta un prezzo barrato nella scheda del prodotto.": "还没有特价商品：请在商品详情中设置划线原价。",
+  "Ordine salvato.": "顺序已保存。",
+  "Prodotti con la stella in Gestione prodotti. Trascina le righe o usa le frecce, poi salva.": "在商品管理中加了星标的商品。拖动行或使用箭头调整，然后保存。",
+  "Prodotti con un prezzo barrato più alto del prezzo. Trascina le righe o usa le frecce, poi salva.": "划线原价高于售价的商品。拖动行或使用箭头调整，然后保存。",
+  "Salva ordine": "保存顺序",
+  "Scegli l'ordine dei prodotti nelle righe «In evidenza» e «In offerta» della home del negozio online.": "设置网店首页“In evidenza”和“In offerta”两栏中商品的显示顺序。",
+  "Sposta giù": "下移",
+  "Sposta su": "上移",
+  "Torna all’ordine alfabetico": "恢复按字母排序",
+  "Torna all’ordine per sconto": "恢复按折扣排序",
+  "Vetrina home": "首页橱窗",
+  "in home": "首页显示",
 };
 export default dict;
