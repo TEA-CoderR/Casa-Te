@@ -7,6 +7,12 @@ name: Build Android APK (preview)
 
 on:
   workflow_dispatch:
+    inputs:
+      abis:
+        description: CPU architectures (all = phones and x86_64 emulators; arm64 = modern phones only, smaller)
+        type: choice
+        options: [all, arm64]
+        default: all
 
 permissions:
   contents: write
@@ -29,9 +35,11 @@ jobs:
       - name: Generate the Android project
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --no-install --clean
-      - name: Build release APK (64-bit ARM phones)
+      - name: Build release APK
         working-directory: apps/mobile/android
-        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+        run: |
+          if [ "${{ inputs.abis }}" = "arm64" ]; then ABIS=arm64-v8a; else ABIS=armeabi-v7a,arm64-v8a,x86,x86_64; fi
+          ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=$ABIS
       - name: Name the APK
         run: cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk casa-te-${{ github.run_number }}.apk
       - uses: actions/upload-artifact@v4
