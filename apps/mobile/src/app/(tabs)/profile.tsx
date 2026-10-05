@@ -136,7 +136,8 @@ export default function ProfileScreen() {
   const lists = <>
     {user && <Group title="Account">
       {/* Orders, addresses and favourites are the shortcuts above; here only what has no shortcut. */}
-      <Row icon="user" title="Dati personali" subtitle={[name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono'} onPress={() => go('/account/edit')} last />
+      <Row icon="user" title="Dati personali" subtitle={[name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono'} onPress={() => go('/account/edit')} />
+      <Row icon="shield" title="Password" subtitle="Imposta o cambia la password di accesso" onPress={() => go('/account/password')} last />
     </Group>}
     <Group title="Assistenza e informazioni">
       <Row icon="truck" title="Spedizioni e ritiro" subtitle="Tariffe, tempi e ritiro in negozio" onPress={() => go('/legal/shipping')} />
