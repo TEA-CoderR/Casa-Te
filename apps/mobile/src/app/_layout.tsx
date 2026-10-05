@@ -53,6 +53,7 @@ export default function RootLayout() {
         <Stack.Screen name="order/[id]" options={{ title: 'Ordine' }} />
         <Stack.Screen name="auth/sign-in" options={{ title: 'Accedi', presentation: 'modal' }} />
         <Stack.Screen name="account/edit" options={{ title: 'Dati personali' }} />
+        <Stack.Screen name="account/password" options={{ title: 'Password' }} />
         <Stack.Screen name="account/addresses" options={{ title: 'Indirizzi' }} />
         <Stack.Screen name="account/delete" options={{ title: 'Elimina account' }} />
         <Stack.Screen name="legal/[doc]" options={{ title: 'Informazioni legali' }} />
