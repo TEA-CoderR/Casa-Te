@@ -1,6 +1,6 @@
 # Handoff — commercial platform
 
-Started 2026-09-27, last updated 2026-10-01 (session 5). Read with `AGENTS.md`,
+Started 2026-09-27, last updated 2026-10-07. Read with `AGENTS.md`,
 `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` (19–28), `docs/DEPLOYMENT.md`, `docs/LAUNCH_CHECKLIST.md`.
 
 ## Goal
@@ -12,7 +12,8 @@ web shop (same Expo codebase), admin console, store picking; catalogue via admin
 - Everything is on `main` (PRs #1–#6 merged). The repository is **public** (needed for free GitHub Pages).
 - **Staging is live**: web shop https://tea-coderr.github.io/Casa-Te/ and admin
   https://tea-coderr.github.io/Casa-Te/admin/ (GitHub Pages, `deploy-pages.yml` on every push to `main`),
-  backed by Supabase project `kejjinbapxnjbceirrtv` and the Stripe sandbox. Full flow verified with
+  backed by Supabase project `kejjinbapxnjbceirrtv` and the **company** Stripe sandbox (since
+  2026-10-07, see "Stripe account switch" below). Full flow verified with
   real Stripe test payments: browse → sign-in → pay → picking → refund (see sessions 4–5).
 - Demo admin: `e2e.admin@casate.test` (password given to the owner in chat; staging only).
 - Catalogue is still the 8 placeholder products from `seed.sql` (no real data — AGENTS.md rule 6).
@@ -94,6 +95,22 @@ web shop (same Expo codebase), admin console, store picking; catalogue via admin
   unpaid order, admin storage upload allowed by policy.
 - Deferred by the owner: Stripe Tax (head office + P.IVA), SDI e-invoicing provider, Google Pay /
   PayPal in the Dashboard (code needs no change: Checkout uses the Dashboard payment-method config).
+
+## Stripe account switch (2026-10-07)
+- Staging now uses the **company** Stripe account "CASA & TE S. FILIPPO S.R.L." (sandbox; registered
+  with the company email; live mode pending Stripe verification). The personal sandbox
+  `acct_1UKKXxLe2u4NCBLP` from session 4 is retired: its webhook was disabled by the owner.
+- Restricted key (`STRIPE_SECRET_KEY`, set by the owner in Supabase secrets): Charges and Refunds
+  **write**, Checkout Sessions **write**, Payment Intents **read**; no IP restriction (Supabase egress
+  IPs are not fixed).
+- Webhook destination "casa-te-staging": your account, **snapshot** payload, the same 6 events, URL
+  `/functions/v1/stripe-webhook`; its signing secret is in `STRIPE_WEBHOOK_SECRET`.
+- Verified on staging: order CT26001016 paid via Checkout (event ids now `…LVt8YFmWvP…`, the company
+  account), webhook recorded once; partial refund €5,99 from admin → one `refunds` row,
+  `refund.created/updated` idempotent.
+- Go-live still to do: in **live** mode create a new restricted key + webhook with the same settings
+  for the production environment. Stripe Tax deferred until the accountant decides (prices are VAT
+  inclusive: `tax_behavior` must be `inclusive`, and per-item line items are needed first).
 
 ## Known risk spots to check first
 1. Dependency versions were written without the registry: `expo-web-browser ~57.0.0`,
