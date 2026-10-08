@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useLocalSearchParams, router, Stack } from 'expo-router';
-import { formatPackSize, formatWeight } from '@casa-te/shared';
+import { formatPackSize, formatWeight, type CategoryRow } from '@casa-te/shared';
 import { discountLabel, formatEuro, unitPriceLabel } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { ProductGallery } from '@/components/ProductGallery';
@@ -10,7 +10,7 @@ import { FavoriteButton, stockLabel } from '@/components/ProductCard';
 import { Icon, type IconName } from '@/components/Icon';
 import { EmptyState, Loading, PrimaryButton, QuantityControl } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
-import { fetchProduct, fetchVariants } from '@/lib/api';
+import { fetchCategories, fetchProduct, fetchVariants } from '@/lib/api';
 import { Stars } from '@/components/Stars';
 import { ProductReviews } from '@/components/ProductReviews';
 import { ProductVariants } from '@/components/ProductVariants';
@@ -18,7 +18,9 @@ import { invalidate } from '@/lib/useQuery';
 import { useLayout, useStores } from '@/lib/hooks';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { useQuery } from '@/lib/useQuery';
-import { useCartStore } from '@/store/cart';
+import { cartItemCount, useCartStore } from '@/store/cart';
+import { useFavorites } from '@/store/favorites';
+import { BrandHeader, HeaderBack, HeaderButton } from '@/components/BrandHeader';
 import { SiteHeader } from '@/components/site/SiteHeader';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SITE_WIDTH, type WebState } from '@/components/site/shared';
@@ -35,6 +37,10 @@ export default function ProductDetailScreen() {
   const insets = useSafeAreaInsets();
   const add = useCartStore((s) => s.add);
   const inCart = useCartStore((s) => s.items[id ?? ''] ?? 0);
+  const cartCount = cartItemCount(useCartStore((s) => s.items));
+  const favorite = useFavorites((s) => s.ids.includes(id ?? ''));
+  const toggleFavorite = useFavorites((s) => s.toggle);
+  const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
   const { data: product, loading, error, refetch } = useQuery(id ? `product:${id}:${selected?.id}` : null, () => fetchProduct(id!, selected?.id ?? null));
   const group = product?.variant_group ?? null;
   const variants = useQuery(group ? `variants:${group}:${selected?.id}` : null, () => fetchVariants(group!, selected?.id ?? null));
@@ -51,8 +57,9 @@ export default function ProductDetailScreen() {
     } catch { /* dismissed */ }
   };
 
-  if (loading && !product) return <Screen stack><Stack.Screen options={{ headerShown: true }} /><Loading /></Screen>;
-  if (!product) return <Screen stack><Stack.Screen options={{ headerShown: true }} /><EmptyState title={error ? 'Connessione assente' : 'Prodotto non trovato'}
+  const plainHeader = wide ? undefined : <BrandHeader title="Prodotto" left={<HeaderBack onPress={back} />} />;
+  if (loading && !product) return <Screen stack header={plainHeader}><Stack.Screen options={{ headerShown: wide }} /><Loading /></Screen>;
+  if (!product) return <Screen stack header={plainHeader}><Stack.Screen options={{ headerShown: wide }} /><EmptyState title={error ? 'Connessione assente' : 'Prodotto non trovato'}
     message={error ? 'Controlla la rete e riprova.' : 'Scopri gli altri prodotti del catalogo.'} icon="search">
     <PrimaryButton title="Vai al catalogo" onPress={() => router.replace(ALL_PRODUCTS)} />
   </EmptyState></Screen>;
@@ -72,7 +79,8 @@ export default function ProductDetailScreen() {
     <View style={styles.buyRow}>
       {canAdd && <QuantityControl value={quantity} onChange={setQuantity} min={1} max={maxQty} label={product.name} />}
       <View style={{ flex: 1 }}>
-        <PrimaryButton title={canAdd ? 'Aggiungi al carrello' : 'Non disponibile in questo negozio'} disabled={!canAdd} onPress={addToCart} />
+        <PrimaryButton title={canAdd ? 'Aggiungi al carrello' : 'Non disponibile in questo negozio'} disabled={!canAdd} onPress={addToCart}
+          icon={canAdd && !wide ? 'cart' : null} />
       </View>
     </View>
   </View>;
@@ -132,6 +140,66 @@ export default function ProductDetailScreen() {
     ? <Pressable onPress={onPress} accessibilityRole="link">{({ hovered }: WebState) =>
         <Text style={[styles.crumb, hovered && { color: colors.green }]}>{label}</Text>}</Pressable>
     : <Text style={[styles.crumb, { color: colors.text }]} numberOfLines={1}>{label}</Text>;
+  // Phone (design D): green band with the department, white blocks on the light ground, sticky buy bar.
+  if (!wide) {
+    const department = categories.data?.find((c) => c.id === product.category_id);
+    const header = <BrandHeader title={department?.name ?? 'Prodotto'} left={<HeaderBack onPress={back} />}
+      right={<View style={{ flexDirection: 'row', gap: 6 }}>
+        <HeaderButton icon="heart" label={favorite ? `Rimuovi ${product.name} dai preferiti` : `Aggiungi ${product.name} ai preferiti`}
+          filled={favorite} onPress={() => toggleFavorite(product.id)} />
+        <HeaderButton icon="share" label={`Condividi ${product.name}`} onPress={() => share(product.name)} />
+        <HeaderButton icon="cart" label={cartCount ? `Carrello, ${cartCount} articoli` : 'Carrello'} count={cartCount} onPress={() => router.push('/cart')} />
+      </View>} />;
+    return <Screen stack header={header} ground={colors.page} footer={buy} contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
+      <Stack.Screen options={{ title: product.name, headerShown: false }} />
+      <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
+      <View style={styles.phoneMedia}>
+        <ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0.1} blend />
+        {!!discount && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{discount.replace('-', '−')}</Text></View>}
+      </View>
+      <View style={styles.phoneInfo}>
+        {!!product.brand && <Text style={styles.phoneBrand}>{product.brand}</Text>}
+        <Text style={styles.phoneTitle} accessibilityRole="header">{product.name}</Text>
+        <View style={styles.ratingRow} accessibilityLabel={product.rating_count ? `Valutazione ${product.rating_avg} su 5, ${product.rating_count} recensioni` : 'Nessuna recensione'}>
+          <Stars value={product.rating_avg ?? 0} size={14} />
+          <Text style={styles.ratingText}>{product.rating_count ? `(${product.rating_count})` : 'Nessuna recensione'}</Text>
+        </View>
+        <View style={styles.phonePriceRow}>
+          <View style={[styles.phonePriceTag, !discount && { backgroundColor: 'transparent', paddingHorizontal: 0 }]}>
+            <Text style={[styles.phonePrice, !discount && { color: colors.text }]}>{formatEuro(product.price_cents)}</Text></View>
+          <View style={{ gap: 2, paddingBottom: 2, flexShrink: 1 }}>
+            {!!discount && <Text style={styles.phonePrior}>Prima <Text style={{ textDecorationLine: 'line-through' }}>{formatEuro(product.compare_at_price_cents as number)}</Text></Text>}
+            <Text style={styles.phoneUnit}>{unitPrice ? `${unitPrice}${pack ? ` · ${pack}` : ''}` : 'IVA inclusa'}</Text>
+          </View>
+        </View>
+      </View>
+      <Pressable style={styles.phoneCard} onPress={() => setStoreSheet(true)} accessibilityRole="button" accessibilityLabel={`${stock.text}. Cambia negozio`}>
+        <View style={[styles.phoneCircle, !stock.available && { backgroundColor: '#F8E9E7' }]}>
+          <Icon name="store" size={19} color={stock.available ? colors.green : colors.danger} strokeWidth={2} /></View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.phoneCardTitle, !stock.available && { color: colors.danger }]}>{stock.text || 'Scegli il negozio'}</Text>
+          <Text style={styles.phoneCardText}>{['Ritiro gratuito', caption].filter(Boolean).join(' · ')}</Text>
+        </View>
+        <Text style={styles.phoneLink}>Cambia</Text>
+      </Pressable>
+      <View style={styles.phoneFeatures}>
+        {features.map((f, i) => <View key={f.icon + f.text} style={styles.phoneFeature}>
+          <View style={[styles.phoneCircle, { width: 34, height: 34 }, i === 0 && !!discount && f.icon === 'star' && { backgroundColor: '#FDECEC' }]}>
+            <Icon name={f.icon} size={18} color={colors.green} strokeWidth={1.9} /></View>
+          <Text style={styles.phoneFeatureText} numberOfLines={3}>{f.text}</Text>
+        </View>)}
+      </View>
+      <View style={styles.phoneMore}>
+        {!!product.description && <Text style={styles.description}>{product.description}</Text>}
+        {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
+        <Text style={[styles.sku, !product.description && !variants.data && { marginTop: 0 }]}>Codice articolo {product.sku}{product.color ? ` · Colore ${product.color}` : ''} · IVA inclusa</Text>
+        <ProductReviews productId={product.id} average={product.rating_avg} count={product.rating_count}
+          onChanged={() => { void refetch(); invalidate('featured'); }} />
+      </View>
+      {sharedNote}
+    </Screen>;
+  }
+
   return <Screen stack footer={wide ? undefined : buy} maxWidth={wide ? SITE_WIDTH - 80 : undefined}
     contentContainerStyle={wide ? { paddingHorizontal: 40, paddingTop: 0 } : undefined} after={wide ? <SiteFooter /> : undefined} bleed={40}>
     <Stack.Screen options={wide ? { title: product.name, headerShown: true, header: () => <SiteHeader /> } : { title: '', headerShown: false }} />
@@ -164,6 +232,27 @@ const styles = StyleSheet.create({
   crumb: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
   crumbSep: { fontSize: 13, color: colors.rule, fontFamily: fonts.sans },
   titleWide: { fontSize: 48, lineHeight: 52, letterSpacing: -0.8 },
+  phoneMedia: { backgroundColor: colors.photo, borderBottomWidth: 1, borderColor: colors.line },
+  phoneBadge: { position: 'absolute', left: 14, top: 14, backgroundColor: colors.sale, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3 },
+  phoneBadgeText: { fontSize: 21, fontFamily: fonts.price, fontWeight: '800', color: '#FFFFFF' },
+  phoneInfo: { backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingTop: 6, paddingBottom: 16, borderBottomWidth: 1, borderColor: colors.line },
+  phoneBrand: { fontSize: 12.5, letterSpacing: 1.4, textTransform: 'uppercase', color: colors.brand, fontFamily: fonts.sansBold, fontWeight: '700' },
+  phoneTitle: { fontSize: 23, lineHeight: 27, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text, marginTop: 4 },
+  phonePriceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginTop: 12 },
+  phonePriceTag: { backgroundColor: colors.yellow, borderRadius: 8, paddingHorizontal: 12, paddingTop: 2, paddingBottom: 4 },
+  phonePrice: { fontSize: 40, lineHeight: 44, fontFamily: fonts.price, fontWeight: '800', color: colors.sale },
+  phonePrior: { fontSize: 15, fontFamily: fonts.sansMedium, color: colors.faint },
+  phoneUnit: { fontSize: 13, fontFamily: fonts.sansMedium, color: colors.muted },
+  phoneCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 12, marginTop: 10, padding: 12, borderRadius: 12,
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  phoneCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  phoneCardTitle: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
+  phoneCardText: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
+  phoneLink: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
+  phoneFeatures: { flexDirection: 'row', gap: 8, marginHorizontal: 12, marginTop: 10 },
+  phoneFeature: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 4, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  phoneFeatureText: { fontSize: 12, lineHeight: 15, textAlign: 'center', fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text },
+  phoneMore: { marginHorizontal: 12, marginTop: 10, padding: 14, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   media: { backgroundColor: colors.photo, marginHorizontal: -20, marginTop: -20, marginBottom: 22, borderBottomWidth: 1, borderColor: colors.photoLine },
   overlay: { position: 'absolute', left: 12, right: 12, flexDirection: 'row', justifyContent: 'space-between' },
   round: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',

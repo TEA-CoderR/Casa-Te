@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   delivery: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 14, padding: 14 },
   deliveryError: { borderColor: colors.danger },
   deliveryIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
-  deliveryTitle: { fontSize: 16, fontFamily: fonts.serif, color: colors.text },
+  deliveryTitle: { fontSize: 16, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   deliveryText: { fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
   modify: { fontSize: 13, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium, fontWeight: '500' },
   checkText: { fontSize: 14, color: colors.text, lineHeight: 21 },

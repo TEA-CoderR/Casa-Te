@@ -3,28 +3,35 @@ import { router } from 'expo-router';
 import { FULFILMENT_LABELS, orderStatusLabel } from '@casa-te/shared';
 import { formatEuro } from '@/lib/price';
 import { Screen } from '@/components/Screen';
+import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
+import { colors as palette } from '@/config/theme';
 import { EmptyState, Loading, Notice, PageTitle, PrimaryButton } from '@/components/UI';
 import { Icon } from '@/components/Icon';
 import { ProductImage } from '@/components/ProductImage';
 import { OrderTimeline } from '@/components/OrderTimeline';
 import { colors } from '@/config/theme';
 import { fetchOrders, imageUrl, type OrderWithItems } from '@/lib/api';
+import { useLayout } from '@/lib/hooks';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
 import { ALL_PRODUCTS } from '@/lib/links';
 
 export default function OrdersScreen() {
+  const phone = !useLayout().wide;
+  // Phones: the green band with a way back (these pages open from the header heart and Profilo).
+  const band = phone ? <BrandHeader title="I miei ordini" left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/profile')} />} /> : undefined;
+  const page = phone ? { header: band, ground: palette.page } : {};
   const user = useUser();
   const { data: orders, loading, error, refetch } = useQuery<OrderWithItems[]>(user ? `orders:list:${user.id}` : null, fetchOrders);
   useRefetchOnFocus(refetch);
 
-  if (!user) return <Screen><PageTitle title="I miei ordini" />
+  if (!user) return <Screen {...page}>{!phone && <PageTitle title="I miei ordini" />}
     <EmptyState icon="user" title="Accedi per vedere i tuoi ordini" message="Segui lo stato delle consegne e dei ritiri in negozio.">
       <PrimaryButton title="Accedi o registrati" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/orders' } })} />
     </EmptyState></Screen>;
 
-  return <Screen onRefresh={refetch} refreshing={loading && !!orders}>
-    <PageTitle title="I miei ordini" subtitle="Ogni piccolo passo verso casa." />
+  return <Screen {...page} onRefresh={refetch} refreshing={loading && !!orders}>
+    {!phone && <PageTitle title="I miei ordini" subtitle="Ogni piccolo passo verso casa." />}
     {error && !orders ? <Notice tone="error" message="Impossibile caricare gli ordini. Trascina verso il basso per riprovare." />
       : !orders ? <Loading />
       : !orders.length ? <EmptyState icon="box" title="Nessun ordine ancora" message="Quando farai il tuo primo ordine, lo ritroverai qui.">

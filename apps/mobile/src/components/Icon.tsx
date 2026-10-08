@@ -38,6 +38,8 @@ const paths = {
   crown: 'M3 8l4.5 4L12 5l4.5 7L21 8l-2 10H5L3 8ZM5 21h14',
   copy: 'M9 9h11v11H9ZM5 15H4V4h11v1',
   weight: 'M4 7h16l2 14H2L4 7Zm5 0V5a3 3 0 1 1 6 0v2',
+  flyer: 'M4 5h12v14H6a2 2 0 0 1-2-2ZM16 9h4v8a2 2 0 0 1-2 2h-2M7.5 9h5M7.5 12.5h5M7.5 16h3',
+  percent: 'M19 5 5 19M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0M19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0',
 } as const;
 export type IconName = keyof typeof paths;
 export function Icon({ name, size = 22, color = colors.text, strokeWidth = 1.65, fill }: {

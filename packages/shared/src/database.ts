@@ -105,6 +105,12 @@ export type AppSettingsRow = {
   updated_at: Timestamp; updated_by: Uuid | null;
 };
 
+/** Monthly flyer ("Volantino"): a PDF and/or page images in the public storage bucket "flyers". */
+export type FlyerRow = {
+  id: Uuid; title: string; valid_from: string | null; valid_to: string | null;
+  pdf_path: string | null; page_paths: string[]; active: boolean; created_at: Timestamp; updated_at: Timestamp;
+};
+
 /** Back-office audit trail, written by triggers. */
 export type ActivityLogRow = {
   id: number; created_at: Timestamp; actor_id: Uuid | null; actor_name: string | null;
@@ -242,6 +248,13 @@ export type ImportReport = {
 };
 
 /** Public URL for a product image path (storage path or absolute URL). */
+/** Public URL of a flyer file (bucket "flyers"); absolute https URLs are returned as they are. */
+export function flyerFileUrl(supabaseUrl: string, path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  return `${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/flyers/${path.replace(/^\//, '')}`;
+}
+
 export function productImageUrl(supabaseUrl: string, path: string | null | undefined): string | null {
   if (!path) return null;
   if (/^https?:\/\//.test(path)) return path;

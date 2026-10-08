@@ -155,6 +155,21 @@ await page.waitForURL(/\/profile/);
 await page.getByText(NEW).last().waitFor();
 console.log(`  new account ${NEW} confirmed with code ${newCode}`);
 
+step('Phone layout (design D): brand header, tabs, Volantino');
+const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'it-IT', isMobile: true, hasTouch: true });
+const pp = await phone.newPage();
+await pp.goto(env.SHOP_URL, { waitUntil: 'networkidle' });
+await pp.getByText('Le nostre migliori offerte', { exact: false }).last().waitFor();
+await pp.getByText('Volantino', { exact: true }).first().waitFor();
+await shot(pp, 'telefono-home');
+await pp.getByRole('tab', { name: /Carrello/ }).last().click();
+await pp.getByText('Carrello', { exact: true }).last().waitFor();
+await pp.goto(`${env.SHOP_URL}/volantino`, { waitUntil: 'networkidle' });
+await pp.getByText(/Nessun volantino al momento|Valido dal|Scarica il PDF|Apri il volantino/).first().waitFor();
+await shot(pp, 'telefono-volantino');
+await phone.close();
+console.log('  phone home, cart tab and Volantino render');
+
 const prev = fs.existsSync(STATE_FILE) ? JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) : { orders: [] };
 fs.writeFileSync(STATE_FILE, JSON.stringify({ orders: [...(prev.orders ?? []), orderNumber] }));
 await browser.close();

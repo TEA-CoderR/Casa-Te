@@ -7,6 +7,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { EMPTY_FILTERS, FilterSheet, type FilterSection, type Filters } from '@/components/FilterSheet';
 import { Loading, Notice, SecondaryButton } from '@/components/UI';
 import { Icon } from '@/components/Icon';
+import { BrandHeader, HeaderBack, HeaderButton, HeaderSearch } from '@/components/BrandHeader';
 import { colors, fonts } from '@/config/theme';
 import { fetchCategories, fetchFacets, fetchProducts, type CatalogProduct } from '@/lib/api';
 import { useLayout, useStores } from '@/lib/hooks';
@@ -106,10 +107,10 @@ export default function CatalogScreen() {
     if (router.canGoBack()) router.back(); else router.replace('/');
   };
   const pill = (section: FilterSection, label: string, active: boolean, icon?: 'filter') =>
-    <Pressable key={section} onPress={() => setSheet(section)} style={[styles.pill, wide && { borderRadius: 4, minHeight: 36 }, active && styles.pillOn]} accessibilityRole="button"
+    <Pressable key={section} onPress={() => setSheet(section)} style={[styles.pill, wide ? { borderRadius: 4, minHeight: 36 } : styles.pillPhone, active && styles.pillOn]} accessibilityRole="button"
       accessibilityLabel={`${label}${active ? ' (attivo)' : ''}`}>
       {icon && <Icon name={icon} size={14} strokeWidth={1.6} />}
-      <Text style={styles.pillText}>{label}</Text>{!icon && <Icon name="down" size={13} />}
+      <Text style={[styles.pillText, !wide && styles.pillTextPhone]}>{label}</Text>{!icon && <Icon name="down" size={13} />}
     </Pressable>;
 
   const searching = !!debounced.trim();
@@ -131,6 +132,82 @@ export default function CatalogScreen() {
     {searching && <Pressable onPress={() => { setQuery(''); setSearchOpen(false); router.setParams({ q: undefined }); }} accessibilityRole="button" style={{ alignSelf: 'flex-start' }}>
       <Text style={styles.clearSearch}>Cancella la ricerca</Text></Pressable>}
   </View>;
+
+  const filterSheet = <FilterSheet visible={sheet !== null} section={sheet ?? 'all'} filters={filters} onChange={setFilters} onClose={() => setSheet(null)}
+    facets={facets.data ?? null} total={loading ? null : count} />;
+  const results = <>
+    {error && !items.length ? <Notice tone="error" message="Impossibile caricare il catalogo. Controlla la connessione." /> : null}
+    {!loading && !error && !shown.length && <View style={{ paddingVertical: 48, alignItems: 'center', gap: 16 }}>
+      <Icon name="search" size={32} color={colors.muted} />
+      <Text style={{ color: colors.muted, textAlign: 'center', lineHeight: 22, fontFamily: fonts.sans }}>Nessun prodotto trovato. Prova un'altra ricerca o togli qualche filtro.</Text>
+    </View>}
+  </>;
+
+  // Phone (design D): green band with title and search, a white band with departments and filters, cards on the light ground.
+  if (!wide) {
+    const canGoBack = !!(searchOpen && query) || !!collection || !!categoryId;
+    const header = <BrandHeader title={searching ? 'Risultati' : title}
+      left={canGoBack ? <HeaderBack onPress={goBack} /> : undefined}
+      right={<HeaderButton icon="heart" label="Preferiti" onPress={() => router.push('/favorites')} />}>
+      <HeaderSearch placeholder="Cerca per nome, marca o codice" value={query} onChangeText={setQuery}
+        autoFocus={!!params.search && !params.q} onFocus={() => setSearchOpen(true)}
+        onSubmitEditing={() => recent.remember(query)} onBlur={() => { if (shown.length) recent.remember(query); if (!query) setSearchOpen(false); }} />
+    </BrandHeader>;
+    const chip = (key: string, label: string, on: boolean, onPress: () => void, tone?: 'sale') =>
+      <Pressable key={key} onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: on }}
+        style={[styles.chip, on && styles.chipOn, tone === 'sale' && styles.chipSale, tone === 'sale' && on && styles.chipSaleOn]}>
+        <Text style={[styles.chipText, on && styles.chipTextOn, tone === 'sale' && { color: on ? '#FFFFFF' : colors.sale }]}>{label}</Text>
+      </Pressable>;
+    return <Screen header={header} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 28 }}>
+      {filterSheet}
+      {searchOpen && !query && recent.terms.length > 0 && <View style={[styles.recent, { paddingHorizontal: 16, backgroundColor: '#FFFFFF', marginTop: 0, marginBottom: 0 }]}>
+        <View style={styles.recentHead}>
+          <Text style={styles.recentTitle}>Ricerche recenti</Text>
+          <Pressable onPress={recent.clear} accessibilityRole="button" hitSlop={8}><Text style={styles.recentClear}>Cancella</Text></Pressable>
+        </View>
+        {recent.terms.map((t) => <View key={t} style={styles.recentRow}>
+          <Pressable onPress={() => { setQuery(t); setDebounced(t); recent.remember(t); }} accessibilityRole="button"
+            accessibilityLabel={`Cerca ancora ${t}`} style={styles.recentTerm}>
+            <Icon name="search" size={16} color={colors.muted} /><Text style={styles.recentText} numberOfLines={1}>{t}</Text>
+          </Pressable>
+          <Pressable onPress={() => recent.forget(t)} accessibilityRole="button" accessibilityLabel={`Rimuovi ${t} dalle ricerche recenti`} hitSlop={6} style={{ padding: 8 }}>
+            <Icon name="close" size={14} color={colors.muted} /></Pressable>
+        </View>)}
+      </View>}
+      <View style={styles.band}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} accessibilityRole="tablist">
+          {tabs.map((item) => chip(item.id ?? 'all', item.name, activeTab === item.id, () => selectCategory(item.id)))}
+        </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          {pill('all', 'Filtri', filters.sort !== 'featured' || filters.onlyAvailable, 'filter')}
+          {chip('sale', '% Offerte', onSale, () => {
+            const next = !onSale; setOnSale(next); if (next) setFeaturedOnly(false);
+            router.setParams({ offerte: next ? '1' : undefined, evidenza: undefined });
+          }, 'sale')}
+          {pill('brand', filters.brands.length ? `Marca (${filters.brands.length})` : 'Marca', filters.brands.length > 0)}
+          {pill('color', filters.colors.length ? `Colore (${filters.colors.length})` : 'Colore', filters.colors.length > 0)}
+          {pill('price', 'Prezzo', filters.price.min !== null || filters.price.max !== null)}
+        </ScrollView>
+      </View>
+      <View style={[styles.toolbar, { paddingHorizontal: 16, marginTop: 10 }]}>
+        <Text style={styles.count}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}`}</Text>
+        <View style={{ flexDirection: 'row', gap: 2 }} accessibilityRole="radiogroup" accessibilityLabel="Vista">
+          {(['grid', 'list'] as const).map((v) => <Pressable key={v} onPress={() => setView(v)} accessibilityRole="radio"
+            accessibilityState={{ checked: view === v }} accessibilityLabel={v === 'grid' ? 'Vista a griglia' : 'Vista a elenco'}
+            style={[styles.viewButton, view === v && { backgroundColor: '#FFFFFF' }]}>
+            <Icon name={v} size={19} strokeWidth={1.6} color={view === v ? colors.green : colors.faint} /></Pressable>)}
+        </View>
+      </View>
+      <View style={{ paddingHorizontal: 12, paddingTop: 4 }}>
+        {results}
+        {view === 'grid'
+          ? <View style={[styles.grid, { marginHorizontal: -4 }]}>{shown.map((product) => <View key={product.id} style={{ width: `${100 / columns}%`, paddingHorizontal: 4, flexDirection: 'row' }}>
+              <ProductCard product={product} /></View>)}</View>
+          : shown.map((product) => <ProductCard key={product.id} product={product} variant="list" />)}
+        {loading ? <Loading /> : hasMore ? <View style={{ marginTop: 20 }}><SecondaryButton title="Mostra altri prodotti" onPress={loadMore} /></View> : null}
+      </View>
+    </Screen>;
+  }
 
   return <Screen contentContainerStyle={wide ? { paddingTop: 0, paddingHorizontal: 40 } : { paddingTop: 4 }} maxWidth={wide ? SITE_WIDTH - 80 : undefined}
     after={wide ? <SiteFooter /> : undefined} bleed={40}>
@@ -223,12 +300,22 @@ const styles = StyleSheet.create({
   pill: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 32, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: '#E6DFD3', backgroundColor: colors.surface },
   pillOn: { borderColor: colors.text },
   pillText: { fontSize: 12, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  pillTextPhone: { fontSize: 14.5, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
+  pillPhone: { minHeight: 36, borderRadius: 18, paddingHorizontal: 14, borderColor: '#D3D8CD' },
   toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, marginBottom: 4 },
   count: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans },
   viewButton: { width: 32, height: 30, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   viewButtonOn: { backgroundColor: colors.cream },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 8 },
   recent: { marginTop: 4, marginBottom: 10 },
+  band: { backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line, paddingTop: 12, paddingBottom: 12, gap: 10 },
+  chips: { paddingHorizontal: 16, gap: 8 },
+  chip: { minHeight: 36, paddingHorizontal: 15, borderRadius: 18, borderWidth: 1, borderColor: '#D3D8CD', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  chipOn: { backgroundColor: colors.green, borderColor: colors.green },
+  chipSale: { borderColor: colors.sale, backgroundColor: '#FFF0F0' },
+  chipSaleOn: { backgroundColor: colors.sale, borderColor: colors.sale },
+  chipText: { fontSize: 14.5, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text },
+  chipTextOn: { color: '#FFFFFF', fontFamily: fonts.sansBold, fontWeight: '700' },
   recentHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   recentTitle: { fontSize: 13, color: colors.muted, fontFamily: fonts.sansMedium, fontWeight: '500' },
   recentClear: { fontSize: 13, color: colors.green, fontFamily: fonts.sansMedium, fontWeight: '500' },

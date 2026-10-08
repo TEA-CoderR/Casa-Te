@@ -123,6 +123,16 @@ await shot(admin, 'annulla-rimborsa');
 console.log(`  db: ${await sql(`select status, payment_status, total_cents, refunded_cents from orders where id='${id2}'`)}`);
 console.log(`  stock before: ${before}\n  stock after:  ${await sql(stockSql)}`);
 
+step('Marketing → Volantino: list shows status, editor opens');
+await sql(`insert into public.flyers (title, valid_from, valid_to, pdf_path, active) values ('Volantino e2e', current_date, current_date + 30, 'e2e/volantino.pdf', true)`);
+await admin.goto(`${env.ADMIN_URL}/flyers`, { waitUntil: 'networkidle' });
+await admin.getByText('Volantino e2e').waitFor();
+await admin.getByText('Visibile nel negozio').first().waitFor();
+await admin.getByRole('button', { name: 'Modifica' }).first().click();
+await admin.getByText('Modifica volantino').waitFor();
+await shot(admin, 'volantino');
+console.log('  flyer listed as live; editor opens');
+
 step('Stripe webhooks received');
 await new Promise((ok) => setTimeout(ok, 1500));
 console.log(await sql(`select type, count(*) from stripe_events group by type order by type`));

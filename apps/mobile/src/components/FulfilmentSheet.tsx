@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, maxWidth: 560, width: '100%', alignSelf: 'center', marginHorizontal: 'auto',
     backgroundColor: colors.background, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 28, gap: 12 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  title: { fontSize: 22, fontFamily: fonts.serif, color: colors.text, flex: 1 },
+  title: { fontSize: 22, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text, flex: 1 },
   close: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
   link: { fontSize: 14, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium },
 });

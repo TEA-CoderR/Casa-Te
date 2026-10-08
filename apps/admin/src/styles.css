@@ -478,3 +478,8 @@ table.showcase .row-actions { white-space: nowrap; text-align: right; }
 table.showcase .row-actions button { margin-left: 2px; }
 .flip { display: inline-flex; transform: rotate(180deg); }
 table.showcase td:first-child { white-space: nowrap; }
+/* Volantino: page thumbnails in reading order. */
+.flyer-pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+.flyer-page { border: 1px solid var(--line); border-radius: 8px; padding: 6px; background: #fff; display: flex; flex-direction: column; gap: 4px; }
+.flyer-page img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 4px; background: #f3f3ef; }
+.flyer-page .icon-btn { min-height: 28px; padding: 4px; }
