@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { brandLogoOnWhite, LOGO_ASPECT } from '@/config/brand';
 import { router, useGlobalSearchParams, usePathname } from 'expo-router';
 import type { CategoryRow } from '@casa-te/shared';
 import { colors, fonts } from '@/config/theme';
@@ -100,7 +101,9 @@ export function SiteHeader() {
         <SearchBox query={query} setQuery={setQuery} onSubmit={search} storeId={selected?.id ?? null} categories={all} />
       </View>
       <Pressable onPress={() => router.push('/')} accessibilityRole="link" accessibilityLabel="Casa & Te, home">
-        <Text style={styles.wordmark} accessibilityRole="header">Casa & Te</Text>
+        {/* The company logo (green on the white masthead). */}
+        <Image source={brandLogoOnWhite} accessibilityRole="header" accessibilityLabel="Casa & Te"
+          style={{ width: 260, height: 260 / LOGO_ASPECT }} resizeMode="contain" />
       </Pressable>
       <View style={[styles.side, { justifyContent: 'flex-end', gap: 6 }]}>
         {tool('heart', 'Preferiti', '/favorites')}
@@ -118,6 +121,10 @@ export function SiteHeader() {
             onHoverIn={() => hoverMenu(null)} onHoverOut={cancelSwitch}
             style={({ hovered }: WebState) => [styles.navLink, (hovered || params.offerte === '1') && { borderColor: colors.sale }, transition('border-color')]}>
             <Text style={[styles.navText, { color: colors.sale, fontFamily: fonts.sansSemiBold, fontWeight: '600' }]}>Offerte</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/volantino')} accessibilityRole="link" onHoverIn={() => hoverMenu(null)} onHoverOut={cancelSwitch}
+            style={({ hovered }: WebState) => [styles.navLink, (hovered || pathname === '/volantino') && { borderColor: colors.green }, transition('border-color')]}>
+            <Text style={[styles.navText, { color: colors.green, fontFamily: fonts.sansSemiBold, fontWeight: '600' }]}>Volantino</Text>
           </Pressable>
         </View>
         <Pressable onPress={() => setStoreSheet(true)} accessibilityRole="button"

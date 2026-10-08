@@ -76,7 +76,7 @@ export function ProductReviews({ productId, average, count, onChanged }: { produ
 const styles = StyleSheet.create({
   wrap: { marginTop: 26, paddingTop: 20, borderTopWidth: 1, borderColor: colors.line, gap: 10 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  title: { fontSize: 20, fontFamily: fonts.serif, color: colors.text },
+  title: { fontSize: 20, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   summary: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   summaryText: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
   empty: { fontSize: 14, lineHeight: 20, color: colors.muted, fontFamily: fonts.sans },
@@ -89,6 +89,6 @@ const styles = StyleSheet.create({
   write: { alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.text, borderRadius: 999, paddingHorizontal: 18, minHeight: 42, justifyContent: 'center' },
   writeText: { fontSize: 14, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500' },
   form: { gap: 12, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.line, padding: 16 },
-  formTitle: { fontSize: 17, fontFamily: fonts.serif, color: colors.text },
+  formTitle: { fontSize: 17, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   input: { minHeight: 96, borderWidth: 1, borderColor: colors.line, borderRadius: 12, padding: 12, fontSize: 15, color: colors.text, textAlignVertical: 'top', fontFamily: fonts.sans },
 });

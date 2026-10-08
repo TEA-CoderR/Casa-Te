@@ -1,7 +1,7 @@
 // Data access for the customer app. All prices/stock/shipping come from the database; the app
 // never computes an amount that is charged.
 import {
-  productImageUrl, type AppSettingsRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
+  flyerFileUrl, productImageUrl, type AppSettingsRow, type FlyerRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
   type CreateOrderInput, type OrderEventRow, type OrderItemRow, type OrderRow, type PickupPointRow,
   type ClubOffer, type ProductReviewRow, type ProductRow, type ProfileRow, type Quote, type QuoteInput,
   type ReviewEligibility, type StoreRow,
@@ -209,6 +209,14 @@ export async function fetchProduct(id: string, storeId: string | null): Promise<
   if (storeId) query = query.eq('inventory.store_id', storeId);
   const rows = unwrap(await query.limit(1)) as unknown as RawProduct[];
   return rows[0] ? toCatalogProduct(rows[0], storeId) : null;
+}
+
+/** Current flyers ("Volantino"), newest first; RLS returns only published flyers inside their validity window. */
+export async function fetchFlyers(): Promise<Array<FlyerRow & { pdf: string | null; pages: string[] }>> {
+  const rows = unwrap(await supabase.from('flyers').select('*')
+    .order('valid_from', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })) as FlyerRow[];
+  return rows.map((f) => ({ ...f, pdf: flyerFileUrl(SUPABASE_URL, f.pdf_path),
+    pages: f.page_paths.map((p) => flyerFileUrl(SUPABASE_URL, p)).filter((u): u is string => !!u) }));
 }
 
 export async function fetchPickupPoints(): Promise<PickupPointRow[]> {

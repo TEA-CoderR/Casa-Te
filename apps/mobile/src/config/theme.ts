@@ -1,32 +1,41 @@
 import { Platform } from 'react-native';
 
 /**
- * "Bottega" look: warm white ground, deep forest green for actions, serif for names and prices.
- * Keys `lime` and `greenDark` are kept for older screens; `lime` is now the soft cream accent.
+ * Brand look (design D "Insegna"): the CASA & TE store sign — logo green with the yellow lettering —
+ * for the header band, deep green for actions, red only for discounts, white product plates on a light ground.
+ * Keys `lime`, `cream`, `sand` and `stone` are kept for older screens and the desktop catalogue.
  */
 export const colors = {
-  green: '#1F4A33',
-  greenDark: '#163826',
+  /** Actions, links, active tab (white text on it passes AA). */
+  green: '#2F5A26',
+  greenDark: '#22441C',
+  /** The logo's green: header band and large brand surfaces only (white text on it is large/bold). */
+  brand: '#51883F',
+  /** The logo's yellow: badges, price tags and highlights on green. */
+  yellow: '#F6EB11',
+  /** Pale green fills (icon circles, availability). */
+  mint: '#E7F0E1',
   lime: '#F3E9D6',
   cream: '#F4EFE6',
   sand: '#F6EEDF',
-  /** Pages are white like the design; warm tones stay on accents (chips, banners, photo backdrop). */
+  /** Phone pages: light ground under white cards. */
+  page: '#F4F5F1',
   background: '#FFFFFF',
   surface: '#FFFFFF',
-  text: '#1B2620',
-  muted: '#5E625A',
+  text: '#1A1F17',
+  muted: '#5D6657',
   /** Secondary icons and inactive tabs: still ≥4.5:1 on white. */
-  faint: '#686C64',
-  line: '#ECE6DB',
+  faint: '#6B7265',
+  line: '#E4E7E0',
   /** Desktop print rules (hairlines between catalogue rows and sections). */
   rule: '#E4DCCD',
-  /** Warm stone ground (footer, closing tiles, hover fills). */
+  /** Warm stone ground (desktop footer, closing tiles, hover fills). */
   stone: '#F4EFE6',
   /** Product photographs always sit on white, like their studio backgrounds (owner's choice). */
   photo: '#FFFFFF',
   /** Thin frame around white photo plates on white pages. */
-  photoLine: '#ECE7DF',
-  badge: '#B3261E',
+  photoLine: '#E4E7E0',
+  badge: '#D62828',
   /** Discounts: solid red label and red sale price, meant to stand out. */
   sale: '#D62828',
   danger: '#A62F2F',
@@ -40,17 +49,21 @@ const family = (name: string, fallback: string) => Platform.OS === 'web' ? `${na
 const serifFallback = 'Georgia, "Times New Roman", serif';
 const sansFallback = 'system-ui, -apple-system, "Segoe UI", sans-serif';
 /**
- * EB Garamond for names, titles and prices (fine strokes, normal lining figures for prices);
- * Bodoni Moda only for the "Casa & Te" wordmark. Both are subset to Latin in assets/fonts (OFL).
+ * Phone app (design D): Barlow for everything, Barlow Semi Condensed for prices (supermarket price tags).
+ * The desktop catalogue keeps EB Garamond (`serif*`) and the Bodoni wordmark (`display`).
  */
 export const fonts = {
   serif: family('EBGaramond_400Regular', serifFallback),
   serifMedium: family('EBGaramond_500Medium', serifFallback),
   serifBold: family('EBGaramond_500Medium', serifFallback),
   display: family('BodoniModa_600SemiBold', serifFallback),
-  sans: family('HankenGrotesk_400Regular', sansFallback),
-  sansMedium: family('HankenGrotesk_500Medium', sansFallback),
-  sansSemiBold: family('HankenGrotesk_600SemiBold', sansFallback),
+  sans: family('Barlow_400Regular', sansFallback),
+  sansMedium: family('Barlow_500Medium', sansFallback),
+  sansSemiBold: family('Barlow_600SemiBold', sansFallback),
+  sansBold: family('Barlow_700Bold', sansFallback),
+  heavy: family('Barlow_800ExtraBold', sansFallback),
+  price: family('BarlowSemiCondensed_800ExtraBold', sansFallback),
+  priceBold: family('BarlowSemiCondensed_700Bold', sansFallback),
 };
 
 export const spacing = {

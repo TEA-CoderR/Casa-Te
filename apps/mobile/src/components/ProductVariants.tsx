@@ -26,7 +26,7 @@ export function ProductVariants({ title, current, variants }: { title: string | 
 
 const styles = StyleSheet.create({
   wrap: { marginTop: 22, gap: 12 },
-  title: { fontSize: 19, fontFamily: fonts.serif, color: colors.text },
+  title: { fontSize: 19, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   item: { width: 80, borderRadius: 10, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, padding: 6, alignItems: 'center', gap: 4 },
   itemOn: { borderColor: colors.text, borderWidth: 1.5 },
   thumb: { width: '100%' },

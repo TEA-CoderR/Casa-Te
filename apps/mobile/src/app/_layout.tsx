@@ -1,11 +1,18 @@
 import { useEffect } from 'react';
 import { Platform, Text, View } from 'react-native';
 import { useFonts } from 'expo-font';
-import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600SemiBold } from '@expo-google-fonts/hanken-grotesk';
+import { Barlow_400Regular } from '@expo-google-fonts/barlow/400Regular';
+import { Barlow_500Medium } from '@expo-google-fonts/barlow/500Medium';
+import { Barlow_600SemiBold } from '@expo-google-fonts/barlow/600SemiBold';
+import { Barlow_700Bold } from '@expo-google-fonts/barlow/700Bold';
+import { Barlow_800ExtraBold } from '@expo-google-fonts/barlow/800ExtraBold';
+import { BarlowSemiCondensed_700Bold } from '@expo-google-fonts/barlow-semi-condensed/700Bold';
+import { BarlowSemiCondensed_800ExtraBold } from '@expo-google-fonts/barlow-semi-condensed/800ExtraBold';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors, fonts } from '@/config/theme';
 import { PersistenceGate } from '@/components/PersistenceGate';
+import { useLayout } from '@/lib/hooks';
 import { isConfigured } from '@/lib/supabase';
 import { startSessionListener } from '@/store/session';
 
@@ -26,24 +33,28 @@ export default function RootLayout() {
     EBGaramond_400Regular: require('../../assets/fonts/EBGaramond_400Regular.ttf'),
     EBGaramond_500Medium: require('../../assets/fonts/EBGaramond_500Medium.ttf'),
     BodoniModa_600SemiBold: require('../../assets/fonts/BodoniModa_600SemiBold.ttf'),
-    HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600SemiBold,
+    Barlow_400Regular, Barlow_500Medium, Barlow_600SemiBold, Barlow_700Bold, Barlow_800ExtraBold,
+    BarlowSemiCondensed_700Bold, BarlowSemiCondensed_800ExtraBold,
   });
+  const { wide } = useLayout();
   useEffect(() => { if (isConfigured) startSessionListener(); }, []);
   if (!isConfigured) return <NotConfigured />;
   // Native needs the faces registered before first render; the web shop falls back to system fonts meanwhile.
   if (Platform.OS !== 'web' && !fontsLoaded && !fontError) return null;
   return (
     <PersistenceGate>
-      <StatusBar style="dark" />
+      {/* Phones: every page starts with the green brand band (design D), so light status bar icons. */}
+      <StatusBar style={wide ? 'dark' : 'light'} />
       <Stack
         screenOptions={{
-          headerTintColor: colors.text,
-          headerTitleStyle: { fontFamily: fonts.serif, fontSize: 21, color: colors.text },
+          headerTintColor: wide ? colors.text : '#FFFFFF',
+          headerTitleStyle: wide ? { fontFamily: fonts.serif, fontSize: 21, color: colors.text }
+            : { fontFamily: fonts.heavy, fontSize: 19, color: '#FFFFFF' },
           headerShadowVisible: false,
-          headerTitleAlign: 'center',
-          headerStyle: { backgroundColor: colors.background },
+          headerTitleAlign: wide ? 'center' : 'left',
+          headerStyle: { backgroundColor: wide ? colors.background : colors.brand },
           headerBackButtonDisplayMode: 'minimal',
-          contentStyle: { backgroundColor: colors.background },
+          contentStyle: { backgroundColor: wide ? colors.background : colors.page },
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'CASA & TE' }} />
@@ -58,6 +69,7 @@ export default function RootLayout() {
         <Stack.Screen name="account/delete" options={{ title: 'Elimina account' }} />
         <Stack.Screen name="legal/[doc]" options={{ title: 'Informazioni legali' }} />
         <Stack.Screen name="club" options={{ title: 'Casa & Te Club' }} />
+        <Stack.Screen name="volantino" options={{ title: 'Volantino' }} />
       </Stack>
     </PersistenceGate>
   );

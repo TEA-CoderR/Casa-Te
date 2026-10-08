@@ -1,6 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Screen } from '@/components/Screen';
+import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
+import { colors as palette } from '@/config/theme';
 import { ProductCard } from '@/components/ProductCard';
 import { EmptyState, Loading, Notice, PageTitle, PrimaryButton } from '@/components/UI';
 import { fetchProducts } from '@/lib/api';
@@ -10,6 +12,10 @@ import { useFavorites } from '@/store/favorites';
 import { ALL_PRODUCTS } from '@/lib/links';
 
 export default function FavoritesScreen() {
+  const phone = !useLayout().wide;
+  // Phones: the green band with a way back (these pages open from the header heart and Profilo).
+  const band = phone ? <BrandHeader title="Preferiti" left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/profile')} />} /> : undefined;
+  const page = phone ? { header: band, ground: palette.page } : {};
   const ids = useFavorites((s) => s.ids);
   const { selected } = useStores();
   const { columns } = useLayout();
@@ -18,13 +24,13 @@ export default function FavoritesScreen() {
   // Keep the order in which products were saved (newest first); hide products no longer on sale.
   const items = (data?.items ?? []).slice().sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)).filter((p) => ids.includes(p.id));
 
-  if (!ids.length) return <Screen><PageTitle title="Preferiti" />
+  if (!ids.length) return <Screen {...page}>{!phone && <PageTitle title="Preferiti" />}
     <EmptyState icon="heart" title="Nessun preferito" message="Tocca il cuore su un prodotto per ritrovarlo qui.">
       <PrimaryButton title="Scopri i prodotti" onPress={() => router.push(ALL_PRODUCTS)} />
     </EmptyState></Screen>;
 
-  return <Screen refreshing={loading && !!data} onRefresh={refetch}>
-    <PageTitle title="Preferiti" subtitle={`${ids.length} ${ids.length === 1 ? 'prodotto' : 'prodotti'}`} />
+  return <Screen {...page} refreshing={loading && !!data} onRefresh={refetch}>
+    {!phone && <PageTitle title="Preferiti" subtitle={`${ids.length} ${ids.length === 1 ? 'prodotto' : 'prodotti'}`} />}
     {error && !data ? <Notice tone="error" message="Impossibile caricare i preferiti. Controlla la connessione." />
       : !data ? <Loading /> : <View style={styles.grid}>{items.map((product) =>
         <View key={product.id} style={{ width: `${100 / columns}%`, paddingHorizontal: 6, flexDirection: 'row' }}>

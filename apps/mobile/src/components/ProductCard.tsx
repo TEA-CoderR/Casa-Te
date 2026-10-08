@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
-import { discountLabel, formatEuro } from '@/lib/price';
+import { discountLabel, formatEuro, unitPriceLabel } from '@/lib/price';
 import type { CatalogProduct } from '@/lib/api';
 import { colors, fonts } from '@/config/theme';
 import { useCartStore } from '@/store/cart';
@@ -42,13 +42,19 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
   const note = !stock.available || (product.stock !== null && product.stock <= 3) ? stock.text : '';
   const cartButton = <Pressable accessibilityRole="button" disabled={!canAdd} onPress={() => add(product.id)}
     accessibilityLabel={quantity ? `${product.name}: ${quantity} nel carrello, aggiungi un altro` : `Aggiungi ${product.name} al carrello`}
-    style={({ pressed }) => [styles.add, { opacity: !canAdd ? 0.35 : pressed ? 0.75 : 1 }]}>
-    {quantity ? <Text style={styles.addCount}>{quantity}</Text> : <Icon name="cart" size={17} color="#fff" strokeWidth={1.6} />}
+    style={({ pressed }) => [styles.add, !wide && styles.addRound, { opacity: !canAdd ? 0.35 : pressed ? 0.75 : 1 }]}>
+    {quantity ? <Text style={styles.addCount}>{quantity}</Text> : wide
+      ? <Icon name="cart" size={17} color="#fff" strokeWidth={1.6} />
+      : <Icon name="plus" size={18} color="#fff" strokeWidth={2.6} />}
   </Pressable>;
   const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
-  const price = <View style={styles.priceRow}>
-    <Text style={[styles.price, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
-    {!!discount && <Text style={styles.compare}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
+  const unit = unitPriceLabel(product.price_cents, product.unit_quantity, product.unit);
+  // Phone (design D): struck price and unit price above a big condensed price, red when discounted.
+  const price = <View style={{ flexShrink: 1 }}>
+    {(!!discount || !!unit) && <Text style={styles.small} numberOfLines={1}>
+      {!!discount && <Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
+      {!!discount && !!unit && ' · '}{unit ?? ''}</Text>}
+    <Text style={[styles.priceBig, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
   </View>;
 
   if (variant === 'list') return <View style={styles.row}>
@@ -74,8 +80,8 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
             <View style={[hovered && { transform: [{ scale: 1.035 }] }, transition('transform', 600)]}>
               <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={feature ? 0.1 : 0.09} aspect={feature ? 0.9 : 1.12} blend />
             </View>
-            {!!discount && <View style={[styles.discount, feature && styles.discountBig]}>
-              <Text style={[styles.discountText, feature && { fontSize: 16 }]} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount}</Text></View>}
+            {!!discount && <View style={[styles.discount, styles.discountDesk, feature && styles.discountBig]}>
+              <Text style={[styles.discountText, styles.discountTextDesk, feature && { fontSize: 16 }]} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount}</Text></View>}
           </View>
           <View style={styles.entryText}>
             {!!product.brand && <Text style={styles.entryBrand} numberOfLines={1}>{product.brand}</Text>}
@@ -99,13 +105,11 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
   return <View style={styles.card}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={styles.media}>
-        <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.04} aspect={1.2} />
-        {!!discount && <View style={styles.discount}><Text style={styles.discountText} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount}</Text></View>}
+        <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.05} aspect={1.08} />
+        {!!discount && <View style={styles.discount}><Text style={styles.discountText} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount.replace('-', '−')}</Text></View>}
       </View>
-      <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
-        {!!note && <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{note}</Text>}
-      </View>
+      <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+      {!!note && <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{note}</Text>}
     </Pressable></Link>
     <FavoriteButton productId={product.id} name={product.name} size={19} style={styles.heartCorner} />
     <View style={styles.bottom}>{price}{cartButton}</View>
@@ -113,31 +117,36 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
 }
 
 const styles = StyleSheet.create({
-  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: '#EEE9E0', overflow: 'hidden' },
+  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.line, overflow: 'hidden', padding: 8, gap: 4 },
   media: { backgroundColor: colors.surface },
   heart: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 4, right: 4 },
-  discount: { position: 'absolute', left: 8, top: 8, backgroundColor: colors.sale, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  discountText: { fontSize: 13.5, color: '#fff', fontFamily: fonts.sansSemiBold, fontWeight: '700', letterSpacing: 0.2 },
-  body: { paddingHorizontal: 10 },
-  name: { fontSize: 15.5, lineHeight: 18, fontFamily: fonts.serif, color: colors.text, minHeight: 36 },
-  meta: { fontSize: 11.5, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
-  bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingTop: 4, paddingBottom: 8, gap: 6, marginTop: 'auto' },
+  discount: { position: 'absolute', left: 0, top: 0, backgroundColor: colors.sale, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  discountText: { fontSize: 14.5, color: '#fff', fontFamily: fonts.price, fontWeight: '800' },
+  name: { fontSize: 13.5, lineHeight: 17, fontFamily: fonts.sansMedium, fontWeight: '500', color: colors.text, minHeight: 34, marginTop: 2 },
+  meta: { fontSize: 11.5, color: colors.muted, marginTop: 1, fontFamily: fonts.sans },
+  bottom: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 6, marginTop: 'auto', paddingTop: 2 },
+  small: { fontSize: 11.5, color: colors.faint, fontFamily: fonts.sansMedium },
+  compareSmall: { textDecorationLine: 'line-through' },
+  priceBig: { fontSize: 23, lineHeight: 26, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
   priceRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
   price: { fontSize: 18.5, fontFamily: fonts.serifMedium, color: colors.text },
   compare: { fontSize: 12, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
   add: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-  addCount: { color: '#fff', fontSize: 15, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
+  addRound: { width: 36, height: 36, borderRadius: 18 },
+  addCount: { color: '#fff', fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700' },
   entry: { flex: 1 },
   plate: { backgroundColor: colors.photo, borderRadius: 4, overflow: 'hidden', borderWidth: 1, borderColor: colors.photoLine },
+  discountDesk: { left: 8, top: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  discountTextDesk: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, fontWeight: '700', letterSpacing: 0.2 },
   discountBig: { left: 16, top: 16, paddingHorizontal: 11, paddingVertical: 5 },
   entryText: { paddingTop: 16, gap: 3 },
   entryBrand: { fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, fontFamily: fonts.sansMedium, fontWeight: '500' },
   entryName: { fontSize: 19, lineHeight: 23, fontFamily: fonts.serif, color: colors.text },
   entryNameBig: { fontSize: 28, lineHeight: 32 },
   entryBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, gap: 8, marginTop: 'auto' },
-  row: { flexDirection: 'row', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.line, alignItems: 'center' },
+  row: { flexDirection: 'row', gap: 12, padding: 10, marginBottom: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, alignItems: 'center' },
   rowLink: { flex: 1, flexDirection: 'row', gap: 14, alignItems: 'center' },
-  rowMedia: { width: 88, borderRadius: 10, borderWidth: 1, borderColor: '#EEE9E0', backgroundColor: colors.surface, overflow: 'hidden' },
+  rowMedia: { width: 84, borderRadius: 8, backgroundColor: colors.surface, overflow: 'hidden' },
   rowSide: { alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', gap: 8 },
 });

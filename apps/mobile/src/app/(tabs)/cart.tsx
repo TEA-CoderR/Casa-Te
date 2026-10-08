@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BrandHeader } from '@/components/BrandHeader';
+import { brandMonogramGreen, MONOGRAM_ASPECT } from '@/config/brand';
 import { router } from 'expo-router';
 import { FREE_SHIPPING_MAX_WEIGHT_G, FULFILMENT_LABELS, formatPackSize, formatWeight, freeShippingRemainingCents, type QuoteLine } from '@casa-te/shared';
 import { formatEuro, formatShipping } from '@/lib/price';
@@ -42,12 +44,13 @@ export default function CartScreen() {
   const { wide } = useLayout();
   const user = useUser();
 
-  if (empty) return <Screen><PageTitle title="Il tuo carrello" /><EmptyState title="Il carrello è vuoto"
+  const band = wide ? undefined : <BrandHeader title="Carrello" />;
+  if (empty) return <Screen header={band} ground={wide ? undefined : colors.page}>{wide && <PageTitle title="Il tuo carrello" />}<EmptyState title="Il carrello è vuoto"
     message="La tua casa aspetta nuove idee. Inizia da un piccolo essenziale.">
     <PrimaryButton title="Vai al catalogo" onPress={() => router.push(ALL_PRODUCTS)} />
   </EmptyState></Screen>;
 
-  if (!quote) return <Screen><PageTitle title="Il tuo carrello" />
+  if (!quote) return <Screen header={band} ground={wide ? undefined : colors.page}>{wide && <PageTitle title="Il tuo carrello" />}
     {error ? <Notice tone="error" title="Impossibile aggiornare il carrello" message="Controlla la connessione e riprova.">
       <Pressable onPress={refresh}><Text style={{ color: colors.green, fontWeight: '600' }}>Riprova</Text></Pressable>
     </Notice> : <Loading />}
@@ -98,6 +101,85 @@ export default function CartScreen() {
     </View>
     <Text style={styles.vat}>IVA inclusa</Text>
   </View>;
+
+  // Phone (design D): green band, white cards on the light ground, totals and the button pinned at the bottom.
+  if (!wide) {
+    const savings = quote.lines.reduce((sum, line) => {
+      const compare = byId.get(line.product_id)?.compare_at_price_cents;
+      return !line.issue && compare && line.unit_price_cents !== null && compare > line.unit_price_cents
+        ? sum + (compare - line.unit_price_cents) * line.quantity : sum;
+    }, 0);
+    const header = <BrandHeader title="Carrello"
+      right={<View style={styles.countPill}><Text style={styles.countPillText}>{count} {count === 1 ? 'articolo' : 'articoli'}</Text></View>} />;
+    const footer = <View style={{ gap: 6 }}>
+      <View style={styles.footRow}><Text style={styles.footLabel}>Totale prodotti</Text><Text style={styles.footValue}>{formatEuro(subtotal)}</Text></View>
+      {!!t?.discount_cents && <View style={styles.footRow}><Text style={styles.footLabel}>Sconto</Text><Text style={styles.footValue}>-{formatEuro(t.discount_cents)}</Text></View>}
+      <View style={styles.footRow}><Text style={styles.footLabel}>{fulfilment === 'store' ? 'Ritiro in negozio' : 'Spedizione'}</Text>
+        <Text style={[styles.footValue, t?.shipping_cents === 0 && { color: colors.green, fontFamily: fonts.sansBold }]}>{shippingValue}</Text></View>
+      {savings > 0 && <View style={styles.footRow}><Text style={[styles.footLabel, styles.save]}>Risparmi con le offerte</Text><Text style={[styles.footValue, styles.save]}>{formatEuro(savings)}</Text></View>}
+      <View style={[styles.footRow, { alignItems: 'baseline', marginBottom: 6 }]}>
+        <Text style={styles.footTotalLabel}>Totale <Text style={styles.footVat}>IVA inclusa</Text></Text>
+        <Text style={styles.footTotal}>{t?.total_cents != null ? formatEuro(t.total_cents) : '—'}</Text></View>
+      {cta}
+    </View>;
+    return <Screen header={header} ground={colors.page} onRefresh={refresh} refreshing={loading} footer={footer}
+      contentContainerStyle={{ padding: 12, paddingBottom: 24, gap: 10 }}>
+      <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
+      <FulfilmentSheet visible={deliverySheet} onClose={() => setDeliverySheet(false)} quote={quote} storeName={storeName || 'negozio'}
+        onChangeStore={() => setStoreSheet(true)} />
+      {removed && <View style={[styles.undo, { marginBottom: 0 }]} accessibilityLiveRegion="polite">
+        <Text style={styles.undoText}>{removed.name} rimosso dal carrello.</Text>
+        <Pressable onPress={() => { add(removed.id, removed.qty); setRemoved(null); }} accessibilityRole="button"><Text style={styles.undoLink}>Annulla</Text></Pressable>
+      </View>}
+      {hasIssues && <Notice tone="error" title="Alcuni articoli richiedono attenzione"
+        message="Modifica le quantità o rimuovi gli articoli segnalati per continuare." />}
+      <View style={styles.pCard}>
+        <View style={styles.pCircle}><Icon name={fulfilment === 'store' ? 'store' : fulfilment === 'home' ? 'truck' : 'pin'} size={20} color={colors.green} strokeWidth={1.9} /></View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.pTitle}>{fulfilment === 'store' ? storeName ? `Ritiro ${atPlace(storeName)}` : 'Ritiro in negozio' : FULFILMENT_LABELS[fulfilment]}</Text>
+          <Text style={styles.pText}>{!methodOk ? 'Non disponibile per questo ordine: scegline un altro'
+            : fulfilment === 'store' ? "Gratuito, quando l'ordine è pronto" : fulfilment === 'home' ? 'Indirizzo al passo successivo' : 'Scegli il punto al passo successivo'}</Text>
+        </View>
+        <Pressable onPress={() => setDeliverySheet(true)} accessibilityRole="button" accessibilityLabel="Modifica consegna" hitSlop={8}>
+          <Text style={styles.pLink}>Modifica</Text></Pressable>
+      </View>
+      <View style={styles.pLines}>
+        {quote.lines.map((line, index) => {
+          const max = Math.min(99, Math.max(line.available_quantity, line.quantity));
+          const p = byId.get(line.product_id);
+          const compare = p?.compare_at_price_cents && line.unit_price_cents !== null && p.compare_at_price_cents > line.unit_price_cents ? p.compare_at_price_cents : null;
+          return <View key={line.product_id} style={[styles.pLine, index > 0 && { borderTopWidth: 1, borderColor: '#ECEEE9' }]}>
+            <Pressable style={styles.pThumb} onPress={() => router.push(`/product/${line.product_id}`)} accessibilityLabel={line.name}>
+              <ProductImage uri={imageUrl(line.image_path)} sku={line.sku} label={line.name} inset={0.06} />
+            </Pressable>
+            <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+              <Text style={styles.pName} numberOfLines={2}>{line.name}</Text>
+              {!!line.issue && <Text style={styles.issue}>{ISSUE_TEXT[line.issue]}{line.issue === 'insufficient_stock' ? ` (disponibili: ${line.available_quantity})` : ''}</Text>}
+              <View style={styles.lineBottom}>
+                <Text numberOfLines={1} style={{ flexShrink: 1 }}>
+                  {!line.issue && <Text style={[styles.pPrice, !!compare && { color: colors.sale }]}>{formatEuro(line.line_total_cents)}</Text>}
+                  {!line.issue && !!compare && <Text style={styles.pCompare}>  {formatEuro(compare * line.quantity)}</Text>}
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Pressable onPress={() => { setRemoved({ id: line.product_id, name: line.name, qty: items[line.product_id] ?? line.quantity }); remove(line.product_id); }}
+                    style={styles.remove} accessibilityRole="button" accessibilityLabel={`Rimuovi ${line.name}`}>
+                    <Icon name="trash" size={18} color={colors.muted} strokeWidth={1.6} /></Pressable>
+                  {line.issue !== 'unavailable' && <QuantityControl value={items[line.product_id] ?? line.quantity} label={line.name} max={max} compact
+                    onChange={(q) => setQuantity(line.product_id, q)} />}
+                </View>
+              </View>
+            </View>
+          </View>;
+        })}
+      </View>
+      {fulfilment === 'home' && !overweight && remaining > 0 && <Text style={[styles.hint, { marginTop: 0, marginHorizontal: 4 }]}>Mancano {formatEuro(remaining)} per la spedizione gratuita (fino a 10 kg).</Text>}
+      {clubOn && <Pressable onPress={() => router.push('/club')} accessibilityRole="link" style={({ pressed }) => [styles.pClub, pressed && { opacity: 0.85 }]}>
+        <Image source={brandMonogramGreen} style={{ width: 52, height: 52 / MONOGRAM_ASPECT }} resizeMode="contain" accessibilityIgnoresInvertColors />
+        <View style={{ flex: 1 }}><Text style={styles.pClubTitle}>Casa & Te Club</Text><Text style={styles.pClubText}>{clubTagline}</Text></View>
+        <Icon name="chevron" size={18} color={colors.green} strokeWidth={2.4} />
+      </Pressable>}
+    </Screen>;
+  }
 
   return <Screen onRefresh={refresh} refreshing={loading} footer={wide ? undefined : cta}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
@@ -174,4 +256,27 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 23, fontFamily: fonts.serif, color: colors.text },
   totalValue: { fontSize: 24, fontFamily: fonts.serifMedium, color: colors.text },
   vat: { fontSize: 12, color: colors.muted, textAlign: 'right', marginTop: 2, fontFamily: fonts.sans },
+  countPill: { backgroundColor: colors.yellow, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
+  countPillText: { fontSize: 13.5, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
+  pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  pCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  pTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  pText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
+  pLink: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
+  pLines: { borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, paddingHorizontal: 12 },
+  pLine: { flexDirection: 'row', gap: 12, paddingVertical: 12 },
+  pThumb: { width: 72, height: 72, borderRadius: 8, backgroundColor: colors.photo, justifyContent: 'center', overflow: 'hidden' },
+  pName: { fontSize: 14.5, lineHeight: 18, fontFamily: fonts.sansMedium, fontWeight: '500', color: colors.text },
+  pPrice: { fontSize: 21, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
+  pCompare: { fontSize: 12.5, fontFamily: fonts.sansMedium, color: colors.faint, textDecorationLine: 'line-through' },
+  pClub: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 12, backgroundColor: colors.yellow },
+  pClubTitle: { fontSize: 16, fontFamily: fonts.heavy, fontWeight: '800', color: colors.green },
+  pClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sansMedium, color: '#2B3326', marginTop: 1 },
+  footRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  footLabel: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.muted },
+  footValue: { fontSize: 14, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text },
+  save: { color: colors.sale, fontFamily: fonts.sansBold, fontWeight: '700' },
+  footTotalLabel: { fontSize: 18, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
+  footVat: { fontSize: 12, fontFamily: fonts.sansMedium, fontWeight: '500', color: colors.muted },
+  footTotal: { fontSize: 30, lineHeight: 34, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
 });

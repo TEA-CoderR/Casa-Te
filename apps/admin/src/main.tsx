@@ -29,6 +29,7 @@ import { LoyaltyPage } from './pages/Loyalty';
 import { SettingsPage } from './pages/Settings';
 import { ActivityPage } from './pages/Activity';
 import { ShowcasePage } from './pages/Showcase';
+import { FlyersPage } from './pages/Flyers';
 
 function Guard({ roles, children }: { roles?: Array<'admin' | 'manager' | 'store_staff'>; children: ReactNode }) {
   const { can } = useAuth();
@@ -65,6 +66,7 @@ function Root() {
       <Route path="categories" element={<Guard roles={M}><CategoriesPage /></Guard>} />
       <Route path="coupons" element={<Guard roles={M}><CouponsPage /></Guard>} />
       <Route path="showcase" element={<Guard roles={M}><ShowcasePage /></Guard>} />
+      <Route path="flyers" element={<Guard roles={M}><FlyersPage /></Guard>} />
       <Route path="reviews" element={<Guard roles={M}><ReviewsPage /></Guard>} />
       <Route path="shipping" element={<Guard roles={M}><ShippingPage /></Guard>} />
       <Route path="pickup-points" element={<Guard roles={M}><PickupPointsPage /></Guard>} />

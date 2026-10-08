@@ -15,10 +15,15 @@ type Props = PropsWithChildren<{
   after?: ReactNode;
   /** Horizontal page padding the `after` content bleeds through (it runs edge to edge). */
   bleed?: number;
+  /** Fixed band above the scrolling content (the phone's green brand header); it handles the top inset. */
+  header?: ReactNode;
+  /** Page ground behind the content (phone pages use the light ground under white cards). */
+  ground?: string;
 }>;
 
-export function Screen({ children, contentContainerStyle, footer, stack = false, refreshing, onRefresh, maxWidth = 1120, after, bleed = 20 }: Props) {
-  return <SafeAreaView style={styles.safe} edges={stack ? ['bottom'] : ['top']}>
+export function Screen({ children, contentContainerStyle, footer, stack = false, refreshing, onRefresh, maxWidth = 1120, after, bleed = 20, header, ground }: Props) {
+  return <SafeAreaView style={[styles.safe, ground ? { backgroundColor: ground } : null]} edges={stack ? ['bottom'] : header ? [] : ['top']}>
+    {header}
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={stack ? 88 : 0}>
       <ScrollView contentContainerStyle={[styles.content, contentContainerStyle]}
         showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
