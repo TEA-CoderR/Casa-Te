@@ -72,8 +72,24 @@ export function OrderDetailPage() {
       <span className="badge muted">{t(FULFILMENT_LABELS[o.fulfilment])}</span>
       {o.shipping_provisional && <span className="badge warn">{t('Tariffa oltre 10 kg (provvisoria)')}</span>}
       {o.invoice_requested && <span className="badge flag">{t('Fattura richiesta')}</span>}
+      {o.payment_status !== 'unpaid' && o.status !== 'cancelled' && (o.pos_registered_at
+        ? <span className="badge">{t('Registrato in cassa')}</span> : <span className="badge warn">{t('Da registrare in cassa')}</span>)}
     </div>
     {error && <Notice tone="error">{error}</Notice>}
+    {o.payment_status !== 'unpaid' && !['pending_payment', 'cancelled'].includes(o.status) && <div className="card no-print" style={{ marginBottom: 16 }}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <strong>{t('Cassa')}</strong>
+          <div className="small muted">{o.pos_registered_at
+            ? t('Registrato in cassa il {date}. Il gestionale scalerà la merce alla prossima sincronizzazione.', { date: fmtDate(o.pos_registered_at) })
+            : t('Batti l’ordine sul registratore di cassa del negozio, poi segnalo qui. Fino ad allora la merce resta esclusa dalla disponibilità online.')}</div>
+        </div>
+        <button className={o.pos_registered_at ? 'ghost' : ''} disabled={busy} onClick={() => run(async () =>
+          unwrap(await supabase.rpc('set_pos_registered', { p_order_id: o.id, p_registered: !o.pos_registered_at })),
+          o.pos_registered_at ? t('Registrazione in cassa annullata') : t('Ordine registrato in cassa'))}>
+          {o.pos_registered_at ? t('Annulla registrazione') : t('Segna come registrato in cassa')}</button>
+      </div>
+    </div>}
     {done && <Success onDismiss={() => setDone('')}>{done}</Success>}
     {o.status === 'cancelled' && o.payment_status === 'paid' && <Notice tone="warn">{t('Pagamento ricevuto su ordine annullato: verificare il rimborso automatico su Stripe.')}</Notice>}
 

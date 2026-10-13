@@ -16,7 +16,7 @@ if [ -f "$DATA/postmaster.pid" ]; then $RUN_AS "$PGBIN/pg_ctl" -D "$DATA" -m imm
 rm -rf "$DATA"
 mkdir -p "$DATA"
 [ -n "$RUN_AS" ] && chown postgres "$DATA"
-$RUN_AS "$PGBIN/initdb" -D "$DATA" -U postgres -A trust >/dev/null
+$RUN_AS "$PGBIN/initdb" -D "$DATA" -U postgres -A trust -E UTF8 --no-locale >/dev/null
 $RUN_AS "$PGBIN/pg_ctl" -D "$DATA" -o "-p $PORT -k /tmp -c listen_addresses=127.0.0.1" -l "$DATA/log" -w start >/dev/null
 
 URL="postgresql://postgres@127.0.0.1:$PORT/postgres"

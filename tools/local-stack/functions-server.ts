@@ -8,6 +8,7 @@ import { adminStaff } from '../../supabase/functions/admin-staff/handler.ts';
 import { checkoutReturn } from '../../supabase/functions/checkout-return/handler.ts';
 import { checkout } from '../../supabase/functions/checkout/handler.ts';
 import { deleteAccount } from '../../supabase/functions/delete-account/handler.ts';
+import { erpSync } from '../../supabase/functions/erp-sync/handler.ts';
 import { notifyOrderEvent } from '../../supabase/functions/notify-order-event/handler.ts';
 import { stripeWebhook } from '../../supabase/functions/stripe-webhook/handler.ts';
 import type { Config } from '../../supabase/functions/_shared/env.ts';
@@ -19,6 +20,7 @@ const handlers: Record<string, (req: Request, config: Config) => Promise<Respons
   'checkout-return': checkoutReturn,
   'checkout': checkout,
   'delete-account': deleteAccount,
+  'erp-sync': erpSync,
   'notify-order-event': notifyOrderEvent,
   'stripe-webhook': stripeWebhook,
 };

@@ -23,6 +23,8 @@ export type Config = {
   webShopUrl: string;
   /** Deep-link scheme of the native app (app.json "scheme"). */
   appScheme: string;
+  /** Shared secret of the ERP sync agent (HMAC of each batch); empty disables erp-sync. */
+  erpSyncSecret?: string;
 };
 
 /** Reads the `default` key from the JSON dictionaries Supabase injects (SUPABASE_SECRET_KEYS etc.). */
@@ -52,5 +54,6 @@ export function loadConfig(): Config {
     stripeWebhookSecret: env('STRIPE_WEBHOOK_SECRET') ?? '',
     webShopUrl: (env('WEB_SHOP_URL') ?? '').replace(/\/$/, ''),
     appScheme: env('APP_SCHEME') ?? 'casate',
+    erpSyncSecret: env('ERP_SYNC_SECRET') ?? '',
   };
 }

@@ -18,6 +18,7 @@ export function OrdersPage() {
   const status = params.get('status') ?? '';
   const storeId = params.get('store') ?? '';
   const fulfilment = params.get('fulfilment') ?? '';
+  const cassa = params.get('cassa') ?? '';
   // Every filter lives in the URL, so refresh, back and shared links keep the same view.
   const from = params.get('dal') ?? '';
   const to = params.get('al') ?? '';
@@ -41,6 +42,8 @@ export function OrdersPage() {
     else query = query.neq('status', 'pending_payment');
     if (storeId) query = query.eq('store_id', storeId);
     if (fulfilment) query = query.eq('fulfilment', fulfilment);
+    if (cassa === 'da') query = query.is('pos_registered_at', null).neq('payment_status', 'unpaid').neq('status', 'cancelled');
+    if (cassa === 'ok') query = query.not('pos_registered_at', 'is', null);
     if (from) query = query.gte('created_at', new Date(from).toISOString());
     if (to) query = query.lt('created_at', new Date(new Date(to).getTime() + 86_400_000).toISOString());
     if (q) {
@@ -53,7 +56,7 @@ export function OrdersPage() {
   const orders = useAsync(async () => {
     const res = await buildQuery().range(page * PAGE, page * PAGE + PAGE - 1);
     return { rows: unwrap(res) as OrderRow[], count: res.count ?? 0 };
-  }, [status, storeId, fulfilment, q, page, from, to]);
+  }, [status, storeId, fulfilment, cassa, q, page, from, to]);
 
   const storeName = (id: string) => stores.data?.find((s) => s.id === id)?.code ?? '';
 
@@ -69,12 +72,12 @@ export function OrdersPage() {
       const eur = (c: number) => (c / 100).toFixed(2).replace('.', ',');
       downloadCsv(`ordini-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(all.map((o) => ({
         numero: o.order_number, data: o.created_at, pagato_il: o.paid_at ?? '', stato: ORDER_STATUS_LABELS[o.status], pagamento: o.payment_status,
-        negozio: storeName(o.store_id), venditore: o.seller_snapshot?.legal_name ?? '', piva_venditore: o.seller_snapshot?.vat_number ?? '', consegna: FULFILMENT_LABELS[o.fulfilment], cliente: o.customer_name, email: o.customer_email, telefono: o.customer_phone,
+        negozio: storeName(o.store_id), venditore: o.seller_snapshot?.legal_name ?? '', piva_venditore: o.seller_snapshot?.vat_number ?? '', registrato_in_cassa: o.pos_registered_at ?? '', consegna: FULFILMENT_LABELS[o.fulfilment], cliente: o.customer_name, email: o.customer_email, telefono: o.customer_phone,
         prodotti: eur(o.subtotal_cents), sconto: eur(o.discount_cents), spedizione: eur(o.shipping_cents), totale: eur(o.total_cents),
         rimborsato: eur(o.refunded_cents), coupon: o.coupon_code ?? '', fattura: o.invoice_requested ? 'si' : 'no',
         codice_fiscale: o.invoice_details?.tax_code ?? '', partita_iva: o.invoice_details?.vat_number ?? '', ragione_sociale: o.invoice_details?.company_name ?? '',
         sdi: o.invoice_details?.sdi_code ?? '', pec: o.invoice_details?.pec ?? '', stripe_payment_intent: o.stripe_payment_intent_id ?? '',
-      })), ['numero', 'data', 'pagato_il', 'stato', 'pagamento', 'negozio', 'venditore', 'piva_venditore', 'consegna', 'cliente', 'email', 'telefono', 'prodotti', 'sconto', 'spedizione',
+      })), ['numero', 'data', 'pagato_il', 'stato', 'pagamento', 'negozio', 'venditore', 'piva_venditore', 'registrato_in_cassa', 'consegna', 'cliente', 'email', 'telefono', 'prodotti', 'sconto', 'spedizione',
         'totale', 'rimborsato', 'coupon', 'fattura', 'codice_fiscale', 'partita_iva', 'ragione_sociale', 'sdi', 'pec', 'stripe_payment_intent']));
     } finally { setExporting(false); }
   };
@@ -92,11 +95,16 @@ export function OrdersPage() {
         <option value="">{t('Tutte le consegne')}</option>
         {(Object.keys(FULFILMENT_LABELS) as FulfilmentMethod[]).map((f) => <option key={f} value={f}>{t(FULFILMENT_LABELS[f])}</option>)}
       </select>
+      <select value={cassa} onChange={(e) => set('cassa', e.target.value)} aria-label={t('Cassa')}>
+        <option value="">{t('Cassa: tutti')}</option>
+        <option value="da">{t('Da registrare in cassa')}</option>
+        <option value="ok">{t('Registrati in cassa')}</option>
+      </select>
       {can('admin', 'manager') && <select value={storeId} onChange={(e) => set('store', e.target.value)} aria-label={t('Negozio')}>
         <option value="">{t('Tutti i negozi')}</option>{stores.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>}
       <label className="inline-field">{t('Dal')} <input type="date" value={from} onChange={(e) => set('dal', e.target.value)} /></label>
       <label className="inline-field">{t('Al')} <input type="date" value={to} onChange={(e) => set('al', e.target.value)} /></label>
-      {(status || storeId || fulfilment || from || to || q) && <button className="ghost" onClick={() => { setSearch(''); setParams(new URLSearchParams()); }}>{t('Azzera filtri')}</button>}
+      {(status || storeId || fulfilment || cassa || from || to || q) && <button className="ghost" onClick={() => { setSearch(''); setParams(new URLSearchParams()); }}>{t('Azzera filtri')}</button>}
     </div>
     {orders.error && <Notice tone="error">{orders.error}</Notice>}
     {!orders.data ? <Loading /> : !orders.data.rows.length ? <Empty>{t('Nessun ordine con questi filtri.')}</Empty> : <div className="table-wrap"><table>
@@ -105,7 +113,8 @@ export function OrdersPage() {
         <td><Link to={`/orders/${o.id}`} className="row-link" onClick={(e) => e.stopPropagation()}>{o.order_number}</Link></td><td>{fmtDate(o.created_at)}</td>
         <td>{o.customer_name}<div className="small muted">{o.customer_email}</div></td>
         <td>{storeName(o.store_id)}</td><td>{t(FULFILMENT_LABELS[o.fulfilment])}</td>
-        <td><StatusBadge status={o.status} /></td><td><PaymentBadge status={o.payment_status} /></td>
+        <td><StatusBadge status={o.status} />{o.payment_status !== 'unpaid' && o.status !== 'cancelled' && !o.pos_registered_at
+          && <div><span className="badge warn" title={t('Da registrare in cassa')}>{t('Cassa')}</span></div>}</td><td><PaymentBadge status={o.payment_status} /></td>
         <td className="num">{formatEuro(o.total_cents)}</td></tr>)}</tbody></table></div>}
     {orders.data && <Pager page={page} hasMore={(page + 1) * PAGE < orders.data.count} onPage={setPage} />}
   </>;

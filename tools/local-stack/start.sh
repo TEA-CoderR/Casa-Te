@@ -22,6 +22,7 @@ API_URL="http://localhost:$GATEWAY_PORT"
 JWT_SECRET="super-secret-jwt-token-with-at-least-32-characters-long"  # local only
 STRIPE_SECRET_KEY="sk_test_local_mock"
 STRIPE_WEBHOOK_SECRET="whsec_local_mock"
+ERP_SYNC_SECRET="erp_local_secret"
 
 "$HERE/stop.sh" >/dev/null 2>&1 || true
 
@@ -55,7 +56,7 @@ PGBIN="${PGBIN:-$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -
 RUN_AS=""
 if [ "$(id -u)" = "0" ]; then id postgres >/dev/null 2>&1 || useradd -r postgres; RUN_AS="runuser -u postgres --"; fi
 rm -rf "$PGDATA"; mkdir -p "$PGDATA"; [ -n "$RUN_AS" ] && chown postgres "$PGDATA"
-$RUN_AS "$PGBIN/initdb" -D "$PGDATA" -U postgres -A trust >/dev/null
+$RUN_AS "$PGBIN/initdb" -D "$PGDATA" -U postgres -A trust -E UTF8 --no-locale >/dev/null
 $RUN_AS "$PGBIN/pg_ctl" -D "$PGDATA" -o "-p $PG_PORT -k /tmp -c listen_addresses=127.0.0.1" -l "$PGDATA/postgres.log" -w start >/dev/null
 DB="postgresql://postgres@127.0.0.1:$PG_PORT/postgres"
 PSQL=(psql "$DB" -v ON_ERROR_STOP=1 -q -X)
@@ -106,6 +107,7 @@ SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY=
 STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" STRIPE_WEBHOOK_SECRET="$STRIPE_WEBHOOK_SECRET" \
 STRIPE_API_BASE="http://127.0.0.1:$STRIPE_MOCK_PORT" WEB_SHOP_URL="http://localhost:$SHOP_PORT" \
 ADMIN_URL="http://localhost:$ADMIN_PORT" APP_SCHEME=casate ALLOWED_ORIGINS='*' FUNCTIONS_PORT=$FUNCTIONS_PORT \
+ERP_SYNC_SECRET="$ERP_SYNC_SECRET" \
   start functions "$DENO" run --allow-net --allow-env --allow-read "$HERE/functions-server.ts"
 
 STRIPE_MOCK_PORT=$STRIPE_MOCK_PORT STRIPE_MOCK_PUBLIC_URL="http://localhost:$STRIPE_MOCK_PORT" \
@@ -144,7 +146,8 @@ SHOP_URL=http://localhost:$SHOP_PORT
 ADMIN_URL=http://localhost:$ADMIN_PORT
 MAIL_URL=http://localhost:$MAIL_UI_PORT
 STRIPE_MOCK_URL=http://localhost:$STRIPE_MOCK_PORT
+ERP_SYNC_SECRET=$ERP_SYNC_SECRET
 EOF
 echo "Local stack ready:"
-sed 's/^/  /' "$STATE/env" | grep -v _KEY
+sed 's/^/  /' "$STATE/env" | grep -v -e _KEY -e _SECRET
 echo "  keys/env: $STATE/env   logs: $LOGS"

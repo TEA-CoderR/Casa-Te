@@ -833,5 +833,17 @@ const dict: Record<string, string> = {
   "Sede legale (via e numero)": "注册地址（街道和门牌号）",
   "Un negozio attivo deve essere collegato all’azienda che vende i suoi ordini.": "营业中的门店必须关联负责其订单销售的公司。",
   "Venditore": "卖家",
+  "Annulla registrazione": "撤销登记",
+  "Batti l’ordine sul registratore di cassa del negozio, poi segnalo qui. Fino ad allora la merce resta esclusa dalla disponibilità online.": "请先在门店收银机上录入这笔订单，再在这里标记。在此之前，这些商品不计入网店可售库存。",
+  "Cassa": "收银",
+  "Cassa: tutti": "收银：全部",
+  "Da registrare in cassa": "待收银登记",
+  "Ordine registrato in cassa": "订单已收银登记",
+  "Prezzo, promozioni e giacenze arrivano dal gestionale (codice {code}): le modifiche a prezzo qui vengono sovrascritte alla prossima sincronizzazione. Nome, descrizione, categoria e foto restano quelli impostati qui.": "价格、促销和库存来自管理软件（编码 {code}）：在这里改的价格会在下次同步时被覆盖。名称、描述、分类和照片以这里的设置为准。",
+  "Registrati in cassa": "已收银登记",
+  "Registrato in cassa": "已收银登记",
+  "Registrato in cassa il {date}. Il gestionale scalerà la merce alla prossima sincronizzazione.": "已于 {date} 收银登记。管理软件会在下次同步时扣减库存。",
+  "Registrazione in cassa annullata": "已撤销收银登记",
+  "Segna come registrato in cassa": "标记为已收银登记",
 };
 export default dict;
