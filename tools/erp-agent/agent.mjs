@@ -3,6 +3,8 @@
 // articles, store prices, promotions and stock to the shop (Supabase Edge Function erp-sync).
 //
 //   node agent.mjs --analyze   count articles step by step for the configured selection, send nothing
+//   node agent.mjs --convert-suppliers   turn selection.json supplierInclude into supplierExclude (all other suppliers
+//                                        of the fornitore table, plus 0), so new suppliers are included automatically
 //   node agent.mjs --dry-run   read MySQL, write dry-run.json (what would be sent), send nothing
 //   node agent.mjs --once      one sync (for Windows Task Scheduler / cron, e.g. every 5 minutes)
 //   node agent.mjs --loop      sync every `intervalMinutes`
@@ -94,10 +96,31 @@ async function analyze(db) {
   }
 }
 
+/** Rewrites selection.json from an include list to the equivalent exclude list (keeps a backup and a CSV to review). */
+async function convertSuppliers(db) {
+  const file = path.join(HERE, 'selection.json');
+  const current = readJson('selection.json') ?? {};
+  const include = new Set(current.supplierInclude ?? []);
+  if (!include.size) throw new Error('selection.json has no supplierInclude to convert');
+  const [rows] = await db.query('select IDFornitore, Nome from fornitore order by IDFornitore');
+  const excluded = rows.filter((r) => !include.has(Number(r.IDFornitore)));
+  const missing = [...include].filter((id) => !rows.some((r) => Number(r.IDFornitore) === id));
+  fs.writeFileSync(path.join(HERE, 'selection.include-backup.json'), JSON.stringify(current, null, 2));
+  const { supplierInclude, ...rest } = current;
+  const supplierExclude = [0, ...excluded.map((r) => Number(r.IDFornitore)).filter((id) => id !== 0)];
+  fs.writeFileSync(file, JSON.stringify({ ...rest, supplierExclude }, null, 2));
+  const csv = ['IDFornitore;Nome', ...excluded.map((r) => `${r.IDFornitore};${String(r.Nome ?? '').replace(/[\r\n;]+/g, ' ').trim()}`)].join('\r\n');
+  fs.writeFileSync(path.join(HERE, 'fornitori-esclusi.csv'), '\ufeff' + csv);
+  log(`${rows.length} suppliers in fornitore; kept ${include.size - missing.length}, excluded ${excluded.length} (+ articles without supplier)`);
+  if (missing.length) log(`not in fornitore (ignored): ${missing.join(', ')}`);
+  log('selection.json now uses supplierExclude; review fornitori-esclusi.csv; backup in selection.include-backup.json');
+}
+
 async function runOnce() {
   const db = await connect();
   try {
     if (args.has('--analyze')) { await analyze(db); return; }
+    if (args.has('--convert-suppliers')) { await convertSuppliers(db); return; }
     if (args.has('--dry-run')) {
       const readRows = rowReader(db, {});
       const out = {};
