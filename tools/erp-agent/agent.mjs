@@ -2,7 +2,7 @@
 // CASA & TE ERP sync agent. Runs on the CASA & TE server next to the ysoft MySQL copy of ITO and pushes web
 // articles, store prices, promotions and stock to the shop (Supabase Edge Function erp-sync).
 //
-//   node agent.mjs --analyze   count articles by candidate "on sale" rules (web flag, stock, recent sales), send nothing
+//   node agent.mjs --analyze   count articles step by step for the configured selection, send nothing
 //   node agent.mjs --dry-run   read MySQL, write dry-run.json (what would be sent), send nothing
 //   node agent.mjs --once      one sync (for Windows Task Scheduler / cron, e.g. every 5 minutes)
 //   node agent.mjs --loop      sync every `intervalMinutes`
@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { syncStore, buildBatch, italyToday } from './lib.mjs';
+import { normalizeSelection, selectionFunnel, selectionSql } from './selection.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const args = new Set(process.argv.slice(2));
@@ -23,23 +24,10 @@ const secret = process.env.ERP_SYNC_SECRET ?? '';
 const statePath = path.join(HERE, config.stateFile ?? 'state.json');
 const log = (...m) => console.log(new Date().toISOString(), ...m);
 
-// Which articles go online, per store n: in stock there and/or sold there in the last soldInStoreDays days
-// (ITO's web flag is not used by CASA & TE). excludeStopped drops articles listed in prodotti_stop.
-const selection = { stockInStore: true, soldInStoreDays: 365, excludeStopped: false, ...(config.selection ?? {}) };
-if (!Number.isInteger(selection.soldInStoreDays) || selection.soldInStoreDays < 0 || selection.soldInStoreDays > 3650) {
-  throw new Error('selection.soldInStoreDays must be an integer between 0 and 3650 (0 = ignore sales)');
-}
-/** SQL condition on alias p for store n (n is validated 0–9, days is an integer). */
-function selectionSql(n) {
-  const days = selection.soldInStoreDays;
-  const parts = [];
-  if (selection.stockInStore) parts.push(`p.CodArticolo in (select CodArticolo from giacenza where G${n} > 0)`);
-  if (days > 0) parts.push(`p.CodArticolo in (select CodArticolo from vendite_list_2026 where Negozio = ${n} and Data >= now() - interval ${days} day
-      union select CodArticolo from vendite_list_2025 where Negozio = ${n} and Data >= now() - interval ${days} day)`);
-  if (!parts.length) throw new Error('selection: enable stockInStore and/or soldInStoreDays');
-  const stop = selection.excludeStopped ? ' and p.CodArticolo not in (select CodArticolo from prodotti_stop)' : '';
-  return `(${parts.join(' or ')})${stop}`;
-}
+// Which articles go online: selection.mjs (defaults) < config.json "selection" < selection.json (optional file,
+// e.g. the supplier list).
+const readJson = (file) => { try { return JSON.parse(fs.readFileSync(path.join(HERE, file), 'utf8')); } catch { return null; } };
+const selection = normalizeSelection(config.selection, readJson('selection.json'));
 
 for (const [code, n] of Object.entries(config.stores ?? {})) {
   if (!/^[A-Z0-9_-]{2,12}$/.test(code) || !Number.isInteger(n) || n < 0 || n > 9) throw new Error(`Invalid store mapping ${code}: ${n}`);
@@ -55,13 +43,27 @@ async function connect() {
 }
 
 /** Reads the rows buildBatch needs for store number n (n is validated 0–9, so the column name is safe). */
-function rowReader(db) {
+function rowReader(db, cache = {}) {
   return async (n) => {
     const q = async (sql, params = []) => (await db.query(sql, params))[0];
-    return {
-      products: await q(`select p.CodArticolo, p.CodBarre, p.Descrizione, p.PrezzoVedi1, p.CodIva, m.Descrizione as marca,
+    // The selection scans the sales tables (MyISAM: reads lock them against the tills), so it runs once a day.
+    const key = `${italyToday()}:${n}:${JSON.stringify(selection)}`;
+    cache.selections ??= {};
+    if (cache.selections[n]?.key !== key) {
+      const t0 = Date.now();
+      const codes = (await q(`select p.CodArticolo from prodotti p where ${selectionSql(selection, n)}`)).map((r) => r.CodArticolo);
+      cache.selections[n] = { key, codes };
+      log(`selection for store ${n}: ${codes.length} articles (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
+    }
+    const { codes } = cache.selections[n];
+    const products = [];
+    for (let i = 0; i < codes.length; i += 5000) {
+      products.push(...await q(`select p.CodArticolo, p.CodBarre, p.Descrizione, p.PrezzoVedi1, p.CodIva, m.Descrizione as marca,
           p.PrezzoVediOfferta, p.PrezzoVediOfferta_inizio, p.PrezzoVediOfferta_fine
-        from prodotti p left join prodotti_marca m on m.uid = p.marca where ${selectionSql(n)}`),
+        from prodotti p left join prodotti_marca m on m.uid = p.marca where p.CodArticolo in (?)`, [codes.slice(i, i + 5000)]));
+    }
+    return {
+      products,
       storePrices: await q(`select np.CodArticolo, np.PrezzoVedi1 from negozio_prezzo np
         join (select CodArticolo, max(l) as l from negozio_prezzo where negozio = ? group by CodArticolo) last on last.l = np.l`, [n]),
       promos: await q(`select pl.CodArticolo, pl.Prezzo_a, pr.Data_a, pr.Data_f, pr.negozio
@@ -75,44 +77,29 @@ function rowReader(db) {
 function loadState() {
   try {
     const s = JSON.parse(fs.readFileSync(statePath, 'utf8'));
-    if (args.has('--full') || s.day !== italyToday()) return { day: italyToday(), products: {}, items: {} };
+    // Once a day (or with --full) everything is resent; `known` (articles online) is kept so removals still apply.
+    if (args.has('--full') || s.day !== italyToday()) return { day: italyToday(), products: {}, items: {}, known: s.known ?? {} };
     return s;
-  } catch { return { day: italyToday(), products: {}, items: {} }; }
+  } catch { return { day: italyToday(), products: {}, items: {}, known: {} }; }
 }
 
-/** Counts per candidate rule, to choose which articles are "on sale" (only counts, no article data). */
+/** Step-by-step counts for the configured selection (counts only, no article data). */
 async function analyze(db) {
-  const n = Number(Object.values(config.stores)[0] ?? 3);
-  const one = async (label, sql) => {
-    try { const [[row]] = await db.query(sql); log(`${label.padEnd(58)} ${row.c}`); }
-    catch (e) { log(`${label.padEnd(58)} error: ${e.message}`); }
-  };
-  const sold = (days, store) => `(select CodArticolo from vendite_list_2026 where Data >= now() - interval ${days} day${store ? ` and Negozio = ${n}` : ''}
-    union select CodArticolo from vendite_list_2025 where Data >= now() - interval ${days} day${store ? ` and Negozio = ${n}` : ''})`;
-  log(`Store ${n} (giacenza.G${n}); sales from vendite_list_2025 + vendite_list_2026`);
-  await one('articoli in prodotti', 'select count(*) c from prodotti');
-  await one(`giacenza G${n} > 0 (store)`, `select count(*) c from giacenza where G${n} > 0`);
-  await one('giacenza G0 > 0 (warehouse)', 'select count(*) c from giacenza where G0 > 0');
-  await one('giacenza > 0 in any store or warehouse', 'select count(*) c from giacenza where G0 > 0 or G1 > 0 or G2 > 0 or G3 > 0 or G4 > 0 or G5 > 0');
-  await one(`sold in store ${n}, last 365 days`, `select count(distinct CodArticolo) c from ${sold(365, true)} s where CodArticolo > 0`);
-  await one('sold in any store, last 365 days', `select count(distinct CodArticolo) c from ${sold(365, false)} s where CodArticolo > 0`);
-  await one(`sold in any store, last 180 days`, `select count(distinct CodArticolo) c from ${sold(180, false)} s where CodArticolo > 0`);
-  await one(`G${n} > 0 or sold in store ${n} in 365 days`, `select count(*) c from prodotti p left join giacenza g on g.CodArticolo = p.CodArticolo
-    where g.G${n} > 0 or p.CodArticolo in ${sold(365, true)}`);
-  await one('in prodotti_stop', 'select count(distinct CodArticolo) c from prodotti_stop');
-  const sel = selectionSql(n).replace(/ and p\.CodArticolo not in \(select CodArticolo from prodotti_stop\)$/, '');
-  await one(`selection (config) — articles that would go online`, `select count(*) c from prodotti p where ${sel}`);
-  await one(`selection and in prodotti_stop`, `select count(*) c from prodotti p where ${sel} and p.CodArticolo in (select CodArticolo from prodotti_stop)`);
-  await one(`selection and Blocco <> 0`, `select count(*) c from prodotti p where ${sel} and coalesce(p.Blocco, 0) <> 0`);
-  await one(`selection with PrezzoVedi1 <= 0`, `select count(*) c from prodotti p where ${sel} and coalesce(p.PrezzoVedi1, 0) <= 0`);
+  for (const [code, n] of Object.entries(config.stores)) {
+    log(`${code} = ITO store ${n}; selection: ${JSON.stringify({ ...selection, supplierInclude: `${selection.supplierInclude.length} suppliers`, supplierExclude: `${selection.supplierExclude.length} suppliers` })}`);
+    for (const [label, where] of selectionFunnel(selection, n)) {
+      try { const [[row]] = await db.query(`select count(*) c from prodotti p where ${where}`); log(`  ${label.padEnd(64)} ${row.c}`); }
+      catch (e) { log(`  ${label.padEnd(64)} error: ${e.message}`); }
+    }
+  }
 }
 
 async function runOnce() {
   const db = await connect();
   try {
     if (args.has('--analyze')) { await analyze(db); return; }
-    const readRows = rowReader(db);
     if (args.has('--dry-run')) {
+      const readRows = rowReader(db, {});
       const out = {};
       for (const [code, n] of Object.entries(config.stores)) {
         const b = buildBatch(await readRows(n), { storeNumber: n, today: italyToday(), imageUrlTemplate: config.imageUrlTemplate });
@@ -126,11 +113,12 @@ async function runOnce() {
     }
     if (!secret) throw new Error('ERP_SYNC_SECRET is not set');
     const state = loadState();
+    const readRows = rowReader(db, state); // the daily selection is kept in state.json between runs
     for (const [code, n] of Object.entries(config.stores)) {
       try {
         const s = await syncStore({ storeCode: code, storeNumber: n, readRows, state, endpoint: config.endpoint, secret,
           imageUrlTemplate: config.imageUrlTemplate, log: (m) => log(code, m) });
-        log(`${code}: ${s.read} web articles, sent ${s.products_sent} products and ${s.items_sent} store items, ${s.skipped.length} skipped by the shop, ${s.problems.length} not sent`);
+        log(`${code}: ${s.read} articles, sent ${s.products_sent} products and ${s.items_sent} store items, ${s.skipped.length} skipped by the shop, ${s.problems.length} not sent`);
         for (const x of [...s.problems, ...s.skipped].slice(0, 20)) log(`  ${x.erp_code}: ${x.reason}${x.detail ? ` (${x.detail})` : ''}`);
       } finally {
         fs.writeFileSync(statePath, JSON.stringify(state));

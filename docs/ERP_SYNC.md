@@ -84,13 +84,10 @@ shown struck through. Listing prices of ERP products are refreshed from the main
 | category | `prodotti.Categoria/Sottocategoria` → `categorie` (mapping to shop categories to define) |
 
 Never read: purchase prices (`PrezzoForn`, `Prezzo_aqu`), customers, staff, sales.
-Online articles: ITO's `web` flag is unused (0 articles). Selection per store n (agent `selection`): in stock there
-(`giacenza.G<n> > 0`) or sold there in the last 365 days (`vendite_list_2025/2026`); about 17,600 for store 3 on
-2026-10-13. Out-of-stock ones show as sold out and come back when restocked.
-Agent price rule (to confirm): store price = latest `negozio_prezzo` row for the store, else `PrezzoVedi1`; promotion =
-the cheapest one running today among `promozioni` for that store (empty `negozio` = every store) and the article's
-`PrezzoVediOfferta` window, else the next one to start; sent only if lower than the store price.
-Open points: the price priority above, the meaning of `PrezzoVedi2/3`.
+Online articles (`tools/erp-agent/selection.mjs`): ITO's `web` flag is unused. Selected = sold (Qta > 0) in the last
+365 days in `vendite_list_0..4` (CASA & TE's own export query) or in stock in the store, filtered by supplier
+(`supplierInclude`, kept in `selection.json`), without stopped articles (`prodotti_stop`; `Blocco` is not a stop).
+Computed once a day and cached in the agent state: the sales tables are MyISAM and long reads would block the tills.
 
 ## First launch: store pickup only
 Home delivery and pickup points are switched off by setting "Prepara ordini da spedire" off on the stores

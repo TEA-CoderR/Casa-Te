@@ -9,8 +9,10 @@ Contratto e mappatura: `docs/ERP_SYNC.md`.
 2. Copiare questa cartella, poi `npm install`.
 3. Utente MySQL **solo lettura** (lo crea l'IT o ITO):
    `CREATE USER 'casate_shop_ro'@'localhost' IDENTIFIED BY '…'; GRANT SELECT ON ysoft.* TO 'casate_shop_ro'@'localhost';`
-4. `config.example.json` → `config.json`. Articoli online per negozio (`selection`): in giacenza nel negozio e/o venduti lì negli
-   ultimi `soldInStoreDays` giorni; `excludeStopped` esclude quelli in `prodotti_stop`. Poi: indirizzo della funzione, host/utente MySQL, negozi (`"LU3": <numero ITO>`),
+4. `config.example.json` → `config.json`. Articoli online (`selection`, dettagli in `selection.mjs`): venduti negli ultimi
+   `soldDays` giorni nelle tabelle `salesTables` oppure in giacenza nel negozio, filtrati per fornitore (`supplierInclude`
+   o `supplierExclude`, anche in un file `selection.json`), senza articoli in `prodotti_stop`. La selezione è calcolata
+   una volta al giorno (legge le tabelle vendite, che sono MyISAM). Poi: indirizzo della funzione, host/utente MySQL, negozi (`"LU3": <numero ITO>`),
    modello URL delle foto (`{barcode}` o `{code}`; facoltativo).
 5. Segreti solo come variabili d'ambiente (mai nel file né in chat):
    `ERP_MYSQL_PASSWORD` (password dell'utente sola lettura) e `ERP_SYNC_SECRET` (lo stesso valore impostato in

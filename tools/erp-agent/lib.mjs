@@ -118,9 +118,11 @@ export const fingerprint = (obj) => crypto.createHash('sha1').update(JSON.string
  */
 export function diff(batch, state, storeCode) {
   const products = batch.products.filter((p) => state.products?.[p.erp_code] !== fingerprint(p));
+  // Articles online before (state.known survives the daily full resend) that left the selection are switched off.
   const present = new Set(batch.products.map((p) => p.erp_code));
-  for (const code of Object.keys(state.products ?? {})) {
-    if (!present.has(code) && state.products[code] !== 'inactive') products.push({ erp_code: code, active: false });
+  const known = new Set([...Object.keys(state.known ?? {}), ...Object.keys(state.products ?? {}).filter((c) => state.products[c] !== 'inactive')]);
+  for (const code of known) {
+    if (!present.has(code) && state.products?.[code] !== 'inactive') products.push({ erp_code: code, active: false });
   }
   const storeItems = batch.storeItems.filter((i) => state.items?.[`${storeCode}:${i.erp_code}`] !== fingerprint(i));
   return { products, storeItems };
@@ -154,10 +156,15 @@ export async function syncStore({ storeCode, storeNumber, readRows, state, endpo
   const summary = { store_code: storeCode, read: batch.products.length, products_sent: 0, items_sent: 0, skipped: [], problems: batch.problems };
   state.products ??= {};
   state.items ??= {};
+  state.known ??= {};
   for (const part of chunk(changes.products, 1000)) {
     const r = await send(endpoint, secret, { store_code: storeCode, sent_at: sentAt, products: part }, { fetchImpl });
     const bad = new Set((r.skipped ?? []).map((s) => s.erp_code));
-    for (const p of part) if (!bad.has(p.erp_code)) state.products[p.erp_code] = p.active === false ? 'inactive' : fingerprint(p);
+    for (const p of part) {
+      if (bad.has(p.erp_code)) continue;
+      state.products[p.erp_code] = p.active === false ? 'inactive' : fingerprint(p);
+      if (p.active === false) delete state.known[p.erp_code]; else state.known[p.erp_code] = 1;
+    }
     summary.products_sent += part.length;
     summary.skipped.push(...(r.skipped ?? []));
     log(`products ${summary.products_sent}/${changes.products.length}`);
