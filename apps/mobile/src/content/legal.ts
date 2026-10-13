@@ -6,7 +6,9 @@
  */
 export type LegalDoc = { title: string; updated: string; sections: Array<{ heading: string; body: string }> };
 
-const COMPANY = '[RAGIONE SOCIALE], con sede legale in [INDIRIZZO SEDE], P.IVA [PARTITA IVA], REA [NUMERO REA], PEC [PEC], email [EMAIL ASSISTENZA]';
+// Seller of online orders (first launch: the Lucca 3 / S. Filippo store only). Data from the company's
+// Registro Imprese extract (visura) of 05/10/2026; the support email is still to be supplied.
+const COMPANY = 'CASA & TE S. FILIPPO S.R.L., con sede legale in Via di Tiglio 1893, 55100 Lucca (LU), P.IVA e C.F. 02711860466, REA LU-263854, capitale sociale € 100.000,00 i.v., PEC casaete.sfilippo@pec.cgn.it, email [EMAIL ASSISTENZA]';
 
 export const LEGAL_DOCS: Record<string, LegalDoc> = {
   terms: {
@@ -21,7 +23,7 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
       { heading: '6. Consegna e ritiro', body: "Consegna a domicilio tramite corriere, consegna presso punto di ritiro oppure ritiro nel negozio scelto. I tempi indicati sono stimati. Per il ritiro in negozio riceverai una notifica quando l'ordine è pronto; l'ordine resta disponibile per [NUMERO] giorni." },
       { heading: '7. Diritto di recesso', body: "Hai diritto di recedere dal contratto entro 14 giorni dalla consegna senza indicarne le ragioni (artt. 52 e ss. Codice del Consumo), comunicandolo a [EMAIL ASSISTENZA] o in negozio. I prodotti vanno restituiti integri entro 14 giorni dalla comunicazione; i costi di restituzione sono a carico del cliente salvo reso in negozio. Il rimborso avviene con lo stesso mezzo di pagamento entro 14 giorni dal ricevimento della merce. Sono esclusi i prodotti sigillati aperti per motivi igienici." },
       { heading: '8. Garanzia legale', body: "Tutti i prodotti sono coperti dalla garanzia legale di conformità di 24 mesi (artt. 128 e ss. Codice del Consumo)." },
-      { heading: '9. Reclami e controversie', body: "Per assistenza scrivi a [EMAIL ASSISTENZA]. Legge applicabile: italiana. Per le controversie è competente il foro del consumatore. Piattaforma ODR dell'UE: https://ec.europa.eu/consumers/odr." },
+      { heading: '9. Reclami e controversie', body: "Per assistenza scrivi a [EMAIL ASSISTENZA]. Legge applicabile: italiana. Per le controversie è competente il foro del consumatore." },
     ],
   },
   privacy: {
@@ -41,7 +43,7 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
     title: 'Spedizioni e ritiro',
     updated: '2026',
     sections: [
-      { heading: 'Ritiro in negozio', body: "Sempre gratuito, in tutti i negozi CASA & TE di Arezzo e Lucca. Ti avvisiamo via email quando l'ordine è pronto." },
+      { heading: 'Ritiro in negozio', body: "Sempre gratuito, nel negozio CASA & TE indicato al checkout. Ti avvisiamo via email quando l'ordine è pronto." },
       { heading: 'Spedizione gratuita', body: 'Per ordini da €66 con peso complessivo fino a 10 kg, la consegna a domicilio e al punto di ritiro è gratuita.' },
       { heading: 'Tariffe fino a 10 kg', body: "Ordini sotto €25: domicilio €4,90 / €6,90 / €8,90, punto di ritiro €3,90 / €4,90 / €6,90 (fino a 2 kg / 2–5 kg / 5–10 kg).\nDa €25 a €44,99: domicilio €3,90 / €5,90 / €7,90, punto di ritiro €2,90 / €3,90 / €5,90.\nDa €45 a €65,99: domicilio €2,90 / €4,90 / €6,90, punto di ritiro €1,90 / €2,90 / €4,90." },
       { heading: 'Oltre 10 kg', body: "Per ordini oltre 10 kg il costo viene calcolato al checkout. Il ritiro in negozio resta gratuito." },

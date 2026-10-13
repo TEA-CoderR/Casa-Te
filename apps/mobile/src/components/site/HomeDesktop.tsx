@@ -123,7 +123,7 @@ export function HomeDesktop() {
           </Pressable>
         </View>
         <View style={{ flex: 1 }}>
-          {([['store', 'Ritiro in negozio', 'Sempre gratuito, nei nostri negozi di Arezzo e Lucca'],
+          {([['store', 'Ritiro in negozio', 'Sempre gratuito, nel negozio che scegli'],
              ['truck', 'Spedizione a casa', 'Gratuita da €66 per ordini fino a 10 kg'],
              ['shield', 'Pagamento sicuro', 'Gestito da Stripe, i dati della carta non passano da noi']] as Array<[IconName, string, string]>)
             .map(([icon, title, text], i) => <View key={title} style={[styles.fact, i === 0 && { borderTopWidth: 0 }]}>
