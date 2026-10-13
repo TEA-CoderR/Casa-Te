@@ -5,3 +5,5 @@ node_modules/
 selection.json
 selection.include-backup.json
 fornitori-esclusi.csv
+catalogo-codici.json
+catalogo-export.json

@@ -5,6 +5,9 @@
 //   node agent.mjs --analyze   count articles step by step for the configured selection, send nothing
 //   node agent.mjs --convert-suppliers   turn selection.json supplierInclude into supplierExclude (all other suppliers
 //                                        of the fornitore table, plus 0), so new suppliers are included automatically
+//   node agent.mjs --export-catalog   for the article codes in catalogo-codici.json, write catalogo-export.json with
+//                                     ITO name, VAT, brand, category codes, store price, promotions, stock, barcodes
+//                                     (input for a one-off admin import; no purchase prices)
 //   node agent.mjs --dry-run   read MySQL, write dry-run.json (what would be sent), send nothing
 //   node agent.mjs --once      one sync (for Windows Task Scheduler / cron, e.g. every 5 minutes)
 //   node agent.mjs --loop      sync every `intervalMinutes`
@@ -116,10 +119,37 @@ async function convertSuppliers(db) {
   log('selection.json now uses supplierExclude; review fornitori-esclusi.csv; backup in selection.include-backup.json');
 }
 
+/** One-off export for an admin import of a given list of articles (catalogo-codici.json: [{ code, barcodes }]). */
+async function exportCatalog(db) {
+  const input = readJson('catalogo-codici.json');
+  if (!Array.isArray(input) || !input.length) throw new Error('catalogo-codici.json missing or empty');
+  const codes = input.map((x) => Number(x.code)).filter((c) => Number.isInteger(c) && c > 0);
+  const [code, n] = Object.entries(config.stores)[0];
+  const q = async (sql, params = []) => (await db.query(sql, params))[0];
+  const byChunks = async (sql) => { const out = []; for (let i = 0; i < codes.length; i += 2000) out.push(...await q(sql, [codes.slice(i, i + 2000)])); return out; };
+  const products = await byChunks(`select p.CodArticolo, p.CodBarre, p.Descrizione, p.Descrizione2, p.PrezzoVedi1, p.CodIva, p.Categoria, p.Sottocategoria,
+      m.Descrizione as marca, p.UdmDim, p.UdmDimV, p.Blocco, p.PrezzoVediOfferta, p.PrezzoVediOfferta_inizio, p.PrezzoVediOfferta_fine
+    from prodotti p left join prodotti_marca m on m.uid = p.marca where p.CodArticolo in (?)`);
+  const barcodes = await byChunks('select CodArticolo, CodBarre from codbarre where CodArticolo in (?)');
+  const stock = await byChunks(`select CodArticolo, G${n} as q from giacenza where CodArticolo in (?)`);
+  const storePrices = await byChunks(`select np.CodArticolo, np.PrezzoVedi1 from negozio_prezzo np
+    join (select CodArticolo, max(l) as l from negozio_prezzo where negozio = ${n} and CodArticolo in (?) group by CodArticolo) last on last.l = np.l`);
+  const promos = await byChunks(`select pl.CodArticolo, pl.Prezzo_a, pr.Data_a, pr.Data_f, pr.negozio
+    from promozioni_list pl join promozioni pr on pr.l = pl.promozioni_l
+    where coalesce(pl.invalid, 0) = 0 and (pr.Data_f is null or pr.Data_f >= curdate()) and pl.CodArticolo in (?)`);
+  const stopped = (await byChunks('select distinct CodArticolo from prodotti_stop where CodArticolo in (?)')).map((r) => r.CodArticolo);
+  const categories = await q('select l, Descrizione, Categorie, SottoCategorie, Distinzione from categorie');
+  const out = { exported_at: new Date().toISOString(), store_code: code, store_number: n, requested: codes.length,
+    products, barcodes, stock, storePrices, promos, stopped, categories };
+  fs.writeFileSync(path.join(HERE, 'catalogo-export.json'), JSON.stringify(out));
+  log(`catalogo-export.json: ${products.length}/${codes.length} articles found, ${stock.filter((s) => s.q > 0).length} in stock in store ${n}, ${stopped.length} stopped, ${promos.length} promotion rows`);
+}
+
 async function runOnce() {
   const db = await connect();
   try {
     if (args.has('--analyze')) { await analyze(db); return; }
+    if (args.has('--export-catalog')) { await exportCatalog(db); return; }
     if (args.has('--convert-suppliers')) { await convertSuppliers(db); return; }
     if (args.has('--dry-run')) {
       const readRows = rowReader(db, {});

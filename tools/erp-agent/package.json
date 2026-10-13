@@ -5,6 +5,6 @@
   "type": "module",
   "description": "Pushes ITO (ysoft) web articles, store prices, promotions and stock to the CASA & TE shop.",
   "engines": { "node": ">=20" },
-  "scripts": { "analyze": "node agent.mjs --analyze", "convert-suppliers": "node agent.mjs --convert-suppliers", "dry-run": "node agent.mjs --dry-run", "once": "node agent.mjs --once", "loop": "node agent.mjs --loop" },
+  "scripts": { "analyze": "node agent.mjs --analyze", "convert-suppliers": "node agent.mjs --convert-suppliers", "export-catalog": "node agent.mjs --export-catalog", "dry-run": "node agent.mjs --dry-run", "once": "node agent.mjs --once", "loop": "node agent.mjs --loop" },
   "dependencies": { "mysql2": "^3.11.0" }
 }
