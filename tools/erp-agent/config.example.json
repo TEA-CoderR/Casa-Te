@@ -1,8 +1,27 @@
 {
   "endpoint": "https://<progetto>.supabase.co/functions/v1/erp-sync",
-  "mysql": { "host": "127.0.0.1", "port": 3306, "user": "casate_shop_ro", "database": "ysoft" },
-  "stores": { "LU3": 3 },
-  "selection": { "stockInStore": true, "soldInStoreDays": 365, "excludeStopped": false },
+  "mysql": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "user": "casate_shop_ro",
+    "database": "ysoft"
+  },
+  "stores": {
+    "LU3": 3
+  },
+  "selection": {
+    "soldDays": 365,
+    "salesTables": [
+      "vendite_list_0",
+      "vendite_list_1",
+      "vendite_list_2",
+      "vendite_list_3",
+      "vendite_list_4"
+    ],
+    "excludeStopped": true,
+    "alsoInStockAtStore": true,
+    "requireStock": "none"
+  },
   "imageUrlTemplate": "https://<vostro-server>/foto/{barcode}.jpg",
   "intervalMinutes": 5,
   "stateFile": "state.json"
