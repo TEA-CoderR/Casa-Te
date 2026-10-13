@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { StoreRow } from '@casa-te/shared';
+import type { CompanyRow, StoreRow } from '@casa-te/shared';
 import { supabase, unwrap } from '../lib/supabase';
 import { errorText, loadStores, useAsync } from '../lib/data';
 import { t } from '../lib/i18n';
@@ -7,6 +7,8 @@ import { Field, Loading, Modal, Notice, PageHead } from '../components/ui';
 
 export function StoresPage() {
   const stores = useAsync(() => loadStores(true), []);
+  const companies = useAsync(async () => unwrap(await supabase.from('companies').select('id, legal_name, is_operator').order('legal_name')) as Pick<CompanyRow, 'id' | 'legal_name' | 'is_operator'>[], []);
+  const companyName = (id: string | null) => companies.data?.find((c) => c.id === id)?.legal_name;
   const [edit, setEdit] = useState<Partial<StoreRow> | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -17,8 +19,9 @@ export function StoresPage() {
     const row = { code: edit.code?.trim().toUpperCase(), name: edit.name?.trim(), city: edit.city?.trim(), address: edit.address?.trim() || null,
       postal_code: edit.postal_code?.trim() || null, province: edit.province?.trim().toUpperCase() || null, phone: edit.phone?.trim() || null,
       email: edit.email?.trim() || null, opening_hours: edit.opening_hours?.trim() || null, pickup_enabled: edit.pickup_enabled ?? true,
-      ships_orders: edit.ships_orders ?? true, active: edit.active ?? true, sort: Number(edit.sort ?? 0) };
+      ships_orders: edit.ships_orders ?? true, active: edit.active ?? true, sort: Number(edit.sort ?? 0), company_id: edit.company_id || null };
     if (!row.code || !row.name || !row.city) return setError(t('Codice, nome e città sono obbligatori.'));
+    if (row.active && !row.company_id) return setError(t('Un negozio attivo deve essere collegato all’azienda che vende i suoi ordini.'));
     setBusy(true);
     try {
       if (edit.id) unwrap(await supabase.from('stores').update(row).eq('id', edit.id));
@@ -30,10 +33,12 @@ export function StoresPage() {
   return <>
     <PageHead title={t('Negozi')} subtitle={t('Indirizzi e orari vengono mostrati ai clienti per il ritiro')}
       actions={<button onClick={() => setEdit({ active: true, pickup_enabled: true, ships_orders: true })}>{t('+ Nuovo negozio')}</button>} />
+    {stores.data?.some((s) => s.active && !s.company_id) && <Notice tone="warn">{t('Alcuni negozi attivi non sono collegati a un’azienda: i loro ordini usano i dati del gestore.')}</Notice>}
     {stores.data?.some((s) => s.active && !s.address) && <Notice tone="warn">{t('Alcuni negozi non hanno ancora indirizzo e orari: completali prima del lancio.')}</Notice>}
     {!stores.data ? <Loading /> : <div className="table-wrap"><table>
-      <thead><tr><th>{t('Codice')}</th><th>{t('Negozio')}</th><th>{t('Indirizzo')}</th><th>{t('Telefono')}</th><th>{t('Ritiro')}</th><th>{t('Spedisce')}</th><th>{t('Stato')}</th><th></th></tr></thead>
+      <thead><tr><th>{t('Codice')}</th><th>{t('Negozio')}</th><th>{t('Azienda')}</th><th>{t('Indirizzo')}</th><th>{t('Telefono')}</th><th>{t('Ritiro')}</th><th>{t('Spedisce')}</th><th>{t('Stato')}</th><th></th></tr></thead>
       <tbody>{stores.data.map((s) => <tr key={s.id}><td>{s.code}</td><td><strong>{s.name}</strong><div className="small muted">{s.opening_hours}</div></td>
+        <td className="small">{companyName(s.company_id) ?? <span className="badge warn">{t('Da collegare')}</span>}</td>
         <td>{s.address ? `${s.address}, ${s.postal_code ?? ''} ${s.city}` : <span className="badge warn">{t('Da completare')}</span>}</td><td>{s.phone ?? '—'}</td>
         <td>{s.pickup_enabled ? '✓' : '—'}</td><td>{s.ships_orders ? '✓' : '—'}</td>
         <td>{s.active ? <span className="badge">{t('Attivo')}</span> : <span className="badge muted">{t('Disattivo')}</span>}</td>
@@ -52,6 +57,11 @@ export function StoresPage() {
           <Field label={t('Email')}><input value={edit.email ?? ''} onChange={(e) => setEdit({ ...edit, email: e.target.value })} /></Field>
           <Field label={t('Ordine##posizione')}><input type="number" value={edit.sort ?? 0} onChange={(e) => setEdit({ ...edit, sort: Number(e.target.value) })} /></Field>
         </div>
+        <Field label={t('Azienda (venditore degli ordini di questo negozio)')} hint={t('Le aziende si gestiscono in Negozi → Aziende')}>
+          <select value={edit.company_id ?? ''} onChange={(e) => setEdit({ ...edit, company_id: e.target.value || null })}>
+            <option value="">{t('— Seleziona —')}</option>
+            {companies.data?.map((c) => <option key={c.id} value={c.id}>{c.legal_name}{c.is_operator ? ` (${t('gestore')})` : ''}</option>)}
+          </select></Field>
         <Field label={t('Orari (mostrati ai clienti)')}><input value={edit.opening_hours ?? ''} onChange={(e) => setEdit({ ...edit, opening_hours: e.target.value })} placeholder={t('Lun–Sab 9:00–19:30')} /></Field>
         <label className="check"><input type="checkbox" checked={edit.pickup_enabled ?? true} onChange={(e) => setEdit({ ...edit, pickup_enabled: e.target.checked })} /> {t('Ritiro in negozio abilitato')}</label>
         <label className="check"><input type="checkbox" checked={edit.ships_orders ?? true} onChange={(e) => setEdit({ ...edit, ships_orders: e.target.checked })} /> {t('Prepara ordini da spedire (domicilio / punti di ritiro)')}</label>

@@ -5,7 +5,7 @@ import {
   formatEuro, formatWeight, parseEuroInput, toCents, vatIncluded,
   allowedNextStatuses, orderStatusLabel, orderTimeline,
   isPostalCode, isVatNumber, isTaxCode, validateAddress, validateInvoice, isValidQuantity,
-  friendlyError, errorCode, productImageUrl,
+  friendlyError, errorCode, productImageUrl, companyIdentity,
 } from '../src/index';
 
 const ship = (s: number, w: number, m: 'home' | 'pickup' | 'store') => shippingCostCents(DEFAULT_SHIPPING_RULES, s, w, m);
@@ -90,4 +90,13 @@ test('product image url', () => {
   assert.equal(productImageUrl('https://x.supabase.co/', 'a/b.jpg'), 'https://x.supabase.co/storage/v1/object/public/product-images/a/b.jpg');
   assert.equal(productImageUrl('https://x.supabase.co', 'https://cdn/x.jpg'), 'https://cdn/x.jpg');
   assert.equal(productImageUrl('https://x.supabase.co', null), null);
+});
+
+test('companyIdentity: short and full legal identity', () => {
+  const c = { legal_name: 'Esempio S.R.L.', address: 'Via Uno 1', postal_code: '55100', city: 'Lucca', province: 'LU',
+    vat_number: '00000000001', tax_code: '00000000001', rea: 'LU-1', share_capital_cents: 1000000, pec: 'a@pec.example.com', email: null };
+  assert.equal(companyIdentity(c), 'Esempio S.R.L., con sede legale in Via Uno 1, 55100 Lucca (LU), P.IVA e C.F. 00000000001');
+  assert.equal(companyIdentity(c, { full: true }),
+    'Esempio S.R.L., con sede legale in Via Uno 1, 55100 Lucca (LU), P.IVA e C.F. 00000000001, REA LU-1, capitale sociale € 10.000,00 i.v., PEC a@pec.example.com');
+  assert.equal(companyIdentity({ ...c, tax_code: 'RSSMRA80A01H501U' }).endsWith('P.IVA 00000000001, C.F. RSSMRA80A01H501U'), true);
 });

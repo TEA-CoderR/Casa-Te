@@ -23,6 +23,7 @@ import { ShippingPage } from './pages/Shipping';
 import { PickupPointsPage } from './pages/PickupPoints';
 import { CustomersPage } from './pages/Customers';
 import { StoresPage } from './pages/Stores';
+import { CompaniesPage } from './pages/Companies';
 import { StaffPage } from './pages/Staff';
 import { AnalyticsPage } from './pages/Analytics';
 import { LoyaltyPage } from './pages/Loyalty';
@@ -76,6 +77,7 @@ function Root() {
       <Route path="analytics" element={<Guard roles={M}><AnalyticsPage /></Guard>} />
       <Route path="customers" element={<Guard roles={M}><CustomersPage /></Guard>} />
       <Route path="stores" element={<Guard roles={['admin']}><StoresPage /></Guard>} />
+      <Route path="companies" element={<Guard roles={['admin']}><CompaniesPage /></Guard>} />
       <Route path="staff" element={<Guard roles={['admin']}><StaffPage /></Guard>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>

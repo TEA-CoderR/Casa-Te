@@ -12,10 +12,12 @@ Items marked **[business]** need a decision or data from CASA & TE; **[legal]** 
 - [ ] **[business]** Loyalty card integration (phase 2, out of scope for v1).
 
 ## Legal / compliance
-- [ ] **[legal]** Complete and approve `terms`, `privacy`, `shipping` texts (`apps/mobile/src/content/legal.ts`). Seller data of
-  CASA & TE S. FILIPPO S.R.L. (Lucca 3, the only store open online at launch) is filled in from its visura; still open:
-  support/privacy email, DPO, dates, pickup holding days, delivery times, marketing retention. Counsel to confirm the
-  roles of CASA & TE GROUP S.R.L. (app publisher on Google Play) and S. FILIPPO (seller) in the privacy notice.
+- [ ] **[legal]** Complete and approve `terms`, `privacy`, `shipping` texts (`apps/mobile/src/content/legal.ts`). Company data
+  is no longer in the code: admin → Negozi → **Aziende** holds the operator (CASA & TE GROUP S.R.L., Google Play publisher)
+  and each store's company (seller of that store's orders); the legal pages, checkout and orders read it. Still open: support
+  and privacy email, DPO, dates, pickup holding days, delivery times, marketing retention. Counsel to confirm the
+  operator/seller roles (incl. whether the privacy notice should describe joint controllership, art. 26 GDPR).
+- [ ] Every active store linked to its company (admin → Negozi). Orders snapshot the seller when placed.
 - [x] EU ODR platform link removed (the platform closed on 20 July 2025, Reg. (EU) 2024/3228).
 - [ ] **[legal]** Cookie/consent: the web shop uses only technical storage (session, cart). If analytics or marketing pixels are added, a consent banner is required.
 - [ ] **[legal]** Data processing agreements (DPA) with Supabase, Stripe, Resend, courier.

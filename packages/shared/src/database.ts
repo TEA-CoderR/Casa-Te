@@ -8,10 +8,35 @@ import type { FulfilmentMethod, ShippedMethod } from './shipping';
 export type Uuid = string;
 export type Timestamp = string;
 
+/** Legal entity: the platform operator, or the company a store belongs to (seller of its orders). */
+export type CompanyRow = {
+  id: Uuid; legal_name: string; address: string; postal_code: string; city: string; province: string;
+  vat_number: string; tax_code: string | null; rea: string | null; share_capital_cents: number | null;
+  pec: string | null; email: string | null; privacy_email: string | null; phone: string | null;
+  is_operator: boolean; created_at: Timestamp; updated_at: Timestamp;
+};
+
+/** Seller identity copied onto an order when it is placed. */
+export type SellerSnapshot = Pick<CompanyRow, 'legal_name' | 'vat_number' | 'tax_code' | 'rea' | 'address' | 'postal_code' | 'city' | 'province' | 'pec' | 'email'>;
+
+/** "CASA & TE … S.R.L., Via …, 55100 Lucca (LU), P.IVA …" for legal pages and receipts. */
+export function companyIdentity(c: Partial<CompanyRow> & Pick<CompanyRow, 'legal_name' | 'vat_number'>, opts: { full?: boolean } = {}): string {
+  const parts = [c.legal_name];
+  if (c.address) parts.push(`con sede legale in ${c.address}, ${c.postal_code ?? ''} ${c.city ?? ''}${c.province ? ` (${c.province})` : ''}`.replace(/\s+/g, ' ').trim());
+  parts.push(c.tax_code && c.tax_code !== c.vat_number ? `P.IVA ${c.vat_number}, C.F. ${c.tax_code}` : `P.IVA e C.F. ${c.vat_number}`);
+  if (opts.full) {
+    if (c.rea) parts.push(`REA ${c.rea}`);
+    if (c.share_capital_cents != null) parts.push(`capitale sociale € ${(c.share_capital_cents / 100).toLocaleString('it-IT', { minimumFractionDigits: 2 })} i.v.`);
+    if (c.pec) parts.push(`PEC ${c.pec}`);
+    if (c.email) parts.push(`email ${c.email}`);
+  }
+  return parts.join(', ');
+}
+
 export type StoreRow = {
   id: Uuid; code: string; name: string; city: string; address: string | null; postal_code: string | null;
   province: string | null; phone: string | null; email: string | null; opening_hours: string | null;
-  pickup_enabled: boolean; ships_orders: boolean; active: boolean; sort: number;
+  pickup_enabled: boolean; ships_orders: boolean; active: boolean; sort: number; company_id: Uuid | null;
   created_at: Timestamp; updated_at: Timestamp;
 };
 
@@ -143,6 +168,7 @@ export type OrderRow = {
   tracking_number: string | null; tracking_url: string | null; stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null; expires_at: Timestamp; paid_at: Timestamp | null;
   cancelled_at: Timestamp | null; completed_at: Timestamp | null; created_at: Timestamp; updated_at: Timestamp;
+  seller_company_id: Uuid | null; seller_snapshot: SellerSnapshot | null;
 };
 
 export type OrderItemRow = {

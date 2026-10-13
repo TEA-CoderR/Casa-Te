@@ -122,6 +122,13 @@ export function OrderDetailPage() {
           {o.fulfilment === 'store' && <div>{tNode('Ritiro presso {store} a nome di {name}', 'store', <strong>{store?.name}</strong>, { name: o.customer_name ?? '' })}</div>}
           {o.tracking_number && <p>{t('Spedizione:')} {o.carrier} · {o.tracking_url ? <a href={o.tracking_url} target="_blank" rel="noreferrer">{o.tracking_number}</a> : o.tracking_number}</p>}
         </div>
+        {o.seller_snapshot && <div className="card">
+          <h2 style={{ marginTop: 0 }}>{t('Venditore')}</h2>
+          <div><strong>{o.seller_snapshot.legal_name}</strong></div>
+          <div>{t('P.IVA')} {o.seller_snapshot.vat_number}</div>
+          <div className="small muted">{o.seller_snapshot.address}, {o.seller_snapshot.postal_code} {o.seller_snapshot.city} ({o.seller_snapshot.province})</div>
+          {o.invoice_requested && <div className="small muted">{t('Lo scontrino o la fattura vanno emessi da questa azienda.')}</div>}
+        </div>}
         {o.invoice_requested && o.invoice_details && <div className="card">
           <h2 style={{ marginTop: 0 }}>{t('Dati fattura')}</h2>
           {o.invoice_details.company_name && <div>{o.invoice_details.company_name}</div>}

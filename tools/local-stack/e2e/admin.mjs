@@ -133,6 +133,13 @@ await admin.getByText('Modifica volantino').waitFor();
 await shot(admin, 'volantino');
 console.log('  flyer listed as live; editor opens');
 
+step('Negozi → Aziende: operator listed');
+await admin.goto(`${env.ADMIN_URL}/companies`, { waitUntil: 'networkidle' });
+await admin.getByText('Gestore Prova S.R.L.').waitFor();
+await admin.getByText('Gestore', { exact: true }).first().waitFor();
+await shot(admin, 'aziende');
+console.log('  companies page lists the operator');
+
 step('Stripe webhooks received');
 await new Promise((ok) => setTimeout(ok, 1500));
 console.log(await sql(`select type, count(*) from stripe_events group by type order by type`));

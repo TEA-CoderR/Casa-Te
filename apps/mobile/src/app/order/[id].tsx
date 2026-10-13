@@ -93,6 +93,8 @@ export default function OrderDetailScreen() {
     <SummaryRow label="Peso" value={formatWeight(order.total_weight_g)} />
     <SummaryRow label="Totale (IVA inclusa)" value={formatEuro(order.total_cents)} strong />
     <SummaryRow label="Pagamento" value={PAYMENT_STATUS_LABELS[order.payment_status]} />
+    {!!order.seller_snapshot && <Text style={[styles.fine, { marginTop: 10 }]}>
+      Venditore: {order.seller_snapshot.legal_name}, {order.seller_snapshot.address}, {order.seller_snapshot.postal_code} {order.seller_snapshot.city} ({order.seller_snapshot.province}) · P.IVA {order.seller_snapshot.vat_number}</Text>}
 
     <View style={{ marginTop: 24, gap: 10 }}>
       {order.status !== 'pending_payment' && <SecondaryButton title="Ordina di nuovo" icon="bag" onPress={reorder} />}

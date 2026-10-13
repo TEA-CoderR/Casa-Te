@@ -164,11 +164,15 @@ await pp.getByText('Volantino', { exact: true }).first().waitFor();
 await shot(pp, 'telefono-home');
 await pp.getByRole('tab', { name: /Carrello/ }).last().click();
 await pp.getByText('Carrello', { exact: true }).last().waitFor();
+await sql(`insert into public.companies (legal_name, address, postal_code, city, province, vat_number, is_operator)
+  values ('Gestore Prova S.R.L.', 'Via Prova 1', '55100', 'Lucca', 'LU', '00000000001', true) on conflict (vat_number) do nothing`);
+await pp.goto(`${env.SHOP_URL}/legal/terms`, { waitUntil: 'networkidle' });
+await pp.getByText(/Gestore Prova S\.R\.L\., con sede legale in Via Prova 1/).first().waitFor();
 await pp.goto(`${env.SHOP_URL}/volantino`, { waitUntil: 'networkidle' });
 await pp.getByText(/Nessun volantino al momento|Valido dal|Scarica il PDF|Apri il volantino/).first().waitFor();
 await shot(pp, 'telefono-volantino');
 await phone.close();
-console.log('  phone home, cart tab and Volantino render');
+console.log('  phone home, cart tab, legal page with the operator, Volantino render');
 
 const prev = fs.existsSync(STATE_FILE) ? JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) : { orders: [] };
 fs.writeFileSync(STATE_FILE, JSON.stringify({ orders: [...(prev.orders ?? []), orderNumber] }));

@@ -69,12 +69,12 @@ export function OrdersPage() {
       const eur = (c: number) => (c / 100).toFixed(2).replace('.', ',');
       downloadCsv(`ordini-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(all.map((o) => ({
         numero: o.order_number, data: o.created_at, pagato_il: o.paid_at ?? '', stato: ORDER_STATUS_LABELS[o.status], pagamento: o.payment_status,
-        negozio: storeName(o.store_id), consegna: FULFILMENT_LABELS[o.fulfilment], cliente: o.customer_name, email: o.customer_email, telefono: o.customer_phone,
+        negozio: storeName(o.store_id), venditore: o.seller_snapshot?.legal_name ?? '', piva_venditore: o.seller_snapshot?.vat_number ?? '', consegna: FULFILMENT_LABELS[o.fulfilment], cliente: o.customer_name, email: o.customer_email, telefono: o.customer_phone,
         prodotti: eur(o.subtotal_cents), sconto: eur(o.discount_cents), spedizione: eur(o.shipping_cents), totale: eur(o.total_cents),
         rimborsato: eur(o.refunded_cents), coupon: o.coupon_code ?? '', fattura: o.invoice_requested ? 'si' : 'no',
         codice_fiscale: o.invoice_details?.tax_code ?? '', partita_iva: o.invoice_details?.vat_number ?? '', ragione_sociale: o.invoice_details?.company_name ?? '',
         sdi: o.invoice_details?.sdi_code ?? '', pec: o.invoice_details?.pec ?? '', stripe_payment_intent: o.stripe_payment_intent_id ?? '',
-      })), ['numero', 'data', 'pagato_il', 'stato', 'pagamento', 'negozio', 'consegna', 'cliente', 'email', 'telefono', 'prodotti', 'sconto', 'spedizione',
+      })), ['numero', 'data', 'pagato_il', 'stato', 'pagamento', 'negozio', 'venditore', 'piva_venditore', 'consegna', 'cliente', 'email', 'telefono', 'prodotti', 'sconto', 'spedizione',
         'totale', 'rimborsato', 'coupon', 'fattura', 'codice_fiscale', 'partita_iva', 'ragione_sociale', 'sdi', 'pec', 'stripe_payment_intent']));
     } finally { setExporting(false); }
   };
