@@ -52,7 +52,7 @@ export function choosePromo(candidates, today) {
 /**
  * Builds products[] and store_items[] for one store from ysoft rows.
  * rows = { products: [{ CodArticolo, CodBarre, Descrizione, PrezzoVedi1, CodIva, marca, PrezzoVediOfferta,
- *                       PrezzoVediOfferta_inizio, PrezzoVediOfferta_fine }],          (web = 1 only)
+ *                       PrezzoVediOfferta_inizio, PrezzoVediOfferta_fine }],          (selected articles)
  *          storePrices: [{ CodArticolo, PrezzoVedi1 }],                                (latest negozio_prezzo row)
  *          promos: [{ CodArticolo, Prezzo_a, Data_a, Data_f, negozio }],               (promozioni + promozioni_list)
  *          stock: [{ CodArticolo, q }] }                                               (giacenza.G<n>)

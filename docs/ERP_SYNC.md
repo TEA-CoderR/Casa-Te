@@ -84,7 +84,9 @@ shown struck through. Listing prices of ERP products are refreshed from the main
 | category | `prodotti.Categoria/Sottocategoria` → `categorie` (mapping to shop categories to define) |
 
 Never read: purchase prices (`PrezzoForn`, `Prezzo_aqu`), customers, staff, sales.
-Online articles: `prodotti.web = 1` (about 25,000 of the 344,000 rows; confirmed).
+Online articles: ITO's `web` flag is unused (0 articles). Selection per store n (agent `selection`): in stock there
+(`giacenza.G<n> > 0`) or sold there in the last 365 days (`vendite_list_2025/2026`); about 17,600 for store 3 on
+2026-10-13. Out-of-stock ones show as sold out and come back when restocked.
 Agent price rule (to confirm): store price = latest `negozio_prezzo` row for the store, else `PrezzoVedi1`; promotion =
 the cheapest one running today among `promozioni` for that store (empty `negozio` = every store) and the article's
 `PrezzoVediOfferta` window, else the next one to start; sent only if lower than the store price.
