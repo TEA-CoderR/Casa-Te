@@ -14,20 +14,23 @@ begin
   perform tests.eq((select row(price_cents, compare_at_price_cents)::text from public.store_unit_price(500, null, 450, 300, null, v_today - 1, v_today)), '(450,)', 'promo ended');
   perform tests.eq((select row(price_cents, compare_at_price_cents)::text from public.store_unit_price(500, null, 450, 460, null, null, v_today)), '(450,)', 'promo above price ignored');
 
-  -- Batch: one new product with weight, one without (skipped), stock and a running promo in LU1.
+  -- Batch: one new product with weight and photo URL, one without weight, one bad code; stock and a running promo in LU1.
   r := public.erp_apply_batch(jsonb_build_object('store_code', 'lu1', 'sent_at', now() - interval '1 minute',
     'products', jsonb_build_array(
-      jsonb_build_object('erp_code', '900001', 'name', 'Scopa Città XL', 'barcode', '8001234567890', 'vat_rate', 22, 'price_cents', 399, 'weight_g', 600),
+      jsonb_build_object('erp_code', '900001', 'name', 'Scopa Città XL', 'barcode', '8001234567890', 'vat_rate', 22, 'price_cents', 399, 'weight_g', 600,
+        'image_url', 'https://img.example.com/8001234567890.jpg'),
       jsonb_build_object('erp_code', '900002', 'name', 'Senza peso', 'price_cents', 199),
       jsonb_build_object('erp_code', 'bad code', 'name', 'X', 'price_cents', 1, 'weight_g', 1)),
     'store_items', jsonb_build_array(
       jsonb_build_object('erp_code', '900001', 'price_cents', 349, 'promo_price_cents', 299, 'promo_starts_on', v_today - 2, 'promo_ends_on', v_today + 5, 'quantity', 5),
       jsonb_build_object('erp_code', '900002', 'price_cents', 199, 'quantity', 3))));
-  perform tests.eq((r ->> 'created')::int, 1, 'product with weight created');
+  perform tests.eq((r ->> 'created')::int, 2, 'products created (weight optional)');
   perform tests.eq((select array_agg(x ->> 'reason' order by x ->> 'reason') from jsonb_array_elements(r -> 'skipped') x),
-    array['invalid_code', 'missing_weight', 'unknown_product'], 'skips reported');
+    array['invalid_code'], 'skips reported');
   perform tests.eq((select slug from public.products where erp_code = '900001'), 'scopa-citta-xl-900001', 'slug from name and code');
   perform tests.eq(tests.stock('LU1', '900001'), 5, 'stock from the ERP');
+  perform tests.eq((select path from public.product_images where product_id = tests.product('900001')), 'https://img.example.com/8001234567890.jpg', 'photo URL stored');
+  perform tests.eq((select weight_g from public.products where erp_code = '900002'), null::integer, 'no weight yet');
   perform tests.eq((select inv.erp_quantity from public.inventory inv where inv.store_id = tests.store('LU1') and inv.product_id = tests.product('900001')), 5, 'erp quantity kept');
 end $$;
 

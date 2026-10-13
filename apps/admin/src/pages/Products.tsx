@@ -43,7 +43,7 @@ export function ProductsPage() {
     downloadCsv('catalogo.csv', toCsv(rows.map((p) => ({
       sku: p.sku, nome: p.name, categoria: catName(p.category_id), prezzo: (p.price_cents / 100).toFixed(2).replace('.', ','),
       'prezzo barrato': p.compare_at_price_cents ? (p.compare_at_price_cents / 100).toFixed(2).replace('.', ',') : '',
-      iva: p.vat_rate, 'peso kg': (p.weight_g / 1000).toFixed(3).replace('.', ','), ean: p.barcode ?? '', marca: p.brand ?? '',
+      iva: p.vat_rate, 'peso kg': p.weight_g == null ? '' : (p.weight_g / 1000).toFixed(3).replace('.', ','), ean: p.barcode ?? '', marca: p.brand ?? '',
       descrizione: p.description ?? '', attivo: p.active ? 'si' : 'no', 'in evidenza': p.featured ? 'si' : 'no',
       immagine: productImageUrl(SUPABASE_URL, [...p.product_images].sort((a, b) => a.sort - b.sort)[0]?.path) ?? '',
     })), ['sku', 'nome', 'categoria', 'prezzo', 'prezzo barrato', 'iva', 'peso kg', 'ean', 'marca', 'descrizione', 'attivo', 'in evidenza', 'immagine']));
@@ -77,7 +77,7 @@ export function ProductsPage() {
             <td><Link to={`/products/${p.id}`} className="row-link" onClick={(e) => e.stopPropagation()}>{p.name}</Link><div className="small muted">{p.sku}{p.barcode ? ` · ${p.barcode}` : ''}{p.brand ? ` · ${p.brand}` : ''}</div></td>
             <td>{catName(p.category_id)}</td>
             <td className="num">{formatEuro(p.price_cents)}{p.compare_at_price_cents ? <div className="small muted" style={{ textDecoration: 'line-through' }}>{formatEuro(p.compare_at_price_cents)}</div> : null}</td>
-            <td className="num">{formatWeight(p.weight_g)}</td>
+            <td className="num">{p.weight_g == null ? <span className="badge warn">{t('Senza peso')}</span> : formatWeight(p.weight_g)}</td>
             <td className="num"><span className={`badge ${stock === 0 ? 'bad' : stock <= threshold ? 'warn' : 'muted'}`}>{stock}</span></td>
             <td>{p.active ? <span className="badge">{t('Pubblicato')}</span> : <span className="badge muted">{t('Non pubblicato')}</span>}{p.featured && <span className="badge flag" style={{ marginLeft: 4 }}>{t('In evidenza')}</span>}</td>
           </tr>;

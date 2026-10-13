@@ -845,5 +845,9 @@ const dict: Record<string, string> = {
   "Registrato in cassa il {date}. Il gestionale scalerà la merce alla prossima sincronizzazione.": "已于 {date} 收银登记。管理软件会在下次同步时扣减库存。",
   "Registrazione in cassa annullata": "已撤销收银登记",
   "Segna come registrato in cassa": "标记为已收银登记",
+  "Peso in grammi": "重量（克）",
+  "Peso in grammi non valido.": "重量无效。",
+  "Senza peso": "无重量",
+  "Senza peso il prodotto si può solo ritirare in negozio": "没有重量的商品只能到店自提",
 };
 export default dict;

@@ -2,6 +2,7 @@
 // the shop quote charges the promo; an unsigned or tampered batch is refused; till registration in the admin.
 import crypto from 'node:crypto';
 import { env, launch, shot, sql, step, watch } from './lib.mjs';
+import { syncStore } from '../../erp-agent/lib.mjs';
 
 const post = (body, { secret = env.ERP_SYNC_SECRET, ts = Math.floor(Date.now() / 1000) } = {}) => {
   const raw = JSON.stringify(body);
@@ -54,4 +55,33 @@ await page.getByRole('button', { name: 'Segna come registrato in cassa' }).click
 await page.getByText(/Registrato in cassa il/).waitFor();
 await shot(page, 'cassa');
 console.log(`  orders registered at the till: ${(await sql('select count(*) from orders where pos_registered_at is not null')).trim()}`);
+
+step('Sync agent: ysoft-shaped rows → erp-sync (diff on the second run)');
+const ysoft = async () => ({
+  products: [{ CodArticolo: 880001, CodBarre: '8000000880001', Descrizione: 'TOVAGLIA AGENTE', PrezzoVedi1: '7.90', CodIva: 22, marca: 'CASA',
+    PrezzoVediOfferta: '', PrezzoVediOfferta_inizio: '', PrezzoVediOfferta_fine: '' }],
+  storePrices: [], promos: [{ CodArticolo: 880001, Prezzo_a: '5.90', Data_a: today, Data_f: today, negozio: '' }],
+  stock: [{ CodArticolo: 880001, q: 4 }],
+});
+const agentState = {};
+let s = await syncStore({ storeCode: 'LU1', storeNumber: 1, readRows: ysoft, state: agentState,
+  endpoint: `${env.API_URL}/functions/v1/erp-sync`, secret: env.ERP_SYNC_SECRET, imageUrlTemplate: 'https://img.example.com/{barcode}.jpg' });
+if (s.products_sent !== 1 || s.items_sent !== 1 || s.skipped.length) throw new Error(`agent run: ${JSON.stringify(s)}`);
+s = await syncStore({ storeCode: 'LU1', storeNumber: 1, readRows: ysoft, state: agentState,
+  endpoint: `${env.API_URL}/functions/v1/erp-sync`, secret: env.ERP_SYNC_SECRET, imageUrlTemplate: 'https://img.example.com/{barcode}.jpg' });
+if (s.products_sent !== 0 || s.items_sent !== 0) throw new Error(`second run should send nothing: ${JSON.stringify(s)}`);
+console.log(`  ${(await sql(`select p.name || ' ' || p.price_cents || ' ' || coalesce(p.weight_g::text, 'senza peso') || ' ' || (select count(*) from product_images pi where pi.product_id = p.id) || ' foto' from products p where erp_code = '880001'`)).trim()}`);
+
+step('Pickup only: delivery shown as "Prossimamente" when no store ships');
+await sql(`update stores set ships_orders = false`);
+const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'it-IT', isMobile: true, hasTouch: true });
+const pp = await phone.newPage();
+await pp.goto(env.SHOP_URL, { waitUntil: 'networkidle' });
+await pp.getByText(/consegna a domicilio arriverà prossimamente/).first().waitFor();
+await pp.goto(`${env.SHOP_URL}/product/${(await sql(`select id from products where erp_code = '880001'`)).trim()}`, { waitUntil: 'networkidle' });
+await pp.getByText(/Spedizione\s+prossimamente/).filter({ visible: true }).first().waitFor();
+await shot(pp, 'solo-ritiro');
+await phone.close();
+await sql(`update stores set ships_orders = true`);
+console.log('  home and product page say delivery is coming soon');
 await browser.close();

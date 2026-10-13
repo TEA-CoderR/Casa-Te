@@ -12,7 +12,7 @@ import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Loading, Notice } from '@/components/UI';
 import { demoHomeImage } from '@/data/productImages';
 import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchOffers, fetchProducts, imageUrl, type CatalogProduct } from '@/lib/api';
-import { useLayout, useStores } from '@/lib/hooks';
+import { useDelivery, useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { SiteFooter } from './SiteFooter';
 import { homeDepartments, transition, Wrap, type WebState } from './shared';
@@ -28,6 +28,7 @@ export function HomeDesktop() {
   const { width } = useLayout();
   const { height } = useWindowDimensions();
   const { selected } = useStores();
+  const delivery = useDelivery();
   const [storeSheet, setStoreSheet] = useState(false);
   const store = storeShortName(selected);
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
@@ -124,7 +125,7 @@ export function HomeDesktop() {
         </View>
         <View style={{ flex: 1 }}>
           {([['store', 'Ritiro in negozio', 'Sempre gratuito, nel negozio che scegli'],
-             ['truck', 'Spedizione a casa', 'Gratuita da €66 per ordini fino a 10 kg'],
+             ['truck', 'Spedizione a casa', delivery.open ? 'Gratuita da €66 per ordini fino a 10 kg' : 'Prossimamente: per ora ritiro in negozio'],
              ['shield', 'Pagamento sicuro', 'Gestito da Stripe, i dati della carta non passano da noi']] as Array<[IconName, string, string]>)
             .map(([icon, title, text], i) => <View key={title} style={[styles.fact, i === 0 && { borderTopWidth: 0 }]}>
               <Icon name={icon} size={24} color="#FFFFFF" strokeWidth={1.2} />

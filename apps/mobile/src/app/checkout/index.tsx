@@ -12,7 +12,7 @@ import {
 } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
 import { fetchAddresses, fetchPickupPoints, fetchProfile, saveAddress, startCheckout, updateProfile } from '@/lib/api';
-import { useCartQuote, useCompanies } from '@/lib/hooks';
+import { useCartQuote, useCompanies, useDelivery } from '@/lib/hooks';
 import { usePreferences } from '@/store/preferences';
 import { openCheckout } from '@/lib/payments';
 import { useQuery } from '@/lib/useQuery';
@@ -33,6 +33,7 @@ export default function CheckoutScreen() {
   const user = useUser();
   // The delivery method is chosen in the cart; here it is only summarised (and can be changed in the same sheet).
   const method = usePreferences((s) => s.fulfilment);
+  useDelivery();
   const [deliverySheet, setDeliverySheet] = useState(false);
   const [storeSheet, setStoreSheet] = useState(false);
   const [couponInput, setCouponInput] = useState('');
