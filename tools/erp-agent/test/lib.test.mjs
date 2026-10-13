@@ -42,6 +42,8 @@ test('buildBatch: web articles, store price, promo for this store, stock ≥ 0, 
     price_cents: 590, active: true, image_url: 'https://img.example.com/8435269954351.jpg' });
   assert.equal(b.products[1].barcode, undefined);
   assert.equal(b.products[1].image_url, undefined, 'no barcode, no photo URL');
+  const placeholder = buildBatch(rows(), { storeNumber: 3, today: '2026-10-13', imageUrlTemplate: 'https://<vostro-server>/foto/{barcode}.jpg' });
+  assert.equal(placeholder.products[0].image_url, undefined, 'placeholder template ignored');
   assert.deepEqual(b.storeItems[0], { erp_code: '10001', price_cents: 550, promo_price_cents: 499, promo_starts_on: '2026-10-01', promo_ends_on: '2026-10-20', quantity: 7 });
   // 10002: product offer (running) beats the November promo; negative stock → 0
   assert.deepEqual(b.storeItems[1], { erp_code: '10002', price_cents: 490, promo_price_cents: 390, promo_starts_on: '2026-10-01', promo_ends_on: '2026-10-31', quantity: 0 });
