@@ -57,7 +57,9 @@ export function choosePromo(candidates, today) {
  *          promos: [{ CodArticolo, Prezzo_a, Data_a, Data_f, negozio }],               (promozioni + promozioni_list)
  *          stock: [{ CodArticolo, q }] }                                               (giacenza.G<n>)
  */
-export function buildBatch(rows, { storeNumber, today, imageUrlTemplate }) {
+export function buildBatch(rows, { storeNumber, today, imageUrlTemplate: template }) {
+  // Only a real https template is used (the example config ships a placeholder with <…>).
+  const imageUrlTemplate = typeof template === 'string' && /^https:\/\/[^<>\s]+$/.test(template) ? template : undefined;
   const storePrice = new Map(rows.storePrices.map((r) => [String(r.CodArticolo), toCents(r.PrezzoVedi1)]));
   const stock = new Map(rows.stock.map((r) => [String(r.CodArticolo), Math.max(0, Math.trunc(Number(r.q) || 0))]));
   const promos = new Map();

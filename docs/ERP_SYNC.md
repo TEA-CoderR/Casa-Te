@@ -71,7 +71,7 @@ shown struck through. Listing prices of ERP products are refreshed from the main
 
 | Shop field | ysoft source |
 |---|---|
-| store | `negozio.N`: 0 = central warehouse, 1–5 = stores (S. Filippo = ?) → shop store code via agent config |
+| store | `negozio.N`: 0 = central warehouse, 1–5 = stores (S. Filippo = 3 → LU3) → shop store code via agent config |
 | erp_code | `prodotti.CodArticolo` |
 | name | `prodotti.Descrizione` (`Descrizione2`?) |
 | barcode | `prodotti.CodBarre` (more in `codbarre`) |
@@ -88,7 +88,7 @@ Online articles: `prodotti.web = 1` (about 25,000 of the 344,000 rows; confirmed
 Agent price rule (to confirm): store price = latest `negozio_prezzo` row for the store, else `PrezzoVedi1`; promotion =
 the cheapest one running today among `promozioni` for that store (empty `negozio` = every store) and the article's
 `PrezzoVediOfferta` window, else the next one to start; sent only if lower than the store price.
-Open points: the S. Filippo store number, the price priority above, the meaning of `PrezzoVedi2/3`.
+Open points: the price priority above, the meaning of `PrezzoVedi2/3`.
 
 ## First launch: store pickup only
 Home delivery and pickup points are switched off by setting "Prepara ordini da spedire" off on the stores
