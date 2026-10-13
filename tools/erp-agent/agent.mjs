@@ -2,6 +2,7 @@
 // CASA & TE ERP sync agent. Runs on the CASA & TE server next to the ysoft MySQL copy of ITO and pushes web
 // articles, store prices, promotions and stock to the shop (Supabase Edge Function erp-sync).
 //
+//   node agent.mjs --analyze   count articles by candidate "on sale" rules (web flag, stock, recent sales), send nothing
 //   node agent.mjs --dry-run   read MySQL, write dry-run.json (what would be sent), send nothing
 //   node agent.mjs --once      one sync (for Windows Task Scheduler / cron, e.g. every 5 minutes)
 //   node agent.mjs --loop      sync every `intervalMinutes`
@@ -61,9 +62,36 @@ function loadState() {
   } catch { return { day: italyToday(), products: {}, items: {} }; }
 }
 
+/** Counts per candidate rule, to choose which articles are "on sale" (only counts, no article data). */
+async function analyze(db) {
+  const n = Number(Object.values(config.stores)[0] ?? 3);
+  const one = async (label, sql) => {
+    try { const [[row]] = await db.query(sql); log(`${label.padEnd(58)} ${row.c}`); }
+    catch (e) { log(`${label.padEnd(58)} error: ${e.message}`); }
+  };
+  const sold = (days, store) => `(select CodArticolo from vendite_list_2026 where Data >= now() - interval ${days} day${store ? ` and Negozio = ${n}` : ''}
+    union select CodArticolo from vendite_list_2025 where Data >= now() - interval ${days} day${store ? ` and Negozio = ${n}` : ''})`;
+  log(`Store ${n} (giacenza.G${n}); sales from vendite_list_2025 + vendite_list_2026`);
+  await one('articoli in prodotti', 'select count(*) c from prodotti');
+  await one('web = 1', 'select count(*) c from prodotti where web = 1');
+  await one('web = 1 and Blocco = 0', 'select count(*) c from prodotti where web = 1 and coalesce(Blocco, 0) = 0');
+  await one(`giacenza G${n} > 0 (store)`, `select count(*) c from giacenza where G${n} > 0`);
+  await one('giacenza G0 > 0 (warehouse)', 'select count(*) c from giacenza where G0 > 0');
+  await one('giacenza > 0 in any store or warehouse', 'select count(*) c from giacenza where G0 > 0 or G1 > 0 or G2 > 0 or G3 > 0 or G4 > 0 or G5 > 0');
+  await one(`sold in store ${n}, last 365 days`, `select count(distinct CodArticolo) c from ${sold(365, true)} s where CodArticolo > 0`);
+  await one('sold in any store, last 365 days', `select count(distinct CodArticolo) c from ${sold(365, false)} s where CodArticolo > 0`);
+  await one(`sold in any store, last 180 days`, `select count(distinct CodArticolo) c from ${sold(180, false)} s where CodArticolo > 0`);
+  await one(`web = 1 and G${n} > 0`, `select count(*) c from prodotti p join giacenza g on g.CodArticolo = p.CodArticolo where p.web = 1 and g.G${n} > 0`);
+  await one(`web = 1 and sold anywhere in 365 days`, `select count(*) c from prodotti p where p.web = 1 and p.CodArticolo in ${sold(365, false)}`);
+  await one(`G${n} > 0 or sold in store ${n} in 365 days`, `select count(*) c from prodotti p left join giacenza g on g.CodArticolo = p.CodArticolo
+    where g.G${n} > 0 or p.CodArticolo in ${sold(365, true)}`);
+  await one('in prodotti_stop', 'select count(distinct CodArticolo) c from prodotti_stop');
+}
+
 async function runOnce() {
   const db = await connect();
   try {
+    if (args.has('--analyze')) { await analyze(db); return; }
     const readRows = rowReader(db);
     if (args.has('--dry-run')) {
       const out = {};

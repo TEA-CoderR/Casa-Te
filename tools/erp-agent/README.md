@@ -16,6 +16,7 @@ Contratto e mappatura: `docs/ERP_SYNC.md`.
    Supabase → Edge Functions → Secrets).
 
 ## Uso
+- `npm run analyze` — solo conteggi per scegliere quali articoli sono "in vendita" (flag web, giacenza, vendite recenti).
 - `npm run dry-run` — legge e scrive `dry-run.json` con conteggi, problemi e un campione; **non invia nulla**.
   Da fare per primo, per controllare prezzi e promozioni.
 - `npm run once` — una sincronizzazione (Utilità di pianificazione di Windows / cron, ogni 5 minuti).
