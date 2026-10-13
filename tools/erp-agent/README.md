@@ -20,6 +20,8 @@ Contratto e mappatura: `docs/ERP_SYNC.md`.
 
 ## Uso
 - `npm run analyze` — solo conteggi per scegliere quali articoli sono "in vendita" (flag web, giacenza, vendite recenti).
+- `npm run convert-suppliers` — trasforma l'elenco dei fornitori inclusi in `selection.json` in un elenco di esclusi
+  (i fornitori nuovi entrano in automatico); scrive `fornitori-esclusi.csv` da controllare e un backup.
 - `npm run dry-run` — legge e scrive `dry-run.json` con conteggi, problemi e un campione; **non invia nulla**.
   Da fare per primo, per controllare prezzi e promozioni.
 - `npm run once` — una sincronizzazione (Utilità di pianificazione di Windows / cron, ogni 5 minuti).

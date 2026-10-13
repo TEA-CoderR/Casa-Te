@@ -2,3 +2,6 @@ config.json
 state.json
 dry-run.json
 node_modules/
+selection.json
+selection.include-backup.json
+fornitori-esclusi.csv
