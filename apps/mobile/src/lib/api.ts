@@ -4,7 +4,7 @@ import {
   flyerFileUrl, productImageUrl, type AppSettingsRow, type FlyerRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
   type CreateOrderInput, type OrderEventRow, type OrderItemRow, type OrderRow, type PickupPointRow,
   type ClubOffer, type ProductReviewRow, type ProductRow, type ProfileRow, type Quote, type QuoteInput,
-  type ReviewEligibility, type StoreRow,
+  type ReviewEligibility, type StoreRow, type CompanyRow,
 } from '@casa-te/shared';
 import { Platform } from 'react-native';
 import { SUPABASE_URL, supabase } from './supabase';
@@ -52,6 +52,11 @@ function toCatalogProduct(p: RawProduct, storeId: string | null): CatalogProduct
 }
 
 // ---- Catalogue ---------------------------------------------------------------
+
+/** Operator and store companies (public legal data for the legal pages, checkout and orders). */
+export async function fetchCompanies(): Promise<CompanyRow[]> {
+  return unwrap(await supabase.from('companies').select('*'));
+}
 
 export async function fetchStores(): Promise<StoreRow[]> {
   return unwrap(await supabase.from('stores').select('*').order('sort'));

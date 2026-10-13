@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useWindowDimensions, Platform } from 'react-native';
-import type { FulfilmentMethod, Quote, StoreRow } from '@casa-te/shared';
-import { fetchAppSettings, fetchQuote, fetchStores } from './api';
+import type { CompanyRow, FulfilmentMethod, Quote, StoreRow } from '@casa-te/shared';
+import { fetchAppSettings, fetchCompanies, fetchQuote, fetchStores } from './api';
+import { buildLegalDocs, legalContext } from '@/content/legal';
 import { useQuery } from './useQuery';
 import { cartItemsInput, useCartStore } from '@/store/cart';
 import { usePreferences } from '@/store/preferences';
@@ -22,6 +23,19 @@ export function useStores() {
     if (stores.length && !selected) setStoreId(stores[0].id);
   }, [stores, selected, setStoreId]);
   return { stores, selected: selected ?? stores[0] ?? null, loading, error, refetch };
+}
+
+/** Legal companies: the operator, the seller of a store, and the legal pages built from them. */
+export function useCompanies() {
+  const { stores } = useStores();
+  const q = useQuery<CompanyRow[]>('companies', fetchCompanies);
+  const companies = q.data ?? [];
+  const sellerOf = (storeId: string | null | undefined) => {
+    const store = stores.find((s) => s.id === storeId);
+    return companies.find((c) => c.id === store?.company_id) ?? companies.find((c) => c.is_operator) ?? null;
+  };
+  const docs = useMemo(() => buildLegalDocs(legalContext(companies, stores)), [companies, stores]);
+  return { companies, sellerOf, docs, loading: q.loading && !q.data };
 }
 
 /** Server-side price quote for the current cart, debounced while quantities change. */

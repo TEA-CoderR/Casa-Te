@@ -21,7 +21,7 @@ const SECTIONS: Array<{ tabs: Tab[] }> = [
   { tabs: [{ to: '/orders', label: 'Tutti gli ordini' }, { to: '/picking', label: 'Preparazione ordini' }] },
   { tabs: [{ to: '/products', label: 'Prodotti' }, { to: '/import', label: 'Importa prodotti' }] },
   { tabs: [{ to: '/coupons', label: 'Codici sconto' }, { to: '/showcase', label: 'Vetrina home' }, { to: '/flyers', label: 'Volantino' }] },
-  { tabs: [{ to: '/stores', label: 'Negozi', roles: ['admin'] }, { to: '/shipping', label: 'Tariffe spedizione' }, { to: '/pickup-points', label: 'Punti di ritiro' }] },
+  { tabs: [{ to: '/stores', label: 'Negozi', roles: ['admin'] }, { to: '/companies', label: 'Aziende', roles: ['admin'] }, { to: '/shipping', label: 'Tariffe spedizione' }, { to: '/pickup-points', label: 'Punti di ritiro' }] },
 ];
 const sectionOf = (pathname: string) => SECTIONS.find((s) => s.tabs.some((tab) => tab.to === pathname));
 
@@ -193,7 +193,7 @@ export function Layout() {
           <Item to="/customers" icon="customers">{t('Clienti')}</Item>
           <Item to="/analytics" icon="chart">{t('Analisi dati')}</Item>
           <div className="group">{t('Canali di vendita')}</div>
-          <Item to={can('admin') ? '/stores' : '/shipping'} icon="stores" also={['/stores', '/shipping', '/pickup-points']}>
+          <Item to={can('admin') ? '/stores' : '/shipping'} icon="stores" also={['/stores', '/companies', '/shipping', '/pickup-points']}>
             {can('admin') ? t('Gestione negozi') : t('Spedizioni e ritiro')}</Item>
           <Item to="/loyalty" icon="gift">{t('Programma fedeltà')}</Item>
           <Item to="/reviews" icon="reviews">{t('Recensioni')}</Item>

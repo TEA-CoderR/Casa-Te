@@ -12,7 +12,7 @@ import {
 } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
 import { fetchAddresses, fetchPickupPoints, fetchProfile, saveAddress, startCheckout, updateProfile } from '@/lib/api';
-import { useCartQuote } from '@/lib/hooks';
+import { useCartQuote, useCompanies } from '@/lib/hooks';
 import { usePreferences } from '@/store/preferences';
 import { openCheckout } from '@/lib/payments';
 import { useQuery } from '@/lib/useQuery';
@@ -41,6 +41,7 @@ export default function CheckoutScreen() {
   const [notesOpen, setNotesOpen] = useState(false);
   const [attempted, setAttempted] = useState(false);
   const { quote, loading: quoting, error: quoteError, store, empty } = useCartQuote({ fulfilment: method, couponCode: coupon });
+  const seller = useCompanies().sellerOf(store?.id);
 
   const profile = useQuery(user ? `profile:${user.id}` : null, () => fetchProfile(user!.id));
   const addresses = useQuery<AddressRow[]>(user ? `addresses:${user.id}` : null, fetchAddresses);
@@ -277,6 +278,8 @@ export default function CheckoutScreen() {
     <SummaryRow label="Peso" value={formatWeight(quote.total_weight_g)} />
     <SummaryRow label="Totale (IVA inclusa)" value={total !== null ? formatEuro(total) : '—'} strong />
 
+    {!!seller && <Text style={styles.fine} accessibilityLabel={`Venditore: ${seller.legal_name}, partita IVA ${seller.vat_number}`}>
+      Venditore: {seller.legal_name} · P.IVA {seller.vat_number}</Text>}
     <View style={{ marginTop: 16 }}>
       <Checkbox checked={accepted} onChange={setAccepted}>
         <Text style={styles.checkText}>Ho letto e accetto le{' '}
