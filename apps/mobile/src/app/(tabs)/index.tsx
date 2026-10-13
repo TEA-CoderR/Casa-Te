@@ -12,7 +12,7 @@ import { BrandHeader, HeaderButton, HeaderSearch } from '@/components/BrandHeade
 import { ProductImage } from '@/components/ProductImage';
 import { colors, fonts } from '@/config/theme';
 import { fetchCategories, fetchOffers, fetchProducts, imageUrl, type CatalogProduct } from '@/lib/api';
-import { useClubSettings, useLayout, useStores } from '@/lib/hooks';
+import { useClubSettings, useDelivery, useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { discountLabel } from '@/lib/price';
 import { HomeDesktop } from '@/components/site/HomeDesktop';
@@ -27,6 +27,7 @@ export default function HomeScreen() {
 
 function HomePhone() {
   const { selected } = useStores();
+  const delivery = useDelivery();
   const [storeSheet, setStoreSheet] = useState(false);
   const storeName = storeShortName(selected);
   const club = useClubSettings();
@@ -128,7 +129,7 @@ function HomePhone() {
       <View style={styles.pickupIcon}><Icon name="store" size={22} color={colors.green} strokeWidth={1.9} /></View>
       <View style={{ flex: 1 }}>
         <Text style={styles.pickupTitle}>Ritiro gratuito in negozio</Text>
-        <Text style={styles.pickupText}>Ordina online e ritira {atPlace(storeName || 'Arezzo o Lucca')} quando è pronto. Spedizione a casa gratuita da €66 (fino a 10 kg).</Text>
+        <Text style={styles.pickupText}>Ordina online e ritira {atPlace(storeName || 'Arezzo o Lucca')} quando è pronto. {delivery.open ? 'Spedizione a casa gratuita da €66 (fino a 10 kg).' : 'La consegna a domicilio arriverà prossimamente.'}</Text>
       </View>
     </Pressable>
 

@@ -52,7 +52,7 @@ export type CategoryRow = {
 export type ProductRow = {
   id: Uuid; sku: string; slug: string; name: string; description: string | null; brand: string | null;
   category_id: Uuid | null; price_cents: number; compare_at_price_cents: number | null; vat_rate: number;
-  weight_g: number; barcode: string | null; max_per_order: number; active: boolean; featured: boolean;
+  weight_g: number | null; barcode: string | null; max_per_order: number; active: boolean; featured: boolean;
   search_text: string; created_at: Timestamp; updated_at: Timestamp;
   /** Article code in the ERP (ITO); set for products synced from the ERP. */
   erp_code?: string | null;
@@ -220,6 +220,8 @@ export type MethodQuote = { price_cents: number; provisional: boolean } | null;
 export type Quote = {
   store_id: Uuid; lines: QuoteLine[]; item_count: number; issue_count: number; subtotal_cents: number;
   discount_cents: number; total_weight_g: number;
+  /** Some product has no weight yet: only store pickup is possible. */
+  weight_missing?: boolean;
   coupon: { code: string; kind: CouponKind; value: number; description: string | null } | null;
   coupon_error: string | null; shipping: Record<FulfilmentMethod, MethodQuote>;
   fulfilment: FulfilmentMethod | null; shipping_cents: number | null; total_cents: number | null;

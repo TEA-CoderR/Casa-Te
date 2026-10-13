@@ -25,6 +25,21 @@ export function useStores() {
   return { stores, selected: selected ?? stores[0] ?? null, loading, error, refetch };
 }
 
+/**
+ * Home delivery / pickup points are open when an active store ships orders (admin → Negozi). While closed,
+ * the shop shows them as "Prossimamente" and keeps the customer on store pickup.
+ */
+export function useDelivery() {
+  const { stores } = useStores();
+  const open = stores.some((s) => s.active && s.ships_orders);
+  const fulfilment = usePreferences((s) => s.fulfilment);
+  const setFulfilment = usePreferences((s) => s.setFulfilment);
+  useEffect(() => {
+    if (stores.length && !open && fulfilment !== 'store') setFulfilment('store');
+  }, [stores.length, open, fulfilment, setFulfilment]);
+  return { open, known: stores.length > 0 };
+}
+
 /** Legal companies: the operator, the seller of a store, and the legal pages built from them. */
 export function useCompanies() {
   const { stores } = useStores();

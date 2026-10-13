@@ -845,5 +845,9 @@ const dict: Record<string, string> = {
   "Registrato in cassa il {date}. Il gestionale scalerà la merce alla prossima sincronizzazione.": "Rung up at the till on {date}. The ERP will deduct the goods at the next sync.",
   "Registrazione in cassa annullata": "Till registration undone",
   "Segna come registrato in cassa": "Mark as rung up at the till",
+  "Peso in grammi": "Weight in grams",
+  "Peso in grammi non valido.": "Invalid weight in grams.",
+  "Senza peso": "No weight",
+  "Senza peso il prodotto si può solo ritirare in negozio": "Without a weight the product can only be collected in store",
 };
 export default dict;

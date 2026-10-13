@@ -15,7 +15,7 @@ import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
 import { colors, fonts } from '@/config/theme';
 import { fetchProducts, imageUrl } from '@/lib/api';
-import { useCartQuote, useClubSettings, useLayout } from '@/lib/hooks';
+import { useCartQuote, useClubSettings, useDelivery, useLayout } from '@/lib/hooks';
 import { cartItemCount, useCartStore } from '@/store/cart';
 import { useUser } from '@/store/session';
 import { ALL_PRODUCTS } from '@/lib/links';
@@ -33,6 +33,7 @@ export default function CartScreen() {
   const remove = useCartStore((s) => s.remove);
   const add = useCartStore((s) => s.add);
   const fulfilment = usePreferences((s) => s.fulfilment);
+  useDelivery();
   const [removed, setRemoved] = useState<{ id: string; name: string; qty: number } | null>(null);
   const [storeSheet, setStoreSheet] = useState(false);
   const [deliverySheet, setDeliverySheet] = useState(false);

@@ -15,6 +15,8 @@ export type LegalContext = {
   operator: CompanyRow | null;
   /** Companies of the stores open online, with their store names. */
   sellers: Array<{ company: CompanyRow; stores: string[] }>;
+  /** Home delivery / pickup points open (an active store ships orders). */
+  deliveryOpen: boolean;
 };
 
 /** Operator + sellers of the active stores, from the rows the app already loads. */
@@ -24,14 +26,14 @@ export function legalContext(companies: CompanyRow[], stores: StoreRow[]): Legal
     const names = stores.filter((s) => s.active && s.company_id === company.id).map((s) => s.name);
     return names.length ? [{ company, stores: names }] : [];
   });
-  return { operator, sellers };
+  return { operator, sellers, deliveryOpen: stores.some((s) => s.active && s.ships_orders) };
 }
 
 const MISSING = '[DATI DEL GESTORE]';
 const emailOf = (c: CompanyRow | null | undefined, kind: 'email' | 'privacy') =>
   (kind === 'privacy' ? c?.privacy_email || c?.email : c?.email) || (kind === 'privacy' ? '[EMAIL PRIVACY]' : '[EMAIL ASSISTENZA]');
 
-export function buildLegalDocs({ operator, sellers }: LegalContext): Record<string, LegalDoc> {
+export function buildLegalDocs({ operator, sellers, deliveryOpen }: LegalContext): Record<string, LegalDoc> {
   const operatorText = operator ? companyIdentity(operator, { full: true }) : MISSING;
   const sellerList = sellers.length
     ? sellers.map(({ company, stores }) => `• ${stores.join(', ')}: ${companyIdentity(company, { full: true })}`).join('\n')
@@ -70,6 +72,7 @@ export function buildLegalDocs({ operator, sellers }: LegalContext): Record<stri
       title: 'Spedizioni e ritiro',
       updated: '2026',
       sections: [
+        ...(deliveryOpen ? [] : [{ heading: 'Consegna a domicilio: prossimamente', body: "Per ora gli ordini online si ritirano in negozio. La consegna a domicilio e presso i punti di ritiro sarà attivata prossimamente: le tariffe qui sotto si applicheranno da quel momento." }]),
         { heading: 'Ritiro in negozio', body: "Sempre gratuito, nel negozio CASA & TE indicato al checkout. Ti avvisiamo via email quando l'ordine è pronto." },
         { heading: 'Spedizione gratuita', body: 'Per ordini da €66 con peso complessivo fino a 10 kg, la consegna a domicilio e al punto di ritiro è gratuita.' },
         { heading: 'Tariffe fino a 10 kg', body: "Ordini sotto €25: domicilio €4,90 / €6,90 / €8,90, punto di ritiro €3,90 / €4,90 / €6,90 (fino a 2 kg / 2–5 kg / 5–10 kg).\nDa €25 a €44,99: domicilio €3,90 / €5,90 / €7,90, punto di ritiro €2,90 / €3,90 / €5,90.\nDa €45 a €65,99: domicilio €2,90 / €4,90 / €6,90, punto di ritiro €1,90 / €2,90 / €4,90." },

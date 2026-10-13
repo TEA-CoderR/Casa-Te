@@ -33,7 +33,7 @@ const ICON_LABELS: Record<HighlightIcon, string> = {
 
 const toForm = (p: ProductRow): Form => ({
   sku: p.sku, name: p.name, slug: p.slug, description: p.description ?? '', brand: p.brand ?? '', category_id: p.category_id ?? '',
-  price: euros(p.price_cents), compare: euros(p.compare_at_price_cents), vat_rate: String(p.vat_rate), weight_g: String(p.weight_g),
+  price: euros(p.price_cents), compare: euros(p.compare_at_price_cents), vat_rate: String(p.vat_rate), weight_g: p.weight_g == null ? '' : String(p.weight_g),
   barcode: p.barcode ?? '', max_per_order: String(p.max_per_order), active: p.active, featured: p.featured,
   unit_quantity: p.unit_quantity === null ? '' : String(p.unit_quantity).replace('.', ','), unit: p.unit ?? '', color: p.color ?? '',
   variant_group: p.variant_group ?? '', variant_title: p.variant_title ?? '', variant_label: p.variant_label ?? '',
@@ -84,10 +84,10 @@ export function ProductEditPage() {
     setError(''); setSaved('');
     const price = parseEuroInput(form.price);
     const compare = form.compare.trim() ? parseEuroInput(form.compare) : null;
-    const weight = Number(form.weight_g);
+    const weight = form.weight_g ? Number(form.weight_g) : null;
     if (!price) return setError(t('Prezzo non valido.'));
     if (form.compare.trim() && (!compare || compare <= price)) return setError(t('Il prezzo barrato deve essere maggiore del prezzo.'));
-    if (!Number.isInteger(weight) || weight <= 0) return setError(t('Il peso in grammi è obbligatorio (serve per la spedizione).'));
+    if (weight !== null && (!Number.isInteger(weight) || weight <= 0)) return setError(t('Peso in grammi non valido.'));
     const unitQty = form.unit_quantity.trim() ? Number(form.unit_quantity.trim().replace(',', '.')) : null;
     if ((unitQty === null) !== (form.unit === '')) return setError(t('Per il prezzo al litro/kg indica sia la quantità sia l’unità (oppure lascia vuoti entrambi).'));
     if (unitQty !== null && (!Number.isFinite(unitQty) || unitQty <= 0)) return setError(t('Quantità della confezione non valida.'));
@@ -196,8 +196,8 @@ export function ProductEditPage() {
             <Field label={t('Prezzo € (IVA inclusa) *')}><input value={form.price} onChange={(e) => set('price', e.target.value)} inputMode="decimal" required placeholder="0,00" /></Field>
             <Field label={t('Prezzo barrato €')} hint={t('Prezzo più basso degli ultimi 30 giorni (Omnibus)')}><input value={form.compare} onChange={(e) => set('compare', e.target.value)} inputMode="decimal" /></Field>
             <Field label={t('IVA')}><select value={form.vat_rate} onChange={(e) => set('vat_rate', e.target.value)}>{[22, 10, 5, 4, 0].map((v) => <option key={v} value={v}>{v}%</option>)}</select></Field>
-            <Field label={t('Peso in grammi *')} hint={form.weight_g ? t('{kg} kg · serve per calcolare la spedizione', { kg: (Number(form.weight_g) / 1000).toFixed(2).replace('.', ',') }) : t('Serve per calcolare la spedizione')}>
-              <input value={form.weight_g} onChange={(e) => set('weight_g', e.target.value.replace(/\D/g, ''))} inputMode="numeric" required /></Field>
+            <Field label={t('Peso in grammi')} hint={form.weight_g ? t('{kg} kg · serve per calcolare la spedizione', { kg: (Number(form.weight_g) / 1000).toFixed(2).replace('.', ',') }) : t('Senza peso il prodotto si può solo ritirare in negozio')}>
+              <input value={form.weight_g} onChange={(e) => set('weight_g', e.target.value.replace(/\D/g, ''))} inputMode="numeric" /></Field>
             <Field label={t('Max pezzi per ordine')}><input type="number" min={1} max={99} value={form.max_per_order} onChange={(e) => set('max_per_order', e.target.value)} /></Field>
             <Field label={t('Indirizzo pagina (slug)')}><input value={form.slug} onChange={(e) => set('slug', e.target.value)} placeholder={t('generato dal nome')} /></Field>
           </div>

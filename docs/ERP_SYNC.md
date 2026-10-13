@@ -1,7 +1,9 @@
 # ERP (ITO) sync
 
 Prices, promotions and stock come from ITO. ITO keeps a MySQL copy (`ysoft`) on the CASA & TE server in sync.
-A small **sync agent** next to that database reads it with a read-only user and pushes changes to the shop.
+A small **sync agent** (`tools/erp-agent`, Node 20 + mysql2) next to that database reads it with a read-only user
+and pushes changes to the shop: only what changed, plus a full resend once a day. `npm run dry-run` reads ysoft and
+writes `dry-run.json` without sending anything.
 Online orders are rung up at the store till by staff (admin → order → "Segna come registrato in cassa"). ITO
 then deducts the goods and the next sync reports the new stock. An ITO endpoint that receives online orders
 is planned but not specified yet.
@@ -47,8 +49,12 @@ Body (at most 2000 products and 5000 store items per call; send larger syncs in 
 
 Rules (`supabase/migrations/20261013000002_erp_sync.sql`):
 - `erp_code` = ITO `CodArticolo`; it is also the product SKU.
-- **New products** are created only with a name, a price and a **weight** (shipping is priced by weight).
-  Missing data is reported in `skipped` and nothing is invented.
+- **New products** need a name and a price. The weight is optional: the ERP has none, and a cart containing a
+  product without a weight can only be collected in store (`quote_cart.weight_missing`). Weights are added later
+  in the admin. Missing data is reported in `skipped` and nothing is invented.
+- `image_url` (https) is stored as the product photo while the product has no photo uploaded in the admin. CASA & TE
+  hosts the photos on its own server for now (agent `imageUrlTemplate`, e.g. `https://…/foto/{barcode}.jpg`).
+- A partial row such as `{ "erp_code": "…", "active": false }` only deactivates the product.
 - Name, brand, category, description and photos are set only when the product is created. After that they are
   curated in the admin. VAT, `active` and a missing barcode or weight are updated.
 - **Store items** set the store price, the dated promotion and the ERP stock. Sellable quantity =
@@ -65,7 +71,7 @@ shown struck through. Listing prices of ERP products are refreshed from the main
 
 | Shop field | ysoft source |
 |---|---|
-| store | `negozio.N` (0 = MAGAZZINO; S. Filippo = ?) → shop store code via agent config |
+| store | `negozio.N`: 0 = central warehouse, 1–5 = stores (S. Filippo = ?) → shop store code via agent config |
 | erp_code | `prodotti.CodArticolo` |
 | name | `prodotti.Descrizione` (`Descrizione2`?) |
 | barcode | `prodotti.CodBarre` (more in `codbarre`) |
@@ -78,5 +84,13 @@ shown struck through. Listing prices of ERP products are refreshed from the main
 | category | `prodotti.Categoria/Sottocategoria` → `categorie` (mapping to shop categories to define) |
 
 Never read: purchase prices (`PrezzoForn`, `Prezzo_aqu`), customers, staff, sales.
-Open points: which articles go online (`prodotti.web`?), weights (not in ITO), photos (not in ITO), the S. Filippo
-store number, priority between `negozio_prezzo` / `promozioni` / `PrezzoVediOfferta`, and the meaning of `PrezzoVedi2/3`.
+Online articles: `prodotti.web = 1` (about 25,000 of the 344,000 rows; confirmed).
+Agent price rule (to confirm): store price = latest `negozio_prezzo` row for the store, else `PrezzoVedi1`; promotion =
+the cheapest one running today among `promozioni` for that store (empty `negozio` = every store) and the article's
+`PrezzoVediOfferta` window, else the next one to start; sent only if lower than the store price.
+Open points: the S. Filippo store number, the price priority above, the meaning of `PrezzoVedi2/3`.
+
+## First launch: store pickup only
+Home delivery and pickup points are switched off by setting "Prepara ordini da spedire" off on the stores
+(admin → Negozi). The shop then shows them as "Prossimamente", keeps customers on store pickup and adds a notice
+on the shipping page. Turning the flag back on reopens delivery for products that have a weight.

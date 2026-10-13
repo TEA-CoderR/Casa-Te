@@ -4,6 +4,7 @@ import { FULFILMENT_LABELS, type FulfilmentMethod, type Quote } from '@casa-te/s
 import { formatShipping } from '@/lib/price';
 import { colors, fonts } from '@/config/theme';
 import { usePreferences } from '@/store/preferences';
+import { useDelivery } from '@/lib/hooks';
 import { Icon, type IconName } from './Icon';
 import { OptionCard } from './UI';
 
@@ -16,6 +17,7 @@ export function FulfilmentSheet({ visible, onClose, quote, storeName, onChangeSt
   const fulfilment = usePreferences((s) => s.fulfilment);
   const setFulfilment = usePreferences((s) => s.setFulfilment);
   const methods: FulfilmentMethod[] = ['store', 'home', 'pickup'];
+  const { open: deliveryOpen, known } = useDelivery();
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Chiudi" />
     <View style={styles.sheet} accessibilityViewIsModal>
@@ -26,10 +28,11 @@ export function FulfilmentSheet({ visible, onClose, quote, storeName, onChangeSt
       <View accessibilityRole="radiogroup">
         {methods.map((m) => {
           const option = quote?.shipping[m];
-          const unavailable = quote ? !option : false;
+          const soon = m !== 'store' && known && !deliveryOpen;
+          const unavailable = soon || (quote ? !option : false);
           return <OptionCard key={m} selected={fulfilment === m} disabled={unavailable} icon={ICONS[m]}
             title={m === 'store' ? `${FULFILMENT_LABELS.store} ${atPlace(storeName)}` : FULFILMENT_LABELS[m]}
-            description={unavailable ? 'Non disponibile per questo ordine' : m === 'store' ? "Quando l'ordine è pronto" : m === 'home' ? 'Indirizzo al passo successivo' : 'Scegli il punto al passo successivo'}
+            description={soon ? 'Prossimamente' : unavailable ? (quote?.weight_missing ? 'Non ancora disponibile per alcuni prodotti: scegli il ritiro' : 'Non disponibile per questo ordine') : m === 'store' ? "Quando l'ordine è pronto" : m === 'home' ? 'Indirizzo al passo successivo' : 'Scegli il punto al passo successivo'}
             right={option ? formatShipping(option.price_cents) : undefined}
             onPress={() => { setFulfilment(m); onClose(); }} />;
         })}

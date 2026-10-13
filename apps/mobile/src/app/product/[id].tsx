@@ -15,7 +15,7 @@ import { Stars } from '@/components/Stars';
 import { ProductReviews } from '@/components/ProductReviews';
 import { ProductVariants } from '@/components/ProductVariants';
 import { invalidate } from '@/lib/useQuery';
-import { useLayout, useStores } from '@/lib/hooks';
+import { useDelivery, useLayout, useStores } from '@/lib/hooks';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { useQuery } from '@/lib/useQuery';
 import { cartItemCount, useCartStore } from '@/store/cart';
@@ -29,6 +29,7 @@ import { ALL_PRODUCTS } from '@/lib/links';
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { selected } = useStores();
+  const delivery = useDelivery();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(0);
   const [storeSheet, setStoreSheet] = useState(false);
@@ -92,8 +93,8 @@ export default function ProductDetailScreen() {
   const pack = formatPackSize(product.unit_quantity, product.unit);
   const features: Array<{ icon: IconName; text: string }> = product.highlights.length
     ? product.highlights.map((h) => ({ icon: h.icon as IconName, text: h.label }))
-    : [{ icon: 'store', text: `Ritiro gratuito\n${atPlace(store)}` }, { icon: 'truck', text: 'Spedizione gratis\nda €66' },
-       { icon: 'shield', text: 'Pagamento\nsicuro' }, { icon: 'weight', text: `Peso\n${formatWeight(product.weight_g)}` }];
+    : [{ icon: 'store', text: `Ritiro gratuito\n${atPlace(store)}` }, { icon: 'truck', text: delivery.open ? 'Spedizione gratis\nda €66' : 'Spedizione\nprossimamente' },
+       { icon: 'shield', text: 'Pagamento\nsicuro' }, ...(product.weight_g ? [{ icon: 'weight' as IconName, text: `Peso\n${formatWeight(product.weight_g)}` }] : [])];
   const details = <>
     {!!product.brand && <Text style={styles.brand}>{product.brand}</Text>}
     <Text style={[styles.title, wide && styles.titleWide]} accessibilityRole="header">{product.name}</Text>
