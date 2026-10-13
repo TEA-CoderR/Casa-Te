@@ -172,6 +172,7 @@ export function ProductEditPage() {
   return <>
     <PageHead title={isNew ? t('Nuovo prodotto') : form.name || t('Prodotto')} subtitle={isNew ? t('Dopo la creazione potrai aggiungere immagini e giacenze.') : t('SKU {sku}', { sku: form.sku })}
       actions={<button className="secondary" onClick={leave}><Icon name="back" size={16} /> {t('Prodotti')}</button>} />
+    {!isNew && product.data?.erp_code && <Notice tone="warn">{t('Prezzo, promozioni e giacenze arrivano dal gestionale (codice {code}): le modifiche a prezzo qui vengono sovrascritte alla prossima sincronizzazione. Nome, descrizione, categoria e foto restano quelli impostati qui.', { code: product.data.erp_code })}</Notice>}
     {error && <Notice tone="error">{error}</Notice>}
     {saved && <Success onDismiss={() => setSaved('')}>{saved}</Success>}
     <form onSubmit={save} id="product-form" className="edit-layout">

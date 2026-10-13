@@ -12,6 +12,7 @@ import { stripeWebhook } from '../../supabase/functions/stripe-webhook/handler.t
 import { adminRefund } from '../../supabase/functions/admin-refund/handler.ts';
 import { deleteAccount } from '../../supabase/functions/delete-account/handler.ts';
 import { buildEmail } from '../../supabase/functions/notify-order-event/handler.ts';
+import { erpSync } from '../../supabase/functions/erp-sync/handler.ts';
 
 const config: Config = {
   supabaseUrl: 'https://proj.supabase.co', anonKey: 'anon', serviceRoleKey: 'service',
@@ -327,4 +328,34 @@ test('loadConfig prefers SUPABASE_SECRET_KEYS / SUPABASE_PUBLISHABLE_KEYS over l
   } finally {
     for (const k of keys) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
   }
+});
+
+test('erp-sync: HMAC-signed batches reach erp_apply_batch with the service role; bad or old signatures are refused', async () => {
+  const cfg = { ...config, erpSyncSecret: 'erp_secret' };
+  const body = JSON.stringify({ store_code: 'LU3', store_items: [{ erp_code: '10001', price_cents: 590, quantity: 4 }] });
+  const ts = String(Math.floor(Date.now() / 1000));
+  const signed = async (b: string, t = ts, secret = 'erp_secret') => new Request('https://fn.local/erp-sync', {
+    method: 'POST', body: b,
+    headers: { 'Content-Type': 'application/json', 'X-Casate-Timestamp': t, 'X-Casate-Signature': `v1=${await hmacSha256Hex(secret, `${t}.${b}`)}` },
+  });
+  routes = [route(/POST .*\/rest\/v1\/rpc\/erp_apply_batch$/, () => jsonRes({ store_code: 'LU3', store_items: 1, skipped: [] }))];
+  const h = handle((r) => erpSync(r, cfg));
+
+  let res = await h(await signed(body));
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).store_items, 1);
+  const call = callsTo(/rpc\/erp_apply_batch/)[0];
+  assert.equal(call.headers.authorization, 'Bearer service');
+  assert.deepEqual(JSON.parse(call.body), { p: JSON.parse(body) });
+
+  res = await h(await signed(body, ts, 'wrong'));
+  assert.equal(res.status, 401);
+  assert.equal((await res.json()).error, 'invalid_signature');
+  res = await h(await signed(body, String(Number(ts) - 3600)));
+  assert.equal((await res.json()).error, 'invalid_timestamp');
+  res = await h(await signed('[1]'));
+  assert.equal(res.status, 400);
+  res = await handle((r) => erpSync(r, config))(await signed(body));
+  assert.equal(res.status, 503);
+  assert.equal(callsTo(/rpc\/erp_apply_batch/).length, 1);
 });

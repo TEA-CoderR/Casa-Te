@@ -54,6 +54,8 @@ export type ProductRow = {
   category_id: Uuid | null; price_cents: number; compare_at_price_cents: number | null; vat_rate: number;
   weight_g: number; barcode: string | null; max_per_order: number; active: boolean; featured: boolean;
   search_text: string; created_at: Timestamp; updated_at: Timestamp;
+  /** Article code in the ERP (ITO); set for products synced from the ERP. */
+  erp_code?: string | null;
   /** Pack size for the unit price (e.g. 500 ml). Both set or both null. */
   unit_quantity: number | null; unit: ProductUnit | null;
   color: string | null; highlights: ProductHighlight[];
@@ -79,7 +81,12 @@ export type ReviewEligibility = { eligible: boolean; review: { rating: number; c
 export type ClubOffer = { code: string; description: string | null; kind: CouponKind; value: number; min_subtotal_cents: number; ends_at: Timestamp | null };
 
 export type ProductImageRow = { id: Uuid; product_id: Uuid; path: string; alt: string | null; sort: number; created_at: Timestamp };
-export type InventoryRow = { store_id: Uuid; product_id: Uuid; quantity: number; updated_at: Timestamp };
+export type InventoryRow = {
+  store_id: Uuid; product_id: Uuid; quantity: number; updated_at: Timestamp;
+  /** From the ERP: store price, dated promotion and the ERP stock (quantity = ERP stock − online orders not yet at the till). */
+  price_cents?: number | null; promo_price_cents?: number | null; promo_starts_on?: string | null; promo_ends_on?: string | null;
+  erp_quantity?: number | null; erp_synced_at?: Timestamp | null;
+};
 
 export type PickupPointRow = {
   id: Uuid; name: string; carrier: string | null; address: string; city: string; postal_code: string;
@@ -169,6 +176,7 @@ export type OrderRow = {
   stripe_payment_intent_id: string | null; expires_at: Timestamp; paid_at: Timestamp | null;
   cancelled_at: Timestamp | null; completed_at: Timestamp | null; created_at: Timestamp; updated_at: Timestamp;
   seller_company_id: Uuid | null; seller_snapshot: SellerSnapshot | null;
+  pos_registered_at: Timestamp | null; pos_registered_by: Uuid | null;
 };
 
 export type OrderItemRow = {

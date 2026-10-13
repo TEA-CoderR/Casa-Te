@@ -27,6 +27,6 @@ jobs:
         run: supabase db push
       - name: Deploy Edge Functions
         run: |
-          for fn in checkout checkout-return stripe-webhook admin-refund admin-staff delete-account notify-order-event; do
+          for fn in checkout checkout-return stripe-webhook admin-refund admin-staff delete-account notify-order-event erp-sync; do
             supabase functions deploy "$fn"
           done

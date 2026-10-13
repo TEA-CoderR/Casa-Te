@@ -833,5 +833,17 @@ const dict: Record<string, string> = {
   "Sede legale (via e numero)": "Registered office (street and number)",
   "Un negozio attivo deve essere collegato all’azienda che vende i suoi ordini.": "An active store must be linked to the company that sells its orders.",
   "Venditore": "Seller",
+  "Annulla registrazione": "Undo registration",
+  "Batti l’ordine sul registratore di cassa del negozio, poi segnalo qui. Fino ad allora la merce resta esclusa dalla disponibilità online.": "Ring the order up on the store's till, then mark it here. Until then the goods stay out of the online stock.",
+  "Cassa": "Till",
+  "Cassa: tutti": "Till: all",
+  "Da registrare in cassa": "To ring up at the till",
+  "Ordine registrato in cassa": "Order rung up at the till",
+  "Prezzo, promozioni e giacenze arrivano dal gestionale (codice {code}): le modifiche a prezzo qui vengono sovrascritte alla prossima sincronizzazione. Nome, descrizione, categoria e foto restano quelli impostati qui.": "Price, promotions and stock come from the ERP (code {code}): price changes made here are overwritten at the next sync. Name, description, category and photos stay as set here.",
+  "Registrati in cassa": "Rung up at the till",
+  "Registrato in cassa": "Rung up at the till",
+  "Registrato in cassa il {date}. Il gestionale scalerà la merce alla prossima sincronizzazione.": "Rung up at the till on {date}. The ERP will deduct the goods at the next sync.",
+  "Registrazione in cassa annullata": "Till registration undone",
+  "Segna come registrato in cassa": "Mark as rung up at the till",
 };
 export default dict;

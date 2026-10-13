@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.notify-order-event]
 verify_jwt = false
+
+[functions.erp-sync]
+verify_jwt = false
