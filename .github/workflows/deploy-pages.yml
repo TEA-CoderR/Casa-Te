@@ -1,5 +1,6 @@
 name: Deploy web (GitHub Pages)
 
+# STAGING PREVIEW ONLY (GitHub Pages may not host a commercial shop; production = deploy-cloudflare.yml).
 # Staging web shop at https://<owner>.github.io/Casa-Te/ and admin console at .../Casa-Te/admin/.
 # Needs: Settings → Pages → Source = GitHub Actions.
 # The Supabase URL and publishable key are public client values (RLS protects the data); override

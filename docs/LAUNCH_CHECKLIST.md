@@ -52,6 +52,7 @@ Items marked **[business]** need a decision or data from CASA & TE; **[legal]** 
 ## Security / operations
 - [ ] Supabase: PITR enabled, SMTP configured, email templates in Italian with the OTP code.
 - [ ] Admin console access restricted (SSO/IP allow-list) and all staff invited with correct roles.
+- [ ] Web shop and admin on Cloudflare Pages with the company domain (`docs/DEPLOYMENT.md` §5b); GitHub Pages only for staging.
 - [ ] `ALLOWED_ORIGINS` set to the real domains.
 - [ ] Alerting on Stripe webhook failures and Edge Function errors.
 - [ ] CI green on `main` (unit, database, build, Edge Function type-check).
