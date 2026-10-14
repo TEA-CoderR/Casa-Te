@@ -57,12 +57,20 @@ jobs:
       - name: Create Pages projects (first run only)
         if: steps.cf.outputs.ready == 'true'
         run: |
+          # wrangler errors are repeated as annotations so they show on the run page.
+          run() { out=$("$@" 2>&1) && code=0 || code=$?; echo "$out"; if [ $code -ne 0 ]; then echo "::error title=wrangler::$(echo "$out" | grep -v '^\s*$' | tail -6 | tr '\n' ' ')"; fi; return $code; }
+          run npx --yes wrangler@3 whoami || true
+          list=$(npx --yes wrangler@3 pages project list 2>&1) || { echo "::error title=wrangler::$(echo "$list" | tail -6 | tr '\n' ' ')"; exit 1; }
           for p in "$SHOP_PROJECT" "$ADMIN_PROJECT"; do
-            npx --yes wrangler@3 pages project list | grep -qw "$p" || npx --yes wrangler@3 pages project create "$p" --production-branch main
+            echo "$list" | grep -qw "$p" || run npx --yes wrangler@3 pages project create "$p" --production-branch main
           done
       - name: Deploy web shop
         if: steps.cf.outputs.ready == 'true'
-        run: npx --yes wrangler@3 pages deploy apps/mobile/dist --project-name "$SHOP_PROJECT" --branch main --commit-dirty=true
+        run: |
+          out=$(npx --yes wrangler@3 pages deploy apps/mobile/dist --project-name "$SHOP_PROJECT" --branch main --commit-dirty=true 2>&1) || { echo "$out"; echo "::error title=wrangler::$(echo "$out" | tail -6 | tr '\n' ' ')"; exit 1; }
+          echo "$out"
       - name: Deploy admin console
         if: steps.cf.outputs.ready == 'true'
-        run: npx --yes wrangler@3 pages deploy apps/admin/dist --project-name "$ADMIN_PROJECT" --branch main --commit-dirty=true
+        run: |
+          out=$(npx --yes wrangler@3 pages deploy apps/admin/dist --project-name "$ADMIN_PROJECT" --branch main --commit-dirty=true 2>&1) || { echo "$out"; echo "::error title=wrangler::$(echo "$out" | tail -6 | tr '\n' ' ')"; exit 1; }
+          echo "$out"
