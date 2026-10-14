@@ -1,0 +1,68 @@
+name: Deploy web (Cloudflare Pages)
+
+# Web shop and admin console as two Cloudflare Pages projects, both served from the site root:
+#   shop  → https://<CF_SHOP_PROJECT>.pages.dev   (later www.<domain>)
+#   admin → https://<CF_ADMIN_PROJECT>.pages.dev  (later admin.<domain>)
+# Setup (docs/DEPLOY_CLOUDFLARE.md): repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
+# Until they exist the workflow only builds and skips the upload.
+# Which Supabase project the sites use: repository variables WEB_SUPABASE_URL / WEB_SUPABASE_PUBLISHABLE_KEY
+# (public client values, RLS protects the data); default = staging.
+# No 404.html is published, so Cloudflare Pages serves index.html for deep links (single-page apps).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ vars.WEB_SUPABASE_URL || vars.STAGING_SUPABASE_URL || 'https://kejjinbapxnjbceirrtv.supabase.co' }}
+      SUPABASE_KEY: ${{ vars.WEB_SUPABASE_PUBLISHABLE_KEY || vars.STAGING_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_5owPpJOcvD_m6hcDD2Iv7Q_CCVylaXA' }}
+      SHOP_PROJECT: ${{ vars.CF_SHOP_PROJECT || 'casate-shop' }}
+      ADMIN_PROJECT: ${{ vars.CF_ADMIN_PROJECT || 'casate-admin' }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: Build admin console
+        run: npm run build -w @casa-te/admin
+        env:
+          VITE_SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.SUPABASE_KEY }}
+          ADMIN_BASE_PATH: /
+      - name: Export web shop
+        run: npm run build:web -w @casa-te/mobile
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SUPABASE_KEY }}
+      - name: Add headers
+        run: node tools/pages/cloudflare-headers.mjs apps/mobile/dist apps/admin/dist
+      - name: Check Cloudflare credentials
+        id: cf
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then echo "ready=true" >> "$GITHUB_OUTPUT";
+          else echo "::notice::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set: built, not deployed."; fi
+      - name: Create Pages projects (first run only)
+        if: steps.cf.outputs.ready == 'true'
+        run: |
+          for p in "$SHOP_PROJECT" "$ADMIN_PROJECT"; do
+            npx --yes wrangler@3 pages project list | grep -qw "$p" || npx --yes wrangler@3 pages project create "$p" --production-branch main
+          done
+      - name: Deploy web shop
+        if: steps.cf.outputs.ready == 'true'
+        run: npx --yes wrangler@3 pages deploy apps/mobile/dist --project-name "$SHOP_PROJECT" --branch main --commit-dirty=true
+      - name: Deploy admin console
+        if: steps.cf.outputs.ready == 'true'
+        run: npx --yes wrangler@3 pages deploy apps/admin/dist --project-name "$ADMIN_PROJECT" --branch main --commit-dirty=true

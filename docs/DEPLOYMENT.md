@@ -132,6 +132,42 @@ npm run build           # output: apps/admin/dist (SPA, same fallback rule)
 Host on a separate subdomain. Recommended: protect with Cloudflare Access / IP allow-list in
 addition to staff login.
 
+## 5b. Cloudflare Pages (chosen host for web shop and admin)
+
+GitHub Pages stays only as a staging preview: its terms do not allow hosting a commercial shop.
+The workflow **Deploy web (Cloudflare Pages)** (`.github/workflows/deploy-cloudflare.yml`) builds both
+sites on every push to `main` and uploads them as two Pages projects, served from the site root:
+
+| Project (repo variable) | Default name | Address | Custom domain later |
+|---|---|---|---|
+| `CF_SHOP_PROJECT` | `casate-shop` | `https://casate-shop.pages.dev` | `www.<domain>` |
+| `CF_ADMIN_PROJECT` | `casate-admin` | `https://casate-admin.pages.dev` | `admin.<domain>` |
+
+One-time setup (owner, company account):
+
+1. Create a Cloudflare account (company email). Copy the **Account ID** (dashboard home → right column).
+2. My Profile → API Tokens → *Create token* → *Custom token*: permission **Account → Cloudflare Pages → Edit**,
+   limited to that account. Copy the token once.
+3. GitHub → repository Settings → Secrets and variables → Actions → *New repository secret*:
+   `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Never paste them in chats or commit them.
+4. Run the workflow (Actions → Deploy web (Cloudflare Pages) → Run workflow). The first run creates the two
+   projects. Without the secrets the workflow only builds.
+5. Which database the sites use: repository variables `WEB_SUPABASE_URL` / `WEB_SUPABASE_PUBLISHABLE_KEY`
+   (default: staging). Switch them to the production project at launch.
+6. Tell Supabase the new addresses (section 1 and 2): Authentication → URL configuration (Site URL = shop,
+   Redirect URLs `https://<shop>/**`, `https://<admin>/reset-password`, `casate://**`), and the Edge Function
+   secrets `WEB_SHOP_URL`, `ADMIN_URL`, `ALLOWED_ORIGINS`.
+
+Custom domain: Pages project → Custom domains → *Set up a domain* → `www.<domain>` (shop) and `admin.<domain>`
+(admin). If the domain's DNS stays at the current registrar, add the CNAME records Cloudflare shows
+(`www` → `casate-shop.pages.dev`, `admin` → `casate-admin.pages.dev`); existing website and mail (MX) records
+are not touched. Then repeat step 6 with the final addresses and add the shop domain to Stripe's payment
+method domains (section 3.5).
+
+Each build gets `_headers` (`tools/pages/cloudflare-headers.mjs`): nosniff, referrer policy, no framing; the
+admin console is also `noindex`. Optional hardening for the admin: Cloudflare Zero Trust → Access application
+on `admin.<domain>` allowing only staff emails.
+
 ## 6. Native apps (EAS)
 
 ```bash
