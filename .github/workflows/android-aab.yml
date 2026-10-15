@@ -1,0 +1,139 @@
+name: Build Android AAB (Google Play)
+
+# Signed Android App Bundle of the customer app, for upload to Google Play (internal testing first).
+# Run it from Actions → "Build Android AAB (Google Play)" → Run workflow, then download the
+# "casa-te-android-aab" artifact and upload the .aab in Play Console (the first upload must be manual).
+#
+# Signing (docs/DEPLOYMENT.md §6b) uses the Play *upload key*, kept only in repository secrets:
+#   ANDROID_UPLOAD_KEYSTORE_BASE64   the .jks/.p12 keystore, base64-encoded
+#   ANDROID_UPLOAD_KEYSTORE_PASSWORD store password (= key password for PKCS12 keystores)
+#   ANDROID_UPLOAD_KEY_PASSWORD      optional, only if the key password differs
+# Optional repository variable ANDROID_UPLOAD_KEY_ALIAS (default "upload").
+# Without the secrets (and on pull requests) the bundle is signed with a throwaway key: it proves the build
+# works but Play will reject it.
+#
+# Database: "staging" (default) or "production" (repository variables PROD_SUPABASE_URL /
+# PROD_SUPABASE_PUBLISHABLE_KEY). The address is compiled into the app: switching later needs a new build.
+# versionCode = run number of this workflow (Play requires it to grow); versionName = app.json version.
+
+on:
+  workflow_dispatch:
+    inputs:
+      database:
+        description: Supabase project the app connects to
+        type: choice
+        options: [staging, production]
+        default: staging
+  pull_request:
+    paths: ['.github/workflows/android-aab.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  aab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      NODE_ENV: production
+      HAS_KEY: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 != '' && secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD != '' && github.event_name != 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - run: npm ci
+      - name: Choose database
+        run: |
+          if [ "${{ inputs.database }}" = "production" ]; then
+            url="${{ vars.PROD_SUPABASE_URL }}"; key="${{ vars.PROD_SUPABASE_PUBLISHABLE_KEY }}"
+            if [ -z "$url" ] || [ -z "$key" ]; then
+              echo "::error::PROD_SUPABASE_URL / PROD_SUPABASE_PUBLISHABLE_KEY repository variables are not set."; exit 1
+            fi
+          else
+            url="${{ vars.STAGING_SUPABASE_URL || 'https://kejjinbapxnjbceirrtv.supabase.co' }}"
+            key="${{ vars.STAGING_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_5owPpJOcvD_m6hcDD2Iv7Q_CCVylaXA' }}"
+          fi
+          echo "EXPO_PUBLIC_SUPABASE_URL=$url" >> "$GITHUB_ENV"
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$key" >> "$GITHUB_ENV"
+          echo "App database: ${{ inputs.database || 'staging' }} ($url)"
+      - name: Prepare upload key
+        run: |
+          ks="$RUNNER_TEMP/upload.keystore"
+          if [ "$HAS_KEY" = "true" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$ks"
+            alias="${{ vars.ANDROID_UPLOAD_KEY_ALIAS || 'upload' }}"
+            keypw="${KEY_PW:-$STORE_PW}"
+          else
+            echo "::warning::Upload key secrets not set (or pull request): signing with a throwaway key. Google Play will NOT accept this bundle."
+            alias=upload; STORE_PW=$(openssl rand -hex 16); keypw=$STORE_PW
+            keytool -genkeypair -storetype PKCS12 -keystore "$ks" -alias "$alias" -keyalg RSA -keysize 2048 \
+              -validity 2 -storepass "$STORE_PW" -dname "CN=Throwaway test key" >/dev/null
+          fi
+          echo "::add-mask::$STORE_PW"; echo "::add-mask::$keypw"
+          {
+            echo "UPLOAD_KEYSTORE_PATH=$ks"; echo "UPLOAD_KEY_ALIAS=$alias"
+            echo "UPLOAD_STORE_PASSWORD=$STORE_PW"; echo "UPLOAD_KEY_PASSWORD=$keypw"
+          } >> "$GITHUB_ENV"
+          keytool -list -keystore "$ks" -storepass "$STORE_PW" -alias "$alias" >/dev/null \
+            || { echo "::error::Keystore, password or alias is wrong (check the secrets and ANDROID_UPLOAD_KEY_ALIAS)."; exit 1; }
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          STORE_PW: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          KEY_PW: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+      - name: Set versionCode
+        working-directory: apps/mobile
+        run: |
+          node -e '
+            const fs = require("fs"); const f = "app.json"; const j = JSON.parse(fs.readFileSync(f, "utf8"));
+            j.expo.android.versionCode = Number(process.env.GITHUB_RUN_NUMBER);
+            fs.writeFileSync(f, JSON.stringify(j, null, 2));
+            console.log(`versionName ${j.expo.version}, versionCode ${j.expo.android.versionCode}`);'
+      - name: Generate the Android project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install --clean
+      - name: Use the upload key for release builds
+        working-directory: apps/mobile/android
+        run: |
+          # Appended block: Gradle merges it into the generated android {} config. Values come from the
+          # environment, so no password is written to disk.
+          cat >> app/build.gradle <<'EOF'
+
+          android {
+              signingConfigs {
+                  upload {
+                      storeFile file(System.getenv("UPLOAD_KEYSTORE_PATH"))
+                      storePassword System.getenv("UPLOAD_STORE_PASSWORD")
+                      keyAlias System.getenv("UPLOAD_KEY_ALIAS")
+                      keyPassword System.getenv("UPLOAD_KEY_PASSWORD")
+                  }
+              }
+              buildTypes { release { signingConfig signingConfigs.upload } }
+          }
+          EOF
+      - name: Build release bundle
+        working-directory: apps/mobile/android
+        run: ./gradlew bundleRelease --no-daemon
+      - name: Check signature
+        run: |
+          aab=apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
+          jarsigner -verify "$aab" >/dev/null && echo "Signature OK"
+          sha=$(keytool -list -v -keystore "$UPLOAD_KEYSTORE_PATH" -storepass "$UPLOAD_STORE_PASSWORD" -alias "$UPLOAD_KEY_ALIAS" | grep -m1 'SHA256:' | sed 's/.*SHA256: *//')
+          name="casa-te-${{ inputs.database || 'staging' }}-${{ github.run_number }}"
+          [ "$HAS_KEY" = "true" ] || name="$name-NON-PER-PLAY"
+          cp "$aab" "$name.aab"
+          echo "AAB_NAME=$name" >> "$GITHUB_ENV"
+          {
+            echo "### Android App Bundle"
+            echo "- File: \`$name.aab\` (artifact *casa-te-android-aab*)"
+            echo "- Database: ${{ inputs.database || 'staging' }}"
+            echo "- versionCode: ${{ github.run_number }}"
+            if [ "$HAS_KEY" = "true" ]; then echo "- Upload key SHA-256: \`$sha\` (must match Play Console → App integrity → Upload key)"
+            else echo "- **Signed with a throwaway key: not for Google Play.**"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: casa-te-android-aab
+          path: ${{ env.AAB_NAME }}.aab
+          retention-days: 30
