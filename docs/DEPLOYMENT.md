@@ -190,6 +190,32 @@ and the Google Play Data safety form. Account deletion is available in-app (Prof
 Run `npx expo install --fix` after installing dependencies to align native module versions with
 the Expo SDK in `package.json`, and make sure the Expo Go version on test phones matches that SDK.
 
+## 6b. Google Play bundle without EAS (GitHub Actions)
+
+The workflow **Build Android AAB (Google Play)** (`.github/workflows/android-aab.yml`) builds a signed
+`.aab` on GitHub's machines; no Expo account is needed. It signs with the Play **upload key**; Google
+re-signs the app with the app signing key it keeps (Play App Signing). A lost upload key can be reset from
+Play Console, but keep a backup anyway.
+
+One-time, on the owner's computer (Windows PowerShell; needs a JDK, e.g.
+`winget install EclipseAdoptium.Temurin.17.JDK`):
+
+```powershell
+keytool -genkeypair -v -storetype PKCS12 -keystore casate-upload.jks -alias upload `
+  -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=CASA & TE GROUP S.R.L., O=CASA & TE GROUP S.R.L., C=IT"
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("casate-upload.jks")) | Set-Clipboard
+```
+
+GitHub → Settings → Secrets and variables → Actions → secrets `ANDROID_UPLOAD_KEYSTORE_BASE64` (paste the
+clipboard) and `ANDROID_UPLOAD_KEYSTORE_PASSWORD`. Store the `.jks` file and its password in the company
+password manager; never commit them or send them in chats.
+
+Each run: Actions → *Build Android AAB (Google Play)* → database `staging` (internal testing) or
+`production` (needs variables `PROD_SUPABASE_URL` / `PROD_SUPABASE_PUBLISHABLE_KEY`) → download the
+artifact → Play Console → Testing → Internal testing → Create release → upload. The first release of a
+new app must be uploaded by hand; `eas submit` / service-account upload can come later. The Supabase
+address is compiled into the app, so moving testers from staging to production needs a new build.
+
 ## 7. Go-live procedure
 
 1. Production migrations applied; **do not** run `seed.sql`.
