@@ -6,7 +6,7 @@
     "scheme": "casate",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "icon": "./assets/logo.png",
+    "icon": "./assets/icon.png",
     "ios": {
       "bundleIdentifier": "it.casate.app",
       "supportsTablet": true,
@@ -14,11 +14,11 @@
     },
     "android": {
       "package": "it.casate.app",
-      "adaptiveIcon": { "foregroundImage": "./assets/logo.png", "backgroundColor": "#F6F7F4" }
+      "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#3B6B31" }
     },
     "plugins": ["expo-router", "expo-web-browser"],
     "experiments": { "typedRoutes": true },
-    "web": { "bundler": "metro", "output": "single", "favicon": "./assets/logo.png" },
+    "web": { "bundler": "metro", "output": "single", "favicon": "./assets/icon.png" },
     "extra": { "router": { "origin": false } }
   }
 }
