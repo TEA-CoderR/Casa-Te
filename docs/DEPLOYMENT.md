@@ -75,7 +75,8 @@ supabase secrets set \
   ALLOWED_ORIGINS=https://shop.casate.it,https://gestione.casate.it \
   ORDER_WEBHOOK_SECRET=$(openssl rand -hex 32) \
   RESEND_API_KEY=re_... \
-  EMAIL_FROM="CASA & TE <ordini@casate.it>"
+  EMAIL_FROM="CASA & TE <ordini@casate.it>" \
+  EMAIL_REPLY_TO=shoponline@casa-te.com   # optional: where customer replies go
 
 for fn in checkout checkout-return stripe-webhook admin-refund admin-staff delete-account notify-order-event; do
   supabase functions deploy "$fn"

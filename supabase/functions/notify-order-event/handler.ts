@@ -1,7 +1,7 @@
 // POST /functions/v1/notify-order-event   (verify_jwt = false; called by a Supabase Database Webhook)
 // Configure in Supabase: Database → Webhooks → on INSERT into public.order_events → this URL,
 // with HTTP header `x-webhook-secret: <ORDER_WEBHOOK_SECRET>`.
-// Sends transactional emails through Resend (RESEND_API_KEY, EMAIL_FROM). No-op if not configured.
+// Sends transactional emails through Resend (RESEND_API_KEY, EMAIL_FROM, optional EMAIL_REPLY_TO). No-op if not configured.
 import type { Config } from '../_shared/env.ts';
 import { env } from '../_shared/env.ts';
 import { HttpError } from '../_shared/http.ts';
@@ -77,7 +77,10 @@ export async function notifyOrderEvent(req: Request, config: Config): Promise<Re
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `order-event-${event.id}` },
-    body: JSON.stringify({ from, to: [order.customer_email], subject: email.subject, html: email.body }),
+    body: JSON.stringify({
+      from, to: [order.customer_email], subject: email.subject, html: email.body,
+      ...(env('EMAIL_REPLY_TO') ? { reply_to: env('EMAIL_REPLY_TO') } : {}),
+    }),
   });
   if (!res.ok) throw new HttpError(502, 'email_failed', await res.text());
   return new Response(JSON.stringify({ sent: true }), { status: 200 });
