@@ -8,9 +8,9 @@ import { colors, fonts } from '@/config/theme';
 import { supabase } from '@/lib/supabase';
 
 /**
- * Sign in with email + password (default), create an account with a password, or sign in with a
- * 6-digit email code (Supabase OTP; the "Magic Link" template must include {{ .Token }} — see
- * docs/DEPLOYMENT.md). On the web the email's link also works: it returns to the shop, signed in.
+ * Sign in with email + password (default), create an account with a password, or sign in with an
+ * email code (Supabase OTP). New accounts confirm their email with the code too, never with a link:
+ * the "Confirm signup" and "Magic Link" templates must include {{ .Token }} (docs/DEPLOYMENT.md).
  * A forgotten password is handled with the code: sign in with it, then set a new password in Profilo.
  */
 
@@ -23,6 +23,7 @@ function webRedirect(next?: string): string | undefined {
 }
 
 type Mode = 'password' | 'register' | 'code';
+const codeSent = (to: string) => `Abbiamo inviato un codice a ${to}. Inseriscilo qui sotto. Controlla anche lo spam.`;
 const MIN_PASSWORD = 8;
 
 export default function SignInScreen() {
@@ -55,7 +56,9 @@ export default function SignInScreen() {
     setBusy(false);
     if (e || !data.session) {
       if (e?.code === 'email_not_confirmed') {
-        setError('Conferma prima il tuo indirizzo email: apri il link che ti abbiamo inviato.');
+        // Unconfirmed account: send a fresh code and ask for it right here.
+        await resendConfirmation();
+        setAwaiting('signup');
       } else if (e?.status === 429) {
         setError('Troppi tentativi. Riprova tra qualche minuto.');
       } else {
@@ -79,9 +82,9 @@ export default function SignInScreen() {
       return;
     }
     if (data.session) { await done(data.session.user.id); return; }
-    // Email confirmation required: a link (and, where the template has it, a 6-digit code) was sent.
+    // Email confirmation required: the email carries a code, entered below.
     setAwaiting('signup');
-    setInfo(`Abbiamo inviato un'email a ${email.trim()} per confermare l'indirizzo. Apri il link contenuto nell'email, poi torna qui e accedi con la tua password. Se l'email contiene un codice numerico, puoi inserirlo qui sotto. Se hai già un account con questa email, accedi direttamente.`);
+    setInfo(codeSent(email.trim()));
   };
 
   const sendCode = async () => {
@@ -91,9 +94,7 @@ export default function SignInScreen() {
     setBusy(false);
     if (e) { setError(e.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.' : 'Invio non riuscito. Riprova.'); return; }
     setAwaiting('email');
-    setInfo(Platform.OS === 'web'
-      ? `Abbiamo inviato un'email a ${email.trim()}: apri il link di accesso contenuto nell'email per entrare. Se l'email contiene un codice numerico, puoi inserirlo qui. Controlla anche lo spam.`
-      : `Abbiamo inviato un codice a ${email.trim()}. Controlla anche lo spam.`);
+    setInfo(codeSent(email.trim()));
   };
 
   const verify = async () => {
@@ -110,14 +111,14 @@ export default function SignInScreen() {
     setBusy(true); setError('');
     const { error: e } = await supabase.auth.resend({ type: 'signup', email: cleanEmail, options: { emailRedirectTo: webRedirect(next) } });
     setBusy(false);
-    setInfo(e ? '' : `Email di conferma inviata di nuovo a ${email.trim()}.`);
+    setInfo(e ? '' : codeSent(email.trim()));
     if (e) setError(e.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.' : 'Invio non riuscito. Riprova.');
   };
 
   const title = awaiting === 'signup' ? 'Conferma la tua email' : awaiting === 'email' ? 'Inserisci il codice'
     : mode === 'register' ? 'Crea un account' : mode === 'code' ? 'Accedi con un codice' : 'Accedi';
   const subtitle = awaiting ? info
-    : mode === 'register' ? 'Bastano email e password. Ti chiediamo solo di confermare l’indirizzo.'
+    : mode === 'register' ? 'Bastano email e password. Per confermare l’indirizzo ti inviamo un codice via email.'
     : mode === 'code' ? 'Ti inviamo un codice via email: niente password. Funziona anche se l’hai dimenticata.'
     : 'Accedi con email e password per seguire i tuoi ordini e salvare gli indirizzi.';
 
@@ -152,8 +153,8 @@ export default function SignInScreen() {
         <PrimaryButton title={awaiting === 'signup' ? 'Conferma' : 'Accedi'} loading={busy} onPress={verify} />
         {awaiting === 'signup'
           ? <>
-              <SecondaryButton title="Ho confermato: accedi con la password" onPress={() => switchMode('password')} disabled={busy} />
-              <SecondaryButton title="Invia di nuovo l'email" onPress={resendConfirmation} disabled={busy} />
+              <SecondaryButton title="Invia di nuovo il codice" onPress={resendConfirmation} disabled={busy} />
+              <SecondaryButton title="Cambia email" onPress={() => switchMode('register')} disabled={busy} />
             </>
           : <>
               <SecondaryButton title="Invia di nuovo" onPress={sendCode} disabled={busy} />
