@@ -82,6 +82,17 @@ export default function SignInScreen() {
       return;
     }
     if (data.session) { await done(data.session.user.id); return; }
+    // Already registered and confirmed: Supabase answers "ok" with no identities and sends nothing
+    // (to hide which emails exist). Send a sign-in code instead, so the customer can still get in.
+    if (data.user && data.user.identities?.length === 0) {
+      setBusy(true);
+      const { error: otpError } = await supabase.auth.signInWithOtp({ email: cleanEmail, options: { shouldCreateUser: false } });
+      setBusy(false);
+      if (otpError) { setError(otpError.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.' : 'Esiste già un account con questa email: accedi.'); return; }
+      setAwaiting('email');
+      setInfo(`Hai già un account con ${email.trim()}: ti abbiamo inviato un codice per accedere. Inseriscilo qui sotto. Controlla anche lo spam.`);
+      return;
+    }
     // Email confirmation required: the email carries a code, entered below.
     setAwaiting('signup');
     setInfo(codeSent(email.trim()));
