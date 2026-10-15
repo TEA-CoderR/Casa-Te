@@ -33,7 +33,7 @@ export function buildEmail(event: EventRecord, order: Order, storeName: string):
       case 'ready':
         if (order.fulfilment !== 'store') return null;
         subject = `Ordine ${n} pronto per il ritiro`;
-        body = `il tuo ordine ti aspetta presso ${esc(storeName)}. Porta con te il numero d'ordine ${n}.`; break;
+        body = `il tuo ordine ti aspetta presso ${esc(storeName)}. Porta con te il numero d'ordine ${n}. L'ordine resta disponibile per 14 giorni.`; break;
       case 'shipped':
         subject = `Ordine ${n} spedito`;
         body = `il tuo ordine è stato affidato al corriere${order.carrier ? ` ${esc(order.carrier)}` : ''}.` +

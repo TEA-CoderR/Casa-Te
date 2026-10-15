@@ -7,15 +7,15 @@ Items marked **[business]** need a decision or data from CASA & TE; **[legal]** 
 - [ ] **[business]** Coupons: discount reduces the value used for shipping bands and the €66 free-shipping threshold (current behaviour). Confirm or change.
 - [ ] **[business]** Fulfilment: each order is prepared by the customer's selected store and stock is per store. Confirm, or designate one central store for home deliveries.
 - [ ] **[business]** Delivery area (currently all of Italy with a valid CAP). Restrict if needed.
-- [ ] **[business]** Store pickup holding period (legal text placeholder `[NUMERO] giorni`).
-- [ ] **[business]** Delivery time promises shown to customers (placeholders in `apps/mobile/src/content/legal.ts`).
+- [x] **[business]** Store pickup holding period: 14 days (terms, shipping page, "ready for pickup" email).
+- [ ] **[business]** Delivery time promises for home / pickup-point delivery (`[2–4]` in `apps/mobile/src/content/legal.ts`, shown only once delivery is enabled).
 - [ ] **[business]** Loyalty card integration (phase 2, out of scope for v1).
 
 ## Legal / compliance
 - [ ] **[legal]** Complete and approve `terms`, `privacy`, `shipping` texts (`apps/mobile/src/content/legal.ts`). Company data
   is no longer in the code: admin → Negozi → **Aziende** holds the operator (CASA & TE GROUP S.R.L., Google Play publisher)
-  and each store's company (seller of that store's orders); the legal pages, checkout and orders read it. Still open: support
-  and privacy email, DPO, dates, pickup holding days, delivery times, marketing retention. Counsel to confirm the
+  and each store's company (seller of that store's orders); the legal pages, checkout and orders read it. Filled 15/10/2026: support and
+  privacy email (companies table), no DPO, dates, pickup 14 days, retention periods. Still open: delivery times. Counsel to confirm the
   operator/seller roles (incl. whether the privacy notice should describe joint controllership, art. 26 GDPR).
 - [ ] Every active store linked to its company (admin → Negozi). Orders snapshot the seller when placed.
 - [x] EU ODR platform link removed (the platform closed on 20 July 2025, Reg. (EU) 2024/3228).
