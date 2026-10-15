@@ -81,7 +81,7 @@ export default function SignInScreen() {
     if (data.session) { await done(data.session.user.id); return; }
     // Email confirmation required: a link (and, where the template has it, a 6-digit code) was sent.
     setAwaiting('signup');
-    setInfo(`Abbiamo inviato un'email a ${email.trim()} per confermare l'indirizzo. Apri il link contenuto nell'email, poi torna qui e accedi con la tua password. Se l'email contiene un codice a 6 cifre, puoi inserirlo qui sotto. Se hai già un account con questa email, accedi direttamente.`);
+    setInfo(`Abbiamo inviato un'email a ${email.trim()} per confermare l'indirizzo. Apri il link contenuto nell'email, poi torna qui e accedi con la tua password. Se l'email contiene un codice numerico, puoi inserirlo qui sotto. Se hai già un account con questa email, accedi direttamente.`);
   };
 
   const sendCode = async () => {
@@ -92,12 +92,13 @@ export default function SignInScreen() {
     if (e) { setError(e.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.' : 'Invio non riuscito. Riprova.'); return; }
     setAwaiting('email');
     setInfo(Platform.OS === 'web'
-      ? `Abbiamo inviato un'email a ${email.trim()}: apri il link di accesso contenuto nell'email per entrare. Se l'email contiene un codice a 6 cifre, puoi inserirlo qui. Controlla anche lo spam.`
+      ? `Abbiamo inviato un'email a ${email.trim()}: apri il link di accesso contenuto nell'email per entrare. Se l'email contiene un codice numerico, puoi inserirlo qui. Controlla anche lo spam.`
       : `Abbiamo inviato un codice a ${email.trim()}. Controlla anche lo spam.`);
   };
 
   const verify = async () => {
-    if (!/^\d{6}$/.test(code.trim())) { setError('Il codice è composto da 6 cifre.'); return; }
+    // Length follows Supabase Auth → Email OTP length (6–10 digits).
+    if (!/^\d{6,10}$/.test(code.trim())) { setError("Inserisci il codice numerico ricevuto via email."); return; }
     setBusy(true); setError('');
     const { data, error: e } = await supabase.auth.verifyOtp({ email: cleanEmail, token: code.trim(), type: awaiting === 'signup' ? 'signup' : 'email' });
     setBusy(false);
@@ -145,8 +146,8 @@ export default function SignInScreen() {
     <PageTitle title={title} subtitle={subtitle} />
 
     {awaiting ? <>
-      <TextField label="Codice a 6 cifre" value={code} onChangeText={(v) => setCode(v.replace(/\D/g, ''))} keyboardType="number-pad"
-        maxLength={6} autoComplete="one-time-code" textContentType="oneTimeCode" autoFocus onSubmitEditing={verify} error={error} />
+      <TextField label="Codice ricevuto via email" value={code} onChangeText={(v) => setCode(v.replace(/\D/g, ''))} keyboardType="number-pad"
+        maxLength={10} autoComplete="one-time-code" textContentType="oneTimeCode" autoFocus onSubmitEditing={verify} error={error} />
       <View style={{ gap: 10, marginTop: 8 }}>
         <PrimaryButton title={awaiting === 'signup' ? 'Conferma' : 'Accedi'} loading={busy} onPress={verify} />
         {awaiting === 'signup'

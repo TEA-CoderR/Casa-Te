@@ -38,10 +38,12 @@ Dashboard settings:
   Verify with `select * from cron.job;`. If the job is missing, run the `cron.schedule(...)`
   statement from migration 0004 in the SQL editor.
 * **Authentication → Providers → Email**: enabled, "Confirm email" on.
-* **Authentication → Email Templates → Magic Link**: the customer app signs in with a 6-digit
+* **Authentication → Email Templates → Magic Link**: the customer app signs in with a numeric
   code, so the template must contain the token, e.g.
   `<h2>Il tuo codice CASA & TE</h2><p style="font-size:28px;letter-spacing:4px">{{ .Token }}</p><p>Valido 15 minuti.</p>`.
   Translate the other templates (Invite, Reset password) to Italian.
+* **Authentication → Sign In / Providers → Email → Email OTP Length**: set **6** (new projects default to 8;
+  the app accepts 6–10 digits).
 * **Authentication → SMTP**: configure Resend SMTP (Supabase's built-in mailer is rate limited
   and not for production).
 * **Authentication → URL configuration**: Site URL = web shop URL; Redirect URLs:
