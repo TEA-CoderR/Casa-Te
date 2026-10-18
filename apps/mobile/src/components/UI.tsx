@@ -27,9 +27,9 @@ export function PriceTag({ cents, size = 22, sale, color }: { cents: number; siz
   const base = { color: ink, fontFamily: fonts.price, fontWeight: '800' as const, letterSpacing: -0.3 };
   // Three pieces in a row, top-aligned: the cents sit raised next to the euros on every platform.
   return <View accessible accessibilityLabel={`${cents < 0 ? '-' : ''}${euros},${rest} euro`} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-    <Text style={[base, { fontSize: small, lineHeight: small * 1.2, marginTop: size * 0.12 }]}>{cents < 0 ? '−€' : '€'}</Text>
+    <Text style={[base, { fontSize: small, lineHeight: small * 1.2, marginTop: size * 0.46 }]}>{cents < 0 ? '−€' : '€'}</Text>
     <Text style={[base, { fontSize: size, lineHeight: size * 1.12 }]}>{euros}</Text>
-    <Text style={[base, { fontSize: small, lineHeight: small * 1.2, marginTop: size * 0.08 }]}>,{rest}</Text>
+    <Text style={[base, { fontSize: small, lineHeight: small * 1.2, marginTop: size * 0.02 }]}>,{rest}</Text>
   </View>;
 }
 

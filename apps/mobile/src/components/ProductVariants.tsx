@@ -25,10 +25,10 @@ export function ProductVariants({ title, current, variants }: { title: string | 
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginTop: 22, gap: 12 },
-  title: { fontSize: 19, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  item: { width: 80, borderRadius: 10, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, padding: 6, alignItems: 'center', gap: 4 },
-  itemOn: { borderColor: colors.text, borderWidth: 1.5 },
+  wrap: { marginTop: 18, gap: 10 },
+  title: { fontSize: 19, lineHeight: 24, fontFamily: fonts.display, color: colors.text },
+  item: { width: 84, borderRadius: 16, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, padding: 6, alignItems: 'center', gap: 4 },
+  itemOn: { borderColor: colors.green, borderWidth: 2 },
   thumb: { width: '100%' },
-  label: { fontSize: 11, color: colors.text, fontFamily: fonts.sans, textAlign: 'center' },
+  label: { fontSize: 12, color: colors.text, fontFamily: fonts.sansSemiBold, textAlign: 'center' },
 });

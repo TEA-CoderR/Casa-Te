@@ -10,6 +10,8 @@ import { Icon } from '@/components/Icon';
 import { BrandHeader, HeaderBack, HeaderButton, HeaderSearch } from '@/components/BrandHeader';
 import { colors, fonts } from '@/config/theme';
 import { fetchCategories, fetchFacets, fetchProducts, type CatalogProduct } from '@/lib/api';
+import { ProductImage } from '@/components/ProductImage';
+import { formatEuro, unitPriceLabel } from '@/lib/price';
 import { useLayout, useStores } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
 import { SiteFooter } from '@/components/site/SiteFooter';
@@ -17,7 +19,7 @@ import { useRecentSearches } from '@/store/recentSearches';
 import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared';
 
 export default function CatalogScreen() {
-  const params = useLocalSearchParams<{ category?: string; q?: string; search?: string; sort?: string; offerte?: string; evidenza?: string }>();
+  const params = useLocalSearchParams<{ category?: string; q?: string; search?: string; sort?: string; offerte?: string; evidenza?: string; code?: string }>();
   const { selected } = useStores();
   const { columns, wide } = useLayout();
   const [query, setQuery] = useState(params.q ?? '');
@@ -96,6 +98,7 @@ export default function CatalogScreen() {
   const count = filters.onlyAvailable ? shown.length : total ?? shown.length;
   // Keep the URL in step with the chosen category, so the home links (same id again) and reloads keep working.
   const selectCategory = (id: string | null) => { setCategoryId(id); router.setParams({ category: id ?? undefined }); };
+  const canGoBackHere = () => !!collection || !!categoryId || router.canGoBack();
   // Back steps out one level: close the search, subcategory → its department, department → all categories, then home.
   const leaveOffers = () => { setOnSale(false); setFeaturedOnly(false); router.setParams({ offerte: undefined, evidenza: undefined }); };
   const goBack = () => {
@@ -143,69 +146,114 @@ export default function CatalogScreen() {
     </View>}
   </>;
 
-  // Phone (design F): the awning with title, count and search; department chips and filters on the ivory ground, white product plates.
+  // Phone (design F): a department page (F-Reparto) or, while searching, the search page (F-Ricerca).
   if (!wide) {
-    const canGoBack = !!(searchOpen && query) || !!collection || !!categoryId;
-    const header = <BrandHeader title={searching ? 'Risultati' : title}
-      subtitle={loading && !items.length ? ' ' : `${count.toLocaleString('it-IT')} ${count === 1 ? 'prodotto' : 'prodotti'}${selected ? ` · ${selected.name.replace(/^CASA & TE\s*/, '')}` : ''}`}
-      left={canGoBack ? <HeaderBack onPress={goBack} /> : undefined}
-      right={<HeaderButton icon="heart" label="Preferiti" onPress={() => router.push('/favorites')} />}>
-      <HeaderSearch placeholder="Cerca per nome, marca o codice" value={query} onChangeText={setQuery}
-        autoFocus={!!params.search && !params.q} onFocus={() => setSearchOpen(true)}
-        onSubmitEditing={() => recent.remember(query)} onBlur={() => { if (shown.length) recent.remember(query); if (!query) setSearchOpen(false); }} />
-    </BrandHeader>;
-    const chip = (key: string, label: string, on: boolean, onPress: () => void, tone?: 'sale') =>
-      <Pressable key={key} onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: on }}
-        style={[styles.chip, on && styles.chipOn, tone === 'sale' && styles.chipSale, tone === 'sale' && on && styles.chipSaleOn]}>
-        <Text style={[styles.chipText, on && styles.chipTextOn, tone === 'sale' && { color: on ? '#FFFFFF' : colors.sale }]}>{label}</Text>
+    const storeLabel = selected ? selected.name.replace(/^CASA & TE\s*/, '').replace(/^(\S+)\s+(?!·)/, '$1 · ') : '';
+    const topOf = (id: string | null) => { const c = all.find((x) => x.id === id); return c?.parent_id ? all.find((x) => x.id === c.parent_id) ?? c : c; };
+    const chip = (key: string, label: string, on: boolean, onPress: () => void) =>
+      <Pressable key={key} onPress={onPress} accessibilityRole="tab" accessibilityState={{ selected: on }} style={[styles.fChip, on && styles.fChipOn]}>
+        <Text style={[styles.fChipText, on && { color: '#FFFFFF' }]}>{label}</Text>
       </Pressable>;
-    return <Screen header={header} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 28 }}>
-      {filterSheet}
-      {searchOpen && !query && recent.terms.length > 0 && <View style={styles.recentPhone}>
-        <View style={styles.recentHead}>
-          <Text style={styles.recentCaps}>RICERCHE RECENTI</Text>
-          <Pressable onPress={recent.clear} accessibilityRole="button" hitSlop={8}><Text style={styles.recentClear}>Cancella</Text></Pressable>
+    const filterCount = filters.brands.length + filters.colors.length + (filters.price.min !== null || filters.price.max !== null ? 1 : 0)
+      + (filters.sort !== 'featured' ? 1 : 0) + (filters.onlyAvailable ? 1 : 0) + (onSale ? 1 : 0);
+    const filterSheetPhone = <FilterSheet visible={sheet !== null} section="all" filters={filters} onChange={setFilters} onClose={() => setSheet(null)}
+      facets={facets.data ?? null} total={loading ? null : count} onSale={onSale} onToggleSale={() => {
+        const next = !onSale; setOnSale(next); if (next) setFeaturedOnly(false);
+        router.setParams({ offerte: next ? '1' : undefined, evidenza: undefined });
+      }} />;
+    const more = loading ? <Loading /> : hasMore ? <View style={{ marginTop: 16 }}><SecondaryButton title="Mostra altri prodotti" onPress={loadMore} /></View> : null;
+
+    if (searchOpen) {
+      const q = query.trim().toLowerCase();
+      const closeSearch = () => { setQuery(''); setDebounced(''); setSearchOpen(false); router.setParams({ q: undefined, search: undefined }); if (!categoryId && !collection && router.canGoBack()) router.back(); };
+      const header = <BrandHeader plain pad={[14, 16, 16]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <HeaderBack onPress={closeSearch} />
+          <View style={styles.sBox}>
+            <Icon name="search" size={20} color={colors.text} strokeWidth={2.1} />
+            <TextInput value={query} onChangeText={setQuery} placeholder="Prodotto, marca o reparto" placeholderTextColor={colors.faint}
+              accessibilityLabel="Cerca prodotti" autoFocus returnKeyType="search" autoCorrect={false} keyboardType={params.code ? 'number-pad' : 'default'}
+              onSubmitEditing={() => recent.remember(query)} onBlur={() => { if (shown.length) recent.remember(query); }} style={styles.sInput} />
+            {!!query && <Pressable onPress={() => { setQuery(''); setDebounced(''); }} accessibilityRole="button" accessibilityLabel="Cancella ricerca" style={styles.sClear}>
+              <Icon name="close" size={15} color={colors.text} strokeWidth={2.6} /></Pressable>}
+          </View>
         </View>
-        <View style={styles.recentChips}>{recent.terms.map((t) => <View key={t} style={styles.recentChip}>
-          <Pressable onPress={() => { setQuery(t); setDebounced(t); recent.remember(t); }} accessibilityRole="button"
-            accessibilityLabel={`Cerca ancora ${t}`} style={styles.recentChipTerm}>
-            <Icon name="search" size={15} color={colors.muted} strokeWidth={2} /><Text style={styles.recentChipText} numberOfLines={1}>{t}</Text>
-          </Pressable>
-          <Pressable onPress={() => recent.forget(t)} accessibilityRole="button" accessibilityLabel={`Rimuovi ${t} dalle ricerche recenti`} hitSlop={6} style={{ paddingHorizontal: 10, height: 40, justifyContent: 'center' }}>
-            <Icon name="close" size={13} color={colors.muted} strokeWidth={2.2} /></Pressable>
-        </View>)}</View>
-      </View>}
-      <View style={styles.band}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} accessibilityRole="tablist">
-          {tabs.map((item) => chip(item.id ?? 'all', item.name, activeTab === item.id, () => selectCategory(item.id)))}
-        </ScrollView>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {pill('all', 'Filtri', filters.sort !== 'featured' || filters.onlyAvailable, 'filter')}
-          {chip('sale', '% Offerte', onSale, () => {
-            const next = !onSale; setOnSale(next); if (next) setFeaturedOnly(false);
-            router.setParams({ offerte: next ? '1' : undefined, evidenza: undefined });
-          }, 'sale')}
-          {pill('brand', filters.brands.length ? `Marca (${filters.brands.length})` : 'Marca', filters.brands.length > 0)}
-          {pill('color', filters.colors.length ? `Colore (${filters.colors.length})` : 'Colore', filters.colors.length > 0)}
-          {pill('price', 'Prezzo', filters.price.min !== null || filters.price.max !== null)}
-        </ScrollView>
-      </View>
-      <View style={[styles.toolbar, { paddingHorizontal: 16, marginTop: 6 }]}>
-        <Text style={styles.countPhone}>{loading && !items.length ? ' ' : searching ? `${count} ${count === 1 ? 'risultato' : 'risultati'} per «${debounced.trim()}»` : `${count} ${count === 1 ? 'prodotto mostrato' : 'prodotti mostrati'}`}</Text>
-        <View style={{ flexDirection: 'row', gap: 2 }} accessibilityRole="radiogroup" accessibilityLabel="Vista">
-          {(['grid', 'list'] as const).map((v) => <Pressable key={v} onPress={() => setView(v)} accessibilityRole="radio"
-            accessibilityState={{ checked: view === v }} accessibilityLabel={v === 'grid' ? 'Vista a griglia' : 'Vista a elenco'}
-            style={[styles.viewButton, styles.viewButtonPhone, view === v && { backgroundColor: '#FFFFFF' }]}>
-            <Icon name={v} size={19} strokeWidth={1.8} color={view === v ? colors.green : colors.faint} /></Pressable>)}
+      </BrandHeader>;
+      const deptHits: CategoryRow[] = [];
+      shown.forEach((p) => { const t = topOf(p.category_id); if (t && !deptHits.some((d) => d.id === t.id)) deptHits.push(t); });
+      return <Screen header={header} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
+        {!debounced.trim() ? <View style={{ paddingHorizontal: 16, paddingTop: 22 }}>
+          {recent.terms.length > 0 && <>
+            <View style={styles.sHead}>
+              <Text style={styles.sCaps}>RICERCHE RECENTI</Text>
+              <Pressable onPress={recent.clear} accessibilityRole="button" hitSlop={8}><Text style={styles.sLink}>Cancella</Text></Pressable>
+            </View>
+            <View style={styles.sRecents}>{recent.terms.map((t) => <Pressable key={t} onPress={() => { setQuery(t); setDebounced(t); recent.remember(t); }}
+              accessibilityRole="button" accessibilityLabel={`Cerca ancora ${t}`} style={styles.sRecent}>
+              <Icon name="clock" size={15} color={colors.muted} strokeWidth={2.2} /><Text style={styles.sRecentText} numberOfLines={1}>{t}</Text>
+            </Pressable>)}</View>
+          </>}
+          <Text style={[styles.sCaps, { marginTop: recent.terms.length ? 28 : 0, marginBottom: 6 }]}>ESPLORA PER REPARTO</Text>
+          <View style={styles.sList}>{all.filter((c) => !c.parent_id).map((c, i) =>
+            <Pressable key={c.id} onPress={() => { setQuery(''); setSearchOpen(false); router.setParams({ search: undefined }); selectCategory(c.id); }}
+              accessibilityRole="link" style={[styles.sRow, i > 0 && { borderTopWidth: 1, borderColor: '#EFECE3' }]}>
+              <View style={[styles.sSwatch, { backgroundColor: SWATCHES[i % SWATCHES.length] }]} />
+              <Text style={styles.sRowText} numberOfLines={1}>{c.name}</Text>
+              <Icon name="chevron" size={18} color="#9A9F94" strokeWidth={2.2} />
+            </Pressable>)}</View>
         </View>
+        : !loading && !error && !shown.length ? <View style={styles.sEmpty}>
+          <View style={styles.sEmptyIcon}><Icon name="search" size={30} color={colors.muted} strokeWidth={1.8} /></View>
+          <Text style={styles.sEmptyTitle}>Nessun risultato per “{debounced.trim()}”</Text>
+          <Text style={styles.sEmptyText}>Controlla come l’hai scritto o prova con il nome della marca.</Text>
+          <Pressable onPress={() => { setQuery(''); setDebounced(''); }} accessibilityRole="button" style={styles.sEmptyButton}><Text style={styles.sEmptyButtonText}>Nuova ricerca</Text></Pressable>
+        </View>
+        : <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
+          {error && !items.length ? <Notice tone="error" message="Impossibile cercare. Controlla la connessione." /> : null}
+          {deptHits.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8 }}>
+            {deptHits.map((d) => <Pressable key={d.id} onPress={() => { setSearchOpen(false); setQuery(''); router.setParams({ search: undefined, q: undefined }); selectCategory(d.id); }}
+              accessibilityRole="link" style={styles.sDept}><Text style={styles.sDeptText}>In {d.name}</Text><Icon name="arrow" size={14} color="#FFFFFF" strokeWidth={2.4} /></Pressable>)}
+          </ScrollView>}
+          <Text style={styles.sCount}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}${storeLabel ? ` a ${storeLabel}` : ''}`}</Text>
+          <View style={{ gap: 8 }}>{shown.map((p) => {
+            const i = q ? p.name.toLowerCase().indexOf(q) : -1;
+            const unit = unitPriceLabel(p.price_cents, p.unit_quantity, p.unit);
+            return <Pressable key={p.id} onPress={() => { recent.remember(query); router.push(`/product/${p.id}`); }} accessibilityRole="link"
+              accessibilityLabel={`${p.name}, ${formatEuro(p.price_cents)}`} style={styles.sHit}>
+              <View style={styles.sThumb}><ProductImage uri={p.image} sku={p.sku} inset={0.04} /></View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.sName} numberOfLines={2}>{i >= 0 ? <>{p.name.slice(0, i)}<Text style={styles.sMark}>{p.name.slice(i, i + q.length)}</Text>{p.name.slice(i + q.length)}</> : p.name}</Text>
+                <Text style={styles.sMeta} numberOfLines={1}>{[topOf(p.category_id)?.name, unit?.replace(/€\s/, '€').replace(/\s\/\s/, '/')].filter(Boolean).join(' · ')}</Text>
+              </View>
+              <Text style={[styles.sPrice, p.compare_at_price_cents && p.compare_at_price_cents > p.price_cents ? { color: colors.sale } : null]}>{formatEuro(p.price_cents).replace(/€\s/, '€')}</Text>
+            </Pressable>;
+          })}</View>
+          {more}
+        </View>}
+      </Screen>;
+    }
+
+    const header = <BrandHeader stacked
+      title={collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Tutti i prodotti'}
+      subtitle={loading && !items.length ? ' ' : `${count.toLocaleString('it-IT')} ${count === 1 ? 'prodotto disponibile' : 'prodotti disponibili'}${storeLabel ? ` a ${storeLabel}` : ''}`}
+      left={canGoBackHere() ? <HeaderBack onPress={goBack} /> : undefined}
+      right={<HeaderButton icon="search" label={parent ? `Cerca in ${parent.name}` : 'Cerca prodotti'} onPress={() => { setSearchOpen(true); router.setParams({ search: '1' }); }} />} />;
+    return <Screen header={header} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
+      {filterSheetPhone}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.fChips} accessibilityRole="tablist">
+        {tabs.map((item) => chip(item.id ?? 'all', item.name, activeTab === item.id, () => selectCategory(item.id)))}
+      </ScrollView>
+      <View style={styles.fBar}>
+        <Text style={styles.fCount}>{loading && !items.length ? ' ' : `${shown.length} ${shown.length === 1 ? 'prodotto mostrato' : 'prodotti mostrati'}`}</Text>
+        <Pressable onPress={() => setSheet('all')} accessibilityRole="button" accessibilityLabel={`Filtra e ordina${filterCount ? `, ${filterCount} attivi` : ''}`} style={styles.fButton}>
+          <Icon name="sliders" size={17} color={colors.text} strokeWidth={2.2} /><Text style={styles.fButtonText}>Filtra e ordina</Text>
+          {filterCount > 0 && <View style={styles.fBadge}><Text style={styles.fBadgeText}>{filterCount}</Text></View>}
+        </Pressable>
       </View>
-      <View style={{ paddingHorizontal: 16, paddingTop: 4 }}>
+      <View style={{ paddingHorizontal: 16 }}>
         {results}
-        {view === 'grid'
-          ? <View style={[styles.grid, { marginHorizontal: -5, rowGap: 10 }]}>{shown.map((product) => <View key={product.id} style={{ width: `${100 / columns}%`, paddingHorizontal: 5, flexDirection: 'row' }}>
-              <ProductCard product={product} /></View>)}</View>
-          : shown.map((product) => <ProductCard key={product.id} product={product} variant="list" />)}
-        {loading ? <Loading /> : hasMore ? <View style={{ marginTop: 20 }}><SecondaryButton title="Mostra altri prodotti" onPress={loadMore} /></View> : null}
+        <View style={styles.fGrid}>{shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
+        {more}
       </View>
     </Screen>;
   }
@@ -284,7 +332,49 @@ export default function CatalogScreen() {
   </Screen>;
 }
 
+const SWATCHES = ['#F4DED6', '#DCE9F2', '#F5E6C8', '#DCE7D3', '#ECE6F3', '#E6E3DA', '#E2EEEC', '#F3E3EA'];
+
 const styles = StyleSheet.create({
+  fChips: { paddingHorizontal: 16, paddingTop: 6, gap: 8 },
+  fChip: { height: 40, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: colors.line, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  fChipOn: { backgroundColor: colors.green, borderColor: colors.green },
+  fChipText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
+  fBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, gap: 12 },
+  fCount: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.muted, flexShrink: 1 },
+  fButton: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: colors.line, backgroundColor: '#FFFFFF' },
+  fButtonText: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.text },
+  fBadge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  fBadgeText: { fontSize: 12, fontFamily: fonts.heavy, color: '#FFFFFF' },
+  fGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
+  fCell: { width: '48.6%', flexDirection: 'row' },
+  sBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, height: 50, paddingLeft: 16, paddingRight: 6, borderRadius: 25, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: colors.yellow },
+  sInput: { flex: 1, minWidth: 0, height: 44, fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0 } as object,
+  sClear: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EFECE3', alignItems: 'center', justifyContent: 'center' },
+  sHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sCaps: { fontSize: 13, letterSpacing: 0.6, fontFamily: fonts.heavy, color: colors.muted },
+  sLink: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green, paddingVertical: 8 },
+  sRecents: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  sRecent: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: colors.line, backgroundColor: '#FFFFFF', maxWidth: 240 },
+  sRecentText: { fontSize: 14.5, fontFamily: fonts.sansSemiBold, color: colors.text },
+  sList: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
+  sRow: { flexDirection: 'row', alignItems: 'center', gap: 14, height: 60, paddingHorizontal: 16 },
+  sSwatch: { width: 36, height: 36, borderRadius: 12 },
+  sRowText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
+  sDept: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.green },
+  sDeptText: { fontSize: 14, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  sCount: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 16, marginBottom: 8 },
+  sHit: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 8, paddingLeft: 8, paddingRight: 14, borderRadius: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
+  sThumb: { width: 64, height: 64, borderRadius: 12, overflow: 'hidden', backgroundColor: '#FFFFFF' },
+  sName: { fontSize: 14.5, lineHeight: 18, fontFamily: fonts.sansMedium, color: colors.text },
+  sMark: { fontFamily: fonts.heavy, backgroundColor: '#F7EE9A' },
+  sMeta: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted, marginTop: 3 },
+  sPrice: { fontSize: 16, fontFamily: fonts.heavy, color: colors.text },
+  sEmpty: { paddingTop: 64, paddingHorizontal: 32, alignItems: 'center' },
+  sEmptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#EFECE3', alignItems: 'center', justifyContent: 'center' },
+  sEmptyTitle: { fontSize: 23, lineHeight: 28, fontFamily: fonts.display, color: colors.text, textAlign: 'center', marginTop: 16, marginBottom: 6 },
+  sEmptyText: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center' },
+  sEmptyButton: { marginTop: 18, height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.green, justifyContent: 'center' },
+  sEmptyButtonText: { fontSize: 15, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, marginTop: -8, gap: 8 },
   iconButton: { width: 44, height: 40, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, textAlign: 'center', fontSize: 25, fontFamily: fonts.serif, color: colors.text },

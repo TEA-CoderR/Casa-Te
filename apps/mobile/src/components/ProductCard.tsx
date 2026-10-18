@@ -23,17 +23,19 @@ export function stockLabel(stock: number | null, store?: string): { text: string
 }
 
 /** Heart toggle for the "Preferiti" list (saved on this device). */
-export function FavoriteButton({ productId, name, size = 22, style }: { productId: string; name: string; size?: number; style?: object }) {
+export function FavoriteButton({ productId, name, size = 22, style, strokeWidth = 1.3 }: { productId: string; name: string; size?: number; style?: object; strokeWidth?: number }) {
   const on = useFavorites((s) => s.ids.includes(productId));
   const toggle = useFavorites((s) => s.toggle);
   return <Pressable onPress={() => toggle(productId)} accessibilityRole="button" accessibilityState={{ selected: on }}
     accessibilityLabel={on ? `Rimuovi ${name} dai preferiti` : `Aggiungi ${name} ai preferiti`} hitSlop={6}
     style={({ pressed }) => [styles.heart, style, pressed && { opacity: 0.6 }]}>
-    <Icon name="heart" size={size} color={on ? colors.badge : colors.text} fill={on ? colors.badge : undefined} strokeWidth={1.3} />
+    <Icon name="heart" size={size} color={on ? colors.badge : colors.text} fill={on ? colors.badge : undefined} strokeWidth={strokeWidth} />
   </Pressable>;
 }
 
-export function ProductCard({ product, variant = 'grid' }: { product: CatalogProduct; variant?: 'grid' | 'list' | 'feature' }) {
+export function ProductCard({ product, variant = 'grid', rail }: { product: CatalogProduct; variant?: 'grid' | 'list' | 'feature';
+  /** Home rail card (design F): taller photo area and no heart. */
+  rail?: boolean }) {
   const { wide } = useLayout();
   const add = useCartStore((s) => s.add);
   const quantity = useCartStore((s) => s.items[product.id] ?? 0);
@@ -53,10 +55,10 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
   // Phone (design F): "+" turns into a stepper in place, so the quantity changes without leaving the list.
   const phoneCart = quantity > 0 ? <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.stepper}>
     <Pressable onPress={() => setQuantity(product.id, quantity - 1)} accessibilityRole="button" hitSlop={4}
-      accessibilityLabel={`Togli un ${product.name}`} style={styles.stepBtn}><Icon name="minus" size={16} color="#fff" strokeWidth={2.6} /></Pressable>
+      accessibilityLabel={`Togli un ${product.name}`} style={styles.stepBtn}><Text style={styles.stepGlyph}>−</Text></Pressable>
     <Text style={styles.stepValue} accessibilityLabel={`${quantity} nel carrello`}>{quantity}</Text>
     <Pressable onPress={() => add(product.id)} disabled={!canAdd} accessibilityRole="button" hitSlop={4}
-      accessibilityLabel={`Aggiungi un altro ${product.name}`} style={[styles.stepBtn, !canAdd && { opacity: 0.35 }]}><Icon name="plus" size={16} color="#fff" strokeWidth={2.6} /></Pressable>
+      accessibilityLabel={`Aggiungi un altro ${product.name}`} style={[styles.stepBtn, !canAdd && { opacity: 0.35 }]}><Text style={styles.stepGlyph}>+</Text></Pressable>
   </Animated.View> : cartButton;
   const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
   const unit = unitPriceLabel(product.price_cents, product.unit_quantity, product.unit);
@@ -112,32 +114,37 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
     </View>;
   }
 
+  // Phone (design F): white plate, photo area, name, unit price, then the price tag and "+" (a stepper once in the cart).
   // The card is a real link (open in new tab, middle click, screen readers); heart and cart sit outside it.
-  return <View style={styles.card}>
+  const subline = !stock.available ? stock.text : unit?.replace(/€\s/, '€').replace(/\s\/\s/, '/') ?? (discount ? `Prima ${formatEuro(product.compare_at_price_cents as number)}` : note);
+  return <View style={[styles.card, rail && { paddingBottom: 12 }]}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
-      <View style={styles.media}>
-        <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.07} aspect={1.04} />
-        {!!discount && <View style={styles.discount}><Text style={styles.discountText} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount.replace('-', '−')}</Text></View>}
+      <View style={[styles.media, { height: rail ? 136 : 132 }]}>
+        <View style={{ width: rail ? 120 : 118, height: rail ? 120 : 118 }}>
+          <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />
+        </View>
+        {!!discount && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
+          <Text style={styles.discountText} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount.replace('-', '−')}</Text></View>}
       </View>
-      <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
-      {!!note && <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{note}</Text>}
+      <Text style={[styles.name, { marginTop: rail ? 6 : 4 }]} numberOfLines={2}>{product.name}</Text>
+      <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>
     </Pressable></Link>
-    <FavoriteButton productId={product.id} name={product.name} size={19} style={styles.heartCorner} />
-    <View style={styles.bottom}>{price}{phoneCart}</View>
+    {!rail && <FavoriteButton productId={product.id} name={product.name} size={19} strokeWidth={2} style={styles.heartCorner} />}
+    <View style={styles.bottom}><PriceTag cents={product.price_cents} size={22} sale={!!discount} />{phoneCart}</View>
   </View>;
 }
 
 const styles = StyleSheet.create({
-  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, overflow: 'hidden', padding: 8, paddingBottom: 10, gap: 4,
-    shadowColor: '#18201A', shadowOpacity: 0.05, shadowRadius: 0, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  media: { backgroundColor: colors.surface },
-  heart: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
-  heartCorner: { position: 'absolute', top: 6, right: 6 },
-  discount: { position: 'absolute', left: 2, top: 2, backgroundColor: colors.sale, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  discountText: { fontSize: 14.5, color: '#fff', fontFamily: fonts.price, fontWeight: '800' },
-  name: { fontSize: 13.5, lineHeight: 17, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text, minHeight: 34, marginTop: 4, paddingHorizontal: 4 },
-  meta: { fontSize: 11.5, color: colors.muted, marginTop: 1, fontFamily: fonts.sans, paddingHorizontal: 4 },
-  bottom: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 6, marginTop: 'auto', paddingTop: 4, paddingLeft: 4, minHeight: 44 },
+  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 10,
+    borderBottomWidth: 1, borderColor: colors.line },
+  media: { backgroundColor: colors.surface, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  heart: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  heartCorner: { position: 'absolute', top: 6, right: 6, zIndex: 2 },
+  discount: { position: 'absolute', left: 0, top: 0, backgroundColor: colors.sale, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  discountText: { fontSize: 12, color: '#fff', fontFamily: fonts.heavy, fontWeight: '800' },
+  name: { fontSize: 13.5, lineHeight: 17, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text, height: 34, paddingHorizontal: 4 },
+  meta: { fontSize: 11.5, lineHeight: 15, color: colors.muted, marginTop: 2, fontFamily: fonts.sans, paddingHorizontal: 4 },
+  bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 6, paddingLeft: 4, height: 40 },
   small: { fontSize: 11.5, color: colors.faint, fontFamily: fonts.sansMedium },
   compareSmall: { textDecorationLine: 'line-through' },
   priceBig: { fontSize: 23, lineHeight: 26, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
@@ -148,6 +155,7 @@ const styles = StyleSheet.create({
   addRound: { width: 40, height: 40, borderRadius: 20 },
   stepper: { flexDirection: 'row', alignItems: 'center', height: 40, borderRadius: 20, backgroundColor: colors.green },
   stepBtn: { width: 34, height: 40, alignItems: 'center', justifyContent: 'center' },
+  stepGlyph: { fontSize: 19, lineHeight: 22, fontFamily: fonts.sansBold, color: '#fff' },
   stepValue: { minWidth: 14, textAlign: 'center', fontSize: 15, fontFamily: fonts.heavy, color: '#fff' },
   addCount: { color: '#fff', fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700' },
   entry: { flex: 1 },

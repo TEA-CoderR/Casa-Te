@@ -8,6 +8,8 @@ import { Icon, type IconName } from '@/components/Icon';
 import { useLayout } from '@/lib/hooks';
 import { SiteHeader } from '@/components/site/SiteHeader';
 import { cartItemCount, useCartStore } from '@/store/cart';
+import { useCartQuote } from '@/lib/hooks';
+import { formatEuro } from '@/lib/price';
 
 const tabs: Array<{ name: string; title: string; icon: IconName; hidden?: boolean }> = [
   { name: 'index', title: 'Home', icon: 'home' },
@@ -31,6 +33,11 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const count = cartItemCount(useCartStore((s) => s.items));
   const current = state.routes[state.index]?.name ?? 'index';
+  const { quote } = useCartQuote();
+  // The cart is a full page with its own back button and checkout sheet (design F): no tab bar there.
+  // The search page (catalog with ?search) is a focused page too.
+  const params = state.routes[state.index]?.params as { search?: string } | undefined;
+  if (current === 'cart' || (current === 'catalog' && !!params?.search)) return null;
   const go = (name: string) => {
     const route = state.routes.find((r) => r.name === name);
     if (!route) return;
@@ -44,8 +51,11 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     {SHOPPING.has(current) && count > 0 && <Animated.View entering={FadeInDown.springify().damping(18)} exiting={FadeOutDown.duration(160)}>
       <Pressable onPress={() => go('cart')} accessibilityRole="button" accessibilityLabel={`Vai al carrello, ${count} articoli`}
         style={({ pressed }) => [styles.mini, pressed && { opacity: 0.92 }]}>
-        <View style={styles.miniCount}><Text style={styles.miniCountText}>{count > 99 ? '99+' : count}</Text></View>
-        <Text style={styles.miniText} numberOfLines={1}>{count === 1 ? '1 articolo nel carrello' : `${count} articoli nel carrello`}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.miniLabel} numberOfLines={1}>{count === 1 ? '1 articolo nel carrello' : `${count} articoli nel carrello`}</Text>
+          {/* The total is the server quote (never computed here); hidden until it arrives. */}
+          <Text style={styles.miniTotal}>{quote ? formatEuro(quote.subtotal_cents).replace(/€\s/, '€') : ' '}</Text>
+        </View>
         <View style={styles.miniCta}><Text style={styles.miniCtaText}>Vai al carrello</Text></View>
       </Pressable>
     </Animated.View>}
@@ -82,17 +92,16 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   dock: { backgroundColor: colors.page, paddingHorizontal: 12, paddingTop: 6, gap: 8 },
-  mini: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 58, paddingLeft: 10, paddingRight: 8, borderRadius: 20, backgroundColor: '#FFFFFF',
-    shadowColor: '#18201A', shadowOpacity: 0.18, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 8 },
-  miniCount: { minWidth: 38, height: 38, paddingHorizontal: 8, borderRadius: 19, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
-  miniCountText: { fontSize: 15, fontFamily: fonts.heavy, color: colors.text },
-  miniText: { flex: 1, fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
-  miniCta: { height: 42, paddingHorizontal: 16, borderRadius: 14, backgroundColor: colors.green, justifyContent: 'center' },
+  mini: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 58, paddingLeft: 18, paddingRight: 8, borderRadius: 20, backgroundColor: '#FFFFFF',
+    shadowColor: '#18201A', shadowOpacity: 0.22, shadowRadius: 34, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
+  miniLabel: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  miniTotal: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text },
+  miniCta: { height: 44, paddingHorizontal: 16, borderRadius: 14, backgroundColor: colors.green, justifyContent: 'center' },
   miniCtaText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   pill: { flexDirection: 'row', alignItems: 'center', height: 66, borderRadius: 33, paddingHorizontal: 7, backgroundColor: colors.green,
-    shadowColor: '#143019', shadowOpacity: 0.32, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 },
+    shadowColor: '#143019', shadowOpacity: 0.35, shadowRadius: 28, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
   tab: { flex: 1, height: 50, borderRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  tabOn: { flex: 1.7, backgroundColor: colors.yellow },
+  tabOn: { flex: 1.6, backgroundColor: colors.yellow },
   tabLabel: { fontSize: 14.5, fontFamily: fonts.heavy, color: colors.text, flexShrink: 1 },
   badge: { position: 'absolute', top: -7, right: -12, minWidth: 19, height: 19, paddingHorizontal: 4, borderRadius: 10,
     backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },

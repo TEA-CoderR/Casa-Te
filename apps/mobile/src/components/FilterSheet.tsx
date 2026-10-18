@@ -16,7 +16,7 @@ export const EMPTY_FILTERS: Filters = { sort: 'featured', brands: [], colors: []
 export type FilterSection = 'all' | 'brand' | 'color' | 'price';
 
 export const SORTS: Array<{ id: SortId; label: string }> = [
-  { id: 'featured', label: 'In evidenza' },
+  { id: 'featured', label: 'Rilevanza' },
   { id: 'price_asc', label: 'Prezzo crescente' },
   { id: 'price_desc', label: 'Prezzo decrescente' },
   { id: 'name', label: 'Nome A-Z' },
@@ -32,9 +32,11 @@ export function priceBands(minCents: number, maxCents: number): Array<{ label: s
   return bands;
 }
 
-export function FilterSheet({ visible, section, filters, onChange, onClose, facets, total }: {
+export function FilterSheet({ visible, section, filters, onChange, onClose, facets, total, onSale, onToggleSale }: {
   visible: boolean; section: FilterSection; filters: Filters; onChange: (f: Filters) => void; onClose: () => void;
   facets: { brands: string[]; colors: string[]; minCents: number; maxCents: number } | null; total: number | null;
+  /** Phone (design F): "Solo prodotti in offerta" as a switch inside the sheet. */
+  onSale?: boolean; onToggleSale?: () => void;
 }) {
   const show = (s: FilterSection) => section === 'all' || section === s;
   const toggle = (list: string[], value: string) => list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -46,6 +48,7 @@ export function FilterSheet({ visible, section, filters, onChange, onClose, face
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Chiudi filtri" />
     <View style={styles.sheet} accessibilityViewIsModal>
+      <View style={styles.grip} />
       <View style={styles.head}>
         <Text style={styles.title} accessibilityRole="header">{title}</Text>
         <Pressable onPress={reset} accessibilityRole="button" hitSlop={8}><Text style={styles.reset}>Azzera</Text></Pressable>
@@ -55,9 +58,6 @@ export function FilterSheet({ visible, section, filters, onChange, onClose, face
           <Text style={styles.group}>Ordina per</Text>
           <View style={styles.wrap}>{SORTS.map((o) => <Chip key={o.id} label={o.label} on={filters.sort === o.id}
             onPress={() => onChange({ ...filters, sort: o.id })} radio />)}</View>
-          <Text style={styles.group}>Disponibilità</Text>
-          <View style={styles.wrap}><Chip label="Solo disponibili nel mio negozio" on={filters.onlyAvailable}
-            onPress={() => onChange({ ...filters, onlyAvailable: !filters.onlyAvailable })} /></View>
         </>}
         {show('brand') && <>
           {section === 'all' && <Text style={styles.group}>Marca</Text>}
@@ -79,16 +79,29 @@ export function FilterSheet({ visible, section, filters, onChange, onClose, face
               onPress={() => onChange({ ...filters, price: on ? { min: null, max: null } : { min: b.min, max: b.max } })} />;
           })}</View> : <Text style={styles.empty}>Tutti i prodotti hanno un prezzo simile.</Text>}
         </>}
+        {section === 'all' && <>
+          {onToggleSale && <Switch label="Solo prodotti in offerta" sale on={!!onSale} onPress={onToggleSale} />}
+          <Switch label="Solo disponibili nel mio negozio" on={filters.onlyAvailable} onPress={() => onChange({ ...filters, onlyAvailable: !filters.onlyAvailable })} />
+        </>}
       </ScrollView>
       <PrimaryButton title={total === null ? 'Mostra prodotti' : `Mostra ${total} ${total === 1 ? 'prodotto' : 'prodotti'}`} onPress={onClose} />
     </View>
   </Modal>;
 }
 
+function Switch({ label, on, onPress, sale }: { label: string; on: boolean; onPress: () => void; sale?: boolean }) {
+  return <Pressable onPress={onPress} accessibilityRole="switch" accessibilityState={{ checked: on }} style={styles.switchRow}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>
+      {sale && <View style={styles.saleTag}><Text style={styles.saleTagText}>%</Text></View>}
+      <Text style={styles.switchText}>{label}</Text>
+    </View>
+    <View style={[styles.track, on && { backgroundColor: colors.green }]}><View style={[styles.knob, { left: on ? 23 : 3 }]} /></View>
+  </Pressable>;
+}
+
 function Chip({ label, on, onPress, radio }: { label: string; on: boolean; onPress: () => void; radio?: boolean }) {
   return <Pressable onPress={onPress} accessibilityRole={radio ? 'radio' : 'checkbox'} accessibilityState={{ checked: on }}
     style={[styles.chip, on && styles.chipOn]}>
-    {on && <Icon name="check" size={14} color="#fff" strokeWidth={2} />}
     <Text style={[styles.chipText, on && { color: '#fff' }]}>{label}</Text>
   </Pressable>;
 }
@@ -96,14 +109,21 @@ function Chip({ label, on, onPress, radio }: { label: string; on: boolean; onPre
 const styles = StyleSheet.create({
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(16, 24, 18, 0.5)' },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, maxWidth: 560, alignSelf: 'center', width: '100%', marginHorizontal: 'auto',
-    backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 28, gap: 12 },
+    backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingTop: 20, paddingBottom: 20, gap: 12 },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 25, lineHeight: 30, fontFamily: fonts.display, color: colors.text },
+  title: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text },
   reset: { fontSize: 14.5, color: colors.green, fontFamily: fonts.sansBold },
-  group: { fontSize: 12.5, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginTop: 16, marginBottom: 8 },
+  group: { fontSize: 13, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginTop: 14, marginBottom: 8 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
+  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: '#DCD7CA', marginTop: -10, marginBottom: 2 },
+  switchRow: { marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 56, paddingHorizontal: 16, borderRadius: 16, backgroundColor: colors.page },
+  switchText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text, flexShrink: 1 },
+  saleTag: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: colors.sale },
+  saleTagText: { fontSize: 12, fontFamily: fonts.heavy, color: '#FFFFFF' },
+  track: { width: 50, height: 30, borderRadius: 15, backgroundColor: '#CFC9BA' },
+  knob: { position: 'absolute', top: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
   chipOn: { backgroundColor: colors.green, borderColor: colors.green },
-  chipText: { fontSize: 14.5, color: colors.text, fontFamily: fonts.sansBold },
+  chipText: { fontSize: 14, color: colors.text, fontFamily: fonts.sansBold },
   empty: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans, paddingVertical: 6 },
 });

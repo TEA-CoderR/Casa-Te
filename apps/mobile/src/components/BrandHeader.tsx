@@ -2,7 +2,7 @@ import { useState, type PropsWithChildren, type ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '@/config/theme';
-import { brandLogoOnGreen, LOGO_ASPECT } from '@/config/brand';
+import { brandLogoStacked, STACKED_ASPECT } from '@/config/brand';
 import { Icon, type IconName } from './Icon';
 
 const STRIPE = 22;
@@ -25,34 +25,41 @@ export function AwningEdge() {
 
 /**
  * Phone header band (design F "La Tenda"): the striped awning of the shop front, edge to edge under the status bar,
- * ending in a scalloped edge. Either the logo or a page title (Bodoni), optional left/right buttons, rows below.
- * `overlap` leaves room under the content for a card that hangs from the valance (store card, pickup pass).
+ * ending in a scalloped edge. Sizes follow the design boards exactly:
+ * - inline (default): [left] title + subtitle … [right] in one row (Carrello, Ordini, Ordine);
+ * - `stacked`: the buttons row, then a large title below it (Reparto, Home greeting, Accesso);
+ * - `plain`: solid green, no stripes and no valance (the search page).
+ * `pad` = [top, horizontal, bottom] inside the band; `overlap` is extra bottom room for a card that hangs from it.
  */
-export function BrandHeader({ title, subtitle, logo, left, right, overlap = 0, inScroll, children }: PropsWithChildren<{
-  title?: string; subtitle?: string; logo?: boolean; left?: ReactNode; right?: ReactNode; overlap?: number;
+export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, right, overlap = 0, inScroll, stacked, plain,
+  titleSize, titleGap, pad = [14, 16, 18], children }: PropsWithChildren<{
+  title?: string; subtitle?: string; logo?: boolean; logoHeight?: number; left?: ReactNode; right?: ReactNode; overlap?: number;
   /** Rendered inside the page's scroll view (Screen `top`): the status bar inset is painted by `StatusBand`. */
-  inScroll?: boolean;
+  inScroll?: boolean; stacked?: boolean; plain?: boolean; titleSize?: number; titleGap?: number;
+  pad?: [number, number, number];
 }>) {
   const insets = useSafeAreaInsets();
+  const size = titleSize ?? (stacked ? 34 : 28);
+  const heading = !!title && <View style={[{ flexShrink: 1 }, stacked ? { marginTop: titleGap ?? 12 } : left ? { marginLeft: 12 } : null]}>
+    <Text style={[styles.title, { fontSize: size, lineHeight: Math.round(size * 1.13) }]} accessibilityRole="header" numberOfLines={stacked ? 2 : 1}>{title}</Text>
+    {!!subtitle && <Text style={[styles.subtitle, stacked && { fontSize: 14.5, marginTop: 2 }]} numberOfLines={stacked ? 2 : 1}>{subtitle}</Text>}
+  </View>;
   // No zIndex: a card that hangs from the band (a later sibling in the scroll content) must paint over it.
   return <View>
-    <View style={[styles.band, { paddingTop: (inScroll ? 0 : insets.top) + 10, paddingBottom: 14 + overlap }]}>
-      <AwningStripes />
-      <View style={styles.row}>
+    <View style={[styles.band, { paddingTop: (inScroll ? 0 : insets.top) + pad[0], paddingHorizontal: pad[1], paddingBottom: pad[2] + overlap }]}>
+      {!plain && <AwningStripes />}
+      {(left || right || logo || (!stacked && !!title)) && <View style={styles.row}>
         {left}
-        {logo
-          ? <Image source={brandLogoOnGreen} accessibilityLabel="Casa & Te — Per la tua casa e per te" accessibilityRole="header"
-              style={{ width: 168, height: 168 / LOGO_ASPECT }} resizeMode="contain" />
-          : <View style={{ flexShrink: 1 }}>
-              <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
-              {!!subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
-            </View>}
+        {logo && <Image source={brandLogoStacked} accessibilityLabel="Casa & Te — Per la tua casa e per te" accessibilityRole="header"
+          style={{ width: logoHeight * STACKED_ASPECT, height: logoHeight }} resizeMode="contain" />}
+        {!stacked && heading}
         <View style={{ flex: 1 }} />
         {right}
-      </View>
+      </View>}
+      {stacked && heading}
       {children}
     </View>
-    <AwningEdge />
+    {!plain && <AwningEdge />}
   </View>;
 }
 
@@ -73,7 +80,7 @@ export function HeaderButton({ icon, label, onPress, count, filled }: {
 }) {
   return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={4}
     style={({ pressed }) => [styles.button, pressed && { opacity: 0.7 }]}>
-    <Icon name={icon} size={21} color="#FFFFFF" strokeWidth={1.9} fill={filled ? '#FFFFFF' : undefined} />
+    <Icon name={icon} size={icon === 'search' ? 20 : 21} color="#FFFFFF" strokeWidth={icon === 'search' ? 2.1 : 1.8} fill={filled ? '#FFFFFF' : undefined} />
     {!!count && <View style={styles.count}><Text style={styles.countText}>{count > 99 ? '99+' : count}</Text></View>}
   </Pressable>;
 }
@@ -81,7 +88,7 @@ export function HeaderButton({ icon, label, onPress, count, filled }: {
 /** Round back button on the green band. */
 export function HeaderBack({ onPress, icon = 'back', label = 'Indietro' }: { onPress: () => void; icon?: IconName; label?: string }) {
   return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={6}
-    style={({ pressed }) => [styles.button, { marginRight: 10 }, pressed && { opacity: 0.7 }]}>
+    style={({ pressed }) => [styles.button, pressed && { opacity: 0.7 }]}>
     <Icon name={icon} size={icon === 'close' ? 18 : 22} color="#FFFFFF" strokeWidth={2.3} />
   </Pressable>;
 }
@@ -103,14 +110,14 @@ export function HeaderSearch({ onPress, placeholder, ...input }: TextInputProps 
 }
 
 const styles = StyleSheet.create({
-  band: { backgroundColor: colors.brand, paddingHorizontal: 16, gap: 12, overflow: 'hidden' },
+  band: { backgroundColor: colors.brand, overflow: 'hidden' },
   stripes: { flexDirection: 'row' },
   edge: { height: 12, flexDirection: 'row', overflow: 'hidden', marginTop: -1 },
   scallop: { width: STRIPE, height: 22, borderRadius: 11, marginTop: -11 },
-  row: { flexDirection: 'row', alignItems: 'center', minHeight: 46 },
-  title: { fontSize: 27, lineHeight: 33, fontFamily: fonts.display, color: '#FFFFFF' },
-  subtitle: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.onBrand, marginTop: 1 },
-  button: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.13)', alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
+  title: { fontFamily: fonts.display, color: '#FFFFFF', letterSpacing: -0.3 },
+  subtitle: { fontSize: 14, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
+  button: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
   count: { position: 'absolute', top: 1, right: -1, minWidth: 19, height: 19, borderRadius: 10, paddingHorizontal: 4,
     backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
   countText: { fontSize: 11.5, fontFamily: fonts.heavy, color: colors.text },

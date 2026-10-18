@@ -13,10 +13,10 @@ import { ALL_PRODUCTS } from '@/lib/links';
 
 export default function FavoritesScreen() {
   const phone = !useLayout().wide;
-  // Phones: the green band with a way back (these pages open from the header heart and Profilo).
-  const band = phone ? <BrandHeader title="Preferiti" left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/profile')} />} /> : undefined;
-  const page = phone ? { header: band, ground: palette.page } : {};
   const ids = useFavorites((s) => s.ids);
+  // Phones: the green band with a way back (these pages open from the header heart and Profilo).
+  const band = phone ? <BrandHeader title="Preferiti" subtitle={ids.length ? `${ids.length} ${ids.length === 1 ? 'prodotto salvato' : 'prodotti salvati'}` : undefined} left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/profile')} />} /> : undefined;
+  const page = phone ? { header: band, ground: palette.page } : {};
   const { selected } = useStores();
   const { columns } = useLayout();
   const key = ids.length ? `favorites:${selected?.id}:${ids.join(',')}` : null;
@@ -29,15 +29,19 @@ export default function FavoritesScreen() {
       <PrimaryButton title="Scopri i prodotti" onPress={() => router.push(ALL_PRODUCTS)} />
     </EmptyState></Screen>;
 
-  return <Screen {...page} refreshing={loading && !!data} onRefresh={refetch}>
+  return <Screen {...page} refreshing={loading && !!data} onRefresh={refetch} contentContainerStyle={phone ? { padding: 16 } : undefined}>
     {!phone && <PageTitle title="Preferiti" subtitle={`${ids.length} ${ids.length === 1 ? 'prodotto' : 'prodotti'}`} />}
     {error && !data ? <Notice tone="error" message="Impossibile caricare i preferiti. Controlla la connessione." />
-      : !data ? <Loading /> : <View style={styles.grid}>{items.map((product) =>
+      : !data ? <Loading /> : phone
+        ? <View style={styles.phoneGrid}>{items.map((product) => <View key={product.id} style={styles.phoneCell}><ProductCard product={product} /></View>)}</View>
+        : <View style={styles.grid}>{items.map((product) =>
         <View key={product.id} style={{ width: `${100 / columns}%`, paddingHorizontal: 6, flexDirection: 'row' }}>
           <ProductCard product={product} /></View>)}</View>}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
+  phoneGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
+  phoneCell: { width: '48.6%', flexDirection: 'row' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, rowGap: 12 },
 });
