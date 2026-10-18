@@ -2,7 +2,7 @@
   "expo": {
     "name": "CASA & TE",
     "slug": "casa-te",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "scheme": "casate",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
