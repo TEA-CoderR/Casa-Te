@@ -74,11 +74,13 @@ export function QuantityControl({ value, onChange, label = '', min = 0, max = 99
   </View>;
 }
 
-export function EmptyState({ title, message, icon = 'bag', children }: PropsWithChildren<{
+export function EmptyState({ title, message, icon = 'bag', art, children }: PropsWithChildren<{
   title: string; message: string; icon?: IconName;
+  /** Replaces the round icon (e.g. the empty receipt of the cart). */
+  art?: ReactNode;
 }>) {
   const { wide } = useLayout();
-  return <View style={styles.empty}><View style={styles.emptyIcon}><Icon name={icon} size={40} color={colors.green} /></View>
+  return <View style={styles.empty}>{art ?? <View style={styles.emptyIcon}><Icon name={icon} size={40} color={colors.green} /></View>}
     <Text style={[styles.emptyTitle, wide && { fontFamily: fonts.serif, fontWeight: '400', fontSize: 28 }]}>{title}</Text><Text style={styles.emptyMessage}>{message}</Text>
     <View style={{ width: '100%', maxWidth: 420, marginTop: 24, gap: 12 }}>{children}</View>
   </View>;
