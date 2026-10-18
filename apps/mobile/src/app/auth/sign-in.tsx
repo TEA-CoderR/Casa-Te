@@ -270,10 +270,10 @@ export default function SignInScreen() {
         <Pressable onPress={mode === 'register' ? register : mode === 'code' ? sendCode : signIn} disabled={busy} accessibilityRole="button" accessibilityState={{ busy }} style={styles.pPrimary}>
           {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.pPrimaryText}>{mode === 'register' ? 'Crea account' : mode === 'code' ? 'Invia il codice' : 'Accedi'}</Text>}
         </Pressable>
-        <Pressable onPress={() => switchMode(mode === 'code' ? 'password' : 'code')} disabled={busy} accessibilityRole="button" style={styles.pSecondary}>
+        {mode !== 'register' && <Pressable onPress={() => switchMode(mode === 'code' ? 'password' : 'code')} disabled={busy} accessibilityRole="button" style={styles.pSecondary}>
           <Icon name="mail" size={18} color={colors.green} strokeWidth={2} />
           <Text style={styles.pSecondaryText}>{mode === 'code' ? 'Accedi con la password' : 'Accedi con un codice email'}</Text>
-        </Pressable>
+        </Pressable>}
         {mode === 'code' && <Text style={styles.pLegal}>Password dimenticata? Accedi con il codice, poi vai su Profilo → Password per sceglierne una nuova.</Text>}
       </View>}
     </Screen>;
