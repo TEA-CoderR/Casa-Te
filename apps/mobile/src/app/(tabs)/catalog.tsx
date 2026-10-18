@@ -70,11 +70,13 @@ export default function CatalogScreen() {
   const title = collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Categorie';
   const facets = useQuery(`facets:${scopeIds?.join(',') ?? 'all'}`, () => fetchFacets(scopeIds));
 
+  // The phone search page searches every department (not just the department it was opened from).
+  const requestScope = !wide && searchOpen ? null : scopeIds;
   const request = (p: number) => fetchProducts({
-    storeId: selected?.id ?? null, categoryIds: scopeIds ?? undefined, search: debounced, sort: filters.sort, page: p, onSale, featured: featuredOnly || undefined,
+    storeId: selected?.id ?? null, categoryIds: requestScope ?? undefined, search: debounced, sort: filters.sort, page: p, onSale, featured: featuredOnly || undefined,
     brands: filters.brands, colors: filters.colors, priceMin: filters.price.min, priceMax: filters.price.max,
   });
-  const key = JSON.stringify([selected?.id, scopeIds, debounced, onSale, featuredOnly, filters.sort, filters.brands, filters.colors, filters.price]);
+  const key = JSON.stringify([selected?.id, requestScope, debounced, onSale, featuredOnly, filters.sort, filters.brands, filters.colors, filters.price]);
   // Reload from page 0 whenever the filters change.
   useEffect(() => {
     let active = true;
@@ -237,7 +239,7 @@ export default function CatalogScreen() {
     const deptTitle = collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Tutti i prodotti';
     return <RollingAwning title={deptTitle}
       subtitle={loading && !items.length ? ' ' : `${count.toLocaleString('it-IT')} ${count === 1 ? 'prodotto disponibile' : 'prodotti disponibili'}${storeLabel ? ` a ${storeLabel}` : ''}`}
-      onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
+      onBack={canGoBackHere() ? goBack : undefined}
       onSearch={() => { setSearchOpen(true); router.setParams({ search: '1' }); }}
       resetKey={JSON.stringify([categoryId, onSale, featuredOnly])} overlay={filterSheetPhone}
       chips={<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.fChips} accessibilityRole="tablist">
