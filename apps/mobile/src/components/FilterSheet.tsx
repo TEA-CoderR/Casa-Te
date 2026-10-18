@@ -94,16 +94,16 @@ function Chip({ label, on, onPress, radio }: { label: string; on: boolean; onPre
 }
 
 const styles = StyleSheet.create({
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20, 24, 18, 0.4)' },
+  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(16, 24, 18, 0.5)' },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, maxWidth: 560, alignSelf: 'center', width: '100%', marginHorizontal: 'auto',
-    backgroundColor: colors.background, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 28, gap: 12 },
+    backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 28, gap: 12 },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 24, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  reset: { fontSize: 14, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium },
-  group: { fontSize: 16, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text, marginTop: 16, marginBottom: 10 },
+  title: { fontSize: 25, lineHeight: 30, fontFamily: fonts.display, color: colors.text },
+  reset: { fontSize: 14.5, color: colors.green, fontFamily: fonts.sansBold },
+  group: { fontSize: 12.5, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginTop: 16, marginBottom: 8 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
   chipOn: { backgroundColor: colors.green, borderColor: colors.green },
-  chipText: { fontSize: 14, color: colors.text, fontFamily: fonts.sans },
+  chipText: { fontSize: 14.5, color: colors.text, fontFamily: fonts.sansBold },
   empty: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans, paddingVertical: 6 },
 });

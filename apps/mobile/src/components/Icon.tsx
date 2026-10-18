@@ -39,6 +39,7 @@ const paths = {
   copy: 'M9 9h11v11H9ZM5 15H4V4h11v1',
   weight: 'M4 7h16l2 14H2L4 7Zm5 0V5a3 3 0 1 1 6 0v2',
   flyer: 'M4 5h12v14H6a2 2 0 0 1-2-2ZM16 9h4v8a2 2 0 0 1-2 2h-2M7.5 9h5M7.5 12.5h5M7.5 16h3',
+  phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z',
   percent: 'M19 5 5 19M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0M19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0',
 } as const;
 export type IconName = keyof typeof paths;

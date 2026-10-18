@@ -283,6 +283,18 @@ Each department is a white photo plate with a hairline frame (aspect 0.88, 4 px 
 ### Pickup band
 Full-bleed Forest Green section: Garamond 54 headline naming the chosen store, a translucent-outline button, and three facts (pickup, delivery, secure payment) separated by 22% white hairlines.
 
+## Phone app (design F "La Tenda")
+
+Below 900 px (and in the native app) the shop has its own visual world: the awning of a Tuscan shop front.
+
+- **Awning band:** every phone page starts with a deep green band (`#1F4127`) with tone-on-tone vertical stripes (`#234A2C`, 22 px) and a scalloped valance edge (half-discs, one per stripe). Page titles sit on it in Bodoni Moda; secondary text in `#CFDDC6`. Stack pages use the striped band as their native header.
+- **Hanging cards:** the store card, the cart's pickup card and the active-order card hang from the valance (white, 20 px radius, soft offset shadow). Store, stock and free pickup are always named.
+- **Ground and plates:** warm ivory ground `#F5F3EC`; products always on white plates (20 px radius, no border), never on tinted circles. Tinted department tiles use the product photo with `multiply`.
+- **Signal colour:** the logo yellow `#F3E33A` only for the active tab pill, cart counts, price chips and the order-ready card. Discounts stay solid red `#C8231F`.
+- **Type:** Bodoni Moda (600) for page and section titles; Figtree for everything else; prices in Figtree ExtraBold with the euro sign and cents small and raised (`PriceTag`).
+- **Navigation:** a floating deep-green pill tab bar; the active tab is a yellow pill with its label. While shopping, a white mini-cart bar rises above it with the item count.
+- **Interaction:** "+" on a product turns into a stepper in place; the product page's buy bar becomes a stepper plus "Vai al carrello", with a toast on the first add; removing a cart line offers "Annulla"; orders are shown as a pickup pass with the code for the till above a tear line.
+
 ## Do's and Don'ts
 
 ### Do:

@@ -183,7 +183,7 @@ export default function CheckoutScreen() {
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
     <SectionTitle>Consegna</SectionTitle>
     <View style={[styles.delivery, !methodQuote && styles.deliveryError]} {...(!methodQuote ? ({ dataSet: { fieldError: 'true' } } as object) : {})}>
-      <View style={styles.deliveryIcon}><Icon name={METHOD_INFO[method].icon} size={22} strokeWidth={1.4} /></View>
+      <View style={styles.deliveryIcon}><Icon name={METHOD_INFO[method].icon} size={22} color={colors.green} strokeWidth={1.9} /></View>
       <View style={{ flex: 1 }}>
         <Text style={styles.deliveryTitle}>{method === 'store' ? storeShortName(store) ? `Ritiro ${atPlace(storeShortName(store))}` : 'Ritiro in negozio' : FULFILMENT_LABELS[method]}</Text>
         <Text style={[styles.deliveryText, !methodQuote && { color: colors.danger }]}>{!methodQuote ? 'Non disponibile per questo ordine: scegline un altro'
@@ -296,19 +296,19 @@ export default function CheckoutScreen() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
-  delivery: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 14, padding: 14 },
+  delivery: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.green, borderRadius: 20, padding: 16 },
   deliveryError: { borderColor: colors.danger },
-  deliveryIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
-  deliveryTitle: { fontSize: 16, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  deliveryText: { fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
-  modify: { fontSize: 13, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium, fontWeight: '500' },
-  checkText: { fontSize: 14, color: colors.text, lineHeight: 21 },
+  deliveryIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  deliveryTitle: { fontSize: 18, lineHeight: 23, fontFamily: fonts.display, color: colors.text },
+  deliveryText: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
+  modify: { fontSize: 14, color: colors.green, fontFamily: fonts.sansBold, fontWeight: '700' },
+  checkText: { fontSize: 14.5, color: colors.text, lineHeight: 21, fontFamily: fonts.sans },
   link: { color: colors.green, textDecorationLine: 'underline', fontWeight: '600' },
   error: { color: colors.danger, fontSize: 13, marginBottom: 8 },
   fine: { color: colors.muted, fontSize: 13, lineHeight: 19, marginTop: 10 },
   footerError: { color: colors.danger, fontSize: 14, textAlign: 'center', fontWeight: '500' },
   secure: { color: colors.muted, fontSize: 12, textAlign: 'center' },
   toggle: { minHeight: 44, justifyContent: 'center', marginTop: 10 },
-  applied: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#E5F2DC', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14 },
+  applied: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.mint, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14 },
   appliedText: { flex: 1, fontSize: 14, color: colors.greenDark },
 });

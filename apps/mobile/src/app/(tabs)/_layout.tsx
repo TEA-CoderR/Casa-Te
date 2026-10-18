@@ -1,6 +1,8 @@
+import type { ComponentProps } from 'react';
 import { Tabs } from 'expo-router';
-import { View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInDown, FadeOutDown, ZoomIn } from 'react-native-reanimated';
 import { colors, fonts } from '@/config/theme';
 import { Icon, type IconName } from '@/components/Icon';
 import { useLayout } from '@/lib/hooks';
@@ -16,35 +18,83 @@ const tabs: Array<{ name: string; title: string; icon: IconName; hidden?: boolea
   { name: 'favorites', title: 'Preferiti', icon: 'heart', hidden: true },
   { name: 'orders', title: 'Ordini', icon: 'box', hidden: true },
 ];
+type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
+const visible = tabs.filter((t) => !t.hidden);
+/** Pages where the mini cart rises above the tab bar once something is in the cart. */
+const SHOPPING = new Set(['index', 'catalog', 'favorites']);
+
+/**
+ * Phone tab bar (design F): a floating deep-green pill on the ivory ground; the active tab is a yellow pill
+ * with its label. While shopping, a white mini cart rises above it with the item count.
+ */
+function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
+  const count = cartItemCount(useCartStore((s) => s.items));
+  const current = state.routes[state.index]?.name ?? 'index';
+  const go = (name: string) => {
+    const route = state.routes.find((r) => r.name === name);
+    if (!route) return;
+    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+    if (event.defaultPrevented) return;
+    // "Categorie" always opens the whole catalogue (not a filter left from "In offerta" or a department).
+    if (name === 'catalog') navigation.navigate('catalog', { offerte: '', evidenza: '', category: '' });
+    else navigation.navigate(name);
+  };
+  return <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+    {SHOPPING.has(current) && count > 0 && <Animated.View entering={FadeInDown.springify().damping(18)} exiting={FadeOutDown.duration(160)}>
+      <Pressable onPress={() => go('cart')} accessibilityRole="button" accessibilityLabel={`Vai al carrello, ${count} articoli`}
+        style={({ pressed }) => [styles.mini, pressed && { opacity: 0.92 }]}>
+        <View style={styles.miniCount}><Text style={styles.miniCountText}>{count > 99 ? '99+' : count}</Text></View>
+        <Text style={styles.miniText} numberOfLines={1}>{count === 1 ? '1 articolo nel carrello' : `${count} articoli nel carrello`}</Text>
+        <View style={styles.miniCta}><Text style={styles.miniCtaText}>Vai al carrello</Text></View>
+      </Pressable>
+    </Animated.View>}
+    <View style={styles.pill} accessibilityRole="tablist">
+      {visible.map((tab) => {
+        const on = current === tab.name || (tab.name === 'profile' && current === 'orders');
+        const badge = tab.name === 'cart' && count > 0 ? (count > 99 ? '99+' : String(count)) : '';
+        return <Pressable key={tab.name} onPress={() => go(tab.name)} accessibilityRole="tab" accessibilityState={{ selected: on }}
+          accessibilityLabel={badge ? `${tab.title}, ${count} articoli` : tab.title}
+          style={[styles.tab, on && styles.tabOn]}>
+          <View>
+            <Icon name={tab.icon} size={22} color={on ? colors.text : '#FFFFFF'} strokeWidth={on ? 1.9 : 1.8}
+              fill={on && tab.icon !== 'cart' ? colors.text : undefined} />
+            {!!badge && !on && <Animated.View key={badge} entering={ZoomIn.springify()} style={styles.badge}>
+              <Text style={styles.badgeText}>{badge}</Text></Animated.View>}
+          </View>
+          {on && <Text style={styles.tabLabel} numberOfLines={1}>{tab.title}</Text>}
+        </Pressable>;
+      })}
+    </View>
+  </View>;
+}
 
 export default function TabsLayout() {
-  const insets = useSafeAreaInsets();
   const { wide } = useLayout();
-  const count = cartItemCount(useCartStore((s) => s.items));
   // Desktop web shop: the catalogue masthead (search, wordmark, departments) replaces the tab bar.
-  return <Tabs tabBar={wide ? () => <SiteHeader /> : undefined} screenOptions={{
-    headerShown: false, tabBarActiveTintColor: colors.green, tabBarInactiveTintColor: colors.faint,
-    tabBarPosition: wide ? 'top' : 'bottom',
-    tabBarVariant: 'uikit',
-    tabBarStyle: { backgroundColor: '#FFFFFF', borderTopColor: colors.line, borderTopWidth: 1, height: 62 + Math.max(insets.bottom, 10),
-      paddingBottom: Math.max(insets.bottom, 10), paddingTop: 0, elevation: 0 },
-    tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginTop: 0 },
-    tabBarBadgeStyle: { backgroundColor: colors.sale, fontSize: 11, fontFamily: fonts.heavy, color: '#fff', minWidth: 18, height: 18, lineHeight: 18 },
+  return <Tabs tabBar={wide ? () => <SiteHeader /> : (props) => <FloatingTabBar {...props} />} screenOptions={{
+    headerShown: false, tabBarPosition: wide ? 'top' : 'bottom',
   }}>
     {tabs.map((tab) => <Tabs.Screen key={tab.name} name={tab.name}
-      // The "Categorie" tab always opens the whole catalogue (not a filter left from "In offerta" or a department).
-      listeners={tab.name === 'catalog' ? ({ navigation }) => ({
-        tabPress: (e) => { e.preventDefault(); navigation.navigate('catalog', { offerte: '', evidenza: '', category: '' }); },
-      }) : undefined}
-      options={{
-      title: tab.title, href: tab.hidden ? null : undefined,
-      tabBarBadge: tab.name === 'cart' && count > 0 ? (count > 99 ? '99+' : count) : undefined,
-      tabBarAccessibilityLabel: tab.name === 'cart' && count > 0 ? `Carrello, ${count} articoli` : undefined,
-      tabBarIcon: ({ color, focused }) => <View style={{ width: 56, height: 34, alignItems: 'center', justifyContent: 'flex-end' }}>
-        {/* Active tab: a short brand-green bar on the top edge and a solid icon (design D). */}
-        {focused && <View style={{ position: 'absolute', top: 0, width: 36, height: 4, borderBottomLeftRadius: 4, borderBottomRightRadius: 4, backgroundColor: colors.brand }} />}
-        <Icon name={tab.icon} color={color} size={24} strokeWidth={focused ? 1.6 : 1.8} fill={focused && tab.icon !== 'cart' ? color : undefined} />
-      </View>,
-    }} />)}
+      options={{ title: tab.title, href: tab.hidden ? null : undefined }} />)}
   </Tabs>;
 }
+
+const styles = StyleSheet.create({
+  dock: { backgroundColor: colors.page, paddingHorizontal: 12, paddingTop: 6, gap: 8 },
+  mini: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 58, paddingLeft: 10, paddingRight: 8, borderRadius: 20, backgroundColor: '#FFFFFF',
+    shadowColor: '#18201A', shadowOpacity: 0.18, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 8 },
+  miniCount: { minWidth: 38, height: 38, paddingHorizontal: 8, borderRadius: 19, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
+  miniCountText: { fontSize: 15, fontFamily: fonts.heavy, color: colors.text },
+  miniText: { flex: 1, fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
+  miniCta: { height: 42, paddingHorizontal: 16, borderRadius: 14, backgroundColor: colors.green, justifyContent: 'center' },
+  miniCtaText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  pill: { flexDirection: 'row', alignItems: 'center', height: 66, borderRadius: 33, paddingHorizontal: 7, backgroundColor: colors.green,
+    shadowColor: '#143019', shadowOpacity: 0.32, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 },
+  tab: { flex: 1, height: 50, borderRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  tabOn: { flex: 1.7, backgroundColor: colors.yellow },
+  tabLabel: { fontSize: 14.5, fontFamily: fonts.heavy, color: colors.text, flexShrink: 1 },
+  badge: { position: 'absolute', top: -7, right: -12, minWidth: 19, height: 19, paddingHorizontal: 4, borderRadius: 10,
+    backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontSize: 11.5, fontFamily: fonts.heavy, color: colors.text },
+});

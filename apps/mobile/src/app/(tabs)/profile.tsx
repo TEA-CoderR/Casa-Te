@@ -9,6 +9,8 @@ import { Screen } from '@/components/Screen';
 import { Icon, type IconName } from '@/components/Icon';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { PrimaryButton } from '@/components/UI';
+import { AwningEdge, AwningStripes } from '@/components/BrandHeader';
+import { StoreCard } from '@/components/StoreCard';
 import { colors, fonts } from '@/config/theme';
 import { fetchOrders, fetchProfile, updateProfile, type OrderWithItems } from '@/lib/api';
 import { useClubSettings, useLayout, useStores } from '@/lib/hooks';
@@ -190,11 +192,11 @@ export default function ProfileScreen() {
       <Icon name="chevron" size={16} color={colors.faint} strokeWidth={2} />
     </Pressable>;
 
-  if (!wide) return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.brand }} />} ground={colors.page}
+  if (!wide) return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.brand, overflow: 'hidden' }}><AwningStripes /></View>} ground={colors.page}
     contentContainerStyle={{ padding: 0, paddingBottom: 28 }}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-    <View style={[styles.pHero, active && { paddingBottom: 54 }]}>
-      <Image source={brandMonogramYellow} style={styles.pWatermark} resizeMode="contain" accessibilityIgnoresInvertColors />
+    <View style={[styles.pHero, active && { paddingBottom: 50 }]}>
+      <AwningStripes />
       {user ? <>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <View style={styles.pAvatar}><Text style={styles.pAvatarText}>{initials(name || user.email || '')}</Text></View>
@@ -213,12 +215,12 @@ export default function ProfileScreen() {
           <Text style={styles.pSignInText}>Accedi o registrati</Text></Pressable>
       </>}
     </View>
-    <View style={{ paddingHorizontal: 12, gap: 10, marginTop: active ? -40 : 12 }}>
+    <AwningEdge />
+    <View style={{ paddingHorizontal: 16, gap: 10, marginTop: active ? -46 : 12, zIndex: 2 }}>
       {active && card(<>
-        <View style={styles.pDot} />
-        <View style={{ flex: 1 }}><Text style={styles.activeLabel}>Ordine in corso · {active.order_number}</Text>
+        <View style={{ flex: 1 }}><Text style={[styles.activeLabel, { color: '#4A4512', fontFamily: fonts.sansBold }]}>Ordine in corso · {active.order_number}</Text>
           <Text style={styles.pStrong}>{orderStatusLabel(active.status, active.fulfilment)}</Text></View>
-        <Text style={styles.pLink}>Segui ›</Text>
+        <View style={styles.pFollow}><Text style={styles.pFollowText}>Segui</Text></View>
       </>, () => go(`/order/${active.id}`), `Ordine in corso ${active.order_number}`, styles.pFloat)}
       {user && <View style={{ flexDirection: 'row', gap: 8 }}>
         {tile('box', 'Ordini', () => go('/orders'), orderCount || undefined)}
@@ -226,17 +228,12 @@ export default function ProfileScreen() {
         {tile('heart', 'Preferiti', () => go('/favorites'), favourites || undefined, 'red')}
       </View>}
       {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={({ pressed }) => [styles.pClub, pressed && { opacity: 0.85 }]}>
-        <Image source={brandMonogramGreen} style={{ width: 52, height: 52 / MONOGRAM_ASPECT }} resizeMode="contain" accessibilityIgnoresInvertColors />
+        <Icon name="crown" size={26} color="#7A5310" fill="#EBCB86" strokeWidth={1.6} />
         <View style={{ flex: 1 }}><Text style={styles.pClubTitle}>Casa & Te Club</Text>
           <Text style={styles.pClubText}>{member ? 'Sei membro: guarda le offerte a te riservate.' : club.tagline}</Text></View>
-        <Icon name="chevron" size={18} color={colors.green} strokeWidth={2.4} />
+        <Icon name="chevron" size={18} color="#3D2A06" strokeWidth={2.4} />
       </Pressable>}
-      {card(<>
-        <View style={styles.pCircle}><Icon name="store" size={20} color={colors.green} strokeWidth={1.9} /></View>
-        <View style={{ flex: 1 }}><Text style={styles.activeLabel}>Il tuo negozio</Text>
-          <Text style={styles.pStrong}>{selected ? `CASA & TE ${storeName}` : 'Nessun negozio scelto'}</Text></View>
-        <Text style={styles.pLink}>{selected ? 'Cambia' : 'Scegli'}</Text>
-      </>, () => setStoreSheet(true), selected ? `Il tuo negozio: ${storeName}. Cambia negozio` : 'Scegli il negozio')}
+      <StoreCard flat label="Il tuo negozio" onPress={() => setStoreSheet(true)} />
       {user && <><Text style={styles.pGroup} accessibilityRole="header">Account</Text>
         <View style={styles.pList}>
           {row('user', 'Dati personali', () => go('/account/edit'), [name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono')}
@@ -324,38 +321,40 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: 12.5, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
 
   session: { marginTop: 36, alignItems: 'center', gap: 16 },
-  pHero: { backgroundColor: colors.brand, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 20, overflow: 'hidden' },
+  pHero: { backgroundColor: colors.brand, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 26, overflow: 'hidden' },
   pWatermark: { position: 'absolute', right: -40, top: 10, width: 200, height: 112, opacity: 0.22 },
   pAvatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
-  pAvatarText: { fontSize: 24, fontFamily: fonts.heavy, fontWeight: '800', color: colors.green },
-  pHello: { fontSize: 24, lineHeight: 28, fontFamily: fonts.heavy, fontWeight: '800', color: '#FFFFFF' },
-  pEmail: { fontSize: 14, fontFamily: fonts.sansMedium, color: '#E3EEDD', marginTop: 2 },
-  pEdit: { height: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.75)', justifyContent: 'center' },
+  pAvatarText: { fontSize: 22, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
+  pHello: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: '#FFFFFF' },
+  pEmail: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.onBrand, marginTop: 2 },
+  pEdit: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)', justifyContent: 'center' },
   pEditText: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: '#FFFFFF' },
   pMember: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 12, paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.18)' },
   pMemberText: { fontSize: 13, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.yellow },
   pSignIn: { alignSelf: 'flex-start', height: 44, paddingHorizontal: 20, borderRadius: 22, backgroundColor: colors.yellow, justifyContent: 'center', marginTop: 14 },
-  pSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
-  pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  pFloat: { borderWidth: 0, shadowColor: '#1A1F17', shadowOpacity: 0.1, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  pSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF' },
+  pFloat: { backgroundColor: colors.yellow, shadowColor: '#18201A', shadowOpacity: 0.14, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 6 },
+  pFollow: { height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.text, justifyContent: 'center' },
+  pFollowText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   pDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.brand, borderWidth: 6, borderColor: colors.mint, marginHorizontal: 2 },
   pStrong: { fontSize: 16, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text, marginTop: 1 },
   pLink: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
-  pTile: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 12, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  pTile: { flex: 1, alignItems: 'flex-start', gap: 8, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 18, backgroundColor: '#FFFFFF' },
   pCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
   pCount: { position: 'absolute', top: -4, right: -8, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   pCountText: { fontSize: 11, fontFamily: fonts.heavy, fontWeight: '800', color: '#FFFFFF' },
   pTileText: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  pClub: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 12, backgroundColor: colors.yellow },
-  pClubTitle: { fontSize: 16, fontFamily: fonts.heavy, fontWeight: '800', color: colors.green },
-  pClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sansMedium, color: '#2B3326', marginTop: 1 },
-  pGroup: { fontSize: 13, letterSpacing: 1.2, textTransform: 'uppercase', fontFamily: fonts.sansBold, fontWeight: '700', color: colors.muted, marginTop: 8, marginLeft: 4 },
-  pList: { borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14 },
+  pClub: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 20, backgroundColor: '#F5E6C8' },
+  pClubTitle: { fontSize: 18, lineHeight: 23, fontFamily: fonts.display, color: '#3D2A06' },
+  pClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sansMedium, color: '#3D2A06', marginTop: 1 },
+  pGroup: { fontSize: 12.5, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginTop: 12, marginLeft: 4 },
+  pList: { borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 16 },
   pRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 56, paddingVertical: 10 },
-  pRowTitle: { fontSize: 15.5, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text },
-  signOut: { alignSelf: 'stretch', height: 48, borderWidth: 1, borderColor: colors.line, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  signOutText: { fontSize: 15, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500' },
-  delete: { fontSize: 13, color: colors.danger, fontFamily: fonts.sans },
+  pRowTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  signOut: { alignSelf: 'stretch', height: 52, borderWidth: 1.5, borderColor: colors.line, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  signOutText: { fontSize: 15, color: colors.text, fontFamily: fonts.sansBold, fontWeight: '700' },
+  delete: { fontSize: 14, color: colors.danger, fontFamily: fonts.sansBold },
   footer: { marginTop: 36, textAlign: 'center', fontSize: 12, color: colors.muted, fontFamily: fonts.sans },
 });
