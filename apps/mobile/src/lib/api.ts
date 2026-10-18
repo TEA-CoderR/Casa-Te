@@ -154,7 +154,7 @@ export async function fetchCategoryCounts(): Promise<Record<string, number>> {
  */
 export async function fetchCategoryCovers(avoid: string[] = []): Promise<Record<string, { image: string | null; sku: string }>> {
   const rows = unwrap(await supabase.from('products').select('sku,category_id,featured,product_images(path,sort)')
-    .eq('active', true).not('category_id', 'is', null).order('featured', { ascending: false }).order('created_at').limit(500)) as unknown as
+    .eq('active', true).not('category_id', 'is', null).order('featured', { ascending: false }).order('created_at').limit(2000)) as unknown as
     Array<{ sku: string; category_id: string; product_images: Array<{ path: string; sort: number }> }>;
   const covers: Record<string, { image: string | null; sku: string }> = {};
   const skip = new Set(avoid);

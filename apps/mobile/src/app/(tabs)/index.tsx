@@ -175,11 +175,10 @@ function HomePhone() {
         return <Pressable key={category.id} accessibilityRole="link" accessibilityLabel={`Reparto ${category.name}${n ? `, ${n} prodotti` : ''}`}
           style={({ pressed }) => [styles.department, { backgroundColor: tint.bg }, pressed && { opacity: 0.85 }]} onPress={() => openCatalog({ category: category.id })}>
           <View style={styles.departmentArt}>
-            {category.image_path
-              ? <Image source={{ uri: imageUrl(category.image_path) ?? undefined }} resizeMode="contain" accessibilityIgnoresInvertColors style={[StyleSheet.absoluteFill, { mixBlendMode: 'multiply' } as object]} />
-              : cover?.image
-                ? <Image source={{ uri: cover.image }} resizeMode="contain" accessibilityIgnoresInvertColors style={[StyleSheet.absoluteFill, { mixBlendMode: 'multiply' } as object]} />
-                : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><CategoryIcon slug={category.slug} name={category.name} size={44} strokeWidth={1.3} /></View>}
+            {/* Design F: a real product photo of the department (featured first), blended into the tile colour. */}
+            {cover?.image
+              ? <Image source={{ uri: cover.image }} resizeMode="contain" accessibilityIgnoresInvertColors style={[StyleSheet.absoluteFill, { mixBlendMode: 'multiply' } as object]} />
+              : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><CategoryIcon slug={category.slug} name={category.name} size={44} strokeWidth={1.3} /></View>}
           </View>
           <Text style={[styles.departmentName, { color: tint.ink }]} numberOfLines={1}>{category.name}</Text>
           {n > 0 && <Text style={[styles.departmentCount, { color: tint.ink }]}>{n.toLocaleString('it-IT')} prodotti</Text>}

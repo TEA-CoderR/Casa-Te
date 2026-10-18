@@ -29,6 +29,17 @@ type Mode = 'password' | 'register' | 'code';
 const codeSent = (to: string) => `Abbiamo inviato un codice a ${to}. Inseriscilo qui sotto. Controlla anche lo spam.`;
 const MIN_PASSWORD = 8;
 
+/** Password strength for the meter: 0 = too short … 4 = strong. Minimum to register: 2 (8+ chars, letters and numbers). */
+export function passwordStrength(pw: string): { score: number; label: string; color: string } {
+  if (pw.length < MIN_PASSWORD) return { score: pw ? 1 : 0, label: pw ? 'Troppo corta' : '', color: '#C8231F' };
+  const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((r) => r.test(pw)).length;
+  const letters = /[A-Za-z]/.test(pw), digits = /\d/.test(pw);
+  if (!letters || !digits) return { score: 1, label: 'Debole: usa lettere e numeri', color: '#C8231F' };
+  if (pw.length >= 12 && kinds >= 3) return { score: 4, label: 'Forte', color: '#2E7D32' };
+  if (kinds >= 3 || pw.length >= 12) return { score: 3, label: 'Buona', color: '#5C8A1F' };
+  return { score: 2, label: 'Media', color: '#C98A00' };
+}
+
 export default function SignInScreen() {
   const { next } = useLocalSearchParams<{ next?: string }>();
   const { wide } = useLayout();
@@ -38,6 +49,8 @@ export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [password2, setPassword2] = useState('');
+  const [terms, setTerms] = useState(false);
   const [code, setCode] = useState('');
   const [marketing, setMarketing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -50,7 +63,7 @@ export default function SignInScreen() {
     const target = typeof next === 'string' && next.startsWith('/') ? next : '/profile';
     router.replace(target as never);
   };
-  const switchMode = (m: Mode) => { setMode(m); setAwaiting(null); setError(''); setInfo(''); setCode(''); };
+  const switchMode = (m: Mode) => { setMode(m); setAwaiting(null); setError(''); setInfo(''); setCode(''); setPassword2(''); };
 
   const signIn = async () => {
     if (!isEmail(email)) { setError('Inserisci un indirizzo email valido.'); return; }
@@ -75,7 +88,9 @@ export default function SignInScreen() {
 
   const register = async () => {
     if (!isEmail(email)) { setError('Inserisci un indirizzo email valido.'); return; }
-    if (password.length < MIN_PASSWORD) { setError(`La password deve avere almeno ${MIN_PASSWORD} caratteri.`); return; }
+    if (passwordStrength(password).score < 2) { setError(`Scegli una password di almeno ${MIN_PASSWORD} caratteri con lettere e numeri.`); return; }
+    if (password !== password2) { setError('Le due password non coincidono.'); return; }
+    if (!terms) { setError('Per creare l’account devi accettare le Condizioni di vendita e l’Informativa privacy.'); return; }
     setBusy(true); setError(''); setInfo('');
     const { data, error: e } = await supabase.auth.signUp({ email: cleanEmail, password, options: { emailRedirectTo: webRedirect(next) } });
     setBusy(false);
@@ -85,7 +100,18 @@ export default function SignInScreen() {
         : e.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.' : 'Registrazione non riuscita. Riprova.');
       return;
     }
-    if (data.session) { await done(data.session.user.id); return; }
+    if (data.session) {
+      // The project accepted the account without confirming the email (Auth "Confirm email" off):
+      // never let it in like that. Sign out and confirm ownership of the address with a code first.
+      await supabase.auth.signOut();
+      setBusy(true);
+      const { error: otpError } = await supabase.auth.signInWithOtp({ email: cleanEmail, options: { shouldCreateUser: false } });
+      setBusy(false);
+      if (otpError) { setError(otpError.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.' : 'Invio del codice non riuscito. Riprova.'); return; }
+      setAwaiting('email');
+      setInfo(codeSent(email.trim()));
+      return;
+    }
     // Already registered and confirmed: Supabase answers "ok" with no identities and sends nothing
     // (to hide which emails exist). Send a sign-in code instead, so the customer can still get in.
     if (data.user && data.user.identities?.length === 0) {
@@ -105,9 +131,14 @@ export default function SignInScreen() {
   const sendCode = async () => {
     if (!isEmail(email)) { setError('Inserisci un indirizzo email valido.'); return; }
     setBusy(true); setError(''); setInfo('');
-    const { error: e } = await supabase.auth.signInWithOtp({ email: cleanEmail, options: { shouldCreateUser: true, emailRedirectTo: webRedirect(next) } });
+    // Codes sign in existing accounts only: a new customer registers (and accepts the terms) with «Crea account».
+    const { error: e } = await supabase.auth.signInWithOtp({ email: cleanEmail, options: { shouldCreateUser: false, emailRedirectTo: webRedirect(next) } });
     setBusy(false);
-    if (e) { setError(e.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.' : 'Invio non riuscito. Riprova.'); return; }
+    if (e) {
+      setError(e.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.'
+        : /signup|not allowed|not found/i.test(e.message) ? 'Nessun account con questa email: crealo con «Crea account».' : 'Invio non riuscito. Riprova.');
+      return;
+    }
     setAwaiting('email');
     setInfo(codeSent(email.trim()));
   };
@@ -210,14 +241,32 @@ export default function SignInScreen() {
               returnKeyType="go" onSubmitEditing={mode === 'register' ? register : signIn} placeholder={mode === 'register' ? `Almeno ${MIN_PASSWORD} caratteri` : ''}
               placeholderTextColor={colors.faint} style={[styles.pInput, { flex: 1 }]} accessibilityLabel="Password" />
             <Pressable onPress={() => setShowPassword((v) => !v)} accessibilityRole="button" hitSlop={8}><Text style={styles.pShow}>{showPassword ? 'Nascondi' : 'Mostra'}</Text></Pressable>
+          </View>, mode !== 'register')}
+          {mode === 'register' && fieldRow('Ripeti la password', <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TextInput value={password2} onChangeText={setPassword2} secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false} autoComplete="new-password"
+              textContentType="newPassword" returnKeyType="go" onSubmitEditing={register} placeholder="Scrivila di nuovo" placeholderTextColor={colors.faint}
+              style={[styles.pInput, { flex: 1 }]} accessibilityLabel="Ripeti la password" />
+            {!!password2 && <Icon name={password2 === password ? 'check' : 'close'} size={18} color={password2 === password ? colors.green : colors.danger} strokeWidth={2.6} />}
           </View>, true)}
         </View>
+        {mode === 'register' && !!password && (() => {
+          const st = passwordStrength(password);
+          return <View style={styles.meter} accessibilityLabel={`Sicurezza della password: ${st.label}`}>
+            <View style={styles.meterBars}>{[1, 2, 3, 4].map((i) => <View key={i} style={[styles.meterBar, i <= st.score && { backgroundColor: st.color }]} />)}</View>
+            <Text style={[styles.meterText, { color: st.color }]}>{st.label}</Text>
+          </View>;
+        })()}
+        {mode === 'register' && <Text style={styles.pHint}>Almeno {MIN_PASSWORD} caratteri con lettere e numeri. Più è lunga, meglio è: aggiungi maiuscole o simboli.</Text>}
+        {mode === 'register' && !!password2 && password2 !== password && <Text style={styles.pError}>Le due password non coincidono.</Text>}
         {!!error && <Text style={styles.pError} accessibilityLiveRegion="polite">{error}</Text>}
         {!!info && !awaiting && <Text style={styles.pIntro}>{info}</Text>}
-        {mode === 'register' && <>
-          <Text style={styles.pLegal}>Creando l’account accetti le <Text style={styles.pLinkInline} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e confermi di aver letto l’<Text style={styles.pLinkInline} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text>.</Text>
+        {mode === 'register' && <View style={{ marginTop: 10, marginHorizontal: 2 }}>
+          <Checkbox checked={terms} onChange={setTerms}>
+            <Text style={styles.pCheck}>Ho letto e accetto le <Text style={styles.pLinkInline} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e l’<Text style={styles.pLinkInline} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text> <Text style={{ color: colors.danger }}>*</Text></Text>
+          </Checkbox>
           {marketingBox}
-        </>}
+          <Text style={styles.pHint}>Ti invieremo un codice via email per confermare l’indirizzo prima di attivare l’account.</Text>
+        </View>}
         <Pressable onPress={mode === 'register' ? register : mode === 'code' ? sendCode : signIn} disabled={busy} accessibilityRole="button" accessibilityState={{ busy }} style={styles.pPrimary}>
           {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.pPrimaryText}>{mode === 'register' ? 'Crea account' : mode === 'code' ? 'Invia il codice' : 'Accedi'}</Text>}
         </Pressable>
@@ -257,7 +306,15 @@ export default function SignInScreen() {
     </> : <>
       {emailField}
       {passwordField}
-      {mode === 'register' && marketingBox}
+      {mode === 'register' && <>
+        <TextField label="Ripeti la password" value={password2} onChangeText={setPassword2} secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false}
+          autoComplete="new-password" textContentType="newPassword" error={password2 && password2 !== password ? 'Le due password non coincidono.' : undefined}
+          hint={password ? `Sicurezza: ${passwordStrength(password).label}` : undefined} />
+        <Checkbox checked={terms} onChange={setTerms}>
+          <Text style={{ fontSize: 13, color: colors.text, lineHeight: 19 }}>Ho letto e accetto le <Text style={{ color: colors.green }} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e l'<Text style={{ color: colors.green }} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text> *</Text>
+        </Checkbox>
+        {marketingBox}
+      </>}
       <View style={{ marginTop: 16 }}>
         <PrimaryButton title={mode === 'register' ? 'Crea account' : 'Accedi'} loading={busy} onPress={mode === 'register' ? register : signIn} />
       </View>
@@ -293,6 +350,12 @@ const styles = StyleSheet.create({
   pShow: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green },
   pError: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.danger, marginTop: 10, marginHorizontal: 4 },
   pIntro: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: '#4E554B', marginHorizontal: 4, marginTop: 6 },
+  meter: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, marginHorizontal: 4 },
+  meterBars: { flex: 1, flexDirection: 'row', gap: 4 },
+  meterBar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.line },
+  meterText: { fontSize: 13, fontFamily: fonts.sansBold, minWidth: 90, textAlign: 'right' },
+  pHint: { fontSize: 12.5, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 6, marginHorizontal: 4 },
+  pCheck: { fontSize: 14, lineHeight: 20, fontFamily: fonts.sans, color: '#4E554B' },
   pLegal: { fontSize: 13, lineHeight: 19, fontFamily: fonts.sans, color: colors.muted, marginTop: 12, marginHorizontal: 4 },
   pLinkInline: { color: colors.green, fontFamily: fonts.sansBold, textDecorationLine: 'underline' },
   pPrimary: { marginTop: 16, height: 58, borderRadius: 29, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
