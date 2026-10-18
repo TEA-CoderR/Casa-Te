@@ -14,8 +14,6 @@ import { Icon } from './Icon';
 const COLLAPSED = 70;
 /** Scroll distance over which the awning rolls up. */
 const RANGE = 110;
-/** Height of the chips row (40 px chips + 6 above + 10 below). */
-const CHIPS_H = 56;
 /** The "back to top" button appears after this much scrolling… */
 const TOP_AFTER = 360;
 /** …and hides again once the page has been still this long (ms). */
@@ -24,22 +22,22 @@ const EDGE = 12;
 
 /**
  * Department page header (design G, "la tenda si arrotola"): the striped awning with the department title.
- * Scrolling down rolls it up into a slim bar (a rolled-cloth cylinder at its bottom edge that also takes up the
- * scalloped valance), the title fades away and the round search button stretches into a white search pill
- * (the search covers the whole catalogue, as before). The chips stick under the rolled awning; the awning
- * unrolls only back at the top of the page. A "back to top" button rises while scrolling and hides once the
- * page has been still for a moment.
+ * Scrolling down rolls it up into a slim bar with a straight bottom edge (the scalloped valance is pulled up with
+ * it), the title fades away and the round search button stretches into a white "Cerca in …" pill. The pill names
+ * the department, but the search page always searches the whole catalogue. The chips scroll away with the
+ * products; the awning unrolls only back at the top of the page. A "back to top" button rises while scrolling and
+ * hides once the page has been still for a moment.
  */
-export function RollingAwning({ title, subtitle, onBack, onSearch, chips, overlay, resetKey, children }: {
+export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, chips, overlay, children }: {
   title: string; subtitle?: string; onBack?: () => void;
-  /** Opens the search page (all departments). */
+  /** Department named in the pill ("Cerca in Profumeria"); without it "Cerca in tutti i prodotti". */
+  searchScope?: string;
+  /** Opens the search page (it searches every department). */
   onSearch: () => void;
-  /** Chips row content (horizontal scroll), pinned under the rolled awning. */
+  /** Chips row content (horizontal scroll), at the top of the scrolling content. */
   chips: ReactNode;
   /** Sheets and other overlays rendered over the page. */
   overlay?: ReactNode;
-  /** When it changes (another chip), a page scrolled past the chips goes back to the start of the list. */
-  resetKey?: string;
   children: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
@@ -64,14 +62,6 @@ export function RollingAwning({ title, subtitle, onBack, onSearch, chips, overla
   useEffect(() => () => { if (idle.current) clearTimeout(idle.current); }, []);
   useAnimatedReaction(() => Math.round(y.value / 8), (now, before) => { if (before !== null && now !== before) scheduleOnRN(moved, now * 8); });
 
-  // Another chip: keep the awning rolled, but show the new list from its start.
-  const pinAt = expanded + EDGE - COLLAPSED;
-  useEffect(() => {
-    if (resetKey === undefined) return;
-    if (y.value > pinAt) ref.current?.scrollTo({ y: pinAt, animated: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resetKey]);
-
   const ease = useDerivedValue(() => {
     const p = Math.max(0, Math.min(1, y.value / RANGE));
     return p * p * (3 - 2 * p);
@@ -79,10 +69,11 @@ export function RollingAwning({ title, subtitle, onBack, onSearch, chips, overla
   const band = useDerivedValue(() => exp.value - (exp.value - COLLAPSED) * ease.value);
 
   const bandStyle = useAnimatedStyle(() => ({ height: insets.top + band.value }));
-  // The valance is rolled up with the cloth: it shortens and slides up into the cylinder.
+  // The valance is rolled up with the cloth: it shortens and slides up into the band.
   const edgeStyle = useAnimatedStyle(() => ({ top: insets.top + band.value - 1, height: EDGE * (1 - ease.value) }));
   const edgeInner = useAnimatedStyle(() => ({ transform: [{ translateY: -EDGE * ease.value }] }));
-  const rollStyle = useAnimatedStyle(() => ({ height: 3 + 11 * ease.value }));
+  // Once rolled up, the band ends in a straight dark line.
+  const lineStyle = useAnimatedStyle(() => ({ opacity: Math.max(0, (ease.value - 0.6) / 0.4) }));
   const titleStyle = useAnimatedStyle(() => ({
     opacity: Math.max(0, 1 - ease.value * 1.9),
     transform: [{ translateY: -28 * ease.value }, { scale: 1 - 0.12 * ease.value }],
@@ -97,26 +88,13 @@ export function RollingAwning({ title, subtitle, onBack, onSearch, chips, overla
   const whiteIcon = useAnimatedStyle(() => ({ opacity: ease.value > 0.2 ? 0 : 1 }));
   const darkIcon = useAnimatedStyle(() => ({ opacity: ease.value > 0.2 ? 1 : 0 }));
   const labelStyle = useAnimatedStyle(() => ({ opacity: Math.max(0, (ease.value - 0.55) / 0.45) }));
-  // The chips scroll with the page until they meet the rolled awning, then stay pinned under it.
-  const chipsStyle = useAnimatedStyle(() => {
-    const natural = insets.top + exp.value + EDGE - y.value;
-    const pinned = insets.top + band.value + EDGE * (1 - ease.value);
-    return { top: Math.max(natural, pinned) };
-  });
-  const chipsShadow = useAnimatedStyle(() => ({ opacity: Math.max(0, Math.min(1, (y.value - pinAt) / 30)) }));
 
   return <View style={styles.page}>
     <Animated.ScrollView ref={ref} onScroll={onScroll} scrollEventThrottle={16} showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingTop: insets.top + expanded + EDGE + CHIPS_H, paddingBottom: 24 }}>
+      contentContainerStyle={{ paddingTop: insets.top + expanded + EDGE, paddingBottom: 24 }}>
+      <View style={{ paddingTop: 6 }}>{chips}</View>
       {children}
     </Animated.ScrollView>
-
-    {/* Pinned chips: an ivory strip that also covers the products sliding under the valance. */}
-    <Animated.View style={[styles.chips, chipsStyle]}>
-      <View pointerEvents="none" style={styles.chipsBehind} />
-      {chips}
-      <Animated.View pointerEvents="none" style={[styles.chipsShadow, chipsShadow]} />
-    </Animated.View>
 
     <Animated.View style={[styles.band, bandStyle]}>
       <AwningStripes />
@@ -125,27 +103,20 @@ export function RollingAwning({ title, subtitle, onBack, onSearch, chips, overla
         <Text style={styles.title} accessibilityRole="header" numberOfLines={2}>{title}</Text>
         {!!subtitle && <Text style={styles.subtitle} numberOfLines={2}>{subtitle}</Text>}
       </Animated.View>
-      {/* The rolled cloth: a small cylinder that thickens as the awning rolls up. */}
-      <Animated.View pointerEvents="none" style={[styles.roll, rollStyle]}>
-        <View style={{ flex: 1.4, backgroundColor: '#102617' }} />
-        <View style={{ flex: 1.2, backgroundColor: '#2F6A3A' }} />
-        <View style={{ flex: 1, backgroundColor: '#3E7A48' }} />
-        <View style={{ flex: 1.6, backgroundColor: '#1C3E24' }} />
-        <View style={{ flex: 1, backgroundColor: '#0E2213' }} />
-      </Animated.View>
+      <Animated.View pointerEvents="none" style={[styles.line, lineStyle]} />
     </Animated.View>
     <Animated.View pointerEvents="none" style={[styles.edge, edgeStyle]}><Animated.View style={edgeInner}><AwningEdge /></Animated.View></Animated.View>
 
     {onBack && <View style={[styles.back, { top: insets.top + 14 }]}><HeaderBack onPress={onBack} /></View>}
     <Animated.View style={[styles.pill, { top: insets.top + 14 }, pillStyle]}>
-      <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel="Cerca in tutti i reparti"
+      <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel={`Cerca in ${searchScope ?? 'tutti i prodotti'}`}
         style={({ pressed }) => [styles.pillInner, pressed && { opacity: 0.8 }]}>
         <View style={{ width: 20, height: 20 }}>
           <Animated.View style={[StyleSheet.absoluteFill, whiteIcon]}><Icon name="search" size={20} color="#FFFFFF" strokeWidth={2.1} /></Animated.View>
           <Animated.View style={[StyleSheet.absoluteFill, darkIcon]}><Icon name="search" size={20} color={colors.text} strokeWidth={2.1} /></Animated.View>
         </View>
         <Animated.Text style={[styles.pillText, labelStyle]} numberOfLines={1}>
-          Cerca in <Text style={styles.pillScope}>tutti i reparti</Text>
+          Cerca in <Text style={styles.pillScope}>{searchScope ?? 'tutti i prodotti'}</Text>
         </Animated.Text>
       </Pressable>
     </Animated.View>
@@ -166,7 +137,7 @@ const styles = StyleSheet.create({
   titleBlock: { position: 'absolute', left: 16, right: 16, transformOrigin: 'left top' },
   title: { fontFamily: fonts.display, color: '#FFFFFF', fontSize: 34, lineHeight: 38, letterSpacing: -0.3 },
   subtitle: { fontSize: 14.5, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
-  roll: { position: 'absolute', left: 0, right: 0, bottom: 0, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 2, shadowOffset: { width: 0, height: 2 } },
+  line: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 2, backgroundColor: colors.greenDark },
   edge: { position: 'absolute', left: 0, right: 0, zIndex: 3, overflow: 'hidden' },
   back: { position: 'absolute', left: 16, zIndex: 4 },
   pill: { position: 'absolute', right: 16, zIndex: 4, height: 44, borderRadius: 22, overflow: 'hidden',
@@ -174,9 +145,6 @@ const styles = StyleSheet.create({
   pillInner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12 },
   pillText: { flex: 1, fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.muted },
   pillScope: { fontFamily: fonts.heavy, color: colors.text },
-  chips: { position: 'absolute', left: 0, right: 0, zIndex: 2, height: CHIPS_H, paddingTop: 6, backgroundColor: colors.page },
-  chipsBehind: { position: 'absolute', left: 0, right: 0, top: -EDGE - 2, height: EDGE + 2, backgroundColor: colors.page },
-  chipsShadow: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, backgroundColor: colors.line },
   toTop: { position: 'absolute', right: 16, bottom: 16, zIndex: 5 },
   toTopButton: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.line, shadowColor: '#18201A', shadowOpacity: 0.22, shadowRadius: 22, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
