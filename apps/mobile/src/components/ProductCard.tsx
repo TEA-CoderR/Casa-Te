@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Link } from 'expo-router';
 import { discountLabel, formatEuro, unitPriceLabel } from '@/lib/price';
 import type { CatalogProduct } from '@/lib/api';
@@ -10,6 +11,7 @@ import { Icon } from './Icon';
 import { atPlace, storeShortName } from './StoreSheet';
 import { useLayout, useStores } from '@/lib/hooks';
 import { transition, type WebState } from './site/shared';
+import { PriceTag } from './UI';
 
 /** Availability is always about one store; name it so the customer knows which. */
 export function stockLabel(stock: number | null, store?: string): { text: string; available: boolean } {
@@ -40,6 +42,7 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
   const canAdd = stock.available && (product.stock === null || quantity < product.stock) && quantity < product.max_per_order;
   // Only scarce or missing stock is worth a line on the card; full availability is the default.
   const note = !stock.available || (product.stock !== null && product.stock <= 3) ? stock.text : '';
+  const setQuantity = useCartStore((s) => s.setQuantity);
   const cartButton = <Pressable accessibilityRole="button" disabled={!canAdd} onPress={() => add(product.id)}
     accessibilityLabel={quantity ? `${product.name}: ${quantity} nel carrello, aggiungi un altro` : `Aggiungi ${product.name} al carrello`}
     style={({ pressed }) => [styles.add, !wide && styles.addRound, { opacity: !canAdd ? 0.35 : pressed ? 0.75 : 1 }]}>
@@ -47,14 +50,22 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
       ? <Icon name="cart" size={17} color="#fff" strokeWidth={1.6} />
       : <Icon name="plus" size={18} color="#fff" strokeWidth={2.6} />}
   </Pressable>;
+  // Phone (design F): "+" turns into a stepper in place, so the quantity changes without leaving the list.
+  const phoneCart = quantity > 0 ? <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.stepper}>
+    <Pressable onPress={() => setQuantity(product.id, quantity - 1)} accessibilityRole="button" hitSlop={4}
+      accessibilityLabel={`Togli un ${product.name}`} style={styles.stepBtn}><Icon name="minus" size={16} color="#fff" strokeWidth={2.6} /></Pressable>
+    <Text style={styles.stepValue} accessibilityLabel={`${quantity} nel carrello`}>{quantity}</Text>
+    <Pressable onPress={() => add(product.id)} disabled={!canAdd} accessibilityRole="button" hitSlop={4}
+      accessibilityLabel={`Aggiungi un altro ${product.name}`} style={[styles.stepBtn, !canAdd && { opacity: 0.35 }]}><Icon name="plus" size={16} color="#fff" strokeWidth={2.6} /></Pressable>
+  </Animated.View> : cartButton;
   const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
   const unit = unitPriceLabel(product.price_cents, product.unit_quantity, product.unit);
-  // Phone (design D): struck price and unit price above a big condensed price, red when discounted.
+  // Phone (design F): unit or struck price above the price tag (raised cents), red when discounted.
   const price = <View style={{ flexShrink: 1 }}>
     {(!!discount || !!unit) && <Text style={styles.small} numberOfLines={1}>
       {!!discount && <Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
       {!!discount && !!unit && ' · '}{unit ?? ''}</Text>}
-    <Text style={[styles.priceBig, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
+    <PriceTag cents={product.price_cents} size={22} sale={!!discount} />
   </View>;
 
   if (variant === 'list') return <View style={styles.row}>
@@ -67,7 +78,7 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
         <View style={{ marginTop: 6 }}>{price}</View>
       </View>
     </Pressable></Link>
-    <View style={styles.rowSide}><FavoriteButton productId={product.id} name={product.name} />{cartButton}</View>
+    <View style={styles.rowSide}><FavoriteButton productId={product.id} name={product.name} />{phoneCart}</View>
   </View>;
 
   // Desktop: borderless catalogue entry, the photo on a stone plate and the text set below it like print.
@@ -105,27 +116,28 @@ export function ProductCard({ product, variant = 'grid' }: { product: CatalogPro
   return <View style={styles.card}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={styles.media}>
-        <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.05} aspect={1.08} />
+        <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.07} aspect={1.04} />
         {!!discount && <View style={styles.discount}><Text style={styles.discountText} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount.replace('-', '−')}</Text></View>}
       </View>
       <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
       {!!note && <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{note}</Text>}
     </Pressable></Link>
     <FavoriteButton productId={product.id} name={product.name} size={19} style={styles.heartCorner} />
-    <View style={styles.bottom}>{price}{cartButton}</View>
+    <View style={styles.bottom}>{price}{phoneCart}</View>
   </View>;
 }
 
 const styles = StyleSheet.create({
-  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.line, overflow: 'hidden', padding: 8, gap: 4 },
+  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, overflow: 'hidden', padding: 8, paddingBottom: 10, gap: 4,
+    shadowColor: '#18201A', shadowOpacity: 0.05, shadowRadius: 0, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
   media: { backgroundColor: colors.surface },
   heart: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
-  heartCorner: { position: 'absolute', top: 4, right: 4 },
-  discount: { position: 'absolute', left: 0, top: 0, backgroundColor: colors.sale, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  heartCorner: { position: 'absolute', top: 6, right: 6 },
+  discount: { position: 'absolute', left: 2, top: 2, backgroundColor: colors.sale, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   discountText: { fontSize: 14.5, color: '#fff', fontFamily: fonts.price, fontWeight: '800' },
-  name: { fontSize: 13.5, lineHeight: 17, fontFamily: fonts.sansMedium, fontWeight: '500', color: colors.text, minHeight: 34, marginTop: 2 },
-  meta: { fontSize: 11.5, color: colors.muted, marginTop: 1, fontFamily: fonts.sans },
-  bottom: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 6, marginTop: 'auto', paddingTop: 2 },
+  name: { fontSize: 13.5, lineHeight: 17, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text, minHeight: 34, marginTop: 4, paddingHorizontal: 4 },
+  meta: { fontSize: 11.5, color: colors.muted, marginTop: 1, fontFamily: fonts.sans, paddingHorizontal: 4 },
+  bottom: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 6, marginTop: 'auto', paddingTop: 4, paddingLeft: 4, minHeight: 44 },
   small: { fontSize: 11.5, color: colors.faint, fontFamily: fonts.sansMedium },
   compareSmall: { textDecorationLine: 'line-through' },
   priceBig: { fontSize: 23, lineHeight: 26, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
@@ -133,7 +145,10 @@ const styles = StyleSheet.create({
   price: { fontSize: 18.5, fontFamily: fonts.serifMedium, color: colors.text },
   compare: { fontSize: 12, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
   add: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-  addRound: { width: 36, height: 36, borderRadius: 18 },
+  addRound: { width: 40, height: 40, borderRadius: 20 },
+  stepper: { flexDirection: 'row', alignItems: 'center', height: 40, borderRadius: 20, backgroundColor: colors.green },
+  stepBtn: { width: 34, height: 40, alignItems: 'center', justifyContent: 'center' },
+  stepValue: { minWidth: 14, textAlign: 'center', fontSize: 15, fontFamily: fonts.heavy, color: '#fff' },
   addCount: { color: '#fff', fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700' },
   entry: { flex: 1 },
   plate: { backgroundColor: colors.photo, borderRadius: 4, overflow: 'hidden', borderWidth: 1, borderColor: colors.photoLine },
@@ -145,7 +160,7 @@ const styles = StyleSheet.create({
   entryName: { fontSize: 19, lineHeight: 23, fontFamily: fonts.serif, color: colors.text },
   entryNameBig: { fontSize: 28, lineHeight: 32 },
   entryBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, gap: 8, marginTop: 'auto' },
-  row: { flexDirection: 'row', gap: 12, padding: 10, marginBottom: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, alignItems: 'center' },
+  row: { flexDirection: 'row', gap: 12, padding: 10, marginBottom: 8, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center' },
   rowLink: { flex: 1, flexDirection: 'row', gap: 14, alignItems: 'center' },
   rowMedia: { width: 84, borderRadius: 8, backgroundColor: colors.surface, overflow: 'hidden' },
   rowSide: { alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', gap: 8 },

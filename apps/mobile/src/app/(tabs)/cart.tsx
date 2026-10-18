@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { BrandHeader } from '@/components/BrandHeader';
+import { BrandHeader, HangingCard, StatusBand } from '@/components/BrandHeader';
+import { AwningMark } from '@/components/StoreCard';
 import { brandMonogramGreen, MONOGRAM_ASPECT } from '@/config/brand';
 import { router } from 'expo-router';
 import { FREE_SHIPPING_MAX_WEIGHT_G, FULFILMENT_LABELS, formatPackSize, formatWeight, freeShippingRemainingCents, type QuoteLine } from '@casa-te/shared';
@@ -13,7 +14,7 @@ import { ProductImage } from '@/components/ProductImage';
 import { EmptyState, Loading, Notice, PageTitle, PrimaryButton, QuantityControl, SummaryRow } from '@/components/UI';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
-import { colors, fonts } from '@/config/theme';
+import { colors, floatShadow, fonts } from '@/config/theme';
 import { fetchProducts, imageUrl } from '@/lib/api';
 import { useCartQuote, useClubSettings, useDelivery, useLayout } from '@/lib/hooks';
 import { cartItemCount, useCartStore } from '@/store/cart';
@@ -103,15 +104,14 @@ export default function CartScreen() {
     <Text style={styles.vat}>IVA inclusa</Text>
   </View>;
 
-  // Phone (design D): green band, white cards on the light ground, totals and the button pinned at the bottom.
+  // Phone (design F): the awning with the count, the pickup card hanging from it, white line plates, totals in a sheet.
   if (!wide) {
     const savings = quote.lines.reduce((sum, line) => {
       const compare = byId.get(line.product_id)?.compare_at_price_cents;
       return !line.issue && compare && line.unit_price_cents !== null && compare > line.unit_price_cents
         ? sum + (compare - line.unit_price_cents) * line.quantity : sum;
     }, 0);
-    const header = <BrandHeader title="Carrello"
-      right={<View style={styles.countPill}><Text style={styles.countPillText}>{count} {count === 1 ? 'articolo' : 'articoli'}</Text></View>} />;
+    const header = <BrandHeader inScroll title="Carrello" subtitle={`${count} ${count === 1 ? 'articolo' : 'articoli'}`} overlap={30} />;
     const footer = <View style={{ gap: 6 }}>
       <View style={styles.footRow}><Text style={styles.footLabel}>Totale prodotti</Text><Text style={styles.footValue}>{formatEuro(subtotal)}</Text></View>
       {!!t?.discount_cents && <View style={styles.footRow}><Text style={styles.footLabel}>Sconto</Text><Text style={styles.footValue}>-{formatEuro(t.discount_cents)}</Text></View>}
@@ -123,19 +123,13 @@ export default function CartScreen() {
         <Text style={styles.footTotal}>{t?.total_cents != null ? formatEuro(t.total_cents) : '—'}</Text></View>
       {cta}
     </View>;
-    return <Screen header={header} ground={colors.page} onRefresh={refresh} refreshing={loading} footer={footer}
-      contentContainerStyle={{ padding: 12, paddingBottom: 24, gap: 10 }}>
+    return <Screen header={<StatusBand />} top={header} ground={colors.page} onRefresh={refresh} refreshing={loading} footer={footer}
+      contentContainerStyle={{ padding: 0, paddingBottom: 24 }} bodyStyle={{ paddingHorizontal: 16, gap: 10 }}>
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
       <FulfilmentSheet visible={deliverySheet} onClose={() => setDeliverySheet(false)} quote={quote} storeName={storeName || 'negozio'}
         onChangeStore={() => setStoreSheet(true)} />
-      {removed && <View style={[styles.undo, { marginBottom: 0 }]} accessibilityLiveRegion="polite">
-        <Text style={styles.undoText}>{removed.name} rimosso dal carrello.</Text>
-        <Pressable onPress={() => { add(removed.id, removed.qty); setRemoved(null); }} accessibilityRole="button"><Text style={styles.undoLink}>Annulla</Text></Pressable>
-      </View>}
-      {hasIssues && <Notice tone="error" title="Alcuni articoli richiedono attenzione"
-        message="Modifica le quantità o rimuovi gli articoli segnalati per continuare." />}
-      <View style={styles.pCard}>
-        <View style={styles.pCircle}><Icon name={fulfilment === 'store' ? 'store' : fulfilment === 'home' ? 'truck' : 'pin'} size={20} color={colors.green} strokeWidth={1.9} /></View>
+      <HangingCard overlap={18} style={{ marginHorizontal: 0 }}><View style={[styles.pCard, floatShadow]}>
+        {fulfilment === 'store' ? <AwningMark size={42} /> : <View style={styles.pCircle}><Icon name={fulfilment === 'home' ? 'truck' : 'pin'} size={20} color={colors.green} strokeWidth={1.9} /></View>}
         <View style={{ flex: 1 }}>
           <Text style={styles.pTitle}>{fulfilment === 'store' ? storeName ? `Ritiro ${atPlace(storeName)}` : 'Ritiro in negozio' : FULFILMENT_LABELS[fulfilment]}</Text>
           <Text style={styles.pText}>{!methodOk ? 'Non disponibile per questo ordine: scegline un altro'
@@ -143,13 +137,19 @@ export default function CartScreen() {
         </View>
         <Pressable onPress={() => setDeliverySheet(true)} accessibilityRole="button" accessibilityLabel="Modifica consegna" hitSlop={8}>
           <Text style={styles.pLink}>Modifica</Text></Pressable>
-      </View>
+      </View></HangingCard>
+      {removed && <View style={styles.snack} accessibilityLiveRegion="polite">
+        <Text style={styles.snackText} numberOfLines={1}>Rimosso: {removed.name}</Text>
+        <Pressable onPress={() => { add(removed.id, removed.qty); setRemoved(null); }} accessibilityRole="button" hitSlop={8}><Text style={styles.snackLink}>Annulla</Text></Pressable>
+      </View>}
+      {hasIssues && <Notice tone="error" title="Alcuni articoli richiedono attenzione"
+        message="Modifica le quantità o rimuovi gli articoli segnalati per continuare." />}
       <View style={styles.pLines}>
         {quote.lines.map((line, index) => {
           const max = Math.min(99, Math.max(line.available_quantity, line.quantity));
           const p = byId.get(line.product_id);
           const compare = p?.compare_at_price_cents && line.unit_price_cents !== null && p.compare_at_price_cents > line.unit_price_cents ? p.compare_at_price_cents : null;
-          return <View key={line.product_id} style={[styles.pLine, index > 0 && { borderTopWidth: 1, borderColor: '#ECEEE9' }]}>
+          return <View key={line.product_id} style={[styles.pLine, index > 0 && { marginTop: 8 }]}>
             <Pressable style={styles.pThumb} onPress={() => router.push(`/product/${line.product_id}`)} accessibilityLabel={line.name}>
               <ProductImage uri={imageUrl(line.image_path)} sku={line.sku} label={line.name} inset={0.06} />
             </Pressable>
@@ -159,6 +159,7 @@ export default function CartScreen() {
               <View style={styles.lineBottom}>
                 <Text numberOfLines={1} style={{ flexShrink: 1 }}>
                   {!line.issue && <Text style={[styles.pPrice, !!compare && { color: colors.sale }]}>{formatEuro(line.line_total_cents)}</Text>}
+                  {!line.issue && !compare && line.quantity > 1 && line.unit_price_cents !== null && <Text style={styles.pEach}>{'\n'}{formatEuro(line.unit_price_cents)} cad.</Text>}
                   {!line.issue && !!compare && <Text style={styles.pCompare}>  {formatEuro(compare * line.quantity)}</Text>}
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -231,6 +232,9 @@ export default function CartScreen() {
 
 const styles = StyleSheet.create({
   undo: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.cream, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
+  snack: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, borderRadius: 16, paddingHorizontal: 16, backgroundColor: colors.text },
+  snackText: { flex: 1, fontSize: 14.5, fontFamily: fonts.sansSemiBold, color: '#FFFFFF' },
+  snackLink: { fontSize: 14.5, fontFamily: fonts.heavy, color: colors.yellow },
   undoText: { flex: 1, fontSize: 14, color: colors.text, fontFamily: fonts.sans },
   undoLink: { fontSize: 14, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.green, textDecorationLine: 'underline' },
   wide: { flexDirection: 'row', gap: 40, alignItems: 'flex-start' },
@@ -259,25 +263,26 @@ const styles = StyleSheet.create({
   vat: { fontSize: 12, color: colors.muted, textAlign: 'right', marginTop: 2, fontFamily: fonts.sans },
   countPill: { backgroundColor: colors.yellow, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
   countPillText: { fontSize: 13.5, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
-  pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF' },
   pCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
-  pTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  pTitle: { fontSize: 18, lineHeight: 23, fontFamily: fonts.display, color: colors.text },
   pText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
   pLink: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
-  pLines: { borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, paddingHorizontal: 12 },
-  pLine: { flexDirection: 'row', gap: 12, paddingVertical: 12 },
-  pThumb: { width: 72, height: 72, borderRadius: 8, backgroundColor: colors.photo, justifyContent: 'center', overflow: 'hidden' },
-  pName: { fontSize: 14.5, lineHeight: 18, fontFamily: fonts.sansMedium, fontWeight: '500', color: colors.text },
-  pPrice: { fontSize: 21, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
+  pLines: { marginTop: 2 },
+  pLine: { flexDirection: 'row', gap: 12, padding: 8, paddingRight: 12, borderRadius: 18, backgroundColor: '#FFFFFF' },
+  pThumb: { width: 80, height: 80, borderRadius: 12, backgroundColor: colors.photo, justifyContent: 'center', overflow: 'hidden' },
+  pName: { fontSize: 14.5, lineHeight: 18, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text },
+  pPrice: { fontSize: 18, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
+  pEach: { fontSize: 11.5, fontFamily: fonts.sansMedium, color: colors.muted },
   pCompare: { fontSize: 12.5, fontFamily: fonts.sansMedium, color: colors.faint, textDecorationLine: 'line-through' },
-  pClub: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 12, backgroundColor: colors.yellow },
-  pClubTitle: { fontSize: 16, fontFamily: fonts.heavy, fontWeight: '800', color: colors.green },
-  pClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sansMedium, color: '#2B3326', marginTop: 1 },
+  pClub: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, backgroundColor: '#F5E6C8' },
+  pClubTitle: { fontSize: 18, lineHeight: 23, fontFamily: fonts.display, color: '#3D2A06' },
+  pClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sansMedium, color: '#3D2A06', marginTop: 1 },
   footRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  footLabel: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.muted },
-  footValue: { fontSize: 14, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text },
+  footLabel: { fontSize: 15, fontFamily: fonts.sansMedium, color: '#4E554B' },
+  footValue: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   save: { color: colors.sale, fontFamily: fonts.sansBold, fontWeight: '700' },
-  footTotalLabel: { fontSize: 18, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
+  footTotalLabel: { fontSize: 21, fontFamily: fonts.display, color: colors.text },
   footVat: { fontSize: 12, fontFamily: fonts.sansMedium, fontWeight: '500', color: colors.muted },
-  footTotal: { fontSize: 30, lineHeight: 34, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
+  footTotal: { fontSize: 28, lineHeight: 34, fontFamily: fonts.price, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
 });

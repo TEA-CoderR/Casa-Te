@@ -19,16 +19,24 @@ type Props = PropsWithChildren<{
   header?: ReactNode;
   /** Page ground behind the content (phone pages use the light ground under white cards). */
   ground?: string;
+  /**
+   * Full-bleed band at the top of the scrolling content (the awning with a card hanging from it). It scrolls
+   * with the page, so cards can overlap it; `header` then only paints the status bar area.
+   */
+  top?: ReactNode;
+  /** Style of the column that holds the children (padding and gaps when `top` needs a bleed-free scroll content). */
+  bodyStyle?: ViewStyle;
 }>;
 
-export function Screen({ children, contentContainerStyle, footer, stack = false, refreshing, onRefresh, maxWidth = 1120, after, bleed = 20, header, ground }: Props) {
+export function Screen({ children, contentContainerStyle, footer, stack = false, refreshing, onRefresh, maxWidth = 1120, after, bleed = 20, header, ground, top, bodyStyle }: Props) {
   return <SafeAreaView style={[styles.safe, ground ? { backgroundColor: ground } : null]} edges={stack ? ['bottom'] : header ? [] : ['top']}>
     {header}
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={stack ? 88 : 0}>
       <ScrollView contentContainerStyle={[styles.content, contentContainerStyle]}
         showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
         refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={colors.green} /> : undefined}>
-        <View style={{ width: '100%', maxWidth, alignSelf: 'center' }}>{children}</View>
+        {top}
+        <View style={[{ width: '100%', maxWidth, alignSelf: 'center' }, bodyStyle]}>{children}</View>
         {after && <View style={{ marginHorizontal: -bleed, marginBottom: -40 }}>{after}</View>}
       </ScrollView>
       {footer && <View style={styles.footer}><View style={{ width: '100%', maxWidth, alignSelf: 'center' }}>{footer}</View></View>}
@@ -39,5 +47,7 @@ export function Screen({ children, contentContainerStyle, footer, stack = false,
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, paddingBottom: 40 },
-  footer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12, borderTopWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
+  // Phone pages: a white sheet with rounded top corners over the ivory ground (design F).
+  footer: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    shadowColor: '#18201A', shadowOpacity: 0.08, shadowRadius: 18, shadowOffset: { width: 0, height: -6 }, elevation: 12 },
 });

@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { FULFILMENT_LABELS, orderStatusLabel } from '@casa-te/shared';
+import { FULFILMENT_LABELS, orderStatusLabel, orderTimeline } from '@casa-te/shared';
 import { formatEuro } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
@@ -9,7 +9,7 @@ import { EmptyState, Loading, Notice, PageTitle, PrimaryButton } from '@/compone
 import { Icon } from '@/components/Icon';
 import { ProductImage } from '@/components/ProductImage';
 import { OrderTimeline } from '@/components/OrderTimeline';
-import { colors } from '@/config/theme';
+import { colors, fonts } from '@/config/theme';
 import { fetchOrders, imageUrl, type OrderWithItems } from '@/lib/api';
 import { useLayout } from '@/lib/hooks';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
@@ -41,8 +41,10 @@ export default function OrdersScreen() {
         <View style={styles.top}><View style={{ flex: 1 }}>
           <Text style={styles.date}>{new Date(order.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
           <Text style={styles.orderId}>{order.order_number}</Text></View>
-          <View style={[styles.status, order.status === 'pending_payment' && { backgroundColor: '#FFF4D6' }]}>
-            <View style={styles.statusDot} /><Text style={styles.statusText}>{orderStatusLabel(order.status, order.fulfilment)}</Text></View></View>
+          <View style={[styles.status, order.status === 'ready' && { backgroundColor: colors.yellow }, order.status === 'pending_payment' && { backgroundColor: '#FFF4D6' },
+            (order.status === 'completed' || order.status === 'cancelled') && { backgroundColor: colors.well }]}>
+            <View style={[styles.statusDot, order.status === 'ready' && { backgroundColor: colors.text }]} />
+            <Text style={[styles.statusText, order.status === 'ready' && { color: colors.text }]}>{orderStatusLabel(order.status, order.fulfilment)}</Text></View></View>
         <View style={styles.products}>{order.order_items.slice(0, 4).map((line) =>
           <View key={line.id} style={styles.thumb}><ProductImage uri={imageUrl(line.image_path)} sku={line.sku} inset={0.13} /></View>)}
           {order.order_items.length > 4 && <Text style={styles.more}>+{order.order_items.length - 4}</Text>}</View>
@@ -50,22 +52,27 @@ export default function OrdersScreen() {
           <Text style={styles.total}>{formatEuro(order.total_cents)}</Text></View>
         <View style={styles.fulfilment}><Icon name={order.fulfilment === 'store' ? 'store' : 'truck'} size={18} color={colors.green} />
           <Text style={styles.fulfilmentText}>{FULFILMENT_LABELS[order.fulfilment]}</Text><Icon name="chevron" size={16} color={colors.muted} /></View>
-        {order.status !== 'pending_payment' && <OrderTimeline order={order} />}
+        {order.status !== 'pending_payment' && (phone
+          ? order.status !== 'cancelled' && <View style={styles.bars}>{orderTimeline(order.fulfilment).map((step, i, steps) =>
+              <View key={step} style={[styles.bar, steps.indexOf(order.status) >= i && { backgroundColor: colors.green }]} />)}</View>
+          : <OrderTimeline order={order} />)}
       </Pressable>)}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  order: { backgroundColor: '#fff', borderRadius: 20, padding: 19, marginBottom: 18, borderWidth: 1, borderColor: '#E8EBE3' },
+  order: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 10 },
+  bars: { flexDirection: 'row', gap: 4, marginTop: 14 },
+  bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.line },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  date: { fontSize: 16, fontWeight: '500', color: colors.text }, orderId: { fontSize: 12, color: colors.muted, marginTop: 5 },
-  status: { flexDirection: 'row', gap: 5, alignItems: 'center', paddingHorizontal: 9, paddingVertical: 6, borderRadius: 14, backgroundColor: '#EBF1E5' },
-  statusDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.green }, statusText: { color: colors.green, fontSize: 12 },
-  products: { flexDirection: 'row', gap: 9, marginTop: 20, alignItems: 'center' },
-  thumb: { width: 60, height: 60, borderRadius: 11, backgroundColor: '#F1F2ED', overflow: 'hidden' },
+  date: { fontSize: 16, fontFamily: fonts.heavy, color: colors.text }, orderId: { fontSize: 13, color: colors.muted, marginTop: 3, fontFamily: fonts.sansMedium },
+  status: { flexDirection: 'row', gap: 6, alignItems: 'center', paddingHorizontal: 12, height: 30, borderRadius: 15, backgroundColor: colors.mint },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.green }, statusText: { color: colors.green, fontSize: 12.5, fontFamily: fonts.heavy },
+  products: { flexDirection: 'row', gap: 8, marginTop: 14, alignItems: 'center' },
+  thumb: { width: 56, height: 56, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EFECE3', overflow: 'hidden' },
   more: { color: colors.muted, fontSize: 12 },
-  totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 1, borderColor: colors.line },
-  meta: { color: colors.muted, fontSize: 12 }, total: { fontSize: 21, fontWeight: '600', color: colors.text },
-  fulfilment: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingTop: 17 },
-  fulfilmentText: { fontSize: 12, color: colors.green, flex: 1 },
+  totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12 },
+  meta: { color: colors.muted, fontSize: 13, fontFamily: fonts.sansMedium }, total: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text },
+  fulfilment: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 10 },
+  fulfilmentText: { fontSize: 13.5, color: colors.green, flex: 1, fontFamily: fonts.sansBold },
 });
