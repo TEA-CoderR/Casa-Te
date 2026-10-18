@@ -144,9 +144,9 @@ function HomePhone() {
           onMomentumScrollEnd={(e) => setSlide(Math.round(e.nativeEvent.contentOffset.x / slideWidth))}>
           {slides.map((s) => <Pressable key={s.key} onPress={s.onPress} accessibilityRole="link" accessibilityLabel={`${s.title}. ${s.text}. ${s.cta}`}
             style={[styles.slide, { width: slideWidth, backgroundColor: s.bg }]}>
-            {(s.product || s.image) && <View style={styles.slideArt}>
-              {s.image ? <Image source={{ uri: s.image }} resizeMode="contain" style={{ width: '100%', height: '100%' }} accessibilityIgnoresInvertColors />
-                : <ProductImage uri={s.product!.image} sku={s.product!.sku} inset={0} aspect={168 / 180} />}
+            {(s.product || s.image) && <View style={[styles.slideArt, { backgroundColor: s.bg }]}>
+              {s.image ? <Image source={{ uri: s.image }} resizeMode="contain" style={{ width: '100%', height: '100%', mixBlendMode: 'multiply' } as object} accessibilityIgnoresInvertColors />
+                : <ProductImage uri={s.product!.image} sku={s.product!.sku} inset={0} aspect={168 / 180} blend backdrop={s.bg} />}
             </View>}
             <View style={styles.slideText}>
               <Text style={[styles.slideTitle, { color: s.ink }]}>{s.title}</Text>
@@ -174,7 +174,8 @@ function HomePhone() {
         const n = countFor(category);
         return <Pressable key={category.id} accessibilityRole="link" accessibilityLabel={`Reparto ${category.name}${n ? `, ${n} prodotti` : ''}`}
           style={({ pressed }) => [styles.department, { backgroundColor: tint.bg }, pressed && { opacity: 0.85 }]} onPress={() => openCatalog({ category: category.id })}>
-          <View style={styles.departmentArt}>
+          {/* Web: every view is its own stacking context, so the tile colour is painted right behind the photo for `multiply`. */}
+          <View style={[styles.departmentArt, { backgroundColor: tint.bg }]}>
             {/* Design F: a real product photo of the department (featured first), blended into the tile colour. */}
             {cover?.image
               ? <Image source={{ uri: cover.image }} resizeMode="contain" accessibilityIgnoresInvertColors style={[StyleSheet.absoluteFill, { mixBlendMode: 'multiply' } as object]} />
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
   pillText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
   hero: { marginHorizontal: 16, height: 196, borderRadius: 24, overflow: 'hidden' },
   slide: { height: 196 },
-  slideArt: { position: 'absolute', right: 6, bottom: 0, width: 168, height: 180, mixBlendMode: 'multiply' } as object,
+  slideArt: { position: 'absolute', right: 6, bottom: 0, width: 168, height: 180 },
   slideText: { position: 'absolute', left: 22, top: 22, width: 186 },
   slideTitle: { fontSize: 25, lineHeight: 28, fontFamily: fonts.display },
   slideBody: { fontSize: 13.5, lineHeight: 18, fontFamily: fonts.sansMedium, marginTop: 6, opacity: 0.85 },
