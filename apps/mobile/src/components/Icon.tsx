@@ -45,6 +45,7 @@ const paths = {
   sliders: 'M4 7h10M18 7h2M4 17h2M10 17h10M18 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0M10 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0',
   lock: 'M5 11h14v10H5ZM8 11V8a4 4 0 0 1 8 0v3',
   phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z',
+  up: 'M12 19V5M5 12l7-7 7 7',
   percent: 'M19 5 5 19M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0M19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0',
 } as const;
 export type IconName = keyof typeof paths;
