@@ -7,7 +7,8 @@ import { ProductCard } from '@/components/ProductCard';
 import { EMPTY_FILTERS, FilterSheet, type FilterSection, type Filters } from '@/components/FilterSheet';
 import { Loading, Notice, SecondaryButton } from '@/components/UI';
 import { Icon } from '@/components/Icon';
-import { BrandHeader, HeaderBack, HeaderButton, HeaderSearch } from '@/components/BrandHeader';
+import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
+import { RollingAwning } from '@/components/RollingAwning';
 import { colors, fonts } from '@/config/theme';
 import { fetchCategories, fetchFacets, fetchProducts, type CatalogProduct } from '@/lib/api';
 import { ProductImage } from '@/components/ProductImage';
@@ -233,16 +234,15 @@ export default function CatalogScreen() {
       </Screen>;
     }
 
-    const header = <BrandHeader stacked
-      title={collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Tutti i prodotti'}
+    const deptTitle = collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Tutti i prodotti';
+    return <RollingAwning title={deptTitle}
       subtitle={loading && !items.length ? ' ' : `${count.toLocaleString('it-IT')} ${count === 1 ? 'prodotto disponibile' : 'prodotti disponibili'}${storeLabel ? ` a ${storeLabel}` : ''}`}
-      left={canGoBackHere() ? <HeaderBack onPress={goBack} /> : undefined}
-      right={<HeaderButton icon="search" label={parent ? `Cerca in ${parent.name}` : 'Cerca prodotti'} onPress={() => { setSearchOpen(true); router.setParams({ search: '1' }); }} />} />;
-    return <Screen header={header} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
-      {filterSheetPhone}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.fChips} accessibilityRole="tablist">
+      onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
+      onSearch={() => { setSearchOpen(true); router.setParams({ search: '1' }); }}
+      resetKey={JSON.stringify([categoryId, onSale, featuredOnly])} overlay={filterSheetPhone}
+      chips={<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.fChips} accessibilityRole="tablist">
         {tabs.map((item) => chip(item.id ?? 'all', item.name, activeTab === item.id, () => selectCategory(item.id)))}
-      </ScrollView>
+      </ScrollView>}>
       <View style={styles.fBar}>
         <Text style={styles.fCount}>{loading && !items.length ? ' ' : `${shown.length} ${shown.length === 1 ? 'prodotto mostrato' : 'prodotti mostrati'}`}</Text>
         <Pressable onPress={() => setSheet('all')} accessibilityRole="button" accessibilityLabel={`Filtra e ordina${filterCount ? `, ${filterCount} attivi` : ''}`} style={styles.fButton}>
@@ -255,7 +255,7 @@ export default function CatalogScreen() {
         <View style={styles.fGrid}>{shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
         {more}
       </View>
-    </Screen>;
+    </RollingAwning>;
   }
 
   return <Screen contentContainerStyle={wide ? { paddingTop: 0, paddingHorizontal: 40 } : { paddingTop: 4 }} maxWidth={wide ? SITE_WIDTH - 80 : undefined}
@@ -335,7 +335,7 @@ export default function CatalogScreen() {
 const SWATCHES = ['#F4DED6', '#DCE9F2', '#F5E6C8', '#DCE7D3', '#ECE6F3', '#E6E3DA', '#E2EEEC', '#F3E3EA'];
 
 const styles = StyleSheet.create({
-  fChips: { paddingHorizontal: 16, paddingTop: 6, gap: 8 },
+  fChips: { paddingHorizontal: 16, gap: 8 },
   fChip: { height: 40, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: colors.line, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   fChipOn: { backgroundColor: colors.green, borderColor: colors.green },
   fChipText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
