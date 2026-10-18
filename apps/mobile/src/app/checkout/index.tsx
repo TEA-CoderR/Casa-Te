@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router, Stack } from 'expo-router';
 import { FULFILMENT_LABELS, formatWeight, friendlyError, isPhone, validateAddress, validateInvoice, type Address, type AddressRow, type CreateOrderInput, type FulfilmentMethod, type InvoiceDetails, type PickupPointRow } from '@casa-te/shared';
 import { formatEuro, formatShipping } from '@/lib/price';
 import { Screen } from '@/components/Screen';
@@ -11,8 +12,9 @@ import {
   Checkbox, EmptyState, Loading, Notice, OptionCard, PrimaryButton, SecondaryButton, SectionTitle, SummaryRow, TextField,
 } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
-import { fetchAddresses, fetchPickupPoints, fetchProfile, saveAddress, startCheckout, updateProfile } from '@/lib/api';
-import { useCartQuote, useCompanies, useDelivery } from '@/lib/hooks';
+import { fetchAddresses, fetchPickupPoints, fetchProfile, imageUrl, saveAddress, startCheckout, updateProfile } from '@/lib/api';
+import { ProductImage } from '@/components/ProductImage';
+import { useCartQuote, useCompanies, useDelivery, useLayout } from '@/lib/hooks';
 import { usePreferences } from '@/store/preferences';
 import { openCheckout } from '@/lib/payments';
 import { useQuery } from '@/lib/useQuery';
@@ -33,6 +35,10 @@ export default function CheckoutScreen() {
   const user = useUser();
   // The delivery method is chosen in the cart; here it is only summarised (and can be changed in the same sheet).
   const method = usePreferences((s) => s.fulfilment);
+  const setFulfilment = usePreferences((s) => s.setFulfilment);
+  const { wide } = useLayout();
+  const insets = useSafeAreaInsets();
+  const [summaryOpen, setSummaryOpen] = useState(false);
   useDelivery();
   const [deliverySheet, setDeliverySheet] = useState(false);
   const [storeSheet, setStoreSheet] = useState(false);
@@ -165,6 +171,176 @@ export default function CheckoutScreen() {
   const fieldError = (k: string) => err(k) ? <Text style={styles.error} {...({ dataSet: { fieldError: 'true' } } as object)} accessibilityRole="alert">{err(k)}</Text> : null;
 
   const pending = attempted ? Object.keys(liveErrors).filter((k) => k !== 'cart').length : 0;
+
+  // Phone (design F, F-Checkout): ivory page with its own header, radio cards, grouped white field cards,
+  // a folding summary, the terms, and the total with "Paga" in a white sheet.
+  if (!wide) {
+    const euro = (c: number) => formatEuro(c).replace(/€\s/, '€');
+    const methods = (['store', 'home', 'pickup'] as FulfilmentMethod[]).filter((m) => m === method || quote.shipping[m] != null);
+    const field = (key: string, label: string, value: string, onChange: (v: string) => void, extra: object = {}, last = false) =>
+      <View key={key} style={[styles.fRow, !last && styles.fRule]}>
+        <Text style={styles.fLabel}>{label}</Text>
+        <TextInput value={value} onChangeText={onChange} accessibilityLabel={label} placeholderTextColor={colors.faint} style={styles.fInput}
+          {...({ dataSet: { invalid: err(key) ? 'true' : 'false' } } as object)} {...extra} />
+        {!!err(key) && <Text style={styles.fError} accessibilityLiveRegion="polite">{err(key)}</Text>}
+      </View>;
+    const radio = (on: boolean) => <View style={[styles.radio, on && { borderColor: colors.green }]}>{on && <View style={styles.radioDot} />}</View>;
+    const head = <View style={[styles.head, { paddingTop: insets.top + 14 }]}>
+      <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Torna al carrello" style={styles.headBack}>
+        <Icon name="back" size={22} color={colors.text} strokeWidth={2.2} /></Pressable>
+      <Text style={styles.headTitle} accessibilityRole="header">Conferma l’ordine</Text>
+    </View>;
+    const ready = accepted && !busy && !quoting && total !== null && quote.issue_count === 0;
+    return <Screen header={head} ground={colors.page} contentContainerStyle={{ padding: 16, paddingTop: 6, paddingBottom: 24 }}
+      footer={<View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <Text style={styles.payLabel}>{method === 'store' ? 'Totale · ritiro gratuito' : `Totale · ${FULFILMENT_LABELS[method].toLowerCase()}`}</Text>
+          <Text style={styles.payTotal}>{total !== null ? euro(total) : '—'}</Text>
+        </View>
+        {pending > 0 ? <Pressable onPress={revealFirstError} accessibilityRole="button">
+          <Text style={styles.footerError} accessibilityRole="alert">{pending === 1 ? 'Manca un dato' : `Mancano ${pending} dati`} · <Text style={{ textDecorationLine: 'underline' }}>mostra</Text></Text></Pressable>
+          : !!submitError && <Text style={styles.footerError} accessibilityRole="alert">{submitError}</Text>}
+        <Pressable onPress={pay} disabled={busy} accessibilityRole="button" accessibilityState={{ disabled: !ready, busy }}
+          style={({ pressed }) => [styles.payButton, !accepted && styles.payOff, pressed && accepted && { opacity: 0.88 }]}>
+          {busy && <ActivityIndicator color="#FFFFFF" />}
+          <Text style={[styles.payText, !accepted && { color: colors.muted }]}>{busy ? 'Pagamento in corso…' : accepted ? (total !== null ? `Paga ${euro(total)} con carta` : 'Scegli la consegna') : 'Accetta i termini per pagare'}</Text>
+        </Pressable>
+        <View style={styles.secureRow}><Icon name="lock" size={13} color={colors.muted} strokeWidth={2.2} /><Text style={styles.secure}>Pagamento sicuro con Stripe</Text></View>
+      </View>}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <FulfilmentSheet visible={deliverySheet} onClose={() => setDeliverySheet(false)} quote={quote} storeName={storeShortName(store) || 'negozio'}
+        onChangeStore={() => setStoreSheet(true)} />
+      <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
+      {quote.issue_count > 0 && <Notice tone="error" title="Alcuni articoli non sono disponibili" message="Torna al carrello per aggiornare le quantità.">
+        <Pressable onPress={() => router.back()}><Text style={{ color: colors.green, fontFamily: fonts.sansBold }}>Torna al carrello</Text></Pressable>
+      </Notice>}
+
+      <Text style={[styles.h2, { marginTop: 12 }]}>Come lo ricevi</Text>
+      <View style={{ gap: 8 }}>{methods.map((m) => {
+        const on = m === method;
+        const q = quote.shipping[m];
+        return <Pressable key={m} onPress={() => setFulfilment(m)} accessibilityRole="radio" accessibilityState={{ checked: on }}
+          style={[styles.option, on ? styles.optionOn : null]}>
+          {radio(on)}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.optionTitle}>{m === 'store' ? 'Ritiro in negozio' : FULFILMENT_LABELS[m]}</Text>
+            <Text style={styles.optionSub}>{m === 'store' ? [storeShortName(store).replace(/^(\S+)\s+(?!·)/, '$1 · '), store?.opening_hours].filter(Boolean).join(' · ') : METHOD_INFO[m].description}</Text>
+          </View>
+          <Text style={[styles.optionPrice, q?.price_cents === 0 && { color: colors.green }]}>{q ? formatShipping(q.price_cents).replace(/€\s/, '€') : '—'}</Text>
+        </Pressable>;
+      })}</View>
+      {!methodQuote && <Text style={styles.fError}>Metodo non disponibile per questo ordine: scegline un altro.</Text>}
+
+      {method === 'home' && <>
+        <Text style={styles.h2}>Indirizzo di consegna</Text>
+        {(addresses.data ?? []).length > 0 && <View style={{ gap: 8, marginBottom: 8 }}>
+          {[...(addresses.data ?? []).map((a) => ({ id: a.id, title: a.label || a.full_name, sub: `${a.line1}${a.line2 ? `, ${a.line2}` : ''} · ${a.postal_code} ${a.city} (${a.province})`, row: a })),
+            { id: 'new', title: 'Nuovo indirizzo', sub: '', row: null }].map((o) => {
+            const on = addressId === o.id;
+            return <Pressable key={o.id} onPress={() => { setAddressId(o.id); setAddress(o.row ? fromRow(o.row) : emptyAddress); }} accessibilityRole="radio"
+              accessibilityState={{ checked: on }} style={[styles.option, on && styles.optionOn]}>
+              {radio(on)}
+              <View style={{ flex: 1 }}><Text style={styles.optionTitle}>{o.title}</Text>{!!o.sub && <Text style={styles.optionSub}>{o.sub}</Text>}</View>
+            </Pressable>;
+          })}
+        </View>}
+        {addressId === 'new' && <>
+          <View style={styles.group}>
+            {field('address.fullName', 'Nome e cognome', address.fullName, (v) => setAddr({ fullName: v }), { autoComplete: 'name' })}
+            {field('address.line1', 'Via e numero civico', address.line1, (v) => setAddr({ line1: v }), { autoComplete: 'street-address' })}
+            {field('address.line2', 'Scala, interno, presso (facoltativo)', address.line2 ?? '', (v) => setAddr({ line2: v }))}
+            {field('address.city', 'Città', address.city, (v) => setAddr({ city: v }))}
+            {field('address.province', 'Provincia (sigla)', address.province, (v) => setAddr({ province: v.toUpperCase() }), { maxLength: 2, autoCapitalize: 'characters' })}
+            {field('address.postalCode', 'CAP', address.postalCode, (v) => setAddr({ postalCode: v.replace(/\D/g, '') }), { keyboardType: 'number-pad', maxLength: 5 })}
+            {field('address.phone', 'Telefono per il corriere', address.phone, (v) => setAddr({ phone: v }), { keyboardType: 'phone-pad', autoComplete: 'tel' }, true)}
+          </View>
+          <Checkbox checked={saveToBook} onChange={setSaveToBook}><Text style={styles.checkText}>Salva nella rubrica indirizzi</Text></Checkbox>
+        </>}
+      </>}
+
+      {method === 'pickup' && <>
+        <Text style={styles.h2}>Punto di ritiro</Text>
+        {fieldError('pickup')}
+        <View style={{ gap: 8 }}>{(pickupPoints.data ?? []).map((pt) => {
+          const on = pickupPointId === pt.id;
+          return <Pressable key={pt.id} onPress={() => setPickupPointId(pt.id)} accessibilityRole="radio" accessibilityState={{ checked: on }} style={[styles.option, on && styles.optionOn]}>
+            {radio(on)}
+            <View style={{ flex: 1 }}><Text style={styles.optionTitle}>{pt.name}</Text>
+              <Text style={styles.optionSub}>{`${pt.address}, ${pt.postal_code} ${pt.city}${pt.opening_hours ? ` · ${pt.opening_hours}` : ''}`}</Text></View>
+          </Pressable>;
+        })}</View>
+      </>}
+
+      <Text style={styles.h2}>I tuoi dati</Text>
+      <View style={styles.group}>
+        {method !== 'home' && field('fullName', 'Nome e cognome', fullName, setFullName, { autoComplete: 'name' })}
+        <View style={[styles.fRow, method !== 'home' && styles.fRule]}>
+          <Text style={styles.fLabel}>Email per gli avvisi dell’ordine</Text>
+          <Text style={[styles.fInput, { paddingTop: 4 }]} numberOfLines={1}>{user.email}</Text>
+        </View>
+        {method !== 'home' && field('phone', 'Telefono', phone, setPhone, { keyboardType: 'phone-pad', autoComplete: 'tel', placeholder: 'Per contattarti se serve' }, true)}
+      </View>
+
+      <View style={[styles.group, { marginTop: 22 }]}>
+        <Pressable onPress={() => setSummaryOpen(!summaryOpen)} accessibilityRole="button" accessibilityState={{ expanded: summaryOpen }} style={styles.sumHead}>
+          <View style={{ flexDirection: 'row' }}>{quote.lines.slice(0, 3).map((l, i) =>
+            <View key={l.product_id} style={[styles.sumThumb, i > 0 && { marginLeft: -10 }]}><ProductImage uri={imageUrl(l.image_path)} sku={l.sku} inset={0.04} /></View>)}</View>
+          <Text style={styles.sumTitle}>{quote.item_count === 1 ? '1 articolo' : `${quote.item_count} articoli`}</Text>
+          <View style={{ transform: [{ rotate: summaryOpen ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color={colors.text} strokeWidth={2.2} /></View>
+        </Pressable>
+        {summaryOpen && <View style={styles.sumBody}>
+          {quote.lines.map((l) => <View key={l.product_id} style={styles.sumLine}>
+            <Text style={styles.sumText} numberOfLines={1}>{l.quantity > 1 ? `${l.quantity} × ` : ''}{l.name}</Text><Text style={styles.sumText}>{euro(l.line_total_cents)}</Text></View>)}
+          {quote.discount_cents > 0 && <View style={styles.sumLine}><Text style={styles.sumText}>Sconto {quote.coupon?.code ?? ''}</Text><Text style={[styles.sumText, { color: colors.green }]}>-{euro(quote.discount_cents)}</Text></View>}
+          <View style={styles.sumLine}><Text style={styles.sumText}>{FULFILMENT_LABELS[method]}</Text><Text style={styles.sumText}>{methodQuote ? formatShipping(methodQuote.price_cents).replace(/€\s/, '€') : '—'}</Text></View>
+          <View style={styles.sumLine}><Text style={styles.sumText}>Peso</Text><Text style={styles.sumText}>{formatWeight(quote.total_weight_g)}</Text></View>
+        </View>}
+      </View>
+
+      <View style={[styles.group, { marginTop: 10 }]}>
+        {coupon && !quote.coupon_error ? <View style={[styles.sumHead, { justifyContent: 'space-between' }]}>
+          <Text style={styles.sumTitle}>Codice {quote.coupon?.code ?? coupon} applicato</Text>
+          <Pressable onPress={() => { setCoupon(''); setCouponInput(''); }} accessibilityRole="button"><Text style={styles.linkPhone}>Rimuovi</Text></Pressable>
+        </View> : !couponOpen ? <Pressable onPress={() => setCouponOpen(true)} accessibilityRole="button" style={styles.sumHead}>
+          <Icon name="percent" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Hai un codice sconto?</Text><Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
+        </Pressable> : <View style={[styles.fRow, { flexDirection: 'row', alignItems: 'flex-end', gap: 10 }]}>
+          <View style={{ flex: 1 }}><Text style={styles.fLabel}>Codice sconto</Text>
+            <TextInput value={couponInput} autoCapitalize="characters" autoCorrect={false} autoFocus onChangeText={(v) => setCouponInput(v.toUpperCase())}
+              onSubmitEditing={() => setCoupon(couponInput.trim())} style={styles.fInput} accessibilityLabel="Codice sconto" />
+            {!!coupon && !!quote.coupon_error && <Text style={styles.fError}>{friendlyError(quote.coupon_error)}</Text>}</View>
+          <Pressable onPress={() => setCoupon(couponInput.trim())} disabled={!couponInput.trim()} accessibilityRole="button" style={styles.apply}><Text style={styles.applyText}>Applica</Text></Pressable>
+        </View>}
+        <View style={styles.fRule} />
+        {notesOpen || notes ? <View style={styles.fRow}><Text style={styles.fLabel}>Note per il negozio (facoltative)</Text>
+          <TextInput value={notes} onChangeText={setNotes} multiline maxLength={500} autoFocus={!notes} style={[styles.fInput, { minHeight: 60, textAlignVertical: 'top' }]} accessibilityLabel="Note per il negozio" /></View>
+          : <Pressable onPress={() => setNotesOpen(true)} accessibilityRole="button" style={styles.sumHead}>
+            <Icon name="list" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Aggiungi una nota per il negozio</Text><Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
+          </Pressable>}
+        <View style={styles.fRule} />
+        <Pressable onPress={() => setInvoice(!invoice)} accessibilityRole="checkbox" accessibilityState={{ checked: invoice }} style={styles.sumHead}>
+          <Icon name="card" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Richiedo la fattura</Text>
+          <View style={[styles.box, invoice && styles.boxOn]}>{invoice && <Icon name="check" size={14} color="#FFFFFF" strokeWidth={3} />}</View>
+        </Pressable>
+        {invoice && <View style={{ borderTopWidth: 1, borderColor: '#EFECE3' }}>
+          {field('invoice.taxCode', 'Codice fiscale', invoiceData.taxCode ?? '', (v) => setInvoiceData({ ...invoiceData, taxCode: v.toUpperCase() }), { autoCapitalize: 'characters', maxLength: 16 })}
+          {field('invoice.vatNumber', 'Partita IVA (aziende)', invoiceData.vatNumber ?? '', (v) => setInvoiceData({ ...invoiceData, vatNumber: v }), { keyboardType: 'number-pad', maxLength: 13 }, !invoiceData.vatNumber)}
+          {!!invoiceData.vatNumber && <>
+            {field('invoice.companyName', 'Ragione sociale', invoiceData.companyName ?? '', (v) => setInvoiceData({ ...invoiceData, companyName: v }))}
+            {field('invoice.sdiCode', 'Codice SDI', invoiceData.sdiCode ?? '', (v) => setInvoiceData({ ...invoiceData, sdiCode: v.toUpperCase() }), { maxLength: 7, autoCapitalize: 'characters' })}
+            {field('invoice.pec', 'PEC (in alternativa al codice SDI)', invoiceData.pec ?? '', (v) => setInvoiceData({ ...invoiceData, pec: v }), { keyboardType: 'email-address', autoCapitalize: 'none' }, true)}
+          </>}
+        </View>}
+      </View>
+
+      <Pressable onPress={() => setAccepted(!accepted)} accessibilityRole="checkbox" accessibilityState={{ checked: accepted }} style={styles.terms}>
+        <View style={[styles.box, accepted && styles.boxOn]}>{accepted && <Icon name="check" size={15} color="#FFFFFF" strokeWidth={3} />}</View>
+        <Text style={styles.termsText}>Ho letto e accetto le <Text style={styles.linkPhone} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e l’<Text style={styles.linkPhone} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text></Text>
+      </Pressable>
+      {fieldError('accepted')}
+      {!!seller && <Text style={styles.finePhone}>Venditore: {seller.legal_name} · P.IVA {seller.vat_number}. Paghi sulla pagina sicura di Stripe: i dati della carta non passano dai nostri server. Recesso entro 14 giorni.</Text>}
+    </Screen>;
+  }
+
   return <Screen stack maxWidth={720} footer={<View style={{ gap: 8 }}>
     {pending > 0 ? <Pressable onPress={revealFirstError} accessibilityRole="button">
       <Text style={styles.footerError} accessibilityRole="alert">{pending === 1 ? 'Manca un dato' : `Mancano ${pending} dati`} · <Text style={{ textDecorationLine: 'underline' }}>mostra</Text></Text></Pressable>
@@ -295,6 +471,43 @@ export default function CheckoutScreen() {
 }
 
 const styles = StyleSheet.create({
+  head: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 6, backgroundColor: colors.page },
+  headBack: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
+  headTitle: { flex: 1, fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.text },
+  h2: { fontSize: 15.5, fontFamily: fonts.heavy, color: colors.text, marginTop: 22, marginBottom: 8, marginLeft: 4 },
+  option: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  optionOn: { borderWidth: 2, borderColor: colors.green, paddingVertical: 13, paddingHorizontal: 15 },
+  radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#B9B4A6', alignItems: 'center', justifyContent: 'center' },
+  radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.green },
+  optionTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
+  optionSub: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
+  optionPrice: { fontSize: 14, fontFamily: fonts.heavy, color: colors.text },
+  group: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: colors.line },
+  fRow: { paddingVertical: 10 },
+  fRule: { borderBottomWidth: 1, borderColor: '#EFECE3' },
+  fLabel: { fontSize: 12.5, fontFamily: fonts.sansBold, color: colors.muted },
+  fInput: { paddingTop: 4, paddingBottom: 0, fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0 } as object,
+  fError: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.danger, marginTop: 4 },
+  sumHead: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 10 },
+  sumThumb: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, overflow: 'hidden', padding: 2 },
+  sumTitle: { flex: 1, fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
+  sumBody: { paddingBottom: 12, gap: 6 },
+  sumLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  sumText: { fontSize: 14, fontFamily: fonts.sans, color: '#4E554B', flexShrink: 1 },
+  apply: { height: 40, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.green, justifyContent: 'center', marginBottom: 2 },
+  applyText: { fontSize: 14, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  box: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: '#B9B4A6', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  boxOn: { backgroundColor: colors.green, borderColor: colors.green },
+  terms: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 14, padding: 4 },
+  termsText: { flex: 1, fontSize: 14, lineHeight: 20, fontFamily: fonts.sans, color: '#4E554B' },
+  linkPhone: { color: colors.green, fontFamily: fonts.sansBold, textDecorationLine: 'underline' },
+  finePhone: { fontSize: 12.5, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 12, marginHorizontal: 4 },
+  payLabel: { fontSize: 15, fontFamily: fonts.sans, color: '#4E554B' },
+  payTotal: { fontSize: 26, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
+  payButton: { marginTop: 10, height: 58, borderRadius: 29, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  payOff: { backgroundColor: colors.line },
+  payText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  secureRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8 },
   row: { flexDirection: 'row', gap: 10 },
   delivery: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.green, borderRadius: 20, padding: 16 },
   deliveryError: { borderColor: colors.danger },
@@ -307,7 +520,7 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: 13, marginBottom: 8 },
   fine: { color: colors.muted, fontSize: 13, lineHeight: 19, marginTop: 10 },
   footerError: { color: colors.danger, fontSize: 14, textAlign: 'center', fontWeight: '500' },
-  secure: { color: colors.muted, fontSize: 12, textAlign: 'center' },
+  secure: { color: colors.muted, fontSize: 12.5, textAlign: 'center', fontFamily: fonts.sans },
   toggle: { minHeight: 44, justifyContent: 'center', marginTop: 10 },
   applied: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.mint, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14 },
   appliedText: { flex: 1, fontSize: 14, color: colors.greenDark },

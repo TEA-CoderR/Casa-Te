@@ -9,7 +9,7 @@ import { Screen } from '@/components/Screen';
 import { Icon, type IconName } from '@/components/Icon';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { PrimaryButton } from '@/components/UI';
-import { AwningEdge, AwningStripes } from '@/components/BrandHeader';
+import { AwningEdge, AwningStripes, StatusBand } from '@/components/BrandHeader';
 import { StoreCard } from '@/components/StoreCard';
 import { colors, fonts } from '@/config/theme';
 import { fetchOrders, fetchProfile, updateProfile, type OrderWithItems } from '@/lib/api';
@@ -192,67 +192,81 @@ export default function ProfileScreen() {
       <Icon name="chevron" size={16} color={colors.faint} strokeWidth={2} />
     </Pressable>;
 
-  if (!wide) return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.brand, overflow: 'hidden' }}><AwningStripes /></View>} ground={colors.page}
-    contentContainerStyle={{ padding: 0, paddingBottom: 28 }}>
-    <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-    <View style={[styles.pHero, active && { paddingBottom: 50 }]}>
-      <AwningStripes />
-      {user ? <>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <View style={styles.pAvatar}><Text style={styles.pAvatarText}>{initials(name || user.email || '')}</Text></View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.pHello} numberOfLines={1} accessibilityRole="header">{name ? `Ciao, ${name.split(' ')[0]}` : 'Ciao!'}</Text>
-            <Text style={styles.pEmail} numberOfLines={1}>{user.email}</Text>
-          </View>
-          <Pressable onPress={() => go('/account/edit')} accessibilityRole="button" accessibilityLabel="Modifica dati personali" style={styles.pEdit}>
-            <Text style={styles.pEditText}>Modifica</Text></Pressable>
+  // Phone (design F, F-Profilo): the person on the awning, the active order hanging from it, three shortcuts,
+  // the store, the Club, then plain grouped lists.
+  if (!wide) {
+    const prow = (title: string, onPress: () => void, subtitle?: string, first?: boolean) =>
+      <Pressable key={title} onPress={onPress} accessibilityRole="link" style={({ pressed }) => [styles.fRow, !first && styles.fRule, pressed && { opacity: 0.7 }]}>
+        <View style={{ flex: 1, minWidth: 0 }}><Text style={styles.fTitle}>{title}</Text>{!!subtitle && <Text style={styles.fSub} numberOfLines={1}>{subtitle}</Text>}</View>
+        <Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
+      </Pressable>;
+    const ftile = (icon: IconName, label: string, detail: string, onPress: () => void) =>
+      <Pressable key={label} onPress={onPress} accessibilityRole="link" accessibilityLabel={`${label}${detail ? `, ${detail}` : ''}`} style={({ pressed }) => [styles.fTile, pressed && { opacity: 0.85 }]}>
+        <Icon name={icon} size={24} color={colors.green} strokeWidth={1.8} />
+        <Text style={styles.fTileLabel}>{label}</Text>
+        <Text style={styles.fTileDetail} numberOfLines={1}>{detail || ' '}</Text>
+      </Pressable>;
+    const hang = user ? -36 : 0;
+    return <Screen header={<StatusBand />} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 28 }}
+      top={<View>
+        <View style={[styles.fHero, !user && { paddingBottom: 28 }]}>
+          <AwningStripes />
+          {user ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View style={styles.fAvatar}><Text style={styles.fAvatarText}>{initials(name || user.email || '')}</Text></View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.fHello} numberOfLines={1} accessibilityRole="header">{name ? `Ciao, ${name.split(' ')[0]}` : 'Ciao!'}</Text>
+              <Text style={styles.fEmail} numberOfLines={1}>{user.email}</Text>
+            </View>
+            <Pressable onPress={() => go('/account/edit')} accessibilityRole="button" accessibilityLabel="Modifica dati personali" style={styles.fEdit}>
+              <Text style={styles.fEditText}>Modifica</Text></Pressable>
+          </View> : <>
+            <Text style={styles.fHello} accessibilityRole="header">Benvenuto in Casa & Te</Text>
+            <Text style={[styles.fEmail, { marginTop: 6, lineHeight: 20 }]}>Accedi per seguire i tuoi ordini, salvare gli indirizzi e iscriverti al Club.</Text>
+            <Pressable onPress={() => go('/auth/sign-in')} accessibilityRole="button" style={styles.fSignIn}><Text style={styles.fSignInText}>Accedi o registrati</Text></Pressable>
+          </>}
         </View>
-        {member && <View style={styles.pMember}><Icon name="crown" size={14} color={colors.yellow} strokeWidth={2} /><Text style={styles.pMemberText}>Membro Casa & Te Club</Text></View>}
-      </> : <>
-        <Text style={styles.pHello} accessibilityRole="header">Benvenuto in Casa & Te</Text>
-        <Text style={[styles.pEmail, { marginTop: 6, lineHeight: 20 }]}>Accedi per seguire i tuoi ordini, salvare gli indirizzi e iscriverti al Club.</Text>
-        <Pressable onPress={() => go('/auth/sign-in')} accessibilityRole="button" style={styles.pSignIn}>
-          <Text style={styles.pSignInText}>Accedi o registrati</Text></Pressable>
-      </>}
-    </View>
-    <AwningEdge />
-    <View style={{ paddingHorizontal: 16, gap: 10, marginTop: active ? -46 : 12, zIndex: 2 }}>
-      {active && card(<>
-        <View style={{ flex: 1 }}><Text style={[styles.activeLabel, { color: '#4A4512', fontFamily: fonts.sansBold }]}>Ordine in corso · {active.order_number}</Text>
-          <Text style={styles.pStrong}>{orderStatusLabel(active.status, active.fulfilment)}</Text></View>
-        <View style={styles.pFollow}><Text style={styles.pFollowText}>Segui</Text></View>
-      </>, () => go(`/order/${active.id}`), `Ordine in corso ${active.order_number}`, styles.pFloat)}
-      {user && <View style={{ flexDirection: 'row', gap: 8 }}>
-        {tile('box', 'Ordini', () => go('/orders'), orderCount || undefined)}
-        {tile('pin', 'Indirizzi', () => go('/account/addresses'))}
-        {tile('heart', 'Preferiti', () => go('/favorites'), favourites || undefined, 'red')}
-      </View>}
-      {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={({ pressed }) => [styles.pClub, pressed && { opacity: 0.85 }]}>
-        <Icon name="crown" size={26} color="#7A5310" fill="#EBCB86" strokeWidth={1.6} />
-        <View style={{ flex: 1 }}><Text style={styles.pClubTitle}>Casa & Te Club</Text>
-          <Text style={styles.pClubText}>{member ? 'Sei membro: guarda le offerte a te riservate.' : club.tagline}</Text></View>
-        <Icon name="chevron" size={18} color="#3D2A06" strokeWidth={2.4} />
-      </Pressable>}
-      <StoreCard flat label="Il tuo negozio" onPress={() => setStoreSheet(true)} />
-      {user && <><Text style={styles.pGroup} accessibilityRole="header">Account</Text>
-        <View style={styles.pList}>
-          {row('user', 'Dati personali', () => go('/account/edit'), [name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono')}
-          {row('shield', 'Password', () => go('/account/password'), 'Imposta o cambia la password di accesso', true)}
-        </View></>}
-      <Text style={styles.pGroup} accessibilityRole="header">Assistenza e informazioni</Text>
-      <View style={styles.pList}>
-        {row('truck', 'Spedizioni e ritiro', () => go('/legal/shipping'), 'Tariffe, tempi e ritiro in negozio')}
-        {row('shield', 'Condizioni di vendita e resi', () => go('/legal/terms'))}
-        {row('help', 'Informativa privacy', () => go('/legal/privacy'), undefined, true)}
+        <AwningEdge />
+      </View>}>
+      <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
+      <View style={{ paddingHorizontal: 16, marginTop: hang }}>
+        {active && <Pressable onPress={() => go(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.fOrder, pressed && { opacity: 0.9 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.fOrderLabel}>Ordine in corso · {active.order_number}</Text>
+            <Text style={styles.fOrderStatus}>{orderStatusLabel(active.status, active.fulfilment)}</Text>
+          </View>
+          <View style={styles.fFollow}><Text style={styles.fFollowText}>Segui</Text></View>
+        </Pressable>}
+        {user && <View style={[styles.fTiles, active && { marginTop: 14 }]}>
+          {ftile('box', 'Ordini', orderCount ? String(orderCount) : '', () => go('/orders'))}
+          {ftile('pin', 'Indirizzi', 'Consegna', () => go('/account/addresses'))}
+          {ftile('heart', 'Preferiti', favourites ? String(favourites) : '', () => go('/favorites'))}
+        </View>}
+        <View style={{ marginTop: user ? 10 : 16 }}><StoreCard compact showStatus={false} label="Il tuo negozio" style={styles.fFlat} onPress={() => setStoreSheet(true)} /></View>
+        {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={({ pressed }) => [styles.fClub, pressed && { opacity: 0.88 }]}>
+          <Icon name="crown" size={26} color="#7A5310" fill="#EBCB86" strokeWidth={1.6} />
+          <View style={{ flex: 1 }}><Text style={styles.fClubTitle}>Casa & Te Club</Text>
+            <Text style={styles.fClubText}>{member ? 'Sei membro: guarda le offerte a te riservate.' : club.tagline}</Text></View>
+          <Icon name="chevron" size={18} color="#3D2A06" strokeWidth={2.2} />
+        </Pressable>}
+        {user && <><Text style={styles.fGroup} accessibilityRole="header">ACCOUNT</Text>
+          <View style={styles.fList}>
+            {prow('Dati personali', () => go('/account/edit'), [name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono', true)}
+            {prow('Password', () => go('/account/password'), 'Imposta o cambia la password')}
+          </View></>}
+        <Text style={styles.fGroup} accessibilityRole="header">ASSISTENZA E INFORMAZIONI</Text>
+        <View style={styles.fList}>
+          {prow('Spedizioni e ritiro', () => go('/legal/shipping'), 'Tariffe, tempi e ritiro in negozio', true)}
+          {prow('Condizioni di vendita e resi', () => go('/legal/terms'))}
+          {prow('Informativa privacy', () => go('/legal/privacy'))}
+        </View>
+        {user && <View style={styles.fSession}>
+          <Pressable onPress={() => supabase.auth.signOut()} accessibilityRole="button" style={styles.fOut}><Text style={styles.fOutText}>Esci dall’account</Text></Pressable>
+          <Pressable onPress={() => go('/account/delete')} accessibilityRole="link" hitSlop={6}><Text style={styles.fDelete}>Elimina account</Text></Pressable>
+        </View>}
+        <Text style={styles.fVersion}>Casa & Te · Versione {Constants.expoConfig?.version ?? '1.0.0'} · Pagamenti gestiti da Stripe</Text>
       </View>
-      {user && <View style={[styles.session, { marginTop: 18 }]}>
-        <Pressable onPress={() => supabase.auth.signOut()} accessibilityRole="button" style={[styles.signOut, { backgroundColor: '#FFFFFF' }]}>
-          <Text style={styles.signOutText}>Esci dall'account</Text></Pressable>
-        <Pressable onPress={() => go('/account/delete')} accessibilityRole="button" hitSlop={6}><Text style={styles.delete}>Elimina account</Text></Pressable>
-      </View>}
-      <Text style={[styles.footer, { marginTop: 18 }]}>Casa & Te · Versione {Constants.expoConfig?.version ?? '1.0.0'} · Pagamenti gestiti da Stripe</Text>
-    </View>
-  </Screen>;
+    </Screen>;
+  }
 
   return <Screen>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
@@ -266,6 +280,40 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  fHero: { backgroundColor: colors.brand, paddingTop: 18, paddingHorizontal: 20, paddingBottom: 46, overflow: 'hidden' },
+  fAvatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
+  fAvatarText: { fontSize: 21, fontFamily: fonts.heavy, color: colors.text },
+  fHello: { fontSize: 28, lineHeight: 32, fontFamily: fonts.display, color: '#FFFFFF' },
+  fEmail: { fontSize: 14, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
+  fEdit: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)', justifyContent: 'center' },
+  fEditText: { fontSize: 14, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  fSignIn: { alignSelf: 'flex-start', height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.yellow, justifyContent: 'center', marginTop: 14 },
+  fSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
+  fOrder: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.yellow,
+    shadowColor: '#18201A', shadowOpacity: 0.14, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
+  fOrderLabel: { fontSize: 12.5, fontFamily: fonts.sansBold, color: '#4A4512' },
+  fOrderStatus: { fontSize: 16, fontFamily: fonts.heavy, color: colors.text, marginTop: 2 },
+  fFollow: { height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.text, justifyContent: 'center' },
+  fFollowText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  fTiles: { flexDirection: 'row', gap: 10 },
+  fTile: { flex: 1, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
+  fTileLabel: { fontSize: 14.5, fontFamily: fonts.heavy, color: colors.text, marginTop: 10 },
+  fTileDetail: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted },
+  fFlat: { shadowOpacity: 0, elevation: 0, borderBottomWidth: 1, borderColor: colors.line, borderRadius: 18 },
+  fClub: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10, padding: 16, borderRadius: 18, backgroundColor: '#F5E6C8' },
+  fClubTitle: { fontSize: 18, lineHeight: 22, fontFamily: fonts.display, color: '#3D2A06' },
+  fClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: '#3D2A06', marginTop: 2 },
+  fGroup: { fontSize: 13, letterSpacing: 0.6, fontFamily: fonts.heavy, color: colors.muted, marginTop: 20, marginBottom: 8, marginLeft: 4 },
+  fList: { borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
+  fRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 58, paddingVertical: 8, paddingHorizontal: 16 },
+  fRule: { borderTopWidth: 1, borderColor: '#EFECE3' },
+  fTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
+  fSub: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
+  fSession: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 },
+  fOut: { height: 48, paddingHorizontal: 20, borderRadius: 24, borderWidth: 1.5, borderColor: '#D5D0C3', justifyContent: 'center' },
+  fOutText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
+  fDelete: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.danger },
+  fVersion: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center', marginTop: 16 },
   pageTitle: { fontSize: 56, lineHeight: 62, letterSpacing: -1, fontFamily: fonts.serif, color: colors.text, paddingTop: 40, paddingBottom: 28,
     borderBottomWidth: 1, borderColor: colors.text, marginBottom: 36 },
   columns: { flexDirection: 'row', gap: 56, alignItems: 'flex-start' },
