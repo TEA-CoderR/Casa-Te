@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -16,21 +16,24 @@ const COLLAPSED = 70;
 const RANGE = 110;
 /** Height of the chips row (40 px chips + 6 above + 10 below). */
 const CHIPS_H = 56;
-/** The "back to top" button appears after this much scrolling. */
+/** The "back to top" button appears after this much scrolling… */
 const TOP_AFTER = 360;
+/** …and hides again once the page has been still this long (ms). */
+const TOP_IDLE = 2000;
 const EDGE = 12;
 
 /**
  * Department page header (design G, "la tenda si arrotola"): the striped awning with the department title.
- * Scrolling down rolls it up into a slim bar (a rolled-cloth cylinder at its bottom edge, the scalloped valance
- * still attached), the title fades away and the round search button stretches into a white "Cerca in …" pill.
- * The chips stick under the rolled awning; the awning unrolls only back at the top of the page.
- * A "back to top" button rises after scrolling.
+ * Scrolling down rolls it up into a slim bar (a rolled-cloth cylinder at its bottom edge that also takes up the
+ * scalloped valance), the title fades away and the round search button stretches into a white search pill
+ * (the search covers the whole catalogue, as before). The chips stick under the rolled awning; the awning
+ * unrolls only back at the top of the page. A "back to top" button rises while scrolling and hides once the
+ * page has been still for a moment.
  */
-export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, chips, overlay, resetKey, children }: {
+export function RollingAwning({ title, subtitle, onBack, onSearch, chips, overlay, resetKey, children }: {
   title: string; subtitle?: string; onBack?: () => void;
-  /** Department name for "Cerca in {scope}"; without it the pill reads "Cerca prodotti". */
-  searchScope?: string; onSearch: () => void;
+  /** Opens the search page (all departments). */
+  onSearch: () => void;
   /** Chips row content (horizontal scroll), pinned under the rolled awning. */
   chips: ReactNode;
   /** Sheets and other overlays rendered over the page. */
@@ -50,10 +53,19 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   const [showTop, setShowTop] = useState(false);
 
   const onScroll = useAnimatedScrollHandler((e) => { y.value = e.contentOffset.y; });
-  useAnimatedReaction(() => y.value > TOP_AFTER, (now, before) => { if (now !== before) scheduleOnRN(setShowTop, now); });
+  // "Torna su": shown while the page moves past TOP_AFTER, hidden after TOP_IDLE ms without scrolling.
+  const idle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const moved = (at: number) => {
+    if (idle.current) clearTimeout(idle.current);
+    if (at <= TOP_AFTER) { setShowTop(false); return; }
+    setShowTop(true);
+    idle.current = setTimeout(() => setShowTop(false), TOP_IDLE);
+  };
+  useEffect(() => () => { if (idle.current) clearTimeout(idle.current); }, []);
+  useAnimatedReaction(() => Math.round(y.value / 8), (now, before) => { if (before !== null && now !== before) scheduleOnRN(moved, now * 8); });
 
   // Another chip: keep the awning rolled, but show the new list from its start.
-  const pinAt = expanded + EDGE - (COLLAPSED + EDGE);
+  const pinAt = expanded + EDGE - COLLAPSED;
   useEffect(() => {
     if (resetKey === undefined) return;
     if (y.value > pinAt) ref.current?.scrollTo({ y: pinAt, animated: false });
@@ -67,7 +79,9 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   const band = useDerivedValue(() => exp.value - (exp.value - COLLAPSED) * ease.value);
 
   const bandStyle = useAnimatedStyle(() => ({ height: insets.top + band.value }));
-  const edgeStyle = useAnimatedStyle(() => ({ top: insets.top + band.value - 1 }));
+  // The valance is rolled up with the cloth: it shortens and slides up into the cylinder.
+  const edgeStyle = useAnimatedStyle(() => ({ top: insets.top + band.value - 1, height: EDGE * (1 - ease.value) }));
+  const edgeInner = useAnimatedStyle(() => ({ transform: [{ translateY: -EDGE * ease.value }] }));
   const rollStyle = useAnimatedStyle(() => ({ height: 3 + 11 * ease.value }));
   const titleStyle = useAnimatedStyle(() => ({
     opacity: Math.max(0, 1 - ease.value * 1.9),
@@ -86,7 +100,7 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   // The chips scroll with the page until they meet the rolled awning, then stay pinned under it.
   const chipsStyle = useAnimatedStyle(() => {
     const natural = insets.top + exp.value + EDGE - y.value;
-    const pinned = insets.top + band.value + EDGE;
+    const pinned = insets.top + band.value + EDGE * (1 - ease.value);
     return { top: Math.max(natural, pinned) };
   });
   const chipsShadow = useAnimatedStyle(() => ({ opacity: Math.max(0, Math.min(1, (y.value - pinAt) / 30)) }));
@@ -120,18 +134,18 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
         <View style={{ flex: 1, backgroundColor: '#0E2213' }} />
       </Animated.View>
     </Animated.View>
-    <Animated.View pointerEvents="none" style={[styles.edge, edgeStyle]}><AwningEdge /></Animated.View>
+    <Animated.View pointerEvents="none" style={[styles.edge, edgeStyle]}><Animated.View style={edgeInner}><AwningEdge /></Animated.View></Animated.View>
 
     {onBack && <View style={[styles.back, { top: insets.top + 14 }]}><HeaderBack onPress={onBack} /></View>}
     <Animated.View style={[styles.pill, { top: insets.top + 14 }, pillStyle]}>
-      <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel={searchScope ? `Cerca in ${searchScope}` : 'Cerca prodotti'}
+      <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel="Cerca in tutti i reparti"
         style={({ pressed }) => [styles.pillInner, pressed && { opacity: 0.8 }]}>
         <View style={{ width: 20, height: 20 }}>
           <Animated.View style={[StyleSheet.absoluteFill, whiteIcon]}><Icon name="search" size={20} color="#FFFFFF" strokeWidth={2.1} /></Animated.View>
           <Animated.View style={[StyleSheet.absoluteFill, darkIcon]}><Icon name="search" size={20} color={colors.text} strokeWidth={2.1} /></Animated.View>
         </View>
         <Animated.Text style={[styles.pillText, labelStyle]} numberOfLines={1}>
-          {searchScope ? <>Cerca in <Text style={styles.pillScope}>{searchScope}</Text></> : 'Cerca prodotti'}
+          Cerca in <Text style={styles.pillScope}>tutti i reparti</Text>
         </Animated.Text>
       </Pressable>
     </Animated.View>
@@ -153,7 +167,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.display, color: '#FFFFFF', fontSize: 34, lineHeight: 38, letterSpacing: -0.3 },
   subtitle: { fontSize: 14.5, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
   roll: { position: 'absolute', left: 0, right: 0, bottom: 0, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 2, shadowOffset: { width: 0, height: 2 } },
-  edge: { position: 'absolute', left: 0, right: 0, zIndex: 3 },
+  edge: { position: 'absolute', left: 0, right: 0, zIndex: 3, overflow: 'hidden' },
   back: { position: 'absolute', left: 16, zIndex: 4 },
   pill: { position: 'absolute', right: 16, zIndex: 4, height: 44, borderRadius: 22, overflow: 'hidden',
     shadowColor: '#0A180C', shadowRadius: 16, shadowOffset: { width: 0, height: 6 } },
