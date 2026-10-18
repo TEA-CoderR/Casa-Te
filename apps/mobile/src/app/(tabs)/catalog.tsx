@@ -239,9 +239,9 @@ export default function CatalogScreen() {
     const deptTitle = collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Tutti i prodotti';
     return <RollingAwning title={deptTitle}
       subtitle={loading && !items.length ? ' ' : `${count.toLocaleString('it-IT')} ${count === 1 ? 'prodotto disponibile' : 'prodotti disponibili'}${storeLabel ? ` a ${storeLabel}` : ''}`}
-      onBack={canGoBackHere() ? goBack : undefined}
+      onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
       onSearch={() => { setSearchOpen(true); router.setParams({ search: '1' }); }}
-      resetKey={JSON.stringify([categoryId, onSale, featuredOnly])} overlay={filterSheetPhone}
+      overlay={filterSheetPhone}
       chips={<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.fChips} accessibilityRole="tablist">
         {tabs.map((item) => chip(item.id ?? 'all', item.name, activeTab === item.id, () => selectCategory(item.id)))}
       </ScrollView>}>
