@@ -75,6 +75,10 @@ export default function ProductDetailScreen() {
   </EmptyState></Screen>;
 
   const stock = stockLabel(product.stock, storeShortName(selected));
+  // "Disponibile a Lucca S. Filippo" → state "Disponibile" + place "a Lucca · S. Filippo".
+  const stockSplit = stock.text.match(/^(.*?)\s((?:a|ad|in)\s.+)$/);
+  const stockState = stockSplit?.[1] ?? '';
+  const stockPlace = (stockSplit?.[2] ?? '').replace(/ a (\S+) (?!·)/, ' a $1 · ').replace(/^(a|ad|in) (\S+) (?!·)/, '$1 $2 · ');
   const maxQty = Math.max(1, Math.min(product.max_per_order, (product.stock ?? 99) - inCart));
   const canAdd = stock.available && (product.stock === null || inCart + quantity <= product.stock);
   const addToCart = () => { add(product.id, quantity); setAdded(quantity); setQuantity(1); };
@@ -222,10 +226,13 @@ export default function ProductDetailScreen() {
         </View>
         {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
         <Pressable style={({ pressed }) => [styles.phoneCard, pressed && { opacity: 0.9 }]} onPress={() => setStoreSheet(true)} accessibilityRole="button" accessibilityLabel={`${stock.text}. Cambia negozio`}>
-          <View style={[styles.phoneCircle, !stock.available && { backgroundColor: '#F8E9E7' }]}>
-            <Icon name={stock.available ? 'check' : 'close'} size={20} color={stock.available ? colors.green : colors.danger} strokeWidth={2.4} /></View>
+          {/* Design H: no icon, a status line with a dot ("DISPONIBILE") over the store name. */}
           <View style={{ flex: 1 }}>
-            <Text style={[styles.phoneCardTitle, !stock.available && { color: colors.danger }]}>{stock.text.replace(/ a (\S+) (?!·)/, ' a $1 · ') || 'Scegli il negozio'}</Text>
+            {!!stockState && <View style={styles.stockRow}>
+              <View style={[styles.stockDot, !stock.available && { backgroundColor: colors.danger }]} />
+              <Text style={[styles.stockState, !stock.available && { color: colors.danger }]}>{stockState.toUpperCase()}</Text>
+            </View>}
+            <Text style={styles.phoneCardTitle}>{stockState ? stockPlace : stock.text.replace(/ a (\S+) (?!·)/, ' a $1 · ') || 'Scegli il negozio'}</Text>
             <Text style={styles.phoneCardText}>{['Ritiro gratuito · resta 14 giorni in negozio', caption].filter(Boolean).join(' · ')}</Text>
           </View>
           <Text style={styles.phoneLink}>Cambia</Text>
@@ -305,7 +312,9 @@ const styles = StyleSheet.create({
   phonePriceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginTop: 10, flexWrap: 'wrap' },
   phoneUnit: { fontSize: 14, fontFamily: fonts.sans, color: colors.muted, paddingBottom: 6, flexShrink: 1 },
   phoneCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
-  phoneCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  stockRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  stockDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2E9B3A' },
+  stockState: { fontSize: 12.5, fontFamily: fonts.heavy, letterSpacing: 0.5, color: '#2E6B34' },
   phoneCardTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   phoneCardText: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
   phoneLink: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green },

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { EmptyReceipt } from '@/components/ShopMarks';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
 import { StoreCard } from '@/components/StoreCard';
@@ -49,7 +50,7 @@ export default function CartScreen() {
 
   const band = wide ? undefined : <BrandHeader title="Carrello" titleSize={30} subtitle="Nessun articolo" pad={[14, 16, 18]}
     left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/')} />} />;
-  if (empty) return <Screen header={band} ground={wide ? undefined : colors.page}>{wide && <PageTitle title="Il tuo carrello" />}<EmptyState title="Il carrello è vuoto"
+  if (empty) return <Screen header={band} ground={wide ? undefined : colors.page}>{wide && <PageTitle title="Il tuo carrello" />}<EmptyState title="Il carrello è vuoto" art={wide ? undefined : <EmptyReceipt />}
     message={wide ? 'La tua casa aspetta nuove idee. Inizia da un piccolo essenziale.' : 'Aggiungi i prodotti che ti servono: li prepariamo noi nel tuo negozio.'}>
     <PrimaryButton title={wide ? 'Vai al catalogo' : 'Inizia la spesa'} onPress={() => wide ? router.push(ALL_PRODUCTS) : router.replace('/')} />
   </EmptyState></Screen>;

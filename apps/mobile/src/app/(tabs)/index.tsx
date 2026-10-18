@@ -7,6 +7,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { StoreCard } from '@/components/StoreCard';
+import { StepTag } from '@/components/ShopMarks';
 import { Icon, type IconName } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
 import { BrandHeader, HangingCard, HeaderButton, HeaderSearch, StatusBand } from '@/components/BrandHeader';
@@ -199,11 +200,12 @@ function HomePhone() {
       <Text style={styles.pickupTitle} accessibilityRole="header">Il ritiro in negozio è gratis</Text>
       <View style={{ gap: 14, marginTop: 14 }}>
         {([
-          ['cart', 'Ordina e paga in app', 'Prezzi e disponibilità del tuo negozio'],
-          ['mail', 'Ti scriviamo quando è pronto', 'Ricevi un’email con il codice dell’ordine'],
-          ['store', 'Ritira entro 14 giorni', selected?.opening_hours ?? 'Negli orari del negozio'],
-        ] as const).map(([icon, title, text]) => <View key={title} style={styles.step}>
-          <View style={styles.stepIcon}><Icon name={icon} size={18} color={colors.green} strokeWidth={2} /></View>
+          ['Ordina e paga in app', 'Prezzi e disponibilità del tuo negozio'],
+          ['Ti scriviamo quando è pronto', 'Ricevi un’email con il codice dell’ordine'],
+          ['Ritira entro 14 giorni', selected?.opening_hours ?? 'Negli orari del negozio'],
+        ] as const).map(([title, text], i) => <View key={title} style={styles.step}>
+          {/* Numbered hanging price tags (design H), not icons in tinted circles. */}
+          <StepTag n={i + 1} />
           <View style={{ flex: 1 }}><Text style={styles.stepTitle}>{title}</Text><Text style={styles.stepText}>{text}</Text></View>
         </View>)}
       </View>
@@ -260,7 +262,6 @@ const styles = StyleSheet.create({
   pickup: { marginHorizontal: 16, marginTop: 28, padding: 20, borderRadius: 24, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
   pickupTitle: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text },
   step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  stepIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8EFE3', alignItems: 'center', justifyContent: 'center' },
   stepTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   stepText: { fontSize: 13.5, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted },
   footer: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6, paddingHorizontal: 20, paddingTop: 22 },
