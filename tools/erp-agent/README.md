@@ -14,6 +14,9 @@ Contratto e mappatura: `docs/ERP_SYNC.md`.
    o `supplierExclude`, anche in un file `selection.json`), senza articoli in `prodotti_stop`. La selezione è calcolata
    una volta al giorno (legge le tabelle vendite, che sono MyISAM). Poi: indirizzo della funzione, host/utente MySQL, negozi (`"LU3": <numero ITO>`),
    modello URL delle foto (`{barcode}` o `{code}`; facoltativo).
+   In alternativa `"codesFile": "catalogo-codici.json"` (in `selection` o in `selection.json`): solo gli articoli di quel
+   file JSON (numeri o oggetti `{ "code": … }`), per esempio quelli che hanno le foto; vendite e giacenza non contano più,
+   restano i filtri fornitore, `prodotti_stop` e `requireStock`.
 5. Segreti solo come variabili d'ambiente (mai nel file né in chat):
    `ERP_MYSQL_PASSWORD` (password dell'utente sola lettura) e `ERP_SYNC_SECRET` (lo stesso valore impostato in
    Supabase → Edge Functions → Secrets).
@@ -24,8 +27,10 @@ Contratto e mappatura: `docs/ERP_SYNC.md`.
   (i fornitori nuovi entrano in automatico); scrive `fornitori-esclusi.csv` da controllare e un backup.
 - `npm run dry-run` — legge e scrive `dry-run.json` con conteggi, problemi e un campione; **non invia nulla**.
   Da fare per primo, per controllare prezzi e promozioni.
-- `npm run once` — una sincronizzazione (Utilità di pianificazione di Windows / cron, ogni 5 minuti).
+- `npm run once` — una sincronizzazione, lanciata a mano oppure dall'Utilità di pianificazione di Windows / cron.
 - `npm run loop` — resta acceso e sincronizza ogni `intervalMinutes`.
 - `node agent.mjs --once --full` — reinvia tutto.
+- `npm run query` — esegue ogni file `.sql` della cartella `query/` (una sola SELECT/SHOW per file, sessione in sola
+  lettura) e scrive accanto un `.csv` con lo stesso nome. Per controlli sui dati ITO senza aprire un client MySQL.
 
 Il negozio non riceve mai prezzi di acquisto, clienti, personale o vendite.
