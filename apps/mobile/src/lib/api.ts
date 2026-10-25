@@ -101,8 +101,13 @@ export async function fetchOffers(storeId: string | null, limit: number): Promis
 export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogProduct[]; hasMore: boolean; total: number | null }> {
   const pageSize = q.pageSize ?? 40;
   const from = (q.page ?? 0) * pageSize;
-  let query = supabase.from('products').select(PRODUCT_FIELDS, { count: 'exact' }).eq('active', true);
+  const needle = q.search?.trim().toLowerCase().replace(/[%_,()]/g, ' ');
+  // Products out of stock are listed only when searched for (or among the favourites): browsing shows what can be bought.
+  const inStockOnly = !needle && !q.ids;
+  let query = supabase.from('products')
+    .select(inStockOnly ? PRODUCT_FIELDS.replace('inventory(', 'inventory!inner(') : PRODUCT_FIELDS, { count: 'exact' }).eq('active', true);
   if (q.storeId) query = query.eq('inventory.store_id', q.storeId);
+  if (inStockOnly) query = query.gt('inventory.quantity', 0);
   if (q.categoryId) query = query.eq('category_id', q.categoryId);
   if (q.categoryIds?.length) query = query.in('category_id', q.categoryIds);
   if (q.brands?.length) query = query.in('brand', q.brands);
@@ -112,7 +117,6 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
   if (q.featured) query = query.eq('featured', true);
   if (q.onSale) query = query.not('compare_at_price_cents', 'is', null);
   if (q.ids) query = query.in('id', q.ids.length ? q.ids : ['00000000-0000-0000-0000-000000000000']);
-  const needle = q.search?.trim().toLowerCase().replace(/[%_,()]/g, ' ');
   if (needle) query = query.ilike('search_text', `%${needle}%`);
   // Default order of the two showcase collections: the manual positions set in the admin come first.
   if ((q.sort ?? 'featured') === 'featured' && q.featured) query = query.order('featured_rank', { ascending: true, nullsFirst: false });
@@ -139,10 +143,10 @@ export async function fetchFacets(categoryIds: string[] | null): Promise<{ brand
     minCents: prices.length ? Math.min(...prices) : 0, maxCents: prices.length ? Math.max(...prices) : 0 };
 }
 
-/** Active products per category id (display only: the department index on the desktop home). */
+/** Active products in stock per category id (display only: the department index on the desktop home). */
 export async function fetchCategoryCounts(): Promise<Record<string, number>> {
-  const rows = unwrap(await supabase.from('products').select('category_id').eq('active', true)
-    .not('category_id', 'is', null).limit(5000)) as unknown as Array<{ category_id: string }>;
+  const rows = unwrap(await supabase.from('products').select('category_id,inventory!inner(quantity)').eq('active', true)
+    .gt('inventory.quantity', 0).not('category_id', 'is', null).limit(10000)) as unknown as Array<{ category_id: string }>;
   const counts: Record<string, number> = {};
   for (const r of rows) counts[r.category_id] = (counts[r.category_id] ?? 0) + 1;
   return counts;
@@ -153,8 +157,8 @@ export async function fetchCategoryCounts(): Promise<Record<string, number>> {
  * when the category has nothing else, so a department tile does not repeat a product shown next to it.
  */
 export async function fetchCategoryCovers(avoid: string[] = []): Promise<Record<string, { image: string | null; sku: string }>> {
-  const rows = unwrap(await supabase.from('products').select('sku,category_id,featured,product_images(path,sort)')
-    .eq('active', true).not('category_id', 'is', null).order('featured', { ascending: false }).order('created_at').limit(2000)) as unknown as
+  const rows = unwrap(await supabase.from('products').select('sku,category_id,featured,product_images(path,sort),inventory!inner(quantity)')
+    .eq('active', true).gt('inventory.quantity', 0).not('category_id', 'is', null).order('featured', { ascending: false }).order('created_at').limit(2000)) as unknown as
     Array<{ sku: string; category_id: string; product_images: Array<{ path: string; sort: number }> }>;
   const covers: Record<string, { image: string | null; sku: string }> = {};
   const skip = new Set(avoid);
