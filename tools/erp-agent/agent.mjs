@@ -9,7 +9,7 @@
 //                                     ITO name, VAT, brand, category codes, store price, promotions, stock, barcodes
 //                                     (input for a one-off admin import; no purchase prices)
 //   node agent.mjs --dry-run   read MySQL, write dry-run.json (what would be sent), send nothing
-//   node agent.mjs --once      one sync (for Windows Task Scheduler / cron, e.g. every 5 minutes)
+//   node agent.mjs --once      one sync (run by hand, or by Windows Task Scheduler / cron, e.g. every 5 minutes)
 //   node agent.mjs --loop      sync every `intervalMinutes`
 //   add --full                 resend everything (also done automatically once a day)
 //
@@ -19,7 +19,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { syncStore, buildBatch, italyToday } from './lib.mjs';
+import { syncStore, buildBatch, italyToday, fingerprint } from './lib.mjs';
 import { normalizeSelection, selectionFunnel, selectionSql } from './selection.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -32,7 +32,16 @@ const log = (...m) => console.log(new Date().toISOString(), ...m);
 // Which articles go online: selection.mjs (defaults) < config.json "selection" < selection.json (optional file,
 // e.g. the supplier list).
 const readJson = (file) => { try { return JSON.parse(fs.readFileSync(path.join(HERE, file), 'utf8')); } catch { return null; } };
-const selection = normalizeSelection(config.selection, readJson('selection.json'));
+// `codesFile` (in config.json or selection.json): JSON list of article codes, plain numbers or { code } objects
+// (catalogo-codici.json has that shape); only those articles go online.
+const selectionParts = [config.selection, readJson('selection.json')];
+const codesFile = selectionParts.reduce((f, part) => part?.codesFile ?? f, null);
+if (codesFile) {
+  const list = readJson(codesFile);
+  if (!Array.isArray(list) || !list.length) throw new Error(`selection.codesFile: ${codesFile} missing or empty`);
+  selectionParts.push({ codes: [...new Set(list.map((x) => Number(typeof x === 'object' && x ? x.code : x)))] });
+}
+const selection = normalizeSelection(...selectionParts.map((part) => { if (!part) return part; const { codesFile: _, ...rest } = part; return rest; }));
 
 for (const [code, n] of Object.entries(config.stores ?? {})) {
   if (!/^[A-Z0-9_-]{2,12}$/.test(code) || !Number.isInteger(n) || n < 0 || n > 9) throw new Error(`Invalid store mapping ${code}: ${n}`);
@@ -52,7 +61,7 @@ function rowReader(db, cache = {}) {
   return async (n) => {
     const q = async (sql, params = []) => (await db.query(sql, params))[0];
     // The selection scans the sales tables (MyISAM: reads lock them against the tills), so it runs once a day.
-    const key = `${italyToday()}:${n}:${JSON.stringify(selection)}`;
+    const key = `${italyToday()}:${n}:${fingerprint(selection)}`;
     cache.selections ??= {};
     if (cache.selections[n]?.key !== key) {
       const t0 = Date.now();
@@ -91,7 +100,7 @@ function loadState() {
 /** Step-by-step counts for the configured selection (counts only, no article data). */
 async function analyze(db) {
   for (const [code, n] of Object.entries(config.stores)) {
-    log(`${code} = ITO store ${n}; selection: ${JSON.stringify({ ...selection, supplierInclude: `${selection.supplierInclude.length} suppliers`, supplierExclude: `${selection.supplierExclude.length} suppliers` })}`);
+    log(`${code} = ITO store ${n}; selection: ${JSON.stringify({ ...selection, codes: `${selection.codes.length} codes`, supplierInclude: `${selection.supplierInclude.length} suppliers`, supplierExclude: `${selection.supplierExclude.length} suppliers` })}`);
     for (const [label, where] of selectionFunnel(selection, n)) {
       try { const [[row]] = await db.query(`select count(*) c from prodotti p where ${where}`); log(`  ${label.padEnd(64)} ${row.c}`); }
       catch (e) { log(`  ${label.padEnd(64)} error: ${e.message}`); }

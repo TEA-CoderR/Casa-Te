@@ -32,3 +32,15 @@ test('funnel steps end with the selected condition', () => {
   assert.equal(steps.at(-1)[1], selectionSql(sel, 3));
   assert.ok(steps.length >= 6);
 });
+
+test('a code list replaces the sales / shelf rule but keeps the other filters', () => {
+  const sql = selectionSql(normalizeSelection({ codes: [12, 7, 12] }), 3);
+  assert.match(sql, /p\.CodArticolo in \(12, 7\)/);
+  assert.match(sql, /prodotti_stop/);
+  assert.doesNotMatch(sql, /vendite_list_|G3 > 0/);
+  const sel = normalizeSelection({ codes: [5], soldDays: 0, alsoInStockAtStore: false, requireStock: 'store' });
+  assert.match(selectionSql(sel, 3), /G3 > 0/);
+  assert.equal(selectionFunnel(sel, 3).at(-1)[1], selectionSql(sel, 3));
+  assert.throws(() => normalizeSelection({ codes: ['1) or (1=1'] }), /codes/);
+  assert.throws(() => normalizeSelection({ codes: [0] }), /codes/);
+});

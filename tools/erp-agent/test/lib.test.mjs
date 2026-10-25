@@ -79,13 +79,14 @@ test('send signs the body; syncStore updates state only for accepted rows', asyn
   assert.equal(seen[0].sent_at, '2026-10-13T08:00:00.000Z');
   // second run: nothing changed except the retried product
   seen.length = 0;
-  await syncStore({ storeCode: 'LU3', storeNumber: 3, readRows: async () => rows(), state, endpoint: 'https://x/erp-sync', secret: 's3cret', fetchImpl });
+  await syncStore({ storeCode: 'LU3', storeNumber: 3, readRows: async () => rows(), state, endpoint: 'https://x/erp-sync', secret: 's3cret', fetchImpl,
+    now: new Date('2026-10-13T08:05:00Z') });
   assert.deepEqual(seen.map((b) => (b.products ?? b.store_items).map((x) => x.erp_code)), [['10002']]);
   // daily reset keeps `known`: an article that left the selection is switched off
   const next = { products: {}, items: {}, known: state.known };
   seen.length = 0;
   await syncStore({ storeCode: 'LU3', storeNumber: 3, readRows: async () => ({ ...rows(), products: rows().products.slice(1) }), state: next,
-    endpoint: 'https://x/erp-sync', secret: 's3cret', fetchImpl });
+    endpoint: 'https://x/erp-sync', secret: 's3cret', fetchImpl, now: new Date('2026-10-14T08:00:00Z') });
   assert.ok(seen[0].products.some((p) => p.erp_code === '10001' && p.active === false), 'removed article deactivated after reset');
   assert.equal(next.known['10001'], undefined);
   await assert.rejects(send('https://x', 's', {}, { fetchImpl: async () => new Response('no', { status: 401 }) }), /erp-sync 401/);
