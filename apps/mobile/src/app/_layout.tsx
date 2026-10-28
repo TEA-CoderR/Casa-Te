@@ -14,6 +14,7 @@ import { AwningStripes } from '@/components/BrandHeader';
 import { useLayout } from '@/lib/hooks';
 import { isConfigured } from '@/lib/supabase';
 import { startSessionListener } from '@/store/session';
+import { startClubListener } from '@/store/club';
 
 export const unstable_settings = { initialRouteName: '(tabs)' };
 
@@ -35,7 +36,7 @@ export default function RootLayout() {
     Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold, Figtree_800ExtraBold,
   });
   const { wide } = useLayout();
-  useEffect(() => { if (isConfigured) startSessionListener(); }, []);
+  useEffect(() => { if (isConfigured) { startSessionListener(); startClubListener(); } }, []);
   if (!isConfigured) return <NotConfigured />;
   // Native needs the faces registered before first render; the web shop falls back to system fonts meanwhile.
   if (Platform.OS !== 'web' && !fontsLoaded && !fontError) return null;

@@ -26,3 +26,23 @@ export function discountLabel(priceCents: number, compareAtCents: number | null 
   const pct = Math.floor(((compareAtCents - priceCents) * 100) / compareAtCents);
   return pct >= 1 ? `-${pct}%` : null;
 }
+
+/** Today in Italy as YYYY-MM-DD (member prices end on an Italian calendar day). */
+const italyToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
+/**
+ * Club member price ("Prezzo Soci") of a product if still valid today and lower than the price, else null.
+ * Display only: the charged price always comes from quote_cart.
+ */
+export function memberPrice(p: { price_cents: number; member_price_cents?: number | null; member_price_ends_on?: string | null }):
+  { cents: number; endsOn: string | null } | null {
+  if (!p.member_price_cents || p.member_price_cents >= p.price_cents) return null;
+  if (p.member_price_ends_on && p.member_price_ends_on < italyToday()) return null;
+  return { cents: p.member_price_cents, endsOn: p.member_price_ends_on ?? null };
+}
+
+/** "fino al 12 novembre" for a YYYY-MM-DD date. */
+export function untilLabel(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  return `fino al ${new Date(y, m - 1, d).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}`;
+}

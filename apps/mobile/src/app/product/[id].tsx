@@ -4,7 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp, FadeOutUp, ZoomIn } from 'react-native-reanimated';
 import { Link, useLocalSearchParams, router, Stack } from 'expo-router';
 import { formatPackSize, formatWeight, type CategoryRow } from '@casa-te/shared';
-import { discountLabel, formatEuro, unitPriceLabel } from '@/lib/price';
+import { discountLabel, formatEuro, memberPrice, unitPriceLabel } from '@/lib/price';
+import { MemberPriceBox } from '@/components/MemberPrice';
+import { useClubMember } from '@/store/club';
 import { Screen } from '@/components/Screen';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductImage } from '@/components/ProductImage';
@@ -47,6 +49,7 @@ export default function ProductDetailScreen() {
   const cartCount = cartItemCount(useCartStore((s) => s.items));
   const favorite = useFavorites((s) => s.ids.includes(id ?? ''));
   const toggleFavorite = useFavorites((s) => s.toggle);
+  const isMember = useClubMember();
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
   const { data: product, loading, error, refetch } = useQuery(id ? `product:${id}:${selected?.id}` : null, () => fetchProduct(id!, selected?.id ?? null));
   const group = product?.variant_group ?? null;
@@ -101,8 +104,12 @@ export default function ProductDetailScreen() {
 
   const caption = inCart ? `Già ${inCart} nel carrello` : product.stock !== null && product.stock < product.max_per_order ? `${product.stock} disponibili` : '';
   const store = storeShortName(selected) || 'negozio';
-  const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
-  const unitPrice = unitPriceLabel(product.price_cents, product.unit_quantity, product.unit);
+  // Club members see the member price as their price (regular struck through); quote_cart charges the same.
+  const club = memberPrice(product);
+  const shown = isMember && club ? { price_cents: club.cents, compare_at_price_cents: product.price_cents as number | null } : product;
+  const memberBox = club ? <MemberPriceBox cents={club.cents} regularCents={product.price_cents} endsOn={club.endsOn} member={isMember} /> : null;
+  const discount = discountLabel(shown.price_cents, shown.compare_at_price_cents);
+  const unitPrice = unitPriceLabel(shown.price_cents, product.unit_quantity, product.unit);
   const pack = formatPackSize(product.unit_quantity, product.unit);
   const features: Array<{ icon: IconName; text: string }> = product.highlights.length
     ? product.highlights.map((h) => ({ icon: h.icon as IconName, text: h.label }))
@@ -112,11 +119,12 @@ export default function ProductDetailScreen() {
     {!!product.brand && <Text style={styles.brand}>{product.brand}</Text>}
     <Text style={[styles.title, wide && styles.titleWide]} accessibilityRole="header">{product.name}</Text>
     <View style={styles.priceRow}>
-      <Text style={[styles.price, wide && { fontSize: 36 }, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
-      {!!product.compare_at_price_cents && <Text style={styles.compare}>{formatEuro(product.compare_at_price_cents)}</Text>}
+      <Text style={[styles.price, wide && { fontSize: 36 }, !!discount && { color: isMember && club ? colors.club : colors.sale }]}>{formatEuro(shown.price_cents)}</Text>
+      {!!shown.compare_at_price_cents && <Text style={styles.compare}>{formatEuro(shown.compare_at_price_cents)}</Text>}
       {!!discount && <View style={styles.discount}><Text style={styles.discountText}>{discount}</Text></View>}
       {unitPrice ? <Text style={styles.vat}>{unitPrice}{pack ? ` · ${pack}` : ''}</Text> : <Text style={styles.vat}>IVA inclusa</Text>}
     </View>
+    {memberBox}
     {(!wide || !!product.rating_count) && <View style={styles.ratingRow} accessibilityLabel={product.rating_count ? `Valutazione ${product.rating_avg} su 5, ${product.rating_count} recensioni` : 'Nessuna recensione'}>
       <Stars value={product.rating_avg ?? 0} size={15} />
       <Text style={styles.ratingText}>{product.rating_count ? `(${product.rating_count})` : 'Nessuna recensione'}</Text>
@@ -178,14 +186,14 @@ export default function ProductDetailScreen() {
           </View>
           <Pressable onPress={() => router.push('/cart')} accessibilityRole="link" style={({ pressed }) => [styles.toCart, pressed && { opacity: 0.88 }]}>
             <Text style={styles.toCartText}>Vai al carrello</Text>
-            <Text style={styles.toCartSub}>{inCart === 1 ? '1 pezzo' : `${inCart} pezzi`} · {euro(product.price_cents * inCart)}</Text>
+            <Text style={styles.toCartSub}>{inCart === 1 ? '1 pezzo' : `${inCart} pezzi`} · {euro(shown.price_cents * inCart)}</Text>
           </Pressable>
         </Animated.View>
       : <Pressable onPress={addFirst} disabled={!stock.available} accessibilityRole="button"
-          accessibilityLabel={stock.available ? `Aggiungi ${product.name} al carrello, ${formatEuro(product.price_cents)}` : 'Non disponibile in questo negozio'}
+          accessibilityLabel={stock.available ? `Aggiungi ${product.name} al carrello, ${formatEuro(shown.price_cents)}` : 'Non disponibile in questo negozio'}
           style={({ pressed }) => [styles.addPhone, !stock.available && { backgroundColor: colors.line }, pressed && { opacity: 0.9 }]}>
           <Text style={[styles.addPhoneText, !stock.available && { color: colors.muted }]}>{stock.available ? 'Aggiungi al carrello' : 'Non disponibile in questo negozio'}</Text>
-          {stock.available && <View style={styles.priceChip}><Text style={styles.priceChipText}>{euro(product.price_cents)}</Text></View>}
+          {stock.available && <View style={styles.priceChip}><Text style={styles.priceChipText}>{euro(shown.price_cents)}</Text></View>}
         </Pressable>;
     const round = (icon: IconName, label: string, onPress: () => void, filled?: boolean) =>
       <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={4} style={({ pressed }) => [styles.roundPhone, pressed && { opacity: 0.7 }]}>
@@ -221,9 +229,10 @@ export default function ProductDetailScreen() {
           <Text style={styles.phoneCrumb} numberOfLines={1}>{top ? `${top.name} › ${department.name}` : department.name}</Text></Pressable>}
         <Text style={styles.phoneTitle} accessibilityRole="header">{product.name}</Text>
         <View style={styles.phonePriceRow}>
-          <PriceTag cents={product.price_cents} size={38} sale={!!discount} />
-          <Text style={styles.phoneUnit}>{[discount ? `Prima ${euro(product.compare_at_price_cents as number)}` : null, unitPrice?.replace(/€\s/, '€').replace(/\s\/\s/, '/'), 'IVA inclusa'].filter(Boolean).join(' · ')}</Text>
+          <PriceTag cents={shown.price_cents} size={38} sale={!!discount} color={isMember && club ? colors.club : undefined} />
+          <Text style={styles.phoneUnit}>{[discount ? `Prima ${euro(shown.compare_at_price_cents as number)}` : null, unitPrice?.replace(/€\s/, '€').replace(/\s\/\s/, '/'), 'IVA inclusa'].filter(Boolean).join(' · ')}</Text>
         </View>
+        {memberBox}
         {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
         <Pressable style={({ pressed }) => [styles.phoneCard, pressed && { opacity: 0.9 }]} onPress={() => setStoreSheet(true)} accessibilityRole="button" accessibilityLabel={`${stock.text}. Cambia negozio`}>
           {/* Design H: no icon, a status line with a dot ("DISPONIBILE") over the store name. */}

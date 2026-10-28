@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { buildBatch, choosePromo, diff, fingerprint, italyToday, promoAppliesTo, send, syncStore, toCents, toIsoDate } from '../lib.mjs';
+import { buildBatch, chooseMemberPrice, choosePromo, diff, fingerprint, italyToday, promoAppliesTo, send, syncStore, toCents, toIsoDate } from '../lib.mjs';
 
 const rows = () => ({
   products: [
@@ -44,9 +44,28 @@ test('buildBatch: web articles, store price, promo for this store, stock ≥ 0, 
   assert.equal(b.products[1].image_url, undefined, 'no barcode, no photo URL');
   const placeholder = buildBatch(rows(), { storeNumber: 3, today: '2026-10-13', imageUrlTemplate: 'https://<vostro-server>/foto/{barcode}.jpg' });
   assert.equal(placeholder.products[0].image_url, undefined, 'placeholder template ignored');
-  assert.deepEqual(b.storeItems[0], { erp_code: '10001', price_cents: 550, promo_price_cents: 499, promo_starts_on: '2026-10-01', promo_ends_on: '2026-10-20', quantity: 7 });
+  assert.deepEqual(b.storeItems[0], { erp_code: '10001', price_cents: 550, promo_price_cents: 499, promo_starts_on: '2026-10-01', promo_ends_on: '2026-10-20', member_price_cents: null, member_price_ends_on: null, quantity: 7 });
   // 10002: product offer (running) beats the November promo; negative stock → 0
-  assert.deepEqual(b.storeItems[1], { erp_code: '10002', price_cents: 490, promo_price_cents: 390, promo_starts_on: '2026-10-01', promo_ends_on: '2026-10-31', quantity: 0 });
+  assert.deepEqual(b.storeItems[1], { erp_code: '10002', price_cents: 490, promo_price_cents: 390, promo_starts_on: '2026-10-01', promo_ends_on: '2026-10-31', member_price_cents: null, member_price_ends_on: null, quantity: 0 });
+});
+
+test('chooseMemberPrice: lowest valid, dated one brings its end date', () => {
+  const today = '2026-10-28';
+  assert.deepEqual(chooseMemberPrice(499, [], today), { price_cents: 499, ends_on: null });
+  assert.deepEqual(chooseMemberPrice(499, [{ price_cents: 450, ends_on: '2026-11-02' }], today), { price_cents: 450, ends_on: '2026-11-02' });
+  assert.deepEqual(chooseMemberPrice(499, [{ price_cents: 450, ends_on: '2026-10-27' }], today), { price_cents: 499, ends_on: null }, 'ended');
+  assert.equal(chooseMemberPrice(null, [], today), null);
+});
+
+test('buildBatch: member price (PrezzoVedi3 or dated prodotti_vip), only when below the store price', () => {
+  const r = rows();
+  r.products[0].PrezzoVedi3 = '4.40';
+  r.products[1].PrezzoVedi3 = '9.00';
+  r.memberPrices = [{ CodArticolo: 10001, PrezzoVedi: '4.20', Prezzofine: '2026-10-20' }];
+  const b = buildBatch(r, { storeNumber: 3, today: '2026-10-13' });
+  assert.equal(b.storeItems[0].member_price_cents, 420);
+  assert.equal(b.storeItems[0].member_price_ends_on, '2026-10-20');
+  assert.equal(b.storeItems[1].member_price_cents, null, 'above the store price');
 });
 
 test('diff: only changes; removed web articles are deactivated', () => {

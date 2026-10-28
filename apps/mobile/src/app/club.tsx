@@ -11,8 +11,10 @@ import { fetchClubOffers, fetchProfile, setClubMembership } from '@/lib/api';
 import { useQuery } from '@/lib/useQuery';
 import { useClubSettings } from '@/lib/hooks';
 import { useUser } from '@/store/session';
+import { useClubStore } from '@/store/club';
 
 const PERKS: Array<{ icon: IconName; title: string; text: string }> = [
+  { icon: 'crown', title: 'Prezzi Soci', text: 'Su tanti articoli paghi il prezzo riservato ai soci, come in negozio.' },
   { icon: 'sparkle', title: 'Offerte riservate', text: 'Codici sconto solo per i membri, sempre visibili qui.' },
   { icon: 'heart', title: 'Gratis, sempre', text: "L'iscrizione non costa nulla e puoi uscire quando vuoi." },
   { icon: 'cart', title: 'Al checkout', text: 'Usa i codici sia con il ritiro in negozio sia con la spedizione.' },
@@ -32,7 +34,7 @@ export default function ClubScreen() {
 
   const toggle = async (join: boolean) => {
     setBusy(true); setError('');
-    try { await setClubMembership(join); await profile.refetch(); } catch (e) { setError(friendlyError(e)); } finally { setBusy(false); }
+    try { const since = await setClubMembership(join); useClubStore.getState().set(!!since); await profile.refetch(); } catch (e) { setError(friendlyError(e)); } finally { setBusy(false); }
   };
 
   return <Screen stack>
