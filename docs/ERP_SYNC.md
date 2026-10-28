@@ -61,7 +61,7 @@ Rules (`supabase/migrations/20261013000002_erp_sync.sql`):
 - **Store items** set the store price, the dated promotion and the ERP stock. Sellable quantity =
   ERP stock − quantity in this store's online orders that are not yet registered at the till.
 - `member_price_cents` / `member_price_ends_on`: Club member price ("Prezzo Soci"; no end date = permanent). A row
-  without the key keeps the stored member price (`20261028160000_member_prices.sql`).
+  without the key keeps the stored member price (`20261028155548_member_prices.sql`).
 - A row older than the last one applied (`sent_at`) is ignored (`stale`), so retries and out-of-order calls are safe.
 - Response: `{ store_code, created, updated, store_items, stale, skipped: [{ erp_code, reason }] }`.
 
