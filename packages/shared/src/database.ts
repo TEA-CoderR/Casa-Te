@@ -65,6 +65,9 @@ export type ProductRow = {
   rating_avg: number | null; rating_count: number;
   /** Manual position in the home rows "In evidenza" / "In offerta" (1 = first; null = default order). */
   featured_rank: number | null; offer_rank: number | null;
+  /** Club member price ("Prezzo Soci") in the main online store, when valid and lower than price_cents
+   *  (listing copy kept by refresh_display_prices; quote_cart charges it to Club members only). */
+  member_price_cents?: number | null; member_price_ends_on?: string | null;
 };
 
 export type ProductUnit = 'ml' | 'l' | 'g' | 'kg' | 'pz' | 'm';
@@ -86,6 +89,8 @@ export type InventoryRow = {
   /** From the ERP: store price, dated promotion and the ERP stock (quantity = ERP stock − online orders not yet at the till). */
   price_cents?: number | null; promo_price_cents?: number | null; promo_starts_on?: string | null; promo_ends_on?: string | null;
   erp_quantity?: number | null; erp_synced_at?: Timestamp | null;
+  /** Club member price from the ERP (no end date = permanent). */
+  member_price_cents?: number | null; member_price_ends_on?: string | null;
 };
 
 export type PickupPointRow = {
@@ -214,6 +219,8 @@ export type QuoteLine = {
   product_id: Uuid; sku: string | null; name: string; image_path: string | null; unit_price_cents: number | null;
   vat_rate: number | null; weight_g: number | null; quantity: number; line_total_cents: number;
   available_quantity: number; issue: QuoteLineIssue | null;
+  /** Price without the Club member price, the member price when lower, and whether it was charged. */
+  regular_unit_price_cents?: number | null; member_unit_price_cents?: number | null; member_price_applied?: boolean;
 };
 export type MethodQuote = { price_cents: number; provisional: boolean } | null;
 
@@ -222,6 +229,8 @@ export type Quote = {
   discount_cents: number; total_weight_g: number;
   /** Some product has no weight yet: only store pickup is possible. */
   weight_missing?: boolean;
+  /** Club: whether the customer is a member, what the member prices saved, and what joining would save. */
+  club_member?: boolean; member_savings_cents?: number; member_savings_available_cents?: number;
   coupon: { code: string; kind: CouponKind; value: number; description: string | null } | null;
   coupon_error: string | null; shipping: Record<FulfilmentMethod, MethodQuote>;
   fulfilment: FulfilmentMethod | null; shipping_cents: number | null; total_cents: number | null;

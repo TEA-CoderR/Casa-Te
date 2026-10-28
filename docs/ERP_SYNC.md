@@ -42,7 +42,8 @@ Body (at most 2000 products and 5000 store items per call; send larger syncs in 
   ],
   "store_items": [
     { "erp_code": "10001", "price_cents": 590, "promo_price_cents": 450,
-      "promo_starts_on": "2026-10-01", "promo_ends_on": "2026-10-31", "quantity": 12 }
+      "promo_starts_on": "2026-10-01", "promo_ends_on": "2026-10-31",
+      "member_price_cents": 399, "member_price_ends_on": null, "quantity": 12 }
   ]
 }
 ```
@@ -59,12 +60,15 @@ Rules (`supabase/migrations/20261013000002_erp_sync.sql`):
   curated in the admin. VAT, `active` and a missing barcode or weight are updated.
 - **Store items** set the store price, the dated promotion and the ERP stock. Sellable quantity =
   ERP stock − quantity in this store's online orders that are not yet registered at the till.
+- `member_price_cents` / `member_price_ends_on`: Club member price ("Prezzo Soci"; no end date = permanent). A row
+  without the key keeps the stored member price (`20261028155548_member_prices.sql`).
 - A row older than the last one applied (`sent_at`) is ignored (`stale`), so retries and out-of-order calls are safe.
 - Response: `{ store_code, created, updated, store_items, stale, skipped: [{ erp_code, reason }] }`.
 
 Price charged at checkout (`public.store_unit_price`, used by `quote_cart`):
 the store price, or the promo price while it is valid today (Europe/Rome) and lower; the regular price is then
-shown struck through. Listing prices of ERP products are refreshed from the main online store every 15 minutes
+shown struck through. Club members (`is_club_member()`) pay the member price instead when it is valid and lower
+(`public.member_unit_price`); everyone sees it on the product as "Prezzo Soci". Listing prices of ERP products are refreshed from the main online store every 15 minutes
 (pg_cron `casa-te-refresh-display-prices`) and after each batch.
 
 ## Reading `ysoft` (to be confirmed with CASA & TE / ITO)
@@ -80,6 +84,7 @@ shown struck through. Listing prices of ERP products are refreshed from the main
 | list price | `prodotti.PrezzoVedi1` |
 | store price | latest `negozio_prezzo` row for (CodArticolo, negozio), else list price |
 | promotion | `promozioni` (Data_a, Data_f, negozio) + `promozioni_list.Prezzo_a`; also `prodotti.PrezzoVediOfferta` + `_inizio/_fine` |
+| member price | `prodotti.PrezzoVedi3` (permanent) and `prodotti_vip.PrezzoVedi` until `Prezzofine` (dated); lowest valid wins |
 | stock | `giacenza.G<N>` for store N |
 | category | `prodotti.Categoria/Sottocategoria` → `categorie` (mapping to shop categories to define) |
 

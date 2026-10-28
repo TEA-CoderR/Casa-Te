@@ -50,11 +50,26 @@ export function choosePromo(candidates, today) {
 }
 
 /**
+ * Club member price ("Prezzo Soci") for one article: the permanent one (prodotti.PrezzoVedi3) and dated ones
+ * (prodotti_vip.PrezzoVedi until Prezzofine). The lowest valid today wins; the dated one brings its end date.
+ * Returns { price_cents, ends_on } or null. Only sent when lower than the store price.
+ */
+export function chooseMemberPrice(permanentCents, dated, today) {
+  const valid = [
+    ...(permanentCents ? [{ price_cents: permanentCents, ends_on: null }] : []),
+    ...dated.filter((d) => d.price_cents && (!d.ends_on || d.ends_on >= today)),
+  ];
+  return valid.sort((a, b) => a.price_cents - b.price_cents || (a.ends_on ? 1 : -1))[0] ?? null;
+}
+
+/**
  * Builds products[] and store_items[] for one store from ysoft rows.
  * rows = { products: [{ CodArticolo, CodBarre, Descrizione, PrezzoVedi1, CodIva, marca, PrezzoVediOfferta,
  *                       PrezzoVediOfferta_inizio, PrezzoVediOfferta_fine }],          (selected articles)
  *          storePrices: [{ CodArticolo, PrezzoVedi1 }],                                (latest negozio_prezzo row)
  *          promos: [{ CodArticolo, Prezzo_a, Data_a, Data_f, negozio }],               (promozioni + promozioni_list)
+ *          memberPrices?: [{ CodArticolo, PrezzoVedi, Prezzofine }],                   (prodotti_vip, dated member prices)
+ *          (products also carry PrezzoVedi3 = permanent member price)
  *          stock: [{ CodArticolo, q }] }                                               (giacenza.G<n>)
  */
 export function buildBatch(rows, { storeNumber, today, imageUrlTemplate: template }) {
@@ -70,6 +85,12 @@ export function buildBatch(rows, { storeNumber, today, imageUrlTemplate: templat
     promos.get(key).push({ price_cents: toCents(r.Prezzo_a), starts_on: toIsoDate(r.Data_a), ends_on: toIsoDate(r.Data_f) });
   }
 
+  const memberDated = new Map();
+  for (const r of rows.memberPrices ?? []) {
+    const key = String(r.CodArticolo);
+    if (!memberDated.has(key)) memberDated.set(key, []);
+    memberDated.get(key).push({ price_cents: toCents(r.PrezzoVedi), ends_on: toIsoDate(r.Prezzofine) });
+  }
   const products = [];
   const storeItems = [];
   const problems = [];
@@ -98,12 +119,16 @@ export function buildBatch(rows, { storeNumber, today, imageUrlTemplate: templat
     if (offer) candidates.push({ price_cents: offer, starts_on: toIsoDate(p.PrezzoVediOfferta_inizio), ends_on: toIsoDate(p.PrezzoVediOfferta_fine) });
     const promo = choosePromo(candidates, today);
     const price = storePrice.get(code) ?? list;
+    const member = chooseMemberPrice(toCents(p.PrezzoVedi3), memberDated.get(code) ?? [], today);
+    const memberOk = member && member.price_cents < price;
     storeItems.push({
       erp_code: code,
       price_cents: price,
       promo_price_cents: promo && promo.price_cents < price ? promo.price_cents : null,
       promo_starts_on: promo && promo.price_cents < price ? promo.starts_on : null,
       promo_ends_on: promo && promo.price_cents < price ? promo.ends_on : null,
+      member_price_cents: memberOk ? member.price_cents : null,
+      member_price_ends_on: memberOk ? member.ends_on : null,
       quantity: stock.get(code) ?? 0,
     });
   }

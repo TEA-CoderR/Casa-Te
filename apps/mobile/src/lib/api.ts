@@ -12,7 +12,8 @@ import { SUPABASE_URL, supabase } from './supabase';
 export type CatalogProduct = Pick<ProductRow,
   'id' | 'sku' | 'name' | 'description' | 'brand' | 'category_id' | 'price_cents' | 'compare_at_price_cents' |
   'weight_g' | 'max_per_order' | 'featured' | 'unit_quantity' | 'unit' | 'color' | 'highlights' |
-  'variant_group' | 'variant_title' | 'variant_label' | 'rating_avg' | 'rating_count' | 'featured_rank' | 'offer_rank'> & {
+  'variant_group' | 'variant_title' | 'variant_label' | 'rating_avg' | 'rating_count' | 'featured_rank' | 'offer_rank' |
+  'member_price_cents' | 'member_price_ends_on'> & {
   image: string | null;
   images: string[];
   /** Units available in the selected store (null when no store is selected). */
@@ -36,6 +37,7 @@ export const imageUrl = (path: string | null | undefined) => productImageUrl(SUP
 const PRODUCT_FIELDS =
   'id,sku,name,description,brand,category_id,price_cents,compare_at_price_cents,weight_g,max_per_order,featured,featured_rank,offer_rank,' +
   'unit_quantity,unit,color,highlights,variant_group,variant_title,variant_label,rating_avg,rating_count,' +
+  'member_price_cents,member_price_ends_on,' +
   'product_images(path,sort),inventory(quantity,store_id)';
 
 type RawProduct = Omit<CatalogProduct, 'image' | 'images' | 'stock'> & {

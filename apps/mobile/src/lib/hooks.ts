@@ -6,6 +6,7 @@ import { buildLegalDocs, legalContext } from '@/content/legal';
 import { useQuery } from './useQuery';
 import { cartItemsInput, useCartStore } from '@/store/cart';
 import { usePreferences } from '@/store/preferences';
+import { useClubMember } from '@/store/club';
 
 /** Active stores plus the customer's selected store (defaults to the first one). */
 /** Club on/off and tagline from the back office (assumed on while loading). */
@@ -58,8 +59,10 @@ export function useCartQuote(options: { fulfilment?: FulfilmentMethod; couponCod
   const items = useCartStore((s) => s.items);
   const { selected } = useStores();
   const input = useMemo(() => cartItemsInput(items), [items]);
+  // Joining or leaving the Club changes the member prices in the quote.
+  const member = useClubMember();
   const key = selected && input.length
-    ? JSON.stringify([selected.id, input, options.fulfilment ?? null, options.couponCode ?? null]) : null;
+    ? JSON.stringify([selected.id, input, options.fulfilment ?? null, options.couponCode ?? null, member]) : null;
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);

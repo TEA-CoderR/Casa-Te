@@ -72,7 +72,7 @@ function rowReader(db, cache = {}) {
     const { codes } = cache.selections[n];
     const products = [];
     for (let i = 0; i < codes.length; i += 5000) {
-      products.push(...await q(`select p.CodArticolo, p.CodBarre, p.Descrizione, p.PrezzoVedi1, p.CodIva, m.Descrizione as marca,
+      products.push(...await q(`select p.CodArticolo, p.CodBarre, p.Descrizione, p.PrezzoVedi1, p.PrezzoVedi3, p.CodIva, m.Descrizione as marca,
           p.PrezzoVediOfferta, p.PrezzoVediOfferta_inizio, p.PrezzoVediOfferta_fine
         from prodotti p left join prodotti_marca m on m.uid = p.marca where p.CodArticolo in (?)`, [codes.slice(i, i + 5000)]));
     }
@@ -83,6 +83,8 @@ function rowReader(db, cache = {}) {
       promos: await q(`select pl.CodArticolo, pl.Prezzo_a, pr.Data_a, pr.Data_f, pr.negozio
         from promozioni_list pl join promozioni pr on pr.l = pl.promozioni_l
         where coalesce(pl.invalid, 0) = 0 and (pr.Data_f is null or pr.Data_f >= curdate())`),
+      memberPrices: await q(`select CodArticolo, PrezzoVedi, Prezzofine from prodotti_vip
+        where Prezzofine is null or Prezzofine >= curdate()`),
       stock: await q(`select CodArticolo, G${n} as q from giacenza`),
     };
   };
@@ -136,7 +138,7 @@ async function exportCatalog(db) {
   const [code, n] = Object.entries(config.stores)[0];
   const q = async (sql, params = []) => (await db.query(sql, params))[0];
   const byChunks = async (sql) => { const out = []; for (let i = 0; i < codes.length; i += 2000) out.push(...await q(sql, [codes.slice(i, i + 2000)])); return out; };
-  const products = await byChunks(`select p.CodArticolo, p.CodBarre, p.Descrizione, p.Descrizione2, p.PrezzoVedi1, p.CodIva, p.Categoria, p.Sottocategoria,
+  const products = await byChunks(`select p.CodArticolo, p.CodBarre, p.Descrizione, p.Descrizione2, p.PrezzoVedi1, p.PrezzoVedi3, p.CodIva, p.Categoria, p.Sottocategoria,
       m.Descrizione as marca, p.UdmDim, p.UdmDimV, p.Blocco, p.PrezzoVediOfferta, p.PrezzoVediOfferta_inizio, p.PrezzoVediOfferta_fine
     from prodotti p left join prodotti_marca m on m.uid = p.marca where p.CodArticolo in (?)`);
   const barcodes = await byChunks('select CodArticolo, CodBarre from codbarre where CodArticolo in (?)');
@@ -146,10 +148,12 @@ async function exportCatalog(db) {
   const promos = await byChunks(`select pl.CodArticolo, pl.Prezzo_a, pr.Data_a, pr.Data_f, pr.negozio
     from promozioni_list pl join promozioni pr on pr.l = pl.promozioni_l
     where coalesce(pl.invalid, 0) = 0 and (pr.Data_f is null or pr.Data_f >= curdate()) and pl.CodArticolo in (?)`);
+  const memberPrices = await byChunks(`select CodArticolo, PrezzoVedi, Prezzofine from prodotti_vip
+    where (Prezzofine is null or Prezzofine >= curdate()) and CodArticolo in (?)`);
   const stopped = (await byChunks('select distinct CodArticolo from prodotti_stop where CodArticolo in (?)')).map((r) => r.CodArticolo);
   const categories = await q('select l, Descrizione, Categorie, SottoCategorie, Distinzione from categorie');
   const out = { exported_at: new Date().toISOString(), store_code: code, store_number: n, requested: codes.length,
-    products, barcodes, stock, storePrices, promos, stopped, categories };
+    products, barcodes, stock, storePrices, promos, memberPrices, stopped, categories };
   fs.writeFileSync(path.join(HERE, 'catalogo-export.json'), JSON.stringify(out));
   log(`catalogo-export.json: ${products.length}/${codes.length} articles found, ${stock.filter((s) => s.q > 0).length} in stock in store ${n}, ${stopped.length} stopped, ${promos.length} promotion rows`);
 }
