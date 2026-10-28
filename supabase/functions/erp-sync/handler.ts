@@ -2,7 +2,8 @@
 // Called by the sync agent that runs next to the ERP (ITO) database. Headers:
 //   X-Casate-Timestamp: <unix seconds>
 //   X-Casate-Signature: v1=<hex HMAC-SHA256(ERP_SYNC_SECRET, "<timestamp>.<raw body>")>
-// Body: see public.erp_apply_batch (store_code, sent_at, products[], store_items[]).
+// Body: see public.erp_apply_batch (store_code, sent_at, products[], store_items[]), or
+//       public.erp_apply_member_cards (sync_id, final, member_cards[]: keyed hashes only).
 import type { Config } from '../_shared/env.ts';
 import { HttpError, json } from '../_shared/http.ts';
 import { rpc } from '../_shared/supabase.ts';
@@ -28,6 +29,8 @@ export async function erpSync(req: Request, config: Config): Promise<Response> {
   let batch: unknown;
   try { batch = JSON.parse(raw); } catch { throw new HttpError(400, 'invalid_json'); }
   if (!batch || typeof batch !== 'object' || Array.isArray(batch)) throw new HttpError(400, 'invalid_json');
-  const result = await rpc<Record<string, unknown>>(config, config.serviceRoleKey, 'erp_apply_batch', { p: batch });
+  // Member card hashes travel in their own batches (public.erp_apply_member_cards).
+  const fn = 'member_cards' in batch ? 'erp_apply_member_cards' : 'erp_apply_batch';
+  const result = await rpc<Record<string, unknown>>(config, config.serviceRoleKey, fn, { p: batch });
   return json(req, result);
 }

@@ -12,11 +12,13 @@ import { useQuery } from '@/lib/useQuery';
 import { useClubSettings } from '@/lib/hooks';
 import { useUser } from '@/store/session';
 import { useClubStore } from '@/store/club';
+import { MemberCardLink, MemberCardView } from '@/components/MemberCard';
 
 const PERKS: Array<{ icon: IconName; title: string; text: string }> = [
   { icon: 'crown', title: 'Prezzi Soci', text: 'Su tanti articoli paghi il prezzo riservato ai soci, come in negozio.' },
   { icon: 'sparkle', title: 'Offerte riservate', text: 'Codici sconto solo per i membri, sempre visibili qui.' },
   { icon: 'heart', title: 'Gratis, sempre', text: "L'iscrizione non costa nulla e puoi uscire quando vuoi." },
+  { icon: 'store', title: 'Hai già la tessera?', text: 'Collegala qui: la mostri dal telefono alla cassa e i punti restano in negozio.' },
   { icon: 'cart', title: 'Al checkout', text: 'Usa i codici sia con il ritiro in negozio sia con la spedizione.' },
 ];
 
@@ -37,6 +39,13 @@ export default function ClubScreen() {
     try { const since = await setClubMembership(join); useClubStore.getState().set(!!since); await profile.refetch(); } catch (e) { setError(friendlyError(e)); } finally { setBusy(false); }
   };
 
+  const card = profile.data?.member_card_number ?? null;
+  const cardSection = !user || !profile.data ? null : <>
+    <Text style={styles.section} accessibilityRole="header">{card ? 'La tua tessera' : 'Hai già la tessera Casa & Te?'}</Text>
+    {card ? <MemberCardView card={card} onUnlinked={() => void profile.refetch()} />
+      : <MemberCardLink onLinked={() => void profile.refetch()} />}
+  </>;
+
   return <Screen stack>
     <Stack.Screen options={{ title: 'Casa & Te Club' }} />
     <View style={styles.hero}>
@@ -52,11 +61,15 @@ export default function ClubScreen() {
     </View>)}
 
     {!!error && <Notice tone="error" message={error} />}
-    {!user ? <View style={{ marginTop: 20 }}><PrimaryButton title="Accedi per iscriverti" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/club' } })} /></View>
+    {!user ? <View style={{ marginTop: 20 }}><PrimaryButton title="Accedi per iscriverti o collegare la tessera" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/club' } })} /></View>
       : profile.loading && !profile.data ? <Loading />
-      : !member ? (club.enabled ? <View style={{ marginTop: 20 }}><PrimaryButton title="Iscriviti gratis" onPress={() => toggle(true)} loading={busy} /></View>
-        : <View style={{ marginTop: 20 }}><Notice message="Al momento il Club non accetta nuove iscrizioni." /></View>)
+      : !member ? <>
+          {club.enabled ? <View style={{ marginTop: 20 }}><PrimaryButton title="Iscriviti gratis" onPress={() => toggle(true)} loading={busy} /></View>
+            : <View style={{ marginTop: 20 }}><Notice message="Al momento il Club non accetta nuove iscrizioni." /></View>}
+          {cardSection}
+        </>
       : <>
+          {cardSection}
           <Text style={styles.section} accessibilityRole="header">Le tue offerte</Text>
           {offers.loading && !offers.data ? <Loading /> : !offers.data?.length
             ? <Text style={styles.empty}>Al momento non ci sono offerte attive. Torna a trovarci presto.</Text>

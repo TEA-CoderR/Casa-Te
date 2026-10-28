@@ -306,6 +306,15 @@ export async function deleteAddress(id: string) {
   unwrap(await supabase.from('addresses').delete().eq('id', id));
 }
 
+/** Links an existing Casa & Te member card (card number + last 4 phone digits or birth date). */
+export function linkMemberCard(input: { card: string; phone_last4?: string; birth_date?: string }): Promise<{ linked: boolean; card: string }> {
+  return invoke('member-card', input);
+}
+
+export async function unlinkMemberCard(): Promise<void> {
+  unwrap(await supabase.rpc('unlink_member_card'));
+}
+
 export function deleteAccount(): Promise<{ deleted: boolean }> {
   return invoke('delete-account', { confirm: 'ELIMINA' });
 }

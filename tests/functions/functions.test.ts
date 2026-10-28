@@ -13,6 +13,10 @@ import { adminRefund } from '../../supabase/functions/admin-refund/handler.ts';
 import { deleteAccount } from '../../supabase/functions/delete-account/handler.ts';
 import { buildEmail } from '../../supabase/functions/notify-order-event/handler.ts';
 import { erpSync } from '../../supabase/functions/erp-sync/handler.ts';
+import { memberCard } from '../../supabase/functions/member-card/handler.ts';
+import { memberCardHashes } from '../../supabase/functions/_shared/member-card.ts';
+// @ts-expect-error plain JS module of the ERP agent
+import { memberHashes } from '../../tools/erp-agent/members.mjs';
 
 const config: Config = {
   supabaseUrl: 'https://proj.supabase.co', anonKey: 'anon', serviceRoleKey: 'service',
@@ -358,4 +362,52 @@ test('erp-sync: HMAC-signed batches reach erp_apply_batch with the service role;
   res = await handle((r) => erpSync(r, config))(await signed(body));
   assert.equal(res.status, 503);
   assert.equal(callsTo(/rpc\/erp_apply_batch/).length, 1);
+});
+
+test('member cards: agent and Edge Function compute the same hashes', async () => {
+  const edge = await memberCardHashes('erp_secret', '00123456', { phoneLast4: '4567', birth: '19800531' });
+  const agent = memberHashes('erp_secret', { card: '123456', phone: '333 1234567', birth: '1980-05-31' });
+  assert.equal(edge.card_hash, agent.card_hash);
+  assert.equal(edge.phone_hash, agent.phone_hash);
+  assert.equal(edge.birth_hash, agent.birth_hash);
+});
+
+test('erp-sync routes member card batches to erp_apply_member_cards', async () => {
+  const cfg = { ...config, erpSyncSecret: 'erp_secret' };
+  const body = JSON.stringify({ sync_id: 's1', final: true, member_cards: [{ card_hash: 'a'.repeat(64) }] });
+  const ts = String(Math.floor(Date.now() / 1000));
+  routes = [route(/POST .*\/rest\/v1\/rpc\/erp_apply_member_cards$/, () => jsonRes({ member_cards: 1, deactivated: 0 }))];
+  const res = await handle((r) => erpSync(r, cfg))(new Request('https://fn.local/erp-sync', {
+    method: 'POST', body,
+    headers: { 'X-Casate-Timestamp': ts, 'X-Casate-Signature': `v1=${await hmacSha256Hex('erp_secret', `${ts}.${body}`)}` },
+  }));
+  assert.equal(res.status, 200);
+  assert.equal(callsTo(/rpc\/erp_apply_batch/).length, 0);
+});
+
+test('member-card: hashes the card and check, links via the service role; refusals are 400', async () => {
+  const cfg = { ...config, erpSyncSecret: 'erp_secret' };
+  let linked = true;
+  routes = [
+    route(/GET .*\/auth\/v1\/user$/, () => jsonRes({ id: 'u1' })),
+    route(/POST .*\/rest\/v1\/rpc\/member_card_link$/, () => jsonRes(linked ? { linked: true, card: '00123456' } : { linked: false, error: 'card_not_verified' })),
+  ];
+  const h = handle((r) => memberCard(r, cfg));
+  let res = await h(post('member-card', { card: '0012 3456', phone_last4: '4567' }));
+  assert.equal(res.status, 200);
+  const call = callsTo(/rpc\/member_card_link/)[0];
+  assert.equal(call.headers.authorization, 'Bearer service');
+  const args = JSON.parse(call.body);
+  const expected = await memberCardHashes('erp_secret', '00123456', { phoneLast4: '4567' });
+  assert.deepEqual(args, { p_user: 'u1', p_card: '00123456', p_card_hash: expected.card_hash, p_phone_hash: expected.phone_hash, p_birth_hash: null });
+  assert.ok(!call.body.includes('4567'), 'phone digits never sent in clear');
+
+  linked = false;
+  res = await h(post('member-card', { card: '00123456', birth_date: '1980-05-31' }));
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, 'card_not_verified');
+  res = await h(post('member-card', { card: '00123456' }));
+  assert.equal((await res.json()).error, 'invalid_card_check');
+  res = await handle((r) => memberCard(r, config))(post('member-card', { card: '00123456', phone_last4: '4567' }));
+  assert.equal(res.status, 503);
 });
