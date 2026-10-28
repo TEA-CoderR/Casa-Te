@@ -20,6 +20,10 @@ begin
   perform tests.eq((select count(*)::int from public.member_card_attempts where user_id = '00000000-0000-0000-0000-00000000000a' and not ok), 1, 'failed attempt kept');
   r := public.member_card_link('00000000-0000-0000-0000-00000000000a', '123456', repeat('d', 64), ph, null);
   perform tests.eq(r ->> 'error', 'card_not_verified', 'inactive card refused like an unknown one');
+  update public.member_cards set active = true where card_hash = repeat('d', 64);
+  r := public.member_card_link('00000000-0000-0000-0000-00000000000a', '123456', repeat('d', 64), ph, bh);
+  perform tests.eq(r ->> 'error', 'card_not_verified', 'card without checks on file cannot be linked online');
+  update public.member_cards set active = false where card_hash = repeat('d', 64);
   r := public.member_card_link('00000000-0000-0000-0000-00000000000a', '123456', h, null, bh);
   perform tests.eq((r ->> 'linked')::boolean, true, 'birth date check links');
   perform tests.eq((select member_card_number from public.profiles where id = '00000000-0000-0000-0000-00000000000a'), '123456', 'card on profile');

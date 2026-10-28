@@ -92,8 +92,8 @@ begin
   end if;
 
   select * into v_card from public.member_cards where card_hash = lower(p_card_hash) and active;
-  v_ok := found and ((p_phone_hash is not null and v_card.phone_hash = lower(p_phone_hash))
-                  or (p_birth_hash is not null and v_card.birth_hash = lower(p_birth_hash)));
+  v_ok := coalesce(found and ((p_phone_hash is not null and v_card.phone_hash = lower(p_phone_hash))
+                  or (p_birth_hash is not null and v_card.birth_hash = lower(p_birth_hash))), false);
   insert into public.member_card_attempts (user_id, ok) values (p_user, v_ok);
   delete from public.member_card_attempts where created_at < now() - interval '30 days';
   -- Same answer whether the card does not exist or the check failed, so card numbers cannot be probed.
