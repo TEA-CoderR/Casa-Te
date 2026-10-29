@@ -156,33 +156,23 @@ export async function fetchFacets(categoryIds: string[] | null): Promise<{ brand
     minCents: prices.length ? Math.min(...prices) : 0, maxCents: prices.length ? Math.max(...prices) : 0 };
 }
 
-/** Active products in stock per category id (display only: the department index on the desktop home). */
+type CategoryOverviewRow = { category_id: string; products: number; cover_path: string | null; cover_sku: string };
+/** Products in stock and a cover product per category, counted in the database (no row cap). */
+async function categoryOverview(avoid: string[] = []): Promise<CategoryOverviewRow[]> {
+  return unwrap(await supabase.rpc('category_overview', { p_avoid: avoid })) as CategoryOverviewRow[];
+}
+
+/** Active products in stock per category id (display only: department tiles and lists). */
 export async function fetchCategoryCounts(): Promise<Record<string, number>> {
-  const rows = unwrap(await supabase.from('products').select('category_id,inventory!inner(quantity)').eq('active', true)
-    .gt('inventory.quantity', 0).not('category_id', 'is', null).limit(10000)) as unknown as Array<{ category_id: string }>;
-  const counts: Record<string, number> = {};
-  for (const r of rows) counts[r.category_id] = (counts[r.category_id] ?? 0) + 1;
-  return counts;
+  return Object.fromEntries((await categoryOverview()).map((r) => [r.category_id, r.products]));
 }
 
 /**
- * One representative photo per category (featured products first). Products in `avoid` are used only
+ * One representative photo per category (photo first, then featured). Products in `avoid` are used only
  * when the category has nothing else, so a department tile does not repeat a product shown next to it.
  */
 export async function fetchCategoryCovers(avoid: string[] = []): Promise<Record<string, { image: string | null; sku: string }>> {
-  const rows = unwrap(await supabase.from('products').select('sku,category_id,featured,product_images(path,sort),inventory!inner(quantity)')
-    .eq('active', true).gt('inventory.quantity', 0).not('category_id', 'is', null).order('featured', { ascending: false }).order('created_at').limit(2000)) as unknown as
-    Array<{ sku: string; category_id: string; product_images: Array<{ path: string; sort: number }> }>;
-  const covers: Record<string, { image: string | null; sku: string }> = {};
-  const skip = new Set(avoid);
-  const ordered = [...rows.filter((r) => !skip.has(r.sku)), ...rows.filter((r) => skip.has(r.sku))];
-  for (const r of ordered) {
-    const path = [...(r.product_images ?? [])].sort((a, b) => a.sort - b.sort)[0]?.path;
-    const cover = { image: imageUrl(path), sku: r.sku };
-    // Keep the first one; upgrade a cover without a photo when a product with a photo comes along.
-    if (!covers[r.category_id] || (!covers[r.category_id].image && cover.image)) covers[r.category_id] = cover;
-  }
-  return covers;
+  return Object.fromEntries((await categoryOverview(avoid)).map((r) => [r.category_id, { image: imageUrl(r.cover_path), sku: r.cover_sku }]));
 }
 
 /** Other products of the same variant group (e.g. the other fragrances), with stock for the store. */
