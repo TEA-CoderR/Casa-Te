@@ -29,7 +29,12 @@ create function auth.role() returns text language sql stable as $$
 $$;
 grant execute on function auth.uid(), auth.role() to anon, authenticated, service_role;
 
-create table storage.buckets (id text primary key, name text not null, public boolean default false);
+create table storage.buckets (id text primary key, name text not null, public boolean default false,
+  file_size_limit bigint, allowed_mime_types text[]);
+-- Like Supabase: the folders of an object path ("a/b/c.jpg" -> {a,b}).
+create function storage.foldername(name text) returns text[] language sql immutable as $$
+  select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1]
+$$;
 create table storage.objects (
   id uuid primary key default gen_random_uuid(),
   bucket_id text references storage.buckets(id),

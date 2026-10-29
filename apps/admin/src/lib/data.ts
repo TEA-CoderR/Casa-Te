@@ -71,6 +71,9 @@ export const ERROR_TEXT: Record<string, string> = {
   invalid_locale: 'Lingua non disponibile.',
   not_found: 'Elemento non trovato.',
   store_required: 'Seleziona il negozio per il personale di negozio.',
+  return_wrong_status: 'Operazione non possibile nello stato attuale del reso.',
+  return_not_found: 'Reso non trovato.',
+  return_reject_reason_required: 'Scrivi il motivo del rifiuto.',
 };
 
 export function errorText(e: unknown): string {

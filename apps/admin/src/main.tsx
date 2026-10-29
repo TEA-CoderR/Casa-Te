@@ -31,6 +31,7 @@ import { SettingsPage } from './pages/Settings';
 import { ActivityPage } from './pages/Activity';
 import { ShowcasePage } from './pages/Showcase';
 import { FlyersPage } from './pages/Flyers';
+import { ReturnsPage } from './pages/Returns';
 
 function Guard({ roles, children }: { roles?: Array<'admin' | 'manager' | 'store_staff'>; children: ReactNode }) {
   const { can } = useAuth();
@@ -60,6 +61,7 @@ function Root() {
       <Route path="picking" element={<PickingPage />} />
       <Route path="orders" element={<OrdersPage />} />
       <Route path="orders/:id" element={<OrderDetailPage />} />
+      <Route path="returns" element={<ReturnsPage />} />
       <Route path="inventory" element={<InventoryPage />} />
       <Route path="products" element={<Guard roles={M}><ProductsPage /></Guard>} />
       <Route path="products/:id" element={<Guard roles={M}><ProductEditPage /></Guard>} />

@@ -5,6 +5,7 @@ import {
   type CreateOrderInput, type OrderEventRow, type OrderItemRow, type OrderRow, type PickupPointRow,
   type ClubOffer, type ProductReviewRow, type ProductRow, type ProfileRow, type Quote, type QuoteInput,
   type ReviewEligibility, type StoreRow, type CompanyRow,
+  type RefundMethod, type ReturnReason, type ReturnResolution, type ReturnWithItems,
 } from '@casa-te/shared';
 import { Platform } from 'react-native';
 import { SUPABASE_URL, supabase } from './supabase';
@@ -298,6 +299,34 @@ export async function fetchOrder(id: string): Promise<OrderDetail | null> {
   const rows = unwrap(await supabase.from('orders').select('*, order_items(*), order_events(*)')
     .eq('id', id).order('created_at', { referencedTable: 'order_events', ascending: true }).limit(1)) as OrderDetail[];
   return rows[0] ?? null;
+}
+
+// ---- Returns (resi e assistenza) ---------------------------------------------------
+
+export async function fetchOrderReturns(orderId: string): Promise<ReturnWithItems[]> {
+  return unwrap(await supabase.from('return_requests').select('*, return_items(*)').eq('order_id', orderId)
+    .order('created_at', { ascending: false })) as ReturnWithItems[];
+}
+
+/** Uploads a photo for a return request into the customer's own folder; returns the storage path. */
+export async function uploadReturnPhoto(userId: string, uri: string, mimeType?: string | null): Promise<string> {
+  const type = mimeType && /^image\//.test(mimeType) ? mimeType : 'image/jpeg';
+  const ext = type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : type === 'image/heic' ? 'heic' : 'jpg';
+  const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+  const body = await (await fetch(uri)).arrayBuffer();
+  const { error } = await supabase.storage.from('return-photos').upload(path, body, { contentType: type, upsert: false });
+  if (error) throw new ApiError('upload_failed', error.message);
+  return path;
+}
+
+export async function createReturnRequest(r: { orderId: string; items: Array<{ order_item_id: string; quantity: number }>;
+  reason: ReturnReason; note: string; resolution: ReturnResolution; refundMethod: RefundMethod | null; photos: string[] }) {
+  return unwrap(await supabase.rpc('create_return_request', { p_order: r.orderId, p_items: r.items, p_reason: r.reason, p_note: r.note,
+    p_resolution: r.resolution, p_refund_method: r.refundMethod, p_photos: r.photos })) as { id: string; return_number: string; amount_cents: number };
+}
+
+export async function cancelReturnRequest(id: string): Promise<void> {
+  unwrap(await supabase.rpc('cancel_return_request', { p_id: id }));
 }
 
 export async function cancelPendingOrder(id: string): Promise<void> {

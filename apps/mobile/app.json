@@ -16,7 +16,7 @@
       "package": "it.casate.app",
       "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#3B6B31" }
     },
-    "plugins": ["expo-router", "expo-web-browser"],
+    "plugins": ["expo-router", "expo-web-browser", ["expo-image-picker", { "photosPermission": "Le foto servono solo per mostrare al negozio un prodotto danneggiato o sbagliato in una richiesta di reso.", "cameraPermission": false, "microphonePermission": false }]],
     "experiments": { "typedRoutes": true },
     "web": { "bundler": "metro", "output": "single", "favicon": "./assets/icon.png" },
     "extra": { "router": { "origin": false } }

@@ -252,6 +252,31 @@ test('admin-refund: only managers; bounded amounts; optional cancel', async () =
   assert.equal(callsTo(/staff_set_order_status/)[0].headers.authorization, 'Bearer user-jwt', 'status change as the staff user');
 });
 
+test('admin-refund: a received return refunded on the card', async () => {
+  const order = { id: ORDER_ID, status: 'completed', payment_status: 'paid', total_cents: 3000, refunded_cents: 0, stripe_payment_intent_id: 'pi_1' };
+  const ret = { id: 'r1', order_id: ORDER_ID, return_number: 'RESO-00001', status: 'received', resolution: 'refund', amount_cents: 1200 };
+  routes = [
+    route(/auth\/v1\/user$/, () => jsonRes({ id: 'mgr1' })),
+    route(/rpc\/is_manager$/, () => jsonRes(true)),
+    route(/GET .*\/rest\/v1\/return_requests/, () => jsonRes([ret])),
+    route(/GET .*\/rest\/v1\/orders/, () => jsonRes([order])),
+    route(/POST https:\/\/api\.stripe\.com\/v1\/refunds$/, (c) => jsonRes({ id: 're_9', amount: Number(decode(c.body).amount), status: 'succeeded', payment_intent: 'pi_1' })),
+    route(/rpc\/record_refund$/, () => jsonRes(true)),
+    route(/rpc\/staff_mark_return_refunded$/, () => jsonRes(null)),
+  ];
+  let res = await handle((r) => adminRefund(r, config))(post('admin-refund', { return_id: 'r1', amount_cents: 1201 }));
+  assert.equal(res.status, 400, 'not more than the return value');
+  res = await handle((r) => adminRefund(r, config))(post('admin-refund', { return_id: 'r1' }));
+  assert.equal(res.status, 200);
+  assert.equal(decode(callsTo(/v1\/refunds/)[0].body).amount, '1200', 'defaults to the return value');
+  assert.equal(JSON.parse(callsTo(/staff_mark_return_refunded/)[0].body).p_amount_cents, 1200);
+  assert.equal(callsTo(/staff_set_order_status/).length, 0, 'the order is not cancelled');
+
+  routes[2] = route(/GET .*\/rest\/v1\/return_requests/, () => jsonRes([{ ...ret, status: 'approved' }]));
+  res = await handle((r) => adminRefund(r, config))(post('admin-refund', { return_id: 'r1' }));
+  assert.equal(res.status, 409, 'only after the store received the goods');
+});
+
 test('delete-account: needs confirmation and no orders in progress', async () => {
   let res = await handle((r) => deleteAccount(r, config))(post('delete-account', {}));
   assert.equal(res.status, 400);
@@ -284,6 +309,9 @@ test('notification emails', () => {
   assert.match(ready!.body, /CASA &amp; TE Lucca 1/);
   assert.equal(buildEmail({ id: 3, order_id: ORDER_ID, status: 'picking', kind: 'status', note: null, visible_to_customer: true }, order, 'x'), null);
   assert.equal(buildEmail({ id: 4, order_id: ORDER_ID, status: 'cancelled', kind: 'status', note: 'Tempo per il pagamento scaduto', visible_to_customer: true }, order, 'x'), null);
+  const ret = buildEmail({ id: 6, order_id: ORDER_ID, status: null, kind: 'return', note: 'Reso RESO-00001 approvato', visible_to_customer: true }, order, 'x');
+  assert.equal(ret?.subject, "Il tuo reso per l'ordine CT26001001");
+  assert.match(ret!.body, /RESO-00001 approvato/);
   const xss = buildEmail({ id: 5, order_id: ORDER_ID, status: 'paid', kind: 'status', note: null, visible_to_customer: true }, { ...order, customer_name: '<script>' }, 'x');
   assert.ok(!xss!.body.includes('<script>'));
 });
