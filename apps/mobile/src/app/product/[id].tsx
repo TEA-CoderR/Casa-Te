@@ -105,9 +105,15 @@ export default function ProductDetailScreen() {
   const store = storeShortName(selected) || 'negozio';
   const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
   const unitPrice = unitPriceLabel(product.price_cents, product.unit_quantity, product.unit);
-  // Club member price shown as the offer; the condition (free Club) and any end date go next to it.
-  const clubNote = product.clubPrice ? [isMember ? null : 'con Club gratuito', product.clubPrice.endsOn ? untilLabel(product.clubPrice.endsOn) : null]
-    .filter(Boolean).join(' · ') : '';
+  // Club member price: shown as the offer and always marked "Prezzo Soci" (only Club members pay it).
+  const soci = !!product.clubPrice;
+  const badge = discount ? `${soci ? 'Soci ' : ''}${discount.replace('-', '−')}` : '';
+  const sociText = product.clubPrice ? [isMember ? 'applicato al tuo account' : 'solo per i membri del Club · iscrizione gratuita',
+    product.clubPrice.endsOn ? untilLabel(product.clubPrice.endsOn) : null].filter(Boolean).join(' · ') : '';
+  const sociLine = soci ? <Pressable onPress={() => router.push('/club')} accessibilityRole="link" style={styles.sociLine}
+    accessibilityLabel={`Prezzo Soci, ${sociText}`}>
+    <Text style={styles.sociText}><Text style={styles.sociStrong}>Prezzo Soci</Text> · {sociText}{isMember ? '' : ' ›'}</Text>
+  </Pressable> : null;
   const pack = formatPackSize(product.unit_quantity, product.unit);
   const features: Array<{ icon: IconName; text: string }> = product.highlights.length
     ? product.highlights.map((h) => ({ icon: h.icon as IconName, text: h.label }))
@@ -119,10 +125,10 @@ export default function ProductDetailScreen() {
     <View style={styles.priceRow}>
       <Text style={[styles.price, wide && { fontSize: 36 }, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
       {!!product.compare_at_price_cents && <Text style={styles.compare}>{formatEuro(product.compare_at_price_cents)}</Text>}
-      {!!discount && <View style={styles.discount}><Text style={styles.discountText}>{discount}</Text></View>}
+      {!!discount && <View style={styles.discount}><Text style={styles.discountText}>{badge}</Text></View>}
       {unitPrice ? <Text style={styles.vat}>{unitPrice}{pack ? ` · ${pack}` : ''}</Text> : <Text style={styles.vat}>IVA inclusa</Text>}
-      {!!clubNote && <Pressable onPress={() => router.push('/club')} accessibilityRole="link"><Text style={styles.vat}>{clubNote}</Text></Pressable>}
     </View>
+    {sociLine}
     {(!wide || !!product.rating_count) && <View style={styles.ratingRow} accessibilityLabel={product.rating_count ? `Valutazione ${product.rating_avg} su 5, ${product.rating_count} recensioni` : 'Nessuna recensione'}>
       <Stars value={product.rating_avg ?? 0} size={15} />
       <Text style={styles.ratingText}>{product.rating_count ? `(${product.rating_count})` : 'Nessuna recensione'}</Text>
@@ -213,7 +219,7 @@ export default function ProductDetailScreen() {
       <View style={styles.stage}>
         <View pointerEvents="none" style={styles.floor} />
         <View style={styles.stageImage}><ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0} /></View>
-        {!!discount && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{discount.replace('-', '−')}</Text></View>}
+        {!!discount && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{badge}</Text></View>}
         <View style={styles.stageBar}>
           {round('back', 'Indietro', back)}
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -228,8 +234,10 @@ export default function ProductDetailScreen() {
         <Text style={styles.phoneTitle} accessibilityRole="header">{product.name}</Text>
         <View style={styles.phonePriceRow}>
           <PriceTag cents={product.price_cents} size={38} sale={!!discount} />
-          <Text style={styles.phoneUnit}>{[discount ? `Prima ${euro(product.compare_at_price_cents as number)}` : null, unitPrice?.replace(/€\s/, '€').replace(/\s\/\s/, '/'), clubNote || null, 'IVA inclusa'].filter(Boolean).join(' · ')}</Text>
+          <Text style={styles.phoneUnit}>{!!discount && <Text style={styles.phoneStruck}>{euro(product.compare_at_price_cents as number)}</Text>}
+            {[discount ? '' : null, unitPrice?.replace(/€\s/, '€').replace(/\s\/\s/, '/'), 'IVA inclusa'].filter((x) => x !== null && x !== undefined).join(' · ')}</Text>
         </View>
+        {sociLine}
         {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
         <Pressable style={({ pressed }) => [styles.phoneCard, pressed && { opacity: 0.9 }]} onPress={() => setStoreSheet(true)} accessibilityRole="button" accessibilityLabel={`${stock.text}. Cambia negozio`}>
           {/* Design H: no icon, a status line with a dot ("DISPONIBILE") over the store name. */}
@@ -316,6 +324,10 @@ const styles = StyleSheet.create({
   phoneCrumb: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green },
   phoneTitle: { fontSize: 28, lineHeight: 32, fontFamily: fonts.display, color: colors.text, marginTop: 6, letterSpacing: -0.2 },
   phonePriceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginTop: 10, flexWrap: 'wrap' },
+  sociLine: { marginTop: 6, marginBottom: 4 },
+  sociText: { fontSize: 13, lineHeight: 18, color: colors.sale, fontFamily: fonts.sans },
+  sociStrong: { fontFamily: fonts.sansBold, fontWeight: '700' },
+  phoneStruck: { textDecorationLine: 'line-through' },
   phoneUnit: { fontSize: 14, fontFamily: fonts.sans, color: colors.muted, paddingBottom: 6, flexShrink: 1 },
   phoneCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
   stockRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

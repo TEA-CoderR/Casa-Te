@@ -185,6 +185,7 @@ export default function CartScreen() {
               <View style={styles.lineBottom}>
                 <View style={{ flexShrink: 1 }}>
                   {!line.issue && <Text style={[styles.pPrice, !!compare && { color: colors.sale }]}>{euro(line.line_total_cents)}</Text>}
+                  {!line.issue && line.member_price_applied && <Text style={styles.pSoci}>Prezzo Soci</Text>}
                   {!line.issue && line.quantity > 1 && line.unit_price_cents !== null && <Text style={styles.pEach}>{euro(line.unit_price_cents)} cad.</Text>}
                 </View>
                 {line.issue !== 'unavailable' && <View style={styles.qty}>
@@ -279,6 +280,7 @@ const styles = StyleSheet.create({
   modify: { fontSize: 12.5, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium, fontWeight: '500' },
   banner: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#F5ECDD', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16 },
   bannerTitle: { fontSize: 19, fontFamily: fonts.serif, color: colors.text },
+  pSoci: { fontSize: 11, color: colors.sale, fontFamily: fonts.sansBold, fontWeight: '700' },
   memberSaved: { fontSize: 13, color: colors.sale, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginTop: 8 },
   memberNudge: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.well, borderRadius: 12,
     paddingHorizontal: 12, paddingVertical: 9, marginBottom: 10 },
