@@ -45,9 +45,6 @@ export const colors = {
   /** Discounts: solid red label and red sale price, meant to stand out. */
   sale: '#C8231F',
   danger: '#A62F2F',
-  /** Casa & Te Club: member prices ("Prezzo Soci"), dark gold that keeps ≥4.5:1 on white, on a pale gold fill. */
-  club: '#80540F',
-  clubFill: '#FBF1DC',
 } as const;
 
 /**

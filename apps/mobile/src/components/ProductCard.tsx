@@ -1,8 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Link } from 'expo-router';
-import { discountLabel, formatEuro, memberPrice, unitPriceLabel } from '@/lib/price';
-import { useClubMember } from '@/store/club';
+import { discountLabel, formatEuro, unitPriceLabel } from '@/lib/price';
 import type { CatalogProduct } from '@/lib/api';
 import { colors, fonts } from '@/config/theme';
 import { useCartStore } from '@/store/cart';
@@ -11,6 +10,7 @@ import { ProductImage } from './ProductImage';
 import { Icon } from './Icon';
 import { atPlace, storeShortName } from './StoreSheet';
 import { useLayout, useStores } from '@/lib/hooks';
+import { useClubMember } from '@/store/club';
 import { transition, type WebState } from './site/shared';
 import { PriceTag } from './UI';
 
@@ -38,12 +38,6 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
   /** Home rail card (design F): taller photo area and no heart. */
   rail?: boolean }) {
   const { wide } = useLayout();
-  // Club member price: members see it as their price (regular struck through), others get a "Soci" line.
-  const club = memberPrice(product);
-  const isMember = useClubMember();
-  const shown = isMember && club ? { ...product, price_cents: club.cents, compare_at_price_cents: product.price_cents } : product;
-  const memberLine = club && !isMember ? <Text style={styles.member} numberOfLines={1}
-    accessibilityLabel={`Prezzo Soci ${formatEuro(club.cents)}`}>Soci {formatEuro(club.cents).replace(/€\s/, '€')}</Text> : null;
   const add = useCartStore((s) => s.add);
   const quantity = useCartStore((s) => s.items[product.id] ?? 0);
   const { selected } = useStores();
@@ -67,25 +61,28 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
     <Pressable onPress={() => add(product.id)} disabled={!canAdd} accessibilityRole="button" hitSlop={4}
       accessibilityLabel={`Aggiungi un altro ${product.name}`} style={[styles.stepBtn, !canAdd && { opacity: 0.35 }]}><Text style={styles.stepGlyph}>+</Text></Pressable>
   </Animated.View> : cartButton;
-  const discount = discountLabel(shown.price_cents, shown.compare_at_price_cents);
-  const unit = unitPriceLabel(shown.price_cents, product.unit_quantity, product.unit);
+  const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
+  const unit = unitPriceLabel(product.price_cents, product.unit_quantity, product.unit);
+  // Club member price shown as the offer: non-members are told it comes with the (free) Club.
+  const isMember = useClubMember();
+  const clubNote = product.clubPrice && !isMember ? 'con Club gratuito' : null;
   // Phone (design F): unit or struck price above the price tag (raised cents), red when discounted.
   const price = <View style={{ flexShrink: 1 }}>
     {(!!discount || !!unit) && <Text style={styles.small} numberOfLines={1}>
-      {!!discount && <Text style={styles.compareSmall}>{formatEuro(shown.compare_at_price_cents as number)}</Text>}
+      {!!discount && <Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
       {!!discount && !!unit && ' · '}{unit ?? ''}</Text>}
-    <PriceTag cents={shown.price_cents} size={22} sale={!!discount} />
+    <PriceTag cents={product.price_cents} size={22} sale={!!discount} />
+    {!!clubNote && <Text style={styles.small} numberOfLines={1}>{clubNote}</Text>}
   </View>;
 
   if (variant === 'list') return <View style={styles.row}>
-    <Link href={`/product/${product.id}`} asChild><Pressable style={styles.rowLink} accessibilityLabel={`${product.name}, ${formatEuro(shown.price_cents)}`}>
+    <Link href={`/product/${product.id}`} asChild><Pressable style={styles.rowLink} accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={styles.rowMedia}><ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.08} /></View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         {!!product.brand && <Text style={styles.meta}>{product.brand}</Text>}
         {!!note && <Text style={[styles.meta, !stock.available && { color: colors.danger }]}>{note}</Text>}
         <View style={{ marginTop: 6 }}>{price}</View>
-        {memberLine}
       </View>
     </Pressable></Link>
     <View style={styles.rowSide}><FavoriteButton productId={product.id} name={product.name} />{phoneCart}</View>
@@ -95,7 +92,7 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
   if (wide) {
     const feature = variant === 'feature';
     return <View style={styles.entry}>
-      <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(shown.price_cents)}`}>
+      <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
         {({ hovered }: WebState) => <>
           <View style={styles.plate}>
             <View style={[hovered && { transform: [{ scale: 1.035 }] }, transition('transform', 600)]}>
@@ -108,26 +105,26 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
             {!!product.brand && <Text style={styles.entryBrand} numberOfLines={1}>{product.brand}</Text>}
             <Text style={[styles.entryName, feature && styles.entryNameBig, hovered && { color: colors.green }, transition('color')]} numberOfLines={2}>{product.name}</Text>
             {!!note && <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{note}</Text>}
+            {!!clubNote && <Text style={styles.meta} numberOfLines={1}>{clubNote}</Text>}
           </View>
         </>}
       </Pressable></Link>
       <FavoriteButton productId={product.id} name={product.name} size={feature ? 22 : 19} style={styles.heartCorner} />
       <View style={styles.entryBottom}>
         <View style={styles.priceRow}>
-          <Text style={[styles.price, feature && { fontSize: 26 }, !!discount && { color: colors.sale }]}>{formatEuro(shown.price_cents)}</Text>
-          {!!discount && <Text style={[styles.compare, feature && { fontSize: 14 }]}>{formatEuro(shown.compare_at_price_cents as number)}</Text>}
+          <Text style={[styles.price, feature && { fontSize: 26 }, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
+          {!!discount && <Text style={[styles.compare, feature && { fontSize: 14 }]}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
         </View>
         {cartButton}
       </View>
-      {memberLine}
     </View>;
   }
 
   // Phone (design F): white plate, photo area, name, unit price, then the price tag and "+" (a stepper once in the cart).
   // The card is a real link (open in new tab, middle click, screen readers); heart and cart sit outside it.
-  const subline = !stock.available ? stock.text : unit?.replace(/€\s/, '€').replace(/\s\/\s/, '/') ?? (discount ? `Prima ${formatEuro(shown.compare_at_price_cents as number)}` : note);
+  const subline = !stock.available ? stock.text : clubNote ?? unit?.replace(/€\s/, '€').replace(/\s\/\s/, '/') ?? (discount ? `Prima ${formatEuro(product.compare_at_price_cents as number)}` : note);
   return <View style={[styles.card, rail && { paddingBottom: 12 }]}>
-    <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(shown.price_cents)}`}>
+    <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={[styles.media, { height: rail ? 136 : 132 }]}>
         <View style={{ width: rail ? 120 : 118, height: rail ? 120 : 118 }}>
           <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />
@@ -136,18 +133,14 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
           <Text style={styles.discountText} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount.replace('-', '−')}</Text></View>}
       </View>
       <Text style={[styles.name, { marginTop: rail ? 6 : 4 }]} numberOfLines={2}>{product.name}</Text>
-      {/* Same line height either way, so the grid stays aligned: the "Soci" price replaces the unit price. */}
-      {memberLine && stock.available ? memberLine
-        : <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>}
+      <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>
     </Pressable></Link>
     {!rail && <FavoriteButton productId={product.id} name={product.name} size={19} strokeWidth={2} style={styles.heartCorner} />}
-    <View style={styles.bottom}><PriceTag cents={shown.price_cents} size={22} sale={!!discount} color={isMember && club ? colors.club : undefined} />{phoneCart}</View>
+    <View style={styles.bottom}><PriceTag cents={product.price_cents} size={22} sale={!!discount} />{phoneCart}</View>
   </View>;
 }
 
 const styles = StyleSheet.create({
-  member: { alignSelf: 'flex-start', marginTop: 2, marginLeft: 4, lineHeight: 15, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6, overflow: 'hidden',
-    backgroundColor: colors.clubFill, color: colors.club, fontSize: 12, fontFamily: fonts.sansBold, fontWeight: '700' },
   card: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 10,
     borderBottomWidth: 1, borderColor: colors.line },
   media: { backgroundColor: colors.surface, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
