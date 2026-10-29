@@ -49,6 +49,9 @@ export default function ProductDetailScreen() {
   const favorite = useFavorites((s) => s.ids.includes(id ?? ''));
   const toggleFavorite = useFavorites((s) => s.toggle);
   const isMember = useClubMember();
+  // Buttons show what this customer will pay: non-members pay the regular price of a Soci offer.
+  const payCents = (p: { price_cents: number; clubPrice: { regularCents: number } | null }) =>
+    p.clubPrice && !isMember ? p.clubPrice.regularCents : p.price_cents;
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
   const { data: product, loading, error, refetch } = useQuery(id ? `product:${id}:${selected?.id}` : null, () => fetchProduct(id!, selected?.id ?? null));
   const group = product?.variant_group ?? null;
@@ -190,14 +193,14 @@ export default function ProductDetailScreen() {
           </View>
           <Pressable onPress={() => router.push('/cart')} accessibilityRole="link" style={({ pressed }) => [styles.toCart, pressed && { opacity: 0.88 }]}>
             <Text style={styles.toCartText}>Vai al carrello</Text>
-            <Text style={styles.toCartSub}>{inCart === 1 ? '1 pezzo' : `${inCart} pezzi`} · {euro(product.price_cents * inCart)}</Text>
+            <Text style={styles.toCartSub}>{inCart === 1 ? '1 pezzo' : `${inCart} pezzi`} · {euro(payCents(product) * inCart)}</Text>
           </Pressable>
         </Animated.View>
       : <Pressable onPress={addFirst} disabled={!stock.available} accessibilityRole="button"
-          accessibilityLabel={stock.available ? `Aggiungi ${product.name} al carrello, ${formatEuro(product.price_cents)}` : 'Non disponibile in questo negozio'}
+          accessibilityLabel={stock.available ? `Aggiungi ${product.name} al carrello, ${formatEuro(payCents(product))}` : 'Non disponibile in questo negozio'}
           style={({ pressed }) => [styles.addPhone, !stock.available && { backgroundColor: colors.line }, pressed && { opacity: 0.9 }]}>
           <Text style={[styles.addPhoneText, !stock.available && { color: colors.muted }]}>{stock.available ? 'Aggiungi al carrello' : 'Non disponibile in questo negozio'}</Text>
-          {stock.available && <View style={styles.priceChip}><Text style={styles.priceChipText}>{euro(product.price_cents)}</Text></View>}
+          {stock.available && <View style={styles.priceChip}><Text style={styles.priceChipText}>{euro(payCents(product))}</Text></View>}
         </Pressable>;
     const round = (icon: IconName, label: string, onPress: () => void, filled?: boolean) =>
       <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={4} style={({ pressed }) => [styles.roundPhone, pressed && { opacity: 0.7 }]}>
