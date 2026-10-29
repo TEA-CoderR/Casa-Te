@@ -143,7 +143,8 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
     case 'price_asc': query = query.order('price_cents', { ascending: true }); break;
     case 'price_desc': query = query.order('price_cents', { ascending: false }); break;
     case 'name': query = query.order('name'); break;
-    default: query = query.order('featured', { ascending: false }).order('name');
+    // Grouped by subcategory in the order of the category tree, then by name (brands mostly lead the name).
+    default: query = query.order('featured', { ascending: false }).order('category_rank', { ascending: true, nullsFirst: false }).order('name');
   }
   const result = await query.range(from, from + pageSize);
   const rows = unwrap(result) as unknown as RawProduct[];
