@@ -195,7 +195,7 @@ export type OrderItemRow = {
 };
 
 export type OrderEventRow = {
-  id: number; order_id: Uuid; status: OrderStatus | null; kind: 'status' | 'note' | 'payment' | 'refund' | 'system';
+  id: number; order_id: Uuid; status: OrderStatus | null; kind: 'status' | 'note' | 'payment' | 'refund' | 'system' | 'return';
   note: string | null; visible_to_customer: boolean; actor_id: Uuid | null; created_at: Timestamp;
 };
 

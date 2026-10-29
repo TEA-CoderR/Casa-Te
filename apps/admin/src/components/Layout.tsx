@@ -18,7 +18,7 @@ type Tab = { to: string; label: string; roles?: Role[] };
  * Detail pages (e.g. /products/:id) keep their own header and show no tabs.
  */
 const SECTIONS: Array<{ tabs: Tab[] }> = [
-  { tabs: [{ to: '/orders', label: 'Tutti gli ordini' }, { to: '/picking', label: 'Preparazione ordini' }] },
+  { tabs: [{ to: '/orders', label: 'Tutti gli ordini' }, { to: '/picking', label: 'Preparazione ordini' }, { to: '/returns', label: 'Resi e assistenza' }] },
   { tabs: [{ to: '/products', label: 'Prodotti' }, { to: '/import', label: 'Importa prodotti' }] },
   { tabs: [{ to: '/coupons', label: 'Codici sconto' }, { to: '/showcase', label: 'Vetrina home' }, { to: '/flyers', label: 'Volantino' }] },
   { tabs: [{ to: '/stores', label: 'Negozi', roles: ['admin'] }, { to: '/companies', label: 'Aziende', roles: ['admin'] }, { to: '/shipping', label: 'Tariffe spedizione' }, { to: '/pickup-points', label: 'Punti di ritiro' }] },
@@ -184,7 +184,7 @@ export function Layout() {
       </div>
       <nav className="nav" id="nav-principale" aria-label={t('Navigazione principale')}>
         <Item to="/" end icon="home">{t('Panoramica')}</Item>
-        <Item to="/orders" icon="clipboard" also={['/picking']}>{t('Gestione ordini')}</Item>
+        <Item to="/orders" icon="clipboard" also={['/picking', '/returns']}>{t('Gestione ordini')}</Item>
         {manager && <Item to="/products" icon="bag" also={['/import']}>{t('Gestione prodotti')}</Item>}
         <Item to="/inventory" icon="warehouse">{t('Gestione inventario')}</Item>
         {manager && <>

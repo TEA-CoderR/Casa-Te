@@ -63,6 +63,7 @@ export default function RootLayout() {
         <Stack.Screen name="checkout/index" options={{ title: 'Consegna e pagamento' }} />
         <Stack.Screen name="checkout/return" options={{ title: 'Pagamento', headerBackVisible: false, gestureEnabled: false }} />
         <Stack.Screen name="order/[id]" options={{ title: 'Ordine' }} />
+        <Stack.Screen name="reso/[orderId]" options={{ title: 'Reso e assistenza' }} />
         <Stack.Screen name="auth/sign-in" options={{ title: 'Accedi', presentation: 'modal' }} />
         <Stack.Screen name="account/edit" options={{ title: 'Dati personali' }} />
         <Stack.Screen name="account/password" options={{ title: 'Password' }} />

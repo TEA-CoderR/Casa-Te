@@ -1,6 +1,6 @@
 {
   "name": "@casa-te/mobile",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -20,6 +20,7 @@
     "expo": "~57.0.31",
     "expo-constants": "~57.0.22",
     "expo-font": "~57.0.4",
+    "expo-image-picker": "~57.0.20",
     "expo-linking": "~57.0.13",
     "expo-router": "~57.0.29",
     "expo-status-bar": "~57.0.1",

@@ -22,7 +22,11 @@ export function buildEmail(event: EventRecord, order: Order, storeName: string):
   const n = order.order_number;
   const hello = `Ciao${order.customer_name ? ` ${esc(order.customer_name.split(' ')[0])}` : ''},`;
   let subject: string; let body: string;
-  if (event.kind === 'refund') {
+  if (event.kind === 'return') {
+    if (!event.note) return null;
+    subject = `Il tuo reso per l'ordine ${n}`;
+    body = esc(event.note);
+  } else if (event.kind === 'refund') {
     subject = `Rimborso per l'ordine ${n}`;
     body = `${esc(event.note ?? 'Abbiamo emesso un rimborso.')} L'accredito può richiedere 5–10 giorni lavorativi.`;
   } else if (event.kind === 'status') {

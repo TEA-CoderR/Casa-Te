@@ -15,6 +15,7 @@ import { Icon } from '@/components/Icon';
 import { openCheckout } from '@/lib/payments';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useCartStore } from '@/store/cart';
+import { OrderReturns } from '@/components/OrderReturns';
 
 const HEADLINES: Record<string, string> = {
   pending_payment: 'In attesa di pagamento', paid: 'Abbiamo ricevuto il tuo ordine', picking: 'Stiamo preparando il tuo ordine',
@@ -22,7 +23,7 @@ const HEADLINES: Record<string, string> = {
 };
 
 export default function OrderDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, reso } = useLocalSearchParams<{ id: string; reso?: string }>();
   const { data: order, loading, refetch } = useQuery(id ? `orders:${id}` : null, () => fetchOrder(id!));
   const { stores } = useStores();
   const add = useCartStore((s) => s.add);
@@ -93,6 +94,8 @@ export default function OrderDetailScreen() {
       {(order.payment_status === 'refunded' || order.payment_status === 'partially_refunded') && <View style={{ marginTop: 14 }}>
         <Notice tone="success" title={PAYMENT_STATUS_LABELS[order.payment_status]} message={`Importo rimborsato: ${formatEuro(order.refunded_cents)}. L'accredito può richiedere 5–10 giorni lavorativi.`} /></View>}
       {!!error && <Notice tone="error" message={error} />}
+      {!!reso && <View style={{ marginTop: 14 }}><Notice tone="success" title={`Richiesta ${reso} inviata`}
+        message="Il negozio la valuta e ti scrive via email. Trovi lo stato qui sotto, in Resi e assistenza." /></View>}
 
       {order.status !== 'pending_payment' && <View style={styles.card}>
         <Text style={styles.cardTitle} accessibilityRole="header">Stato dell’ordine</Text>
@@ -145,10 +148,12 @@ export default function OrderDetailScreen() {
         </View>}
       </View>
 
+      <OrderReturns order={order} />
+
       {order.status !== 'pending_payment' && <Pressable onPress={reorder} accessibilityRole="button" style={styles.reorder}>
         <Icon name="bag" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.actionText}>Ordina di nuovo</Text></Pressable>}
       {!!order.seller_snapshot && <Text style={[styles.fine, { marginTop: 12, marginHorizontal: 4 }]}>
-        Venditore: {order.seller_snapshot.legal_name} · P.IVA {order.seller_snapshot.vat_number}. Per resi o assistenza contatta il negozio indicando il numero d'ordine.</Text>}
+        Venditore: {order.seller_snapshot.legal_name} · P.IVA {order.seller_snapshot.vat_number}.</Text>}
     </Screen>;
   }
 
@@ -250,8 +255,10 @@ export default function OrderDetailScreen() {
 
     <View style={{ marginTop: 24, gap: 10 }}>
       {order.status !== 'pending_payment' && <SecondaryButton title="Ordina di nuovo" icon="bag" onPress={reorder} />}
-      <Text style={styles.fine}>Per resi o assistenza contatta il negozio indicando il numero d'ordine. Diritto di recesso entro 14 giorni dalla consegna.</Text>
     </View>
+    {!!reso && <View style={{ marginTop: 14 }}><Notice tone="success" title={`Richiesta ${reso} inviata`}
+      message="Il negozio la valuta e ti scrive via email. Trovi lo stato qui sotto." /></View>}
+    <OrderReturns order={order} />
   </Screen>;
 }
 

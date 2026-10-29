@@ -25,6 +25,8 @@ select tests.ok(not has_any_column_privilege('anon', 'public.member_card_attempt
 select tests.ok(not has_table_privilege('authenticated', 'public.orders', 'insert'), 'clients cannot insert orders');
 select tests.ok(not has_table_privilege('authenticated', 'public.orders', 'update'), 'clients cannot update orders');
 select tests.ok(not has_table_privilege('authenticated', 'public.refunds', 'insert'), 'clients cannot insert refunds');
+select tests.ok(not has_table_privilege('authenticated', 'public.return_requests', 'insert'), 'returns only via RPC');
+select tests.ok(not has_table_privilege('authenticated', 'public.return_items', 'update'), 'return lines only via RPC');
 select tests.ok(not has_table_privilege('authenticated', 'public.inventory_movements', 'insert'), 'clients cannot write stock movements');
 select tests.ok(not has_table_privilege('authenticated', 'public.order_items', 'update'), 'no table-wide update on order lines');
 select tests.ok(has_column_privilege('authenticated', 'public.order_items', 'picked_quantity', 'update'), 'pickers update picked_quantity');
