@@ -41,7 +41,8 @@ export default function CatalogScreen() {
   const recent = useRecentSearches();
   // "Esplora per reparto" (phone search page): a photo per department and its subcategories, same cache as the home.
   const browsing = searchOpen && !wide && !debounced.trim();
-  const counts = useQuery(browsing ? 'category-counts' : null, fetchCategoryCounts);
+  // Also hides empty subcategory tabs on department pages.
+  const counts = useQuery('category-counts', fetchCategoryCounts);
   const covers = useQuery(browsing ? 'category-covers' : null, () => fetchCategoryCovers());
   const [openDept, setOpenDept] = useState<string | null>(null);
 
@@ -65,7 +66,7 @@ export default function CatalogScreen() {
   const parent = current ? (current.parent_id ? all.find((c) => c.id === current.parent_id) ?? current : current) : null;
   const children = parent ? all.filter((c) => c.parent_id === parent.id) : [];
   const tabs: Array<{ id: string | null; name: string }> = parent
-    ? [{ id: parent.id, name: 'Tutti' }, ...children]
+    ? [{ id: parent.id, name: 'Tutti' }, ...children.filter((c) => !counts.data || (counts.data[c.id] ?? 0) > 0 || c.id === categoryId)]
     : [{ id: null, name: 'Tutti' }, ...all.filter((c) => !c.parent_id)];
   const activeTab = current && current.parent_id ? current.id : parent ? parent.id : null;
   const scopeIds = useMemo(() => {
