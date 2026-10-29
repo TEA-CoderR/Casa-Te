@@ -200,6 +200,12 @@ export async function submitReview(productId: string, rating: number, comment: s
 
 // ---- CASA & TE Club ----------------------------------------------------------
 
+/** Joins the Club with the customer's details (checked again on the server). */
+export async function joinClub(details: { fullName: string; phone: string; privacy: boolean; marketing: boolean }): Promise<string | null> {
+  return unwrap(await supabase.rpc('join_club', { p_full_name: details.fullName, p_phone: details.phone,
+    p_privacy: details.privacy, p_marketing: details.marketing })) as string | null;
+}
+
 export async function setClubMembership(join: boolean): Promise<string | null> {
   return unwrap(await supabase.rpc('set_club_membership', { p_join: join })) as string | null;
 }

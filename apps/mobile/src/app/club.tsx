@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router, Stack } from 'expo-router';
-import { friendlyError, type ClubOffer } from '@casa-te/shared';
+import { friendlyError, isPhone, type ClubOffer, type ProfileRow } from '@casa-te/shared';
 import { formatEuro } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { Icon, type IconName } from '@/components/Icon';
-import { Loading, Notice, PrimaryButton, SecondaryButton } from '@/components/UI';
+import { Checkbox, Loading, Notice, PrimaryButton, SecondaryButton, TextField } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
-import { fetchClubOffers, fetchProfile, setClubMembership } from '@/lib/api';
+import { fetchClubOffers, fetchProfile, joinClub, setClubMembership } from '@/lib/api';
 import { useQuery } from '@/lib/useQuery';
 import { useClubSettings } from '@/lib/hooks';
 import { useUser } from '@/store/session';
@@ -34,9 +34,9 @@ export default function ClubScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const toggle = async (join: boolean) => {
+  const leave = async () => {
     setBusy(true); setError('');
-    try { const since = await setClubMembership(join); useClubStore.getState().set(!!since); await profile.refetch(); } catch (e) { setError(friendlyError(e)); } finally { setBusy(false); }
+    try { await setClubMembership(false); useClubStore.getState().set(false); await profile.refetch(); } catch (e) { setError(friendlyError(e)); } finally { setBusy(false); }
   };
 
   const card = profile.data?.member_card_number ?? null;
@@ -64,7 +64,9 @@ export default function ClubScreen() {
     {!user ? <View style={{ marginTop: 20 }}><PrimaryButton title="Accedi per iscriverti o collegare la tessera" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/club' } })} /></View>
       : profile.loading && !profile.data ? <Loading />
       : !member ? <>
-          {club.enabled ? <View style={{ marginTop: 20 }}><PrimaryButton title="Iscriviti gratis" onPress={() => toggle(true)} loading={busy} /></View>
+          {club.enabled ? !profile.data ? <View style={{ marginTop: 20 }}><Notice tone="error" message="Impossibile caricare i tuoi dati. Riprova più tardi." /></View>
+            : <JoinForm profile={profile.data} email={user.email ?? ''}
+              onJoined={async () => { useClubStore.getState().set(true); await profile.refetch(); }} />
             : <View style={{ marginTop: 20 }}><Notice message="Al momento il Club non accetta nuove iscrizioni." /></View>}
           {cardSection}
         </>
@@ -82,12 +84,71 @@ export default function ClubScreen() {
                 <Text selectable style={styles.code} accessibilityLabel={`Codice ${o.code}`}>{o.code}</Text>
               </View>)}
           <Text style={styles.howto}>Inserisci il codice al checkout, nella sezione "Codice sconto".</Text>
-          <View style={{ marginTop: 28 }}><SecondaryButton title="Esci dal Club" onPress={() => toggle(false)} disabled={busy} /></View>
+          <View style={{ marginTop: 28 }}><SecondaryButton title="Esci dal Club" onPress={leave} disabled={busy} /></View>
         </>}
   </Screen>;
 }
 
+/** Joining needs name, phone, the account email and the privacy notice (checked again by join_club). */
+function JoinForm({ profile, email, onJoined }: { profile: ProfileRow; email: string; onJoined: () => Promise<void> }) {
+  const [first, setFirst] = useState('');
+  const [last, setLast] = useState('');
+  const [phone, setPhone] = useState('');
+  const [privacy, setPrivacy] = useState(false);
+  const [marketing, setMarketing] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const [f = '', ...rest] = (profile.full_name ?? '').trim().split(/\s+/);
+    setFirst(f); setLast(rest.join(' ')); setPhone(profile.phone ?? ''); setMarketing(profile.marketing_opt_in);
+  }, [profile.id]);
+
+  const submit = async () => {
+    const e: Record<string, string> = {};
+    if (!first.trim()) e.first = 'Inserisci il nome.';
+    if (!last.trim()) e.last = 'Inserisci il cognome.';
+    if (!isPhone(phone) || phone.replace(/\D/g, '').length < 8) e.phone = 'Inserisci un numero di telefono valido.';
+    if (!email) e.email = 'Al tuo account manca un indirizzo email.';
+    if (!privacy) e.privacy = "Per iscriverti devi accettare l'informativa privacy.";
+    setErrors(e); setError('');
+    if (Object.keys(e).length) return;
+    setBusy(true);
+    try { await joinClub({ fullName: `${first.trim()} ${last.trim()}`, phone: phone.trim(), privacy, marketing }); await onJoined(); }
+    catch (err) { setError(friendlyError(err)); } finally { setBusy(false); }
+  };
+
+  return <View style={styles.form}>
+    <Text style={styles.formTitle} accessibilityRole="header">Iscriviti gratis</Text>
+    <Text style={styles.formLead}>Bastano pochi dati: li usiamo solo per il Club.</Text>
+    <View style={styles.formRow}>
+      <View style={{ flex: 1 }}><TextField label="Nome" value={first} onChangeText={setFirst} autoComplete="given-name" textContentType="givenName" error={errors.first} /></View>
+      <View style={{ flex: 1 }}><TextField label="Cognome" value={last} onChangeText={setLast} autoComplete="family-name" textContentType="familyName" error={errors.last} /></View>
+    </View>
+    <TextField label="Telefono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber"
+      placeholder="Il tuo numero di cellulare" error={errors.phone} />
+    <TextField label="Email" value={email} editable={false} error={errors.email} hint="È l'email del tuo account." style={styles.readOnly} />
+    <Checkbox checked={privacy} onChange={setPrivacy}>
+      <Text style={styles.check}>Ho letto l'<Text style={styles.link} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text> del Club <Text style={{ color: colors.danger }}>*</Text></Text>
+    </Checkbox>
+    {!!errors.privacy && <Text style={styles.fieldError}>{errors.privacy}</Text>}
+    <Checkbox checked={marketing} onChange={setMarketing}>
+      <Text style={styles.check}>Voglio ricevere offerte e novità via email (facoltativo)</Text>
+    </Checkbox>
+    {!!error && <Notice tone="error" message={error} />}
+    <View style={{ marginTop: 8 }}><PrimaryButton title="Iscriviti al Club" onPress={submit} loading={busy} icon="crown" /></View>
+  </View>;
+}
+
 const styles = StyleSheet.create({
+  form: { marginTop: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 16, gap: 4 },
+  formTitle: { fontSize: 20, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  formLead: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans, marginBottom: 10 },
+  formRow: { flexDirection: 'row', gap: 10 },
+  check: { fontSize: 13, color: colors.text, lineHeight: 19, fontFamily: fonts.sans },
+  link: { color: colors.green, textDecorationLine: 'underline' },
+  readOnly: { backgroundColor: colors.cream, color: colors.muted },
+  fieldError: { fontSize: 12, color: colors.danger, fontFamily: fonts.sans, marginTop: -4, marginBottom: 6 },
   hero: { backgroundColor: colors.sand, borderRadius: 16, padding: 24, alignItems: 'center', gap: 8, marginBottom: 18 },
   title: { fontSize: 30, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   lead: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans },

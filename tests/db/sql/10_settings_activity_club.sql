@@ -61,7 +61,7 @@ end $$;
 select tests.login('00000000-0000-0000-0000-00000000000a');
 set role authenticated;
 do $$ begin
-  perform tests.ok(public.set_club_membership(true) is not null, 'customer joins');
+  perform tests.ok(public.join_club('Cliente A', '+39 333 123 4567', true) is not null, 'customer joins');
   perform tests.eq((select count(*) from public.activity_log)::int, 0, 'customers cannot read the log');
 end $$;
 reset role;
@@ -73,7 +73,7 @@ select tests.login('00000000-0000-0000-0000-00000000000a');
 set role authenticated;
 do $$ begin
   perform public.set_club_membership(false);
-  perform tests.throws($q$select public.set_club_membership(true)$q$, 'club_disabled', 'cannot join a disabled club');
+  perform tests.throws($q$select public.join_club('Cliente A', '+39 333 123 4567', true)$q$, 'club_disabled', 'cannot join a disabled club');
 end $$;
 reset role;
 
