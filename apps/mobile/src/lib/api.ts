@@ -80,6 +80,8 @@ export async function fetchCategories(): Promise<CategoryRow[]> {
 
 export type ProductQuery = {
   storeId: string | null;
+  /** Default order only: discounted products (promotions and Club prices) before the others. */
+  offersFirst?: boolean;
   categoryId?: string | null;
   /** Any of these categories (a parent plus its subcategories). */
   categoryIds?: string[];
@@ -134,6 +136,9 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
   // Default order of the two showcase collections: the manual positions set in the admin come first.
   if ((q.sort ?? 'featured') === 'featured' && q.featured) query = query.order('featured_rank', { ascending: true, nullsFirst: false });
   if ((q.sort ?? 'featured') === 'featured' && q.onSale) query = query.order('offer_rank', { ascending: true, nullsFirst: false });
+  if ((q.sort ?? 'featured') === 'featured' && q.offersFirst && !q.onSale && !q.featured) {
+    query = query.order('on_offer', { ascending: false }).order('offer_rank', { ascending: true, nullsFirst: false });
+  }
   switch (q.sort) {
     case 'price_asc': query = query.order('price_cents', { ascending: true }); break;
     case 'price_desc': query = query.order('price_cents', { ascending: false }); break;
