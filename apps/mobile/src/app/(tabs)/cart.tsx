@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { EmptyReceipt } from '@/components/ShopMarks';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
 import { StoreCard } from '@/components/StoreCard';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -17,7 +17,8 @@ import { EmptyState, Loading, Notice, PageTitle, PrimaryButton, QuantityControl,
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
 import { colors, floatShadow, fonts } from '@/config/theme';
-import { fetchProducts, imageUrl } from '@/lib/api';
+import { fetchCartSuggestions, fetchProducts, imageUrl } from '@/lib/api';
+import { ProductCard } from '@/components/ProductCard';
 import { useCartQuote, useClubSettings, useDelivery, useLayout } from '@/lib/hooks';
 import { cartItemCount, useCartStore } from '@/store/cart';
 import { useUser } from '@/store/session';
@@ -47,6 +48,9 @@ export default function CartScreen() {
     () => fetchProducts({ storeId: store?.id ?? null, ids, pageSize: 100 }));
   const { wide } = useLayout();
   const user = useUser();
+  // Suggestions change only when the set of products changes (not on quantity changes).
+  const suggestions = useQuery(ids.length ? `cart-suggestions:${store?.id}:${ids.join(',')}` : null,
+    () => fetchCartSuggestions(store?.id ?? null, ids, 10));
 
   const band = wide ? undefined : <BrandHeader title="Carrello" titleSize={30} subtitle="Nessun articolo" pad={[14, 16, 18]}
     left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/')} />} />;
@@ -99,9 +103,20 @@ export default function CartScreen() {
     </View>
     <Icon name="chevron" size={18} color={colors.text} />
   </Pressable>;
+  const suggested = (suggestions.data ?? []).filter((p) => !items[p.id]);
+  const suggestionsRow = suggested.length > 0 && <View style={styles.sugg}>
+    <Text style={styles.suggTitle} accessibilityRole="header">Potrebbe servirti anche</Text>
+    {fulfilment === 'home' && !overweight && remaining > 0
+      ? <Text style={styles.suggNote}>Mancano {formatEuro(remaining)} per la spedizione gratuita</Text>
+      : <Text style={styles.suggNote}>Scelti in base al tuo carrello</Text>}
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 10, paddingRight: 16 }}>
+      {suggested.map((p) => <View key={p.id} style={{ width: wide ? 190 : 156 }}><ProductCard product={p} /></View>)}
+    </ScrollView>
+  </View>;
   const shippingValue = !t ? '—' : t.shipping_cents === null ? 'Non disponibile' : formatShipping(t.shipping_cents);
   const summary = <View style={styles.totals}>
-    <SummaryRow label="Totale prodotti" value={formatEuro(subtotal)} />
+    <SummaryRow label="Totale prodotti" value={formatEuro(subtotal + memberSaved)} />
+    {memberSaved > 0 && <View style={[styles.footRow, { marginVertical: 4 }]}><Text style={styles.footSoci}>Prezzi Soci</Text><Text style={styles.footSoci}>-{formatEuro(memberSaved)}</Text></View>}
     {!!t?.discount_cents && <SummaryRow label="Sconto" value={`-${formatEuro(t.discount_cents)}`} />}
     <SummaryRow label="Spedizione" value={shippingValue} />
     {fulfilment === 'home' && !overweight && remaining > 0 && <Text style={styles.hint}>Mancano {formatEuro(remaining)} per la spedizione gratuita (fino a 10 kg).</Text>}
@@ -110,7 +125,7 @@ export default function CartScreen() {
       <Text style={styles.totalValue}>{t?.total_cents != null ? formatEuro(t.total_cents) : '—'}</Text>
     </View>
     <Text style={styles.vat}>IVA inclusa</Text>
-    {memberSaved > 0 && <Text style={styles.memberSaved}>Hai risparmiato {formatEuro(memberSaved)} con il Club</Text>}
+    {memberAvailable > 0 && clubOn && t?.total_cents != null && <View style={{ marginTop: 14 }}><ClubCompare total={t.total_cents} saving={memberAvailable} /></View>}
   </View>;
 
   // Phone (design F, F-Carrello): full page with a back button, the pickup card hanging from the awning,
@@ -121,14 +136,9 @@ export default function CartScreen() {
     const header = <BrandHeader inScroll title="Carrello" titleSize={30} subtitle={`${count} ${count === 1 ? 'articolo' : 'articoli'}`} pad={[14, 16, 40]}
       left={<HeaderBack onPress={back} />} />;
     const footer = <View>
-      {memberSaved > 0 && <Text style={[styles.memberSaved, { marginTop: 0, marginBottom: 8 }]}>Hai risparmiato {euro(memberSaved)} con il Club</Text>}
-      {memberAvailable > 0 && clubOn && <Pressable onPress={() => router.push('/club')} accessibilityRole="link" style={styles.memberNudge}
-        accessibilityLabel={`Con il Club risparmi ${formatEuro(memberAvailable)}. Iscriviti gratis o collega la tua tessera`}>
-        <Icon name="crown" size={18} color={colors.sale} strokeWidth={1.7} />
-        <Text style={styles.memberNudgeText}>Con il Club gratuito risparmi <Text style={{ fontFamily: fonts.sansBold, fontWeight: '700' }}>{euro(memberAvailable)}</Text> · iscriviti gratis</Text>
-        <Icon name="chevron" size={16} color={colors.sale} />
-      </Pressable>}
-      <View style={styles.footRow}><Text style={styles.footLabel}>Prodotti</Text><Text style={styles.footLabel}>{euro(subtotal)}</Text></View>
+      {memberAvailable > 0 && clubOn && t?.total_cents != null && <ClubCompare total={t.total_cents} saving={memberAvailable} />}
+      <View style={styles.footRow}><Text style={styles.footLabel}>Prodotti</Text><Text style={styles.footLabel}>{euro(subtotal + memberSaved)}</Text></View>
+      {memberSaved > 0 && <View style={[styles.footRow, { marginTop: 4 }]}><Text style={styles.footSoci}>Prezzi Soci</Text><Text style={styles.footSoci}>-{euro(memberSaved)}</Text></View>}
       {!!t?.discount_cents && <View style={[styles.footRow, { marginTop: 4 }]}><Text style={styles.footLabel}>Sconto</Text><Text style={styles.footLabel}>-{euro(t.discount_cents)}</Text></View>}
       <View style={[styles.footRow, { marginTop: 4 }]}><Text style={styles.footLabel}>{fulfilment === 'store' ? 'Ritiro in negozio' : 'Spedizione'}</Text>
         <Text style={[styles.footLabel, t?.shipping_cents === 0 && styles.footFree]}>{shippingValue.replace(/€\s/, '€')}</Text></View>
@@ -183,11 +193,7 @@ export default function CartScreen() {
               </View>
               {!!line.issue && <Text style={styles.issue}>{ISSUE_TEXT[line.issue]}{line.issue === 'insufficient_stock' ? ` (disponibili: ${line.available_quantity})` : ''}</Text>}
               <View style={styles.lineBottom}>
-                <View style={{ flexShrink: 1 }}>
-                  {!line.issue && <Text style={[styles.pPrice, !!compare && { color: colors.sale }]}>{euro(line.line_total_cents)}</Text>}
-                  {!line.issue && line.member_price_applied && <Text style={styles.pSoci}>Prezzo Soci</Text>}
-                  {!line.issue && line.quantity > 1 && line.unit_price_cents !== null && <Text style={styles.pEach}>{euro(line.unit_price_cents)} cad.</Text>}
-                </View>
+                <View style={{ flexShrink: 1 }}>{!line.issue && <LinePrice line={line} compareUnit={compare} />}</View>
                 {line.issue !== 'unavailable' && <View style={styles.qty}>
                   <Pressable onPress={() => qty <= 1 ? (setRemoved({ id: line.product_id, name: line.name, qty }), remove(line.product_id)) : setQuantity(line.product_id, qty - 1)}
                     accessibilityRole="button" accessibilityLabel={`Togli un ${line.name}`} style={styles.qtyButton}><Text style={styles.qtyGlyph}>−</Text></Pressable>
@@ -200,6 +206,7 @@ export default function CartScreen() {
           </Animated.View>;
         })}
       </View>
+      {suggestionsRow}
       {removed && <Animated.View entering={FadeInDown.springify().damping(18)} style={styles.snack} accessibilityLiveRegion="polite">
         <Text style={styles.snackText} numberOfLines={1}>Rimosso: {removed.name}</Text>
         <Pressable onPress={() => { add(removed.id, removed.qty); setRemoved(null); }} accessibilityRole="button" hitSlop={8} style={{ paddingHorizontal: 12, height: 40, justifyContent: 'center' }}>
@@ -236,7 +243,8 @@ export default function CartScreen() {
           {!p?.brand && !attrs && line.weight_g !== null && <Text style={styles.meta}>{formatWeight(line.weight_g)}</Text>}
           {!!line.issue && <Text style={styles.issue}>{ISSUE_TEXT[line.issue]}{line.issue === 'insufficient_stock' ? ` (disponibili: ${line.available_quantity})` : ''}</Text>}
           <View style={styles.lineBottom}>
-            <Text style={styles.linePrice}>{line.issue ? '' : formatEuro(line.line_total_cents)}</Text>
+            <View style={{ flexShrink: 1 }}>{!line.issue && <LinePrice line={line} wide
+              compareUnit={p?.compare_at_price_cents && line.unit_price_cents !== null && p.compare_at_price_cents > line.unit_price_cents ? p.compare_at_price_cents : null} />}</View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {line.issue !== 'unavailable' && <QuantityControl value={items[line.product_id] ?? line.quantity} label={line.name} max={max} compact
                 onChange={(q) => setQuantity(line.product_id, q)} />}
@@ -248,14 +256,95 @@ export default function CartScreen() {
       </View>;
     })}
     </View>
-    {!wide && <>{delivery}{clubOn && club}{summary}</>}
+    {suggestionsRow}
+    {!wide && <>{delivery}{clubOn && memberAvailable === 0 && club}{summary}</>}
     </View>
-    {wide && <View style={styles.summaryCard}>{delivery}{clubOn && club}{summary}<View style={{ marginTop: 18 }}>{cta}</View></View>}
+    {wide && <View style={styles.summaryCard}>{delivery}{clubOn && memberAvailable === 0 && club}{summary}<View style={{ marginTop: 18 }}>{cta}</View></View>}
     </View>
   </Screen>;
 }
 
+const euroTight = (c: number) => formatEuro(c).replace(/€\s/, '€');
+
+/**
+ * A cart line's price: Club member price charged (red, regular price struck), member price on offer to a
+ * non-member (regular price, the Soci price beside it), or a store promotion (red, old price struck).
+ * Display only: every amount comes from quote_cart.
+ */
+function LinePrice({ line, compareUnit, wide }: { line: QuoteLine; compareUnit: number | null; wide?: boolean }) {
+  const regular = line.regular_unit_price_cents ?? line.unit_price_cents ?? 0;
+  const member = line.member_unit_price_cents ?? null;
+  const qty = line.quantity;
+  const pct = (from: number, to: number) => Math.round((1 - to / from) * 100);
+  const big = [wide ? styles.linePrice : styles.pPrice];
+  if (line.member_price_applied && member !== null) return <View>
+    <View style={styles.priceRow}>
+      <Text style={[...big, { color: colors.sale }]}>{euroTight(line.line_total_cents)}</Text>
+      <Text style={styles.struck}>{euroTight(regular * qty)}</Text>
+    </View>
+    <View style={styles.sociTag}><Icon name="crown" size={12} color="#FFFFFF" strokeWidth={2} />
+      <Text style={styles.sociTagText}>Prezzo Soci −{pct(regular, member)}%</Text></View>
+    {qty > 1 && <Text style={styles.pEach}>{euroTight(member)} cad.</Text>}
+  </View>;
+  if (member !== null) return <View>
+    <Text style={big}>{euroTight(line.line_total_cents)}</Text>
+    <View style={styles.sociOffer}>
+      <Icon name="crown" size={12} color={colors.sale} strokeWidth={2} />
+      <Text style={styles.sociOfferText}>Soci <Text style={{ fontFamily: fonts.sansBold, fontWeight: '700' }}>{euroTight(member * qty)}</Text> −{pct(regular, member)}%</Text>
+    </View>
+    {qty > 1 && <Text style={styles.pEach}>{euroTight(regular)} cad.</Text>}
+  </View>;
+  return <View>
+    <View style={styles.priceRow}>
+      <Text style={[...big, !!compareUnit && { color: colors.sale }]}>{euroTight(line.line_total_cents)}</Text>
+      {!!compareUnit && <Text style={styles.struck}>{euroTight(compareUnit * qty)}</Text>}
+    </View>
+    {qty > 1 && line.unit_price_cents !== null && <Text style={styles.pEach}>{euroTight(line.unit_price_cents)} cad.</Text>}
+  </View>;
+}
+
+/** For non-members: the cart total with and without the Club, side by side, and the way in. */
+function ClubCompare({ total, saving }: { total: number; saving: number }) {
+  return <Pressable onPress={() => router.push('/club')} accessibilityRole="link" style={styles.compare}
+    accessibilityLabel={`Totale ${formatEuro(total)}, con il Club ${formatEuro(total - saving)}. Iscriviti gratis`}>
+    <View style={styles.compareCol}>
+      <Text style={styles.compareLabel}>Senza Club</Text>
+      <Text style={styles.compareNow}>{euroTight(total)}</Text>
+    </View>
+    <View style={[styles.compareCol, styles.compareClub]}>
+      <Text style={[styles.compareLabel, { color: colors.sale }]}>Con il Club</Text>
+      <Text style={styles.compareSoci}>{euroTight(total - saving)}</Text>
+      <Text style={styles.compareSave}>risparmi {euroTight(saving)}</Text>
+    </View>
+    <View style={styles.compareCta}>
+      <Text style={styles.compareCtaText}>Iscriviti{'\n'}gratis</Text>
+      <Icon name="chevron" size={16} color="#FFFFFF" strokeWidth={2.4} />
+    </View>
+  </Pressable>;
+}
+
 const styles = StyleSheet.create({
+  sugg: { marginTop: 18 },
+  suggTitle: { fontSize: 19, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  suggNote: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
+  struck: { fontSize: 12.5, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
+  sociTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: colors.sale, borderRadius: 6,
+    paddingHorizontal: 6, paddingVertical: 2, marginTop: 3 },
+  sociTagText: { fontSize: 11, color: '#FFFFFF', fontFamily: fonts.sansBold, fontWeight: '700' },
+  sociOffer: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.sale, borderRadius: 6,
+    paddingHorizontal: 6, paddingVertical: 1, marginTop: 3 },
+  sociOfferText: { fontSize: 11.5, color: colors.sale, fontFamily: fonts.sans },
+  footSoci: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.sale },
+  compare: { flexDirection: 'row', alignItems: 'stretch', borderRadius: 16, borderWidth: 1.5, borderColor: colors.sale, overflow: 'hidden', marginBottom: 12 },
+  compareCol: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, justifyContent: 'center' },
+  compareClub: { backgroundColor: '#FCEDEA' },
+  compareLabel: { fontSize: 11.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  compareNow: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text, marginTop: 2 },
+  compareSoci: { fontSize: 20, fontFamily: fonts.heavy, color: colors.sale, marginTop: 2 },
+  compareSave: { fontSize: 11.5, color: colors.sale, fontFamily: fonts.sans },
+  compareCta: { width: 86, backgroundColor: colors.sale, alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 6 },
+  compareCtaText: { fontSize: 13, lineHeight: 16, color: '#FFFFFF', fontFamily: fonts.sansBold, fontWeight: '700', textAlign: 'center' },
   undo: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.cream, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
   snack: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, borderRadius: 16, paddingHorizontal: 16, backgroundColor: colors.text },
   snackText: { flex: 1, fontSize: 14.5, fontFamily: fonts.sansSemiBold, color: '#FFFFFF' },
