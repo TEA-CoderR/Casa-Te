@@ -15,7 +15,7 @@ import { useClubStore } from '@/store/club';
 import { MemberCardLink, MemberCardView } from '@/components/MemberCard';
 
 const PERKS: Array<{ icon: IconName; title: string; text: string }> = [
-  { icon: 'crown', title: 'Prezzi Soci', text: 'Su tanti articoli paghi il prezzo riservato ai soci, come in negozio.' },
+  { icon: 'crown', title: 'Più offerte', text: 'Su tanti articoli in offerta paghi il prezzo riservato al Club, come in negozio.' },
   { icon: 'sparkle', title: 'Offerte riservate', text: 'Codici sconto solo per i membri, sempre visibili qui.' },
   { icon: 'heart', title: 'Gratis, sempre', text: "L'iscrizione non costa nulla e puoi uscire quando vuoi." },
   { icon: 'store', title: 'Hai già la tessera?', text: 'Collegala qui: la mostri dal telefono alla cassa e i punti restano in negozio.' },

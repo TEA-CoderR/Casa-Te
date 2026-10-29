@@ -26,14 +26,18 @@ function defaultOrder(kind: Kind, rows: Row[]): Row[] {
 export function ShowcasePage() {
   const [kind, setKind] = useState<Kind>('featured');
   const data = useAsync(async () => {
-    const select = 'id,sku,name,price_cents,compare_at_price_cents,featured_rank,offer_rank,product_images(path,sort)';
+    const select = 'id,sku,name,price_cents,compare_at_price_cents,member_price_cents,featured_rank,offer_rank,product_images(path,sort)';
     const [featured, offers] = await Promise.all([
       supabase.from('products').select(select).eq('active', true).eq('featured', true).limit(500),
-      supabase.from('products').select(select).eq('active', true).not('compare_at_price_cents', 'is', null).limit(500),
+      // Club member prices count as offers, as in the shop (shown at the member price, regular price struck through).
+      supabase.from('products').select(select).eq('active', true).or('compare_at_price_cents.not.is.null,member_price_cents.not.is.null').limit(1000),
     ]);
     return {
       featured: defaultOrder('featured', unwrap(featured) as unknown as Row[]),
-      offer: defaultOrder('offer', (unwrap(offers) as unknown as Row[]).filter((p) => discount(p) > 0)),
+      offer: defaultOrder('offer', (unwrap(offers) as unknown as Array<Row & { member_price_cents: number | null }>)
+        .map(({ member_price_cents: m, ...p }) => (m && m < p.price_cents
+          ? { ...p, price_cents: m, compare_at_price_cents: Math.max(p.price_cents, p.compare_at_price_cents ?? 0) } : p))
+        .filter((p) => discount(p) > 0)),
     };
   }, []);
   const [list, setList] = useState<Row[]>([]);

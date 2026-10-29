@@ -8,6 +8,7 @@ import {
 } from '@casa-te/shared';
 import { Platform } from 'react-native';
 import { SUPABASE_URL, supabase } from './supabase';
+import { memberPrice } from './price';
 
 export type CatalogProduct = Pick<ProductRow,
   'id' | 'sku' | 'name' | 'description' | 'brand' | 'category_id' | 'price_cents' | 'compare_at_price_cents' |
@@ -18,6 +19,11 @@ export type CatalogProduct = Pick<ProductRow,
   images: string[];
   /** Units available in the selected store (null when no store is selected). */
   stock: number | null;
+  /**
+   * Set when price_cents is the Club member price (shown like any offer: regular price struck through). quote_cart
+   * charges it to Club members only; others see "con Club gratuito" next to it.
+   */
+  clubPrice: { endsOn: string | null } | null;
 };
 
 export type OrderWithItems = OrderRow & { order_items: OrderItemRow[] };
@@ -50,7 +56,10 @@ function toCatalogProduct(p: RawProduct, storeId: string | null): CatalogProduct
     .map((i) => imageUrl(i.path)).filter((u): u is string => Boolean(u));
   const stock = storeId ? (p.inventory ?? []).find((i) => i.store_id === storeId)?.quantity ?? 0 : null;
   const { product_images: _i, inventory: _s, ...rest } = p;
-  return { ...rest, images, image: images[0] ?? null, stock };
+  // A valid member price is the product's offer, like a store promotion (display only).
+  const club = memberPrice(rest);
+  const offer = club ? { price_cents: club.cents, compare_at_price_cents: Math.max(rest.price_cents, rest.compare_at_price_cents ?? 0) } : {};
+  return { ...rest, ...offer, images, image: images[0] ?? null, stock, clubPrice: club ? { endsOn: club.endsOn } : null };
 }
 
 // ---- Catalogue ---------------------------------------------------------------
@@ -117,7 +126,8 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
   if (q.priceMin != null) query = query.gte('price_cents', q.priceMin);
   if (q.priceMax != null) query = query.lte('price_cents', q.priceMax);
   if (q.featured) query = query.eq('featured', true);
-  if (q.onSale) query = query.not('compare_at_price_cents', 'is', null);
+  // Offers include Club member prices (expired ones are cleared by refresh_display_prices).
+  if (q.onSale) query = query.or('compare_at_price_cents.not.is.null,member_price_cents.not.is.null');
   if (q.ids) query = query.in('id', q.ids.length ? q.ids : ['00000000-0000-0000-0000-000000000000']);
   if (needle) query = query.ilike('search_text', `%${needle}%`);
   // Default order of the two showcase collections: the manual positions set in the admin come first.

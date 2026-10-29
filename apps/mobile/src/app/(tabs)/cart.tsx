@@ -94,7 +94,7 @@ export default function CartScreen() {
     <View style={{ flex: 1 }}>
       <Text style={styles.bannerTitle}>Casa & Te Club</Text>
       <Text style={styles.bannerText}>{memberAvailable > 0
-        ? `Con i Prezzi Soci risparmi ${formatEuro(memberAvailable)} su questo carrello: iscriviti gratis o collega la tua tessera.`
+        ? `Con il Club gratuito risparmi ${formatEuro(memberAvailable)} su questo carrello: iscriviti o collega la tua tessera.`
         : clubTagline}</Text>
     </View>
     <Icon name="chevron" size={18} color={colors.text} />
@@ -110,7 +110,7 @@ export default function CartScreen() {
       <Text style={styles.totalValue}>{t?.total_cents != null ? formatEuro(t.total_cents) : '—'}</Text>
     </View>
     <Text style={styles.vat}>IVA inclusa</Text>
-    {memberSaved > 0 && <Text style={styles.memberSaved}>Con i Prezzi Soci hai risparmiato {formatEuro(memberSaved)}</Text>}
+    {memberSaved > 0 && <Text style={styles.memberSaved}>Hai risparmiato {formatEuro(memberSaved)} con il Club</Text>}
   </View>;
 
   // Phone (design F, F-Carrello): full page with a back button, the pickup card hanging from the awning,
@@ -121,12 +121,12 @@ export default function CartScreen() {
     const header = <BrandHeader inScroll title="Carrello" titleSize={30} subtitle={`${count} ${count === 1 ? 'articolo' : 'articoli'}`} pad={[14, 16, 40]}
       left={<HeaderBack onPress={back} />} />;
     const footer = <View>
-      {memberSaved > 0 && <Text style={[styles.memberSaved, { marginTop: 0, marginBottom: 8 }]}>Con i Prezzi Soci hai risparmiato {euro(memberSaved)}</Text>}
+      {memberSaved > 0 && <Text style={[styles.memberSaved, { marginTop: 0, marginBottom: 8 }]}>Hai risparmiato {euro(memberSaved)} con il Club</Text>}
       {memberAvailable > 0 && clubOn && <Pressable onPress={() => router.push('/club')} accessibilityRole="link" style={styles.memberNudge}
         accessibilityLabel={`Con il Club risparmi ${formatEuro(memberAvailable)}. Iscriviti gratis o collega la tua tessera`}>
-        <Icon name="crown" size={18} color={colors.club} strokeWidth={1.7} />
-        <Text style={styles.memberNudgeText}>Con il Club risparmi <Text style={{ fontFamily: fonts.sansBold, fontWeight: '700' }}>{euro(memberAvailable)}</Text> · iscriviti gratis</Text>
-        <Icon name="chevron" size={16} color={colors.club} />
+        <Icon name="crown" size={18} color={colors.sale} strokeWidth={1.7} />
+        <Text style={styles.memberNudgeText}>Con il Club gratuito risparmi <Text style={{ fontFamily: fonts.sansBold, fontWeight: '700' }}>{euro(memberAvailable)}</Text> · iscriviti gratis</Text>
+        <Icon name="chevron" size={16} color={colors.sale} />
       </Pressable>}
       <View style={styles.footRow}><Text style={styles.footLabel}>Prodotti</Text><Text style={styles.footLabel}>{euro(subtotal)}</Text></View>
       {!!t?.discount_cents && <View style={[styles.footRow, { marginTop: 4 }]}><Text style={styles.footLabel}>Sconto</Text><Text style={styles.footLabel}>-{euro(t.discount_cents)}</Text></View>}
@@ -184,8 +184,7 @@ export default function CartScreen() {
               {!!line.issue && <Text style={styles.issue}>{ISSUE_TEXT[line.issue]}{line.issue === 'insufficient_stock' ? ` (disponibili: ${line.available_quantity})` : ''}</Text>}
               <View style={styles.lineBottom}>
                 <View style={{ flexShrink: 1 }}>
-                  {!line.issue && <Text style={[styles.pPrice, !!compare && { color: colors.sale }, line.member_price_applied && { color: colors.club }]}>{euro(line.line_total_cents)}</Text>}
-                  {!line.issue && line.member_price_applied && <Text style={styles.pMember}>Prezzo Soci</Text>}
+                  {!line.issue && <Text style={[styles.pPrice, !!compare && { color: colors.sale }]}>{euro(line.line_total_cents)}</Text>}
                   {!line.issue && line.quantity > 1 && line.unit_price_cents !== null && <Text style={styles.pEach}>{euro(line.unit_price_cents)} cad.</Text>}
                 </View>
                 {line.issue !== 'unavailable' && <View style={styles.qty}>
@@ -280,11 +279,10 @@ const styles = StyleSheet.create({
   modify: { fontSize: 12.5, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium, fontWeight: '500' },
   banner: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#F5ECDD', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16 },
   bannerTitle: { fontSize: 19, fontFamily: fonts.serif, color: colors.text },
-  memberSaved: { fontSize: 13, color: colors.club, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginTop: 8 },
-  memberNudge: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.clubFill, borderRadius: 12,
+  memberSaved: { fontSize: 13, color: colors.sale, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginTop: 8 },
+  memberNudge: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.well, borderRadius: 12,
     paddingHorizontal: 12, paddingVertical: 9, marginBottom: 10 },
-  memberNudgeText: { flex: 1, fontSize: 13, color: colors.club, fontFamily: fonts.sans },
-  pMember: { fontSize: 11, color: colors.club, fontFamily: fonts.sansBold, fontWeight: '700' },
+  memberNudgeText: { flex: 1, fontSize: 13, color: colors.sale, fontFamily: fonts.sans },
   bannerText: { fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
   totals: { marginTop: 16 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 8 },
