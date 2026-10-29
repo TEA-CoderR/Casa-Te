@@ -215,23 +215,24 @@ export default function CatalogScreen() {
                 accessibilityRole={subs.length > 1 ? 'button' : 'link'} accessibilityState={subs.length > 1 ? { expanded: open } : undefined}
                 accessibilityLabel={`${c.name}${n ? `, ${n} ${n === 1 ? 'prodotto' : 'prodotti'}` : ''}`} style={styles.sRow}>
                 <Thumb image={cover} tint={tint} slug={c.slug} name={c.name} size={44} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.sRowText} numberOfLines={1}>{c.name}</Text>
-                  {n > 0 && <Text style={styles.sRowMeta}>{n.toLocaleString('it-IT')} {n === 1 ? 'prodotto' : 'prodotti'}{subs.length > 1 ? ` · ${subs.length} categorie` : ''}</Text>}
-                </View>
+                <Text style={styles.sRowText} numberOfLines={1}>{c.name}</Text>
                 <View style={open && { transform: [{ rotate: '90deg' }] }}><Icon name="chevron" size={18} color="#9A9F94" strokeWidth={2.2} /></View>
               </Pressable>
               {open && <View style={styles.sSubs}>
-                <Pressable onPress={() => go(c.id)} accessibilityRole="link" style={styles.sSub}>
-                  <Text style={[styles.sSubText, { color: colors.green, fontFamily: fonts.sansBold }]} numberOfLines={1}>Tutto in {c.name}</Text>
-                  <Icon name="arrow" size={15} color={colors.green} strokeWidth={2.2} />
+                <Pressable onPress={() => go(c.id)} accessibilityRole="link" accessibilityLabel={`Tutto in ${c.name}`} style={styles.sAll}>
+                  <Text style={styles.sAllText}>Vedi tutto in {c.name}</Text>
+                  <Icon name="arrow" size={15} color={colors.green} strokeWidth={2.4} />
                 </Pressable>
-                {subs.map((x) => <Pressable key={x.id} onPress={() => go(x.id)} accessibilityRole="link"
-                  accessibilityLabel={`${x.name}${counts.data?.[x.id] ? `, ${counts.data[x.id]} prodotti` : ''}`} style={styles.sSub}>
-                  <Thumb image={covers.data?.[x.id]?.image ?? null} tint={tint} slug={c.slug} name={x.name} size={34} />
-                  <Text style={styles.sSubText} numberOfLines={1}>{x.name}</Text>
-                  {!!counts.data?.[x.id] && <Text style={styles.sSubCount}>{counts.data[x.id]}</Text>}
-                </Pressable>)}
+                <View style={styles.sGrid}>{subs.map((x) => <Pressable key={x.id} onPress={() => go(x.id)} accessibilityRole="link"
+                  accessibilityLabel={x.name} style={({ pressed }) => [styles.sCell, pressed && { opacity: 0.75 }]}>
+                  <View style={[styles.sTile, { backgroundColor: tint }]}>
+                    {covers.data?.[x.id]?.image
+                      ? <Image source={{ uri: covers.data[x.id].image as string }} resizeMode="contain" accessibilityIgnoresInvertColors
+                          style={[styles.sTileImage, { backgroundColor: tint }, { mixBlendMode: 'multiply' } as object]} />
+                      : <CategoryIcon slug={c.slug} name={x.name} size={34} strokeWidth={1.4} />}
+                  </View>
+                  <Text style={styles.sCellText} numberOfLines={2}>{x.name}</Text>
+                </Pressable>)}</View>
               </View>}
             </View>;
           })}</View>
@@ -399,12 +400,16 @@ const styles = StyleSheet.create({
   sRecent: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: colors.line, backgroundColor: '#FFFFFF', maxWidth: 240 },
   sRecentText: { fontSize: 14.5, fontFamily: fonts.sansSemiBold, color: colors.text },
   sList: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
-  sRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 68, paddingVertical: 10, paddingHorizontal: 16 },
-  sRowMeta: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
-  sSubs: { backgroundColor: '#FAF8F3', paddingVertical: 4, borderTopWidth: 1, borderColor: '#EFECE3' },
-  sSub: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 6, paddingLeft: 30, paddingRight: 18 },
-  sSubText: { flex: 1, fontSize: 14.5, fontFamily: fonts.sansMedium, color: colors.text },
-  sSubCount: { fontSize: 12.5, color: colors.faint, fontFamily: fonts.sans },
+  sRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 64, paddingVertical: 10, paddingHorizontal: 16 },
+  sSubs: { paddingHorizontal: 12, paddingBottom: 16 },
+  sAll: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 4, marginBottom: 12, paddingHorizontal: 14, height: 42,
+    borderRadius: 21, backgroundColor: '#EEF3EA' },
+  sAllText: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
+  sGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 },
+  sCell: { width: '33.333%', paddingHorizontal: 4, alignItems: 'center' },
+  sTile: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  sTileImage: { position: 'absolute', top: '12%', left: '12%', right: '12%', bottom: '12%' },
+  sCellText: { marginTop: 7, fontSize: 12.5, lineHeight: 16, textAlign: 'center', fontFamily: fonts.sansMedium, fontWeight: '500', color: colors.text },
   sRowText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
   sDept: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.green },
   sDeptText: { fontSize: 14, fontFamily: fonts.sansBold, color: '#FFFFFF' },
