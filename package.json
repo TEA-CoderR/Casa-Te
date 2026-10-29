@@ -15,7 +15,7 @@
     "admin": "npm run dev -w @casa-te/admin",
     "test:functions": "tsx --test tests/functions/*.test.ts",
     "test:admin": "tsx --test apps/admin/test/*.test.ts",
-    "test:agent": "node --test tools/erp-agent/test/lib.test.mjs tools/erp-agent/test/selection.test.mjs"
+    "test:agent": "node --test tools/erp-agent/test/lib.test.mjs tools/erp-agent/test/selection.test.mjs tools/erp-agent/test/members.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

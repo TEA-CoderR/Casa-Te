@@ -98,3 +98,14 @@ Computed once a day and cached in the agent state: the sales tables are MyISAM a
 Home delivery and pickup points are switched off by setting "Prepara ordini da spedire" off on the stores
 (admin → Negozi). The shop then shows them as "Prossimamente", keeps customers on store pickup and adds a notice
 on the shipping page. Turning the flag back on reopens delivery for products that have a weight.
+
+## Member cards (tessere)
+
+`node agent.mjs --members` (on the PC: `会员同步.bat`) runs `members.sql` (one SELECT with columns `card`, `phone`,
+`birth`, optional `active`; see `members.example.sql`) and sends only keyed hashes to erp-sync
+(`public.erp_apply_member_cards`): `card_hash`, `phone_hash` (last 4 digits), `birth_hash`. The key is derived from
+ERP_SYNC_SECRET (`supabase/functions/_shared/member-card.ts`), so no new secret is needed. Every run sends all cards
+with one `sync_id`; the last batch deactivates cards no longer listed. Customers link a card in the app (Club page)
+with the card number plus the last 4 phone digits or the birth date (Edge Function `member-card` →
+`public.member_card_link`; 5 failures per hour, one account per card). Linking makes them Club members and keeps the
+card number on their profile, shown as a Code 128 barcode for the till. Names, addresses and points are never read.

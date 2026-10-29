@@ -119,6 +119,8 @@ export type ProfileRow = {
   marketing_opt_in: boolean; created_at: Timestamp; updated_at: Timestamp;
   /** Set when the customer joined the CASA & TE Club (set_club_membership RPC only). */
   club_member_since: Timestamp | null;
+  /** Linked Casa & Te member card (member-card Edge Function only), shown as a barcode at the till. */
+  member_card_number?: string | null; member_card_linked_at?: Timestamp | null;
 };
 
 export type AddressRow = {

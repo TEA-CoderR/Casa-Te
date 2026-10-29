@@ -11,6 +11,7 @@
 //   node agent.mjs --dry-run   read MySQL, write dry-run.json (what would be sent), send nothing
 //   node agent.mjs --once      one sync (run by hand, or by Windows Task Scheduler / cron, e.g. every 5 minutes)
 //   node agent.mjs --loop      sync every `intervalMinutes`
+//   node agent.mjs --members   member cards: run members.sql, send keyed hashes only (card + phone/birth checks)
 //   add --full                 resend everything (also done automatically once a day)
 //
 // Configuration: config.json next to this file (see config.example.json). Secrets come from environment
@@ -21,6 +22,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { syncStore, buildBatch, italyToday, fingerprint } from './lib.mjs';
 import { normalizeSelection, selectionFunnel, selectionSql } from './selection.mjs';
+import { checkMembersSql, syncMembers } from './members.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const args = new Set(process.argv.slice(2));
@@ -164,6 +166,16 @@ async function runOnce() {
     if (args.has('--analyze')) { await analyze(db); return; }
     if (args.has('--export-catalog')) { await exportCatalog(db); return; }
     if (args.has('--convert-suppliers')) { await convertSuppliers(db); return; }
+    if (args.has('--members')) {
+      if (!secret) throw new Error('ERP_SYNC_SECRET is not set');
+      const sqlFile = path.join(HERE, 'members.sql');
+      if (!fs.existsSync(sqlFile)) throw new Error('members.sql non trovato (vedi members.example.sql)');
+      await db.query('SET SESSION TRANSACTION READ ONLY');
+      const [rows] = await db.query(checkMembersSql(fs.readFileSync(sqlFile, 'utf8')));
+      const s = await syncMembers({ rows, secret, endpoint: config.endpoint, log });
+      log(`tessere inviate (solo hash): ${s.cards}; con telefono ${s.withPhone}, con data di nascita ${s.withBirth}, senza verifica possibile ${s.withoutCheck}; righe scartate ${s.skipped}; disattivate ${s.deactivated}`);
+      return;
+    }
     if (args.has('--dry-run')) {
       const readRows = rowReader(db, {});
       const out = {};

@@ -6,11 +6,11 @@ do $$
 declare t text;
 begin
   -- Every public table is reachable by service_role (Edge Functions) and readable by the API roles
-  -- the apps use, except the webhook log.
+  -- the apps use, except the webhook log and the member card hashes (service role only).
   for t in select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
            where n.nspname = 'public' and c.relkind = 'r' loop
     perform tests.ok(has_table_privilege('service_role', 'public.' || t, 'select,insert,update,delete'), 'service_role full access: ' || t);
-    if t <> 'stripe_events' then
+    if t not in ('stripe_events', 'member_cards', 'member_card_attempts') then
       perform tests.ok(has_any_column_privilege('authenticated', 'public.' || t, 'select'), 'authenticated can select (RLS filters): ' || t);
       perform tests.ok(has_any_column_privilege('anon', 'public.' || t, 'select'), 'anon can select (RLS filters): ' || t);
     end if;
@@ -20,6 +20,8 @@ end $$;
 -- Narrowed privileges stay narrow.
 select tests.ok(not has_table_privilege('anon', 'public.stripe_events', 'select'), 'anon cannot read stripe_events');
 select tests.ok(not has_table_privilege('authenticated', 'public.stripe_events', 'select'), 'authenticated cannot read stripe_events');
+select tests.ok(not has_any_column_privilege('authenticated', 'public.member_cards', 'select'), 'member card hashes closed to clients');
+select tests.ok(not has_any_column_privilege('anon', 'public.member_card_attempts', 'select'), 'link attempts closed to clients');
 select tests.ok(not has_table_privilege('authenticated', 'public.orders', 'insert'), 'clients cannot insert orders');
 select tests.ok(not has_table_privilege('authenticated', 'public.orders', 'update'), 'clients cannot update orders');
 select tests.ok(not has_table_privilege('authenticated', 'public.refunds', 'insert'), 'clients cannot insert refunds');
