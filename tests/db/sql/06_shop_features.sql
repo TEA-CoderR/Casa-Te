@@ -107,7 +107,7 @@ begin
   q := public.quote_cart(tests.cart('LU1', 'store', '{"carta-cucina": 2}', '{"coupon_code":"club10"}'));
   perform tests.eq(q ->> 'coupon_error', 'coupon_club_only', 'non-members cannot use club coupons');
   perform tests.eq((select count(*) from public.club_offers())::int, 0, 'no offers before joining');
-  perform tests.ok(public.set_club_membership(true) is not null, 'joined the club');
+  perform tests.ok(public.join_club('Cliente A', '+39 333 123 4567', true) is not null, 'joined the club');
   perform tests.eq(public.is_club_member(), true, 'is member');
   q := public.quote_cart(tests.cart('LU1', 'store', '{"carta-cucina": 2}', '{"coupon_code":"club10"}'));
   perform tests.eq(q ->> 'coupon_error', null, 'members can use club coupons');

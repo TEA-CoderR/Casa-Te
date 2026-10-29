@@ -61,7 +61,7 @@ begin
   perform tests.eq((select bool_or((l ->> 'member_price_applied')::boolean) from jsonb_array_elements(q -> 'lines') l), false, 'no line at member price');
 
   -- After joining the Club the member price is charged, also on the order.
-  perform public.set_club_membership(true);
+  perform public.join_club('Cliente A', '+39 333 123 4567', true);
   q := public.quote_cart(tests.cart('LU1', 'store', '{"910001": 2, "910002": 1}'));
   perform tests.eq((q ->> 'subtotal_cents')::int, 2499 * 2 + 1499, 'member pays the member price');
   perform tests.eq((q ->> 'member_savings_cents')::int, 1300, 'member savings');
