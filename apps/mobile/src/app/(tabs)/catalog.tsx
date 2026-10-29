@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import type { CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
@@ -10,7 +10,8 @@ import { Icon } from '@/components/Icon';
 import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
 import { RollingAwning } from '@/components/RollingAwning';
 import { colors, fonts } from '@/config/theme';
-import { fetchCategories, fetchFacets, fetchProducts, type CatalogProduct } from '@/lib/api';
+import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchFacets, fetchProducts, type CatalogProduct } from '@/lib/api';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import { ProductImage } from '@/components/ProductImage';
 import { formatEuro, unitPriceLabel } from '@/lib/price';
 import { useLayout, useStores } from '@/lib/hooks';
@@ -38,6 +39,11 @@ export default function CatalogScreen() {
   const [error, setError] = useState<unknown>(null);
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
   const recent = useRecentSearches();
+  // "Esplora per reparto" (phone search page): a photo per department and its subcategories, same cache as the home.
+  const browsing = searchOpen && !wide && !debounced.trim();
+  const counts = useQuery(browsing ? 'category-counts' : null, fetchCategoryCounts);
+  const covers = useQuery(browsing ? 'category-covers' : null, () => fetchCategoryCovers());
+  const [openDept, setOpenDept] = useState<string | null>(null);
 
   useEffect(() => { if (params.category !== undefined) setCategoryId(params.category || null); }, [params.category]);
   // ?offerte=1: only discounted products ("In offerta"), within the chosen category.
@@ -197,13 +203,38 @@ export default function CatalogScreen() {
             </Pressable>)}</View>
           </>}
           <Text style={[styles.sCaps, { marginTop: recent.terms.length ? 28 : 0, marginBottom: 6 }]}>ESPLORA PER REPARTO</Text>
-          <View style={styles.sList}>{all.filter((c) => !c.parent_id).map((c, i) =>
-            <Pressable key={c.id} onPress={() => { setQuery(''); setSearchOpen(false); router.setParams({ search: undefined }); selectCategory(c.id); }}
-              accessibilityRole="link" style={[styles.sRow, i > 0 && { borderTopWidth: 1, borderColor: '#EFECE3' }]}>
-              <View style={[styles.sSwatch, { backgroundColor: SWATCHES[i % SWATCHES.length] }]} />
-              <Text style={styles.sRowText} numberOfLines={1}>{c.name}</Text>
-              <Icon name="chevron" size={18} color="#9A9F94" strokeWidth={2.2} />
-            </Pressable>)}</View>
+          <View style={styles.sList}>{all.filter((c) => !c.parent_id).map((c, i) => {
+            const tint = SWATCHES[i % SWATCHES.length];
+            const subs = all.filter((x) => x.parent_id === c.id && (counts.data ? (counts.data[x.id] ?? 0) > 0 : true));
+            const n = [c.id, ...all.filter((x) => x.parent_id === c.id).map((x) => x.id)].reduce((sum, id) => sum + (counts.data?.[id] ?? 0), 0);
+            const cover = covers.data?.[c.id]?.image ?? subs.map((x) => covers.data?.[x.id]?.image).find(Boolean) ?? null;
+            const open = openDept === c.id && subs.length > 1;
+            const go = (id: string) => { setQuery(''); setOpenDept(null); setSearchOpen(false); router.setParams({ search: undefined }); selectCategory(id); };
+            return <View key={c.id} style={i > 0 && { borderTopWidth: 1, borderColor: '#EFECE3' }}>
+              <Pressable onPress={() => subs.length > 1 ? setOpenDept(open ? null : c.id) : go(c.id)}
+                accessibilityRole={subs.length > 1 ? 'button' : 'link'} accessibilityState={subs.length > 1 ? { expanded: open } : undefined}
+                accessibilityLabel={`${c.name}${n ? `, ${n} prodotti` : ''}`} style={styles.sRow}>
+                <Thumb image={cover} tint={tint} slug={c.slug} name={c.name} size={44} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.sRowText} numberOfLines={1}>{c.name}</Text>
+                  {n > 0 && <Text style={styles.sRowMeta}>{n.toLocaleString('it-IT')} {n === 1 ? 'prodotto' : 'prodotti'}{subs.length > 1 ? ` · ${subs.length} categorie` : ''}</Text>}
+                </View>
+                <View style={open && { transform: [{ rotate: '90deg' }] }}><Icon name="chevron" size={18} color="#9A9F94" strokeWidth={2.2} /></View>
+              </Pressable>
+              {open && <View style={styles.sSubs}>
+                <Pressable onPress={() => go(c.id)} accessibilityRole="link" style={styles.sSub}>
+                  <Text style={[styles.sSubText, { color: colors.green, fontFamily: fonts.sansBold }]} numberOfLines={1}>Tutto in {c.name}</Text>
+                  <Icon name="arrow" size={15} color={colors.green} strokeWidth={2.2} />
+                </Pressable>
+                {subs.map((x) => <Pressable key={x.id} onPress={() => go(x.id)} accessibilityRole="link"
+                  accessibilityLabel={`${x.name}${counts.data?.[x.id] ? `, ${counts.data[x.id]} prodotti` : ''}`} style={styles.sSub}>
+                  <Thumb image={covers.data?.[x.id]?.image ?? null} tint={tint} slug={c.slug} name={x.name} size={34} />
+                  <Text style={styles.sSubText} numberOfLines={1}>{x.name}</Text>
+                  {!!counts.data?.[x.id] && <Text style={styles.sSubCount}>{counts.data[x.id]}</Text>}
+                </Pressable>)}
+              </View>}
+            </View>;
+          })}</View>
         </View>
         : !loading && !error && !shown.length ? <View style={styles.sEmpty}>
           <View style={styles.sEmptyIcon}><Icon name="search" size={30} color={colors.muted} strokeWidth={1.8} /></View>
@@ -334,6 +365,15 @@ export default function CatalogScreen() {
   </Screen>;
 }
 
+/** Department photo (a real product of it) blended into a soft tile; the department icon while there is none. */
+function Thumb({ image, tint, slug, name, size }: { image: string | null; tint: string; slug: string; name: string; size: number }) {
+  return <View style={{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: tint, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+    {image ? <Image source={{ uri: image }} resizeMode="contain" accessibilityIgnoresInvertColors
+        style={[{ position: 'absolute', top: size * 0.08, left: size * 0.08, right: size * 0.08, bottom: size * 0.08, backgroundColor: tint }, { mixBlendMode: 'multiply' } as object]} />
+      : <CategoryIcon slug={slug} name={name} size={size * 0.55} strokeWidth={1.5} />}
+  </View>;
+}
+
 const SWATCHES = ['#F4DED6', '#DCE9F2', '#F5E6C8', '#DCE7D3', '#ECE6F3', '#E6E3DA', '#E2EEEC', '#F3E3EA'];
 
 const styles = StyleSheet.create({
@@ -359,8 +399,12 @@ const styles = StyleSheet.create({
   sRecent: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: colors.line, backgroundColor: '#FFFFFF', maxWidth: 240 },
   sRecentText: { fontSize: 14.5, fontFamily: fonts.sansSemiBold, color: colors.text },
   sList: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
-  sRow: { flexDirection: 'row', alignItems: 'center', gap: 14, height: 60, paddingHorizontal: 16 },
-  sSwatch: { width: 36, height: 36, borderRadius: 12 },
+  sRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 68, paddingVertical: 10, paddingHorizontal: 16 },
+  sRowMeta: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
+  sSubs: { backgroundColor: '#FAF8F3', paddingVertical: 4, borderTopWidth: 1, borderColor: '#EFECE3' },
+  sSub: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 6, paddingLeft: 30, paddingRight: 18 },
+  sSubText: { flex: 1, fontSize: 14.5, fontFamily: fonts.sansMedium, color: colors.text },
+  sSubCount: { fontSize: 12.5, color: colors.faint, fontFamily: fonts.sans },
   sRowText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
   sDept: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.green },
   sDeptText: { fontSize: 14, fontFamily: fonts.sansBold, color: '#FFFFFF' },
