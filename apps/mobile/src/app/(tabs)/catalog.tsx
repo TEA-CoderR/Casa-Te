@@ -79,7 +79,9 @@ export default function CatalogScreen() {
   // The phone search page searches every department (not just the department it was opened from).
   const requestScope = !wide && searchOpen ? null : scopeIds;
   const request = (p: number) => fetchProducts({
-    storeId: selected?.id ?? null, categoryIds: requestScope ?? undefined, search: debounced, sort: filters.sort, page: p, onSale, featured: featuredOnly || undefined,
+    storeId: selected?.id ?? null, categoryIds: requestScope ?? undefined, search: debounced, sort: filters.sort, page: p, onSale,
+    // Browsing a department: discounted products first (search results keep their order).
+    offersFirst: !debounced.trim(), featured: featuredOnly || undefined,
     brands: filters.brands, colors: filters.colors, priceMin: filters.price.min, priceMax: filters.price.max,
   });
   const key = JSON.stringify([selected?.id, requestScope, debounced, onSale, featuredOnly, filters.sort, filters.brands, filters.colors, filters.price]);

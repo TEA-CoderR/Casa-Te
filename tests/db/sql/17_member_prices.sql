@@ -43,6 +43,8 @@ begin
   update public.inventory set member_price_ends_on = v_today - 1 where product_id = tests.product('910002');
   perform public.refresh_display_prices();
   perform tests.eq((select member_price_cents from public.products where erp_code = '910002'), null::integer, 'expired member price hidden');
+  perform tests.eq((select on_offer from public.products where erp_code = '910002'), false, 'expired member price: not on offer');
+  perform tests.eq((select on_offer from public.products where erp_code = '910001'), true, 'member price: on offer');
   update public.inventory set member_price_ends_on = v_today + 3 where product_id = tests.product('910002');
   perform public.refresh_display_prices();
 end $$;
