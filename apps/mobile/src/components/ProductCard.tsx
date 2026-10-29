@@ -10,7 +10,6 @@ import { ProductImage } from './ProductImage';
 import { Icon } from './Icon';
 import { atPlace, storeShortName } from './StoreSheet';
 import { useLayout, useStores } from '@/lib/hooks';
-import { useClubMember } from '@/store/club';
 import { transition, type WebState } from './site/shared';
 import { PriceTag } from './UI';
 
@@ -63,16 +62,16 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
   </Animated.View> : cartButton;
   const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
   const unit = unitPriceLabel(product.price_cents, product.unit_quantity, product.unit);
-  // Club member price shown as the offer: non-members are told it comes with the (free) Club.
-  const isMember = useClubMember();
-  const clubNote = product.clubPrice && !isMember ? 'con Club gratuito' : null;
+  // Club member price: shown as an offer, always marked "Soci" (only Club members pay it).
+  const soci = !!product.clubPrice;
+  const badge = discount ? `${soci ? 'Soci ' : ''}${discount.replace('-', '−')}` : '';
   // Phone (design F): unit or struck price above the price tag (raised cents), red when discounted.
   const price = <View style={{ flexShrink: 1 }}>
     {(!!discount || !!unit) && <Text style={styles.small} numberOfLines={1}>
       {!!discount && <Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
       {!!discount && !!unit && ' · '}{unit ?? ''}</Text>}
     <PriceTag cents={product.price_cents} size={22} sale={!!discount} />
-    {!!clubNote && <Text style={styles.small} numberOfLines={1}>{clubNote}</Text>}
+    {soci && <Text style={styles.soci} numberOfLines={1}>Prezzo Soci</Text>}
   </View>;
 
   if (variant === 'list') return <View style={styles.row}>
@@ -99,13 +98,13 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
               <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={feature ? 0.1 : 0.09} aspect={feature ? 0.9 : 1.12} blend />
             </View>
             {!!discount && <View style={[styles.discount, styles.discountDesk, feature && styles.discountBig]}>
-              <Text style={[styles.discountText, styles.discountTextDesk, feature && { fontSize: 16 }]} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount}</Text></View>}
+              <Text style={[styles.discountText, styles.discountTextDesk, feature && { fontSize: 16 }]} accessibilityLabel={`${soci ? 'Prezzo Soci, sconto' : 'Sconto'} ${discount.slice(1)}`}>{badge}</Text></View>}
           </View>
           <View style={styles.entryText}>
             {!!product.brand && <Text style={styles.entryBrand} numberOfLines={1}>{product.brand}</Text>}
             <Text style={[styles.entryName, feature && styles.entryNameBig, hovered && { color: colors.green }, transition('color')]} numberOfLines={2}>{product.name}</Text>
             {!!note && <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{note}</Text>}
-            {!!clubNote && <Text style={styles.meta} numberOfLines={1}>{clubNote}</Text>}
+            {soci && <Text style={[styles.meta, styles.soci]} numberOfLines={1}>Prezzo Soci · solo per i membri del Club</Text>}
           </View>
         </>}
       </Pressable></Link>
@@ -122,7 +121,12 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
 
   // Phone (design F): white plate, photo area, name, unit price, then the price tag and "+" (a stepper once in the cart).
   // The card is a real link (open in new tab, middle click, screen readers); heart and cart sit outside it.
-  const subline = !stock.available ? stock.text : clubNote ?? unit?.replace(/€\s/, '€').replace(/\s\/\s/, '/') ?? (discount ? `Prima ${formatEuro(product.compare_at_price_cents as number)}` : note);
+  const unitShort = unit?.replace(/€\s/, '€').replace(/\s\/\s/, '/');
+  // Discounted: the regular price struck through, then "Soci" (member price) or the unit price.
+  const subline = !stock.available ? stock.text : discount
+    ? <><Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number).replace(/€\s/, '€')}</Text>
+        {soci ? <Text style={styles.soci}> · Prezzo Soci</Text> : unitShort ? ` · ${unitShort}` : ''}</>
+    : unitShort ?? note;
   return <View style={[styles.card, rail && { paddingBottom: 12 }]}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={[styles.media, { height: rail ? 136 : 132 }]}>
@@ -130,7 +134,7 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
           <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />
         </View>
         {!!discount && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
-          <Text style={styles.discountText} accessibilityLabel={`Sconto ${discount.slice(1)}`}>{discount.replace('-', '−')}</Text></View>}
+          <Text style={styles.discountText} accessibilityLabel={`${soci ? 'Prezzo Soci, sconto' : 'Sconto'} ${discount.slice(1)}`}>{badge}</Text></View>}
       </View>
       <Text style={[styles.name, { marginTop: rail ? 6 : 4 }]} numberOfLines={2}>{product.name}</Text>
       <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>
@@ -153,6 +157,7 @@ const styles = StyleSheet.create({
   bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 6, paddingLeft: 4, height: 40 },
   small: { fontSize: 11.5, color: colors.faint, fontFamily: fonts.sansMedium },
   compareSmall: { textDecorationLine: 'line-through' },
+  soci: { color: colors.sale, fontFamily: fonts.sansBold, fontWeight: '700' },
   priceBig: { fontSize: 23, lineHeight: 26, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
   priceRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
   price: { fontSize: 18.5, fontFamily: fonts.serifMedium, color: colors.text },
