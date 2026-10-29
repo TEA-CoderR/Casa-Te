@@ -213,7 +213,7 @@ export default function CatalogScreen() {
             return <View key={c.id} style={i > 0 && { borderTopWidth: 1, borderColor: '#EFECE3' }}>
               <Pressable onPress={() => subs.length > 1 ? setOpenDept(open ? null : c.id) : go(c.id)}
                 accessibilityRole={subs.length > 1 ? 'button' : 'link'} accessibilityState={subs.length > 1 ? { expanded: open } : undefined}
-                accessibilityLabel={`${c.name}${n ? `, ${n} prodotti` : ''}`} style={styles.sRow}>
+                accessibilityLabel={`${c.name}${n ? `, ${n} ${n === 1 ? 'prodotto' : 'prodotti'}` : ''}`} style={styles.sRow}>
                 <Thumb image={cover} tint={tint} slug={c.slug} name={c.name} size={44} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.sRowText} numberOfLines={1}>{c.name}</Text>
