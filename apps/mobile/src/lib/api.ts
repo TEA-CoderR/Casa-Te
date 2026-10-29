@@ -206,6 +206,17 @@ export async function submitReview(productId: string, rating: number, comment: s
 
 // ---- CASA & TE Club ----------------------------------------------------------
 
+/** "Potrebbe servirti anche": products to add, chosen on the server from the cart (display only). */
+export async function fetchCartSuggestions(storeId: string | null, productIds: string[], limit = 10): Promise<CatalogProduct[]> {
+  if (!productIds.length) return [];
+  const rows = unwrap(await supabase.rpc('cart_suggestions', { p_store: storeId, p_products: productIds, p_limit: limit })) as Array<{ product_id: string }>;
+  const ids = rows.map((r) => r.product_id);
+  if (!ids.length) return [];
+  const { items } = await fetchProducts({ storeId, ids, pageSize: ids.length });
+  const byId = new Map(items.map((p) => [p.id, p]));
+  return ids.map((id) => byId.get(id)).filter((p): p is CatalogProduct => !!p && (p.stock ?? 1) > 0);
+}
+
 /** Joins the Club with the customer's details (checked again on the server). */
 export async function joinClub(details: { fullName: string; phone: string; privacy: boolean; marketing: boolean }): Promise<string | null> {
   return unwrap(await supabase.rpc('join_club', { p_full_name: details.fullName, p_phone: details.phone,
