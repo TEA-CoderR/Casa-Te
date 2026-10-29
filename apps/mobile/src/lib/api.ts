@@ -23,7 +23,8 @@ export type CatalogProduct = Pick<ProductRow,
    * Set when price_cents is the Club member price (shown like any offer: regular price struck through). quote_cart
    * charges it to Club members only; others see "con Club gratuito" next to it.
    */
-  clubPrice: { endsOn: string | null } | null;
+  /** Member price shown as the offer; regularCents is what non-members pay (quote_cart decides). */
+  clubPrice: { endsOn: string | null; regularCents: number } | null;
 };
 
 export type OrderWithItems = OrderRow & { order_items: OrderItemRow[] };
@@ -59,7 +60,7 @@ function toCatalogProduct(p: RawProduct, storeId: string | null): CatalogProduct
   // A valid member price is the product's offer, like a store promotion (display only).
   const club = memberPrice(rest);
   const offer = club ? { price_cents: club.cents, compare_at_price_cents: Math.max(rest.price_cents, rest.compare_at_price_cents ?? 0) } : {};
-  return { ...rest, ...offer, images, image: images[0] ?? null, stock, clubPrice: club ? { endsOn: club.endsOn } : null };
+  return { ...rest, ...offer, images, image: images[0] ?? null, stock, clubPrice: club ? { endsOn: club.endsOn, regularCents: rest.price_cents } : null };
 }
 
 // ---- Catalogue ---------------------------------------------------------------
