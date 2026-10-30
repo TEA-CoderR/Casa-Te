@@ -150,6 +150,7 @@ export function HomeDesktop() {
       <View style={styles.row}>
         {offerItems.map((p) => <View key={p.id} style={{ flex: 1, flexDirection: 'row' }}><ProductCard product={p} /></View>)}
         {offerItems.length < perRow && <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1', evidenza: '' } })} accessibilityRole="link"
+          // ui-check: allow (desktop catalogue: the offers closing tile)
           style={({ hovered }: WebState) => [styles.closer, { flex: perRow - offerItems.length }, hovered && { backgroundColor: '#F7E3E1' }, transition('background-color')]}>
           <Text style={styles.closerTitle}>Tutte le offerte{'\n'}del momento.</Text>
           <View style={styles.more}><Text style={[styles.moreText, { color: colors.sale }]}>Scopri</Text><Icon name="arrow" size={16} color={colors.sale} strokeWidth={1.6} /></View>
@@ -260,6 +261,7 @@ const styles = StyleSheet.create({
   tileName: { flexShrink: 1, fontSize: 26, lineHeight: 30, fontFamily: fonts.serif, color: colors.text },
   tileCount: { fontSize: 13.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
   spread: { flexDirection: 'row', gap: 40 },
+  // ui-check: allow (desktop catalogue: the offers closing tile)
   closer: { backgroundColor: '#FBEDEB', borderRadius: 4, padding: 36, justifyContent: 'space-between', minHeight: 260 },
   offerHead: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   offerTag: { backgroundColor: colors.sale, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4, marginTop: 8 },

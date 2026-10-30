@@ -105,17 +105,18 @@ export function Checkbox({ checked, onChange, children }: PropsWithChildren<{ ch
 }
 
 export function Notice({ tone = 'info', title, message, children }: PropsWithChildren<{ tone?: 'info' | 'error' | 'success'; title?: string; message?: string }>) {
-  const palette = tone === 'error' ? { bg: '#F8E9E7', fg: colors.danger } : tone === 'success' ? { bg: '#E8EFE6', fg: colors.greenDark } : { bg: colors.sand, fg: colors.greenDark };
-  return <View style={[styles.notice, { backgroundColor: palette.bg }]} accessibilityRole={tone === 'error' ? 'alert' : undefined}>
-    {title && <Text style={[styles.noticeTitle, { color: palette.fg }]}>{title}</Text>}
-    {message && <Text style={[styles.noticeText, { color: palette.fg }]}>{message}</Text>}
+  // A white plate on the ivory page (design F): the tone shows in the edge and the title, never as a tinted fill.
+  const ink = tone === 'error' ? colors.danger : tone === 'success' ? colors.green : colors.text;
+  return <View style={[styles.notice, { borderColor: tone === 'info' ? colors.line : ink }]} accessibilityRole={tone === 'error' ? 'alert' : undefined}>
+    {title && <Text style={[styles.noticeTitle, { color: ink }]}>{title}</Text>}
+    {message && <Text style={[styles.noticeText, { color: tone === 'error' && !title ? ink : colors.text }]}>{message}</Text>}
     {children}
   </View>;
 }
 
 export function Loading({ label = 'Caricamento…' }: { label?: string }) {
   return <View style={{ paddingVertical: 48, alignItems: 'center', gap: 12 }}>
-    <ActivityIndicator color={colors.green} /><Text style={{ color: colors.muted, fontSize: 12 }}>{label}</Text>
+    <ActivityIndicator color={colors.green} /><Text style={{ fontFamily: fonts.sans, color: colors.muted, fontSize: 12 }}>{label}</Text>
   </View>;
 }
 
@@ -142,19 +143,44 @@ export function ListRow({ icon, title, subtitle, onPress, danger }: { icon: Icon
   </Pressable>;
 }
 
-export function OptionCard({ selected, onPress, icon, title, description, right, disabled }: {
-  selected: boolean; onPress: () => void; icon?: IconName; title: string; description?: string; right?: string; disabled?: boolean;
+/** Radio mark of the choice cards (design F checkout): a ring, with a green dot when chosen. */
+export function RadioMark({ on }: { on: boolean }) {
+  return <View style={[styles.radio, on && { borderColor: colors.green }]}>{on && <View style={styles.radioDot} />}</View>;
+}
+
+/**
+ * A choice among a few (delivery, address, refund…), as in the design F checkout: a white card with the radio on the left;
+ * the chosen one only gets a green edge. No tinted fill and no icon in a circle.
+ */
+export function OptionCard({ selected, onPress, title, description, right, disabled }: {
+  selected: boolean; onPress: () => void; title: string; description?: string; right?: string; disabled?: boolean;
 }) {
   return <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected, disabled }} disabled={disabled} onPress={onPress}
     style={[styles.option, selected && styles.optionOn, disabled && { opacity: 0.45 }]}>
-    {icon && <View style={[styles.optionIcon, selected && { backgroundColor: colors.green }]}>
-      <Icon name={icon} size={20} color={selected ? '#fff' : colors.green} /></View>}
+    <RadioMark on={selected} />
     <View style={{ flex: 1 }}>
       <Text style={styles.optionTitle}>{title}</Text>
       {description && <Text style={styles.optionDescription}>{description}</Text>}
     </View>
     {right && <Text style={styles.optionRight}>{right}</Text>}
   </Pressable>;
+}
+
+/**
+ * Status of an order or a request, written like the shelf labels ("● DISPONIBILE"): a dot and the words, no tinted pill.
+ * Only "ready" gets the logo yellow, the single signal of the app.
+ */
+/** Tone of an order status for `StatusMark`. */
+export function orderStatusTone(status: string): 'active' | 'ready' | 'done' | 'alert' {
+  return status === 'ready' ? 'ready' : status === 'cancelled' ? 'alert' : status === 'completed' ? 'done' : 'active';
+}
+
+export function StatusMark({ label, tone = 'active' }: { label: string; tone?: 'active' | 'ready' | 'done' | 'alert' }) {
+  const ink = tone === 'alert' ? colors.danger : tone === 'done' ? colors.muted : colors.green;
+  if (tone === 'ready') return <View style={styles.statusReady}><View style={[styles.statusDot, { backgroundColor: colors.text }]} />
+    <Text style={[styles.statusText, { color: colors.text }]} numberOfLines={1}>{label}</Text></View>;
+  return <View style={styles.status}><View style={[styles.statusDot, { backgroundColor: ink }]} />
+    <Text style={[styles.statusText, { color: ink }]} numberOfLines={1}>{label}</Text></View>;
 }
 
 const styles = StyleSheet.create({
@@ -182,7 +208,7 @@ const styles = StyleSheet.create({
   checkRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 8, minHeight: 44 },
   checkBox: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: colors.green, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   checkBoxOn: { backgroundColor: colors.green },
-  notice: { borderRadius: 18, padding: 16, marginBottom: 12, gap: 6 },
+  notice: { borderRadius: 18, padding: 16, marginBottom: 12, gap: 6, backgroundColor: colors.surface, borderWidth: 1 },
   noticeTitle: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700' },
   noticeText: { fontSize: 14, lineHeight: 19, fontFamily: fonts.sans },
   sectionTitle: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, marginTop: 28, marginBottom: 12, color: colors.text },
@@ -192,11 +218,16 @@ const styles = StyleSheet.create({
   listRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, borderBottomWidth: 1, borderColor: colors.line, minHeight: 56 },
   listTitle: { fontSize: 15.5, color: colors.text, fontFamily: fonts.sansBold, fontWeight: '700' },
   listSubtitle: { fontSize: 12, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
-  option: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 18, borderWidth: 1, borderColor: colors.line,
+  option: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, borderWidth: 1, borderColor: colors.line,
     backgroundColor: colors.surface, marginBottom: 10, minHeight: 66 },
-  optionOn: { borderColor: colors.green, borderWidth: 2, backgroundColor: '#F1F6EE' },
-  optionIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  optionOn: { borderColor: colors.green, borderWidth: 2, paddingVertical: 13, paddingHorizontal: 15 },
+  radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#B9B4A6', alignItems: 'center', justifyContent: 'center' },
+  radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.green },
   optionTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  optionDescription: { fontSize: 12, color: colors.muted, marginTop: 3, lineHeight: 16, fontFamily: fonts.sans },
-  optionRight: { fontSize: 16, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
+  optionDescription: { fontSize: 13, color: colors.muted, marginTop: 2, lineHeight: 18, fontFamily: fonts.sans },
+  optionRight: { fontSize: 14, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 0, minHeight: 28 },
+  statusReady: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0, height: 28, paddingHorizontal: 11, borderRadius: 14, backgroundColor: colors.yellow },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusText: { fontSize: 13, fontFamily: fonts.heavy, fontWeight: '800' },
 });

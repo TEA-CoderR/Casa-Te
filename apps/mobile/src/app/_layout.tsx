@@ -20,7 +20,7 @@ export const unstable_settings = { initialRouteName: '(tabs)' };
 
 function NotConfigured() {
   return <View style={{ flex: 1, justifyContent: 'center', padding: 32, backgroundColor: colors.background, gap: 12 }}>
-    <Text style={{ fontSize: 22, fontWeight: '600', color: colors.greenDark }}>Configurazione mancante</Text>
+    <Text style={{ fontFamily: fonts.sansSemiBold, fontSize: 22, fontWeight: '600', color: colors.greenDark }}>Configurazione mancante</Text>
     <Text style={{ color: colors.muted, lineHeight: 21 }}>
       Copia apps/mobile/.env.example in apps/mobile/.env e inserisci l'URL e la chiave anon del progetto Supabase, poi riavvia Expo.
     </Text>

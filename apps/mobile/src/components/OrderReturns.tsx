@@ -8,7 +8,7 @@ import {
 } from '@casa-te/shared';
 import { Barcode } from '@/components/Barcode';
 import { Icon } from '@/components/Icon';
-import { Notice } from '@/components/UI';
+import { Notice, StatusMark } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
 import { cancelReturnRequest, fetchOrderReturns } from '@/lib/api';
 import { formatEuro } from '@/lib/price';
@@ -68,9 +68,7 @@ function ReturnCard({ ret, names, busy, onCancel }: { ret: ReturnWithItems; name
   return <View style={styles.card}>
     <View style={styles.cardHead}>
       <Text style={styles.number}>{ret.return_number}</Text>
-      <View style={[styles.badge, done && { backgroundColor: colors.mint }, bad && { backgroundColor: '#F4E3E0' }]}>
-        <Text style={[styles.badgeText, bad && { color: colors.danger }]}>{RETURN_STATUS_LABELS[ret.status].split(':')[0]}</Text>
-      </View>
+      <StatusMark label={RETURN_STATUS_LABELS[ret.status].split(':')[0]} tone={bad ? 'alert' : done ? 'done' : ret.status === 'approved' ? 'ready' : 'active'} />
     </View>
     <Text style={styles.meta}>{RETURN_REASON_LABELS[ret.reason]} · {ret.resolution === 'exchange' ? 'Cambio' : `Rimborso ${formatEuro(ret.amount_cents)} · ${REFUND_METHOD_LABELS[ret.refund_method ?? 'card']}`}</Text>
     {ret.return_items.map((ri) => <Text key={ri.order_item_id} style={styles.item} numberOfLines={1}>{ri.quantity} × {names.get(ri.order_item_id) ?? 'Articolo'}</Text>)}
@@ -94,8 +92,6 @@ const styles = StyleSheet.create({
   card: { padding: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, gap: 4 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   number: { fontSize: 17, fontFamily: fonts.heavy, color: colors.text, letterSpacing: 0.3 },
-  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.well },
-  badgeText: { fontSize: 12, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
   meta: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans },
   item: { fontSize: 13.5, color: colors.text, fontFamily: fonts.sansMedium },
   text: { fontSize: 13, color: colors.text, fontFamily: fonts.sans, lineHeight: 18, marginTop: 4 },

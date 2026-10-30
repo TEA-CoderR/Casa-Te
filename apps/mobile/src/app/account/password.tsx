@@ -3,7 +3,7 @@ import { Text } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { Notice, PrimaryButton, TextField } from '@/components/UI';
-import { colors } from '@/config/theme';
+import { colors, fonts } from '@/config/theme';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/store/session';
 
@@ -36,7 +36,7 @@ export default function PasswordScreen() {
   };
 
   return <Screen stack maxWidth={480}>
-    <Text style={{ fontSize: 14, lineHeight: 21, color: colors.muted, marginBottom: 18 }}>
+    <Text style={{ fontFamily: fonts.sans, fontSize: 14, lineHeight: 21, color: colors.muted, marginBottom: 18 }}>
       Scegli una password per accedere con email e password. Puoi sempre entrare anche con un codice via email.
     </Text>
     {saved && <Notice tone="success" title="Password salvata" message={`Da ora puoi accedere con ${user.email} e la nuova password.`} />}

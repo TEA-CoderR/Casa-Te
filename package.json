@@ -8,9 +8,10 @@
   ],
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test:shared && npm run test:admin && npm run test:functions && npm run test:agent && npm run test:db",
+    "test": "npm run test:ui && npm run test:shared && npm run test:admin && npm run test:functions && npm run test:agent && npm run test:db",
     "test:shared": "tsx --test packages/shared/test/*.test.ts",
     "test:db": "bash tests/db/run.sh",
+    "test:ui": "node --test tools/ui-check/check.test.mjs && node tools/ui-check/check.mjs",
     "mobile": "npm run start -w @casa-te/mobile",
     "admin": "npm run dev -w @casa-te/admin",
     "test:functions": "tsx --test tests/functions/*.test.ts",

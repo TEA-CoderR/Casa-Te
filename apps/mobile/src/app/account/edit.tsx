@@ -4,7 +4,7 @@ import { Redirect, router } from 'expo-router';
 import { friendlyError, isPhone } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { Checkbox, Loading, Notice, PrimaryButton, TextField } from '@/components/UI';
-import { colors } from '@/config/theme';
+import { colors, fonts } from '@/config/theme';
 import { fetchProfile, updateProfile } from '@/lib/api';
 import { invalidate, useQuery } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
@@ -40,7 +40,7 @@ export default function EditProfileScreen() {
     <TextField label="Nome e cognome" value={name} onChangeText={setName} autoComplete="name" />
     <TextField label="Telefono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" />
     <Checkbox checked={marketing} onChange={setMarketing}>
-      <Text style={{ fontSize: 13, color: colors.text, lineHeight: 19 }}>Ricevi offerte e novità via email</Text>
+      <Text style={{ fontFamily: fonts.sans, fontSize: 13, color: colors.text, lineHeight: 19 }}>Ricevi offerte e novità via email</Text>
     </Checkbox>
     {!!error && <Notice tone="error" message={error} />}
     <PrimaryButton title="Salva" loading={busy} onPress={save} icon="check" />

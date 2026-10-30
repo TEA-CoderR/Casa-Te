@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   sRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 64, paddingVertical: 10, paddingHorizontal: 16 },
   sSubs: { paddingHorizontal: 12, paddingBottom: 16 },
   sAll: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 4, marginBottom: 12, paddingHorizontal: 14, height: 42,
-    borderRadius: 21, backgroundColor: '#EEF3EA' },
+    borderRadius: 21, backgroundColor: colors.page },
   sAllText: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
   sGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 },
   sCell: { width: '33.333%', paddingHorizontal: 4, alignItems: 'center' },

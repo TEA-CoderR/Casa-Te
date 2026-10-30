@@ -22,3 +22,23 @@ Read `docs/ARCHITECTURE.md` and `docs/DECISIONS.md` first.
 5. Never add a new migration that edits an old one; always add a new file.
 6. Do not invent real product data, prices, stock, addresses or legal data.
 7. Run `npm test` (needs `psql` + PostgreSQL binaries or `DATABASE_URL`) and `npm run typecheck` before committing.
+
+## Design rules (customer app, `apps/mobile`)
+The phone app follows design F "La Tenda" (`apps/mobile/src/config/theme.ts`); the desktop shop is the printed catalogue.
+The September demo (built with Codex) left generic AI patterns that kept coming back; do not reintroduce them.
+1. **Start from the shared components** in `components/UI.tsx` (`OptionCard`, `RadioMark`, `StatusMark`, `Notice`,
+   `PrimaryButton`, `SecondaryButton`, `QuantityControl`, `EmptyState`, `PriceTag`…) and `components/ShopMarks.tsx`;
+   copy a screen's styles only after checking them against the design boards.
+2. **Choices** (delivery, address, store, refund…): white card, radio on the left, the chosen one gets a green edge only.
+   No tinted fill, no thicker coloured frame with a fill, no icon that turns into a filled circle.
+3. **Status** (orders, returns): `StatusMark` — a dot and the words. The logo yellow is the single signal
+   (active tab, price chips, cart count, "ready"/"approved"); red only for discounts and errors.
+4. **Messages**: `Notice` — a white plate with a coloured edge and title, never a pale green/red/yellow panel.
+5. **Icons** stand alone, never inside a tinted circle; prefer signs from the shop (`StepTag`, `EmptyReceipt`, `AwningMark`).
+6. **Grounds**: ivory page (`colors.page`), white plates, warm neutrals (`well`, `stone`) for quiet fills.
+   Pale tints are only for content that is not a state (department tiles, the home banners, the desktop offers tile).
+7. **Type**: every text style sets `fontFamily` from `fonts` (Bodoni Moda titles, Figtree text); a `fontWeight` alone
+   falls back to the system font on phones.
+8. `npm run test:ui` checks 2–4 and 7 (`tools/ui-check`); a deliberate exception carries
+   `// ui-check: allow (<reason>)` on the line or the line above. New UI is compared with the boards before merging.
+

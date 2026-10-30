@@ -9,7 +9,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { FulfilmentSheet } from '@/components/FulfilmentSheet';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import {
-  Checkbox, EmptyState, Loading, Notice, OptionCard, PrimaryButton, SecondaryButton, SectionTitle, SummaryRow, TextField,
+  Checkbox, EmptyState, Loading, Notice, OptionCard, PrimaryButton, RadioMark, SecondaryButton, SectionTitle, SummaryRow, TextField,
 } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
 import { fetchAddresses, fetchPickupPoints, fetchProfile, imageUrl, saveAddress, startCheckout, updateProfile } from '@/lib/api';
@@ -184,7 +184,7 @@ export default function CheckoutScreen() {
           {...({ dataSet: { invalid: err(key) ? 'true' : 'false' } } as object)} {...extra} />
         {!!err(key) && <Text style={styles.fError} accessibilityLiveRegion="polite">{err(key)}</Text>}
       </View>;
-    const radio = (on: boolean) => <View style={[styles.radio, on && { borderColor: colors.green }]}>{on && <View style={styles.radioDot} />}</View>;
+    const radio = (on: boolean) => <RadioMark on={on} />;
     const head = <View style={[styles.head, { paddingTop: insets.top + 14 }]}>
       <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Torna al carrello" style={styles.headBack}>
         <Icon name="back" size={22} color={colors.text} strokeWidth={2.2} /></Pressable>
@@ -351,7 +351,7 @@ export default function CheckoutScreen() {
   </View>}>
     {quote.issue_count > 0 && <Notice tone="error" title="Alcuni articoli non sono disponibili"
       message="Torna al carrello per aggiornare le quantità.">
-      <Pressable onPress={() => router.back()}><Text style={{ color: colors.green, fontWeight: '600' }}>Torna al carrello</Text></Pressable>
+      <Pressable onPress={() => router.back()}><Text style={{ fontFamily: fonts.sansSemiBold, color: colors.green, fontWeight: '600' }}>Torna al carrello</Text></Pressable>
     </Notice>}
 
     <FulfilmentSheet visible={deliverySheet} onClose={() => setDeliverySheet(false)} quote={quote} storeName={storeShortName(store) || 'negozio'}
@@ -359,7 +359,7 @@ export default function CheckoutScreen() {
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
     <SectionTitle>Consegna</SectionTitle>
     <View style={[styles.delivery, !methodQuote && styles.deliveryError]} {...(!methodQuote ? ({ dataSet: { fieldError: 'true' } } as object) : {})}>
-      <View style={styles.deliveryIcon}><Icon name={METHOD_INFO[method].icon} size={22} color={colors.green} strokeWidth={1.9} /></View>
+      <Icon name={METHOD_INFO[method].icon} size={24} color={colors.green} strokeWidth={1.9} />
       <View style={{ flex: 1 }}>
         <Text style={styles.deliveryTitle}>{method === 'store' ? storeShortName(store) ? `Ritiro ${atPlace(storeShortName(store))}` : 'Ritiro in negozio' : FULFILMENT_LABELS[method]}</Text>
         <Text style={[styles.deliveryText, !methodQuote && { color: colors.danger }]}>{!methodQuote ? 'Non disponibile per questo ordine: scegline un altro'
@@ -377,7 +377,7 @@ export default function CheckoutScreen() {
         onPress={() => { setAddressId(a.id); setAddress(fromRow(a)); }}
         title={a.label || a.full_name} description={`${a.line1}${a.line2 ? `, ${a.line2}` : ''} · ${a.postal_code} ${a.city} (${a.province})`} />)}
       {!!addresses.data?.length && <OptionCard selected={addressId === 'new'} onPress={() => { setAddressId('new'); setAddress(emptyAddress); }}
-        icon="plus" title="Nuovo indirizzo" />}
+ title="Nuovo indirizzo" />}
       {addressId === 'new' && <View style={{ marginTop: 8 }}>
         <TextField label="Nome e cognome" value={address.fullName} onChangeText={(v) => setAddr({ fullName: v })} autoComplete="name" error={err('address.fullName')} />
         <TextField label="Via e numero civico" value={address.line1} onChangeText={(v) => setAddr({ line1: v })} autoComplete="street-address" error={err('address.line1')} />
@@ -401,7 +401,7 @@ export default function CheckoutScreen() {
       <SectionTitle>Punto di ritiro</SectionTitle>
       {fieldError('pickup')}
       {(pickupPoints.data ?? []).map((p) => <OptionCard key={p.id} selected={pickupPointId === p.id} onPress={() => setPickupPointId(p.id)}
-        icon="pin" title={p.name} description={`${p.address}, ${p.postal_code} ${p.city}${p.opening_hours ? ` · ${p.opening_hours}` : ''}`} />)}
+ title={p.name} description={`${p.address}, ${p.postal_code} ${p.city}${p.opening_hours ? ` · ${p.opening_hours}` : ''}`} />)}
     </>}
 
     {method !== 'home' && <>
@@ -477,8 +477,6 @@ const styles = StyleSheet.create({
   h2: { fontSize: 15.5, fontFamily: fonts.heavy, color: colors.text, marginTop: 22, marginBottom: 8, marginLeft: 4 },
   option: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   optionOn: { borderWidth: 2, borderColor: colors.green, paddingVertical: 13, paddingHorizontal: 15 },
-  radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#B9B4A6', alignItems: 'center', justifyContent: 'center' },
-  radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.green },
   optionTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
   optionSub: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
   optionPrice: { fontSize: 14, fontFamily: fonts.heavy, color: colors.text },
@@ -511,17 +509,17 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
   delivery: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.green, borderRadius: 20, padding: 16 },
   deliveryError: { borderColor: colors.danger },
-  deliveryIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
   deliveryTitle: { fontSize: 18, lineHeight: 23, fontFamily: fonts.display, color: colors.text },
   deliveryText: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
   modify: { fontSize: 14, color: colors.green, fontFamily: fonts.sansBold, fontWeight: '700' },
   checkText: { fontSize: 14.5, color: colors.text, lineHeight: 21, fontFamily: fonts.sans },
-  link: { color: colors.green, textDecorationLine: 'underline', fontWeight: '600' },
-  error: { color: colors.danger, fontSize: 13, marginBottom: 8 },
-  fine: { color: colors.muted, fontSize: 13, lineHeight: 19, marginTop: 10 },
-  footerError: { color: colors.danger, fontSize: 14, textAlign: 'center', fontWeight: '500' },
+  link: { fontFamily: fonts.sansSemiBold, color: colors.green, textDecorationLine: 'underline', fontWeight: '600' },
+  error: { fontFamily: fonts.sans, color: colors.danger, fontSize: 13, marginBottom: 8 },
+  fine: { fontFamily: fonts.sans, color: colors.muted, fontSize: 13, lineHeight: 19, marginTop: 10 },
+  footerError: { fontFamily: fonts.sansMedium, color: colors.danger, fontSize: 14, textAlign: 'center', fontWeight: '500' },
   secure: { color: colors.muted, fontSize: 12.5, textAlign: 'center', fontFamily: fonts.sans },
   toggle: { minHeight: 44, justifyContent: 'center', marginTop: 10 },
-  applied: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.mint, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14 },
-  appliedText: { flex: 1, fontSize: 14, color: colors.greenDark },
+  // An applied code looks like the voucher of the returns: a dashed edge, like a coupon cut from the flyer.
+  applied: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.green, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14 },
+  appliedText: { fontFamily: fonts.sans, flex: 1, fontSize: 14, color: colors.greenDark },
 });
