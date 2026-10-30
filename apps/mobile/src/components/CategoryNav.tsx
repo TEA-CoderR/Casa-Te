@@ -94,7 +94,7 @@ export function CategoryBrowser({ all, counts, covers, layout = 'rail', onOpen, 
           </Pressable>;
         })}
       </ScrollView>
-      <ScrollView ref={panel} style={styles.panel} contentContainerStyle={{ padding: 14, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={panel} style={styles.panel} contentContainerStyle={{ padding: 12, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
         {active && <>
           <Pressable onPress={() => onOpen(active.id)} accessibilityRole="link" accessibilityLabel={`Tutto in ${active.name}`}
             style={({ pressed }) => [styles.panelHead, pressed && { opacity: 0.7 }]}>
@@ -193,19 +193,19 @@ const styles = StyleSheet.create({
   searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
 
   split: { flex: 1, flexDirection: 'row' },
-  rail: { width: 98, flexGrow: 0, backgroundColor: colors.page },
-  railItem: { minHeight: 62, justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 10 },
+  rail: { width: 104, flexGrow: 0, backgroundColor: colors.page },
+  railItem: { minHeight: 62, justifyContent: 'center', paddingLeft: 12, paddingRight: 8, paddingVertical: 10 },
   railItemOn: { backgroundColor: '#FFFFFF' },
   railMark: { position: 'absolute', left: 0, top: 14, bottom: 14, width: 3, borderTopRightRadius: 3, borderBottomRightRadius: 3, backgroundColor: colors.green },
-  railText: { fontSize: 13.5, lineHeight: 17, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  railText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sansSemiBold, color: colors.muted },
   railTextOn: { fontFamily: fonts.heavy, color: colors.text },
   panel: { flex: 1, backgroundColor: '#FFFFFF' },
   panelHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 14, marginBottom: 14, borderBottomWidth: 1, borderColor: colors.line },
   panelTitle: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text },
   panelLink: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 16 },
-  cell: { width: '33.333%', paddingHorizontal: 5 },
-  cellName: { marginTop: 7, fontSize: 12.5, lineHeight: 16, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, rowGap: 16 },
+  cell: { width: '33.333%', paddingHorizontal: 4 },
+  cellName: { marginTop: 7, fontSize: 12, lineHeight: 15.5, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
 
   tiles: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12, padding: 16, paddingBottom: 32 },
   tile: { width: '48.4%', backgroundColor: '#FFFFFF', borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
