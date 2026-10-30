@@ -5,8 +5,19 @@ import { colors, fonts } from '@/config/theme';
 import { brandLogoStacked, STACKED_ASPECT } from '@/config/brand';
 import { Icon, type IconName } from './Icon';
 
+const SCALLOP = 22;
+/** Enough scallops for the widest phone/tablet band; the edge clips the rest. */
+const SCALLOPS = Array.from({ length: 48 }, (_, i) => i);
+
+/** The band's scalloped bottom edge: a row of half-discs in the band green (no stripes). */
+export function BandEdge() {
+  return <View pointerEvents="none" style={styles.edge} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    {SCALLOPS.map((i) => <View key={i} style={styles.scallop} />)}
+  </View>;
+}
+
 /**
- * Phone header band: solid deep green, edge to edge under the status bar, with a straight bottom edge (cards may
+ * Phone header band: solid deep green, edge to edge under the status bar, ending in a scalloped edge (cards may
  * hang over it). Layouts:
  * - inline (default): [left] title + subtitle … [right] in one row (Carrello, Ordini, Ordine);
  * - `stacked`: the buttons row, then a large title below it (Reparto, Home greeting, Accesso);
@@ -39,6 +50,7 @@ export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, righ
       {stacked && heading}
       {children}
     </View>
+    <BandEdge />
   </View>;
 }
 
@@ -89,6 +101,8 @@ export function HeaderSearch({ onPress, placeholder, ...input }: TextInputProps 
 }
 
 const styles = StyleSheet.create({
+  edge: { height: 12, flexDirection: 'row', overflow: 'hidden', marginTop: -1 },
+  scallop: { width: SCALLOP, height: 22, borderRadius: 11, marginTop: -11, backgroundColor: colors.brand },
   band: { backgroundColor: colors.brand, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
   title: { fontFamily: fonts.display, color: '#FFFFFF', letterSpacing: -0.3 },

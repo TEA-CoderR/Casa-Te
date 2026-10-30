@@ -288,7 +288,7 @@ Full-bleed Forest Green section: Garamond 54 headline naming the chosen store, a
 Below 900 px (and in the native app) the shop has its own visual world: deep green, ivory and the logo yellow.
 The rules that keep it clean are in `AGENTS.md` ("Design rules") and checked by `npm run test:ui`.
 
-- **Header band:** every phone page starts with a solid deep green band (`#1F4127`), no stripes, straight bottom edge (the owner's choice, 31/10). Page titles sit on it in Bodoni Moda; secondary text in `#CFDDC6`. Department pages keep the band one row high (back, title with product count, search) so products start near the top; scrolling slims it and the search button becomes a "Cerca in …" pill.
+- **Header band:** every phone page starts with a solid deep green band (`#1F4127`), no stripes, ending in a scalloped edge of green half-discs (the owner's choice, 31/10). Page titles sit on it in Bodoni Moda; secondary text in `#CFDDC6`. Department pages keep the band one row high (back, title with product count, search) so products start near the top; scrolling slims it, pulls the scallops up and the search button becomes a "Cerca in …" pill.
 - **Hanging cards:** the store card, the cart's pickup card, the profile cards and the active-order card hang over the band's edge (white, 20 px radius, soft offset shadow). Store, stock and free pickup are always named.
 - **Ground and plates:** warm ivory ground `#F5F3EC`; products, departments and subcategories always as photos on white plates with a hairline, never on tinted tiles or circles. Pale tints only for the home banners.
 - **Signal colour:** the logo yellow `#F3E33A` only for the active tab, cart counts, price chips and "ready"/"approved" states. Red `#C8231F` only for discounts and errors.

@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 /**
- * Brand look (design F "La Tenda"): a solid deep green band (no stripes, straight edge) tops every phone page,
+ * Brand look (design F "La Tenda"): a solid deep green band (no stripes) with a scalloped edge tops every phone page,
  * cards may hang over its edge; products sit on white plates on a warm ivory ground;
  * the logo yellow is the single signal (active tab, price chips, cart count); red only for discounts.
  * No pale tinted fills for states or messages (the September demo's pale-green panels, pills and icon circles):

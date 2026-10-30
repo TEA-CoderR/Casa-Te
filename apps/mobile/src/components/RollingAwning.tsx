@@ -7,7 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { colors, fonts } from '@/config/theme';
-import { HeaderBack } from './BrandHeader';
+import { BandEdge, HeaderBack } from './BrandHeader';
 import { Icon } from './Icon';
 
 /** Band height (below the status bar) once rolled up: just the buttons row. */
@@ -18,11 +18,12 @@ const RANGE = 60;
 const TOP_AFTER = 360;
 /** …and hides again once the page has been still this long (ms). */
 const TOP_IDLE = 2000;
+const EDGE = 12;
 
 /**
  * Department page header: a solid green band with the department title in one row between the back and search
- * buttons, so the products start high on the page. Scrolling down the title fades away, the band ends in a darker
- * line and the round search button stretches into a white "Cerca in …" pill. The pill names the department, but the
+ * buttons and a scalloped bottom edge, so the products start high on the page. Scrolling down the title fades away,
+ * the scallops are pulled up, the band ends in a darker line and the round search button stretches into a white "Cerca in …" pill. The pill names the department, but the
  * search page always searches the whole catalogue. The chips scroll away with the products. A "back to top" button
  * rises while scrolling and hides once the page has been still for a moment.
  */
@@ -68,6 +69,9 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   const band = useDerivedValue(() => exp.value - (exp.value - COLLAPSED) * ease.value);
 
   const bandStyle = useAnimatedStyle(() => ({ height: insets.top + band.value }));
+  // The scalloped edge is pulled up into the band as it slims, leaving a straight dark line.
+  const edgeStyle = useAnimatedStyle(() => ({ top: insets.top + band.value - 1, height: EDGE * (1 - ease.value) }));
+  const edgeInner = useAnimatedStyle(() => ({ transform: [{ translateY: -EDGE * ease.value }] }));
   // Once rolled up, the band ends in a straight dark line.
   const lineStyle = useAnimatedStyle(() => ({ opacity: Math.max(0, (ease.value - 0.6) / 0.4) }));
   const titleStyle = useAnimatedStyle(() => ({
@@ -87,7 +91,7 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
 
   return <View style={styles.page}>
     <Animated.ScrollView ref={ref} onScroll={onScroll} scrollEventThrottle={16} showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingTop: insets.top + expanded, paddingBottom: 24 }}>
+      contentContainerStyle={{ paddingTop: insets.top + expanded + EDGE, paddingBottom: 24 }}>
       <View style={{ paddingTop: 6 }}>{chips}</View>
       {children}
     </Animated.ScrollView>
@@ -100,6 +104,8 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
       </Animated.View>
       <Animated.View pointerEvents="none" style={[styles.line, lineStyle]} />
     </Animated.View>
+
+    <Animated.View pointerEvents="none" style={[styles.edge, edgeStyle]}><Animated.View style={edgeInner}><BandEdge /></Animated.View></Animated.View>
 
     {onBack && <View style={[styles.back, { top: insets.top + 14 }]}><HeaderBack onPress={onBack} /></View>}
     <Animated.View style={[styles.pill, { top: insets.top + 14 }, pillStyle]}>
@@ -131,6 +137,7 @@ const styles = StyleSheet.create({
   titleBlock: { position: 'absolute', right: 16 + 44 + 10 },
   title: { fontFamily: fonts.display, color: '#FFFFFF', fontSize: 25, lineHeight: 29, letterSpacing: -0.2 },
   subtitle: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.onBrand },
+  edge: { position: 'absolute', left: 0, right: 0, zIndex: 3, overflow: 'hidden' },
   line: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 2, backgroundColor: colors.greenDark },
   back: { position: 'absolute', left: 16, zIndex: 4 },
   pill: { position: 'absolute', right: 16, zIndex: 4, height: 44, borderRadius: 22, overflow: 'hidden',
