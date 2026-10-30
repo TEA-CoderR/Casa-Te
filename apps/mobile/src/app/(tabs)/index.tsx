@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { orderStatusLabel, type CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
-import { CategoryIcon } from '@/components/CategoryIcon';
+import { CategoryPhoto } from '@/components/CategoryNav';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { StoreCard } from '@/components/StoreCard';
 import { StepTag } from '@/components/ShopMarks';
@@ -13,7 +13,7 @@ import { Loading, Notice } from '@/components/UI';
 import { BrandHeader, HangingCard, HeaderButton, HeaderSearch, StatusBand } from '@/components/BrandHeader';
 import { ProductImage } from '@/components/ProductImage';
 import { colors, fonts } from '@/config/theme';
-import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchOffers, fetchOrders, fetchProducts, fetchProfile, imageUrl, type CatalogProduct, type OrderWithItems } from '@/lib/api';
+import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchFlyers, fetchOffers, fetchOrders, fetchProducts, fetchProfile, imageUrl, type CatalogProduct, type OrderWithItems } from '@/lib/api';
 import { useClubSettings, useDelivery, useLayout, useStores } from '@/lib/hooks';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
@@ -29,14 +29,6 @@ export default function HomeScreen() {
 const ACTIVE = new Set(['paid', 'picking', 'ready', 'shipped']);
 /** Steps of an order, for the progress bar on the order card (pickup and delivery both have four). */
 const STEP: Record<string, number> = { paid: 1, picking: 2, ready: 3, shipped: 3 };
-/** Department tile tints (design F), each with a dark ink of the same hue for its text. */
-const TINTS = [
-  // ui-check: allow (department tiles of design F, not a state)
-  { bg: '#F4DED6', ink: '#5B2414' }, { bg: '#DCE9F2', ink: '#173F5C' }, { bg: '#F5E6C8', ink: '#5A3A08' }, { bg: '#DCE7D3', ink: '#1F4127' },
-  // ui-check: allow (department tiles of design F, not a state)
-  { bg: '#ECE6F3', ink: '#3E2A63' }, { bg: '#E2EEEC', ink: '#1C4744' }, { bg: '#F3E3EA', ink: '#5E2340' }, { bg: '#E9E6DC', ink: '#3F3A2A' },
-];
-
 function HomePhone() {
   const { selected } = useStores();
   const user = useUser();
@@ -58,6 +50,8 @@ function HomePhone() {
     });
   const offers = useQuery(selected ? `offers:${selected.id}:8` : null, () => fetchOffers(selected?.id ?? null, 8));
   const offerItems = offers.data ?? [];
+  // The Volantino shortcut only while a flyer is published (RLS returns only current ones).
+  const flyers = useQuery('flyers', fetchFlyers);
   const refresh = () => { void categories.refetch(); void featured.refetch(); void offers.refetch(); void orders.refetch(); };
   // Up to 8 departments chosen in the admin ("Mostra in home"); the first 6 when none is chosen.
   const all = categories.data ?? [];
@@ -136,7 +130,7 @@ function HomePhone() {
 
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills} style={{ flexGrow: 0 }}>
       {pill('Offerte', 'percent', () => openCatalog({ offerte: '1' }), true)}
-      {pill('Volantino', 'flyer', () => router.push('/volantino'))}
+      {!!flyers.data?.length && pill('Volantino', 'flyer', () => router.push('/volantino'))}
       {pill('Ordini', 'box', () => router.push('/orders'))}
       {club.enabled ? pill('Club', 'card', () => router.push('/club')) : pill('Preferiti', 'heart', () => router.push('/favorites'))}
     </ScrollView>
@@ -171,21 +165,15 @@ function HomePhone() {
         <Pressable onPress={() => router.push(ALL_PRODUCTS)} accessibilityRole="link" hitSlop={8}>
           <Text style={styles.link}>{allTop.length > topCategories.length ? `Tutti i ${allTop.length} reparti` : 'Tutti i reparti'}</Text></Pressable>
       </View>
-      <View style={styles.departments}>{topCategories.map((category, i) => {
-        const tint = TINTS[i % TINTS.length];
+      {/* Departments as product photos on white plates, like the Categorie tab: 4 across for 8, 3 across for 6. */}
+      <View style={styles.departments}>{topCategories.map((category) => {
         const cover = coverFor(category);
         const n = countFor(category);
+        const across = topCategories.length % 4 === 0 ? 4 : 3;
         return <Pressable key={category.id} accessibilityRole="link" accessibilityLabel={`Reparto ${category.name}${n ? `, ${n} prodotti` : ''}`}
-          style={({ pressed }) => [styles.department, { backgroundColor: tint.bg }, pressed && { opacity: 0.85 }]} onPress={() => openCatalog({ category: category.id })}>
-          {/* Web: every view is its own stacking context, so the tile colour is painted right behind the photo for `multiply`. */}
-          <View style={[styles.departmentArt, { backgroundColor: tint.bg }]}>
-            {/* Design F: a real product photo of the department (featured first), blended into the tile colour. */}
-            {cover?.image
-              ? <Image source={{ uri: cover.image }} resizeMode="contain" accessibilityIgnoresInvertColors style={[StyleSheet.absoluteFill, { mixBlendMode: 'multiply' } as object]} />
-              : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><CategoryIcon slug={category.slug} name={category.name} size={44} strokeWidth={1.3} /></View>}
-          </View>
-          <Text style={[styles.departmentName, { color: tint.ink }]} numberOfLines={1}>{category.name}</Text>
-          {n > 0 && <Text style={[styles.departmentCount, { color: tint.ink }]}>{n.toLocaleString('it-IT')} prodotti</Text>}
+          style={({ pressed }) => [styles.department, { width: `${100 / across}%` }, pressed && { opacity: 0.75 }]} onPress={() => openCatalog({ category: category.id })}>
+          <CategoryPhoto image={cover?.image} slug={category.slug} name={category.name} radius={16} />
+          <Text style={styles.departmentName} numberOfLines={1}>{category.name}</Text>
         </Pressable>;
       })}</View>
     </View>}
@@ -256,11 +244,9 @@ const styles = StyleSheet.create({
   link: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
   rail: { paddingHorizontal: 16, gap: 10, paddingBottom: 1 },
   railItem: { width: 162, flexDirection: 'row' },
-  departments: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
-  department: { width: '48.6%', height: 104, borderRadius: 20, overflow: 'hidden', padding: 14 },
-  departmentName: { fontSize: 16, fontFamily: fonts.heavy },
-  departmentCount: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, opacity: 0.8, marginTop: 1 },
-  departmentArt: { position: 'absolute', right: -6, bottom: -8, width: 92, height: 92 },
+  departments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, rowGap: 14 },
+  department: { paddingHorizontal: 4 },
+  departmentName: { marginTop: 6, fontSize: 13, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
   pickup: { marginHorizontal: 16, marginTop: 28, padding: 20, borderRadius: 24, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
   pickupTitle: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text },
   step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },

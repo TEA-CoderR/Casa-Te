@@ -135,23 +135,30 @@ export default function CartScreen() {
     const back = () => router.canGoBack() ? router.back() : router.replace('/');
     const header = <BrandHeader inScroll title="Carrello" titleSize={30} subtitle={`${count} ${count === 1 ? 'articolo' : 'articoli'}`} pad={[14, 16, 40]}
       left={<HeaderBack onPress={back} />} />;
-    const footer = <View>
+    // The breakdown is read once, in the page; the bar at the bottom keeps only what decides the tap: total and button.
+    const summary = <View style={styles.summaryPlate}>
       {memberAvailable > 0 && clubOn && t?.total_cents != null && <ClubCompare total={t.total_cents} saving={memberAvailable} />}
       <View style={styles.footRow}><Text style={styles.footLabel}>Prodotti</Text><Text style={styles.footLabel}>{euro(subtotal + memberSaved)}</Text></View>
-      {memberSaved > 0 && <View style={[styles.footRow, { marginTop: 4 }]}><Text style={styles.footSoci}>Prezzi Soci</Text><Text style={styles.footSoci}>-{euro(memberSaved)}</Text></View>}
-      {!!t?.discount_cents && <View style={[styles.footRow, { marginTop: 4 }]}><Text style={styles.footLabel}>Sconto</Text><Text style={styles.footLabel}>-{euro(t.discount_cents)}</Text></View>}
-      <View style={[styles.footRow, { marginTop: 4 }]}><Text style={styles.footLabel}>{fulfilment === 'store' ? 'Ritiro in negozio' : 'Spedizione'}</Text>
+      {memberSaved > 0 && <View style={[styles.footRow, { marginTop: 6 }]}><Text style={styles.footSoci}>Prezzi Soci</Text><Text style={styles.footSoci}>-{euro(memberSaved)}</Text></View>}
+      {!!t?.discount_cents && <View style={[styles.footRow, { marginTop: 6 }]}><Text style={styles.footLabel}>Sconto</Text><Text style={styles.footLabel}>-{euro(t.discount_cents)}</Text></View>}
+      <View style={[styles.footRow, { marginTop: 6 }]}><Text style={styles.footLabel}>{fulfilment === 'store' ? 'Ritiro in negozio' : 'Spedizione'}</Text>
         <Text style={[styles.footLabel, t?.shipping_cents === 0 && styles.footFree]}>{shippingValue.replace(/€\s/, '€')}</Text></View>
-      {fulfilment === 'home' && !overweight && remaining > 0 && <Text style={[styles.footNote, { marginTop: 4 }]}>Mancano {euro(remaining)} per la spedizione gratuita (fino a 10 kg).</Text>}
+      {fulfilment === 'home' && !overweight && remaining > 0 && <Text style={[styles.footNote, { marginTop: 6 }]}>Mancano {euro(remaining)} per la spedizione gratuita (fino a 10 kg).</Text>}
       <View style={styles.footRule} />
       <View style={[styles.footRow, { alignItems: 'baseline' }]}>
         <Text style={styles.footTotalLabel}>Totale</Text>
-        <Text style={styles.footTotal}>{t?.total_cents != null ? euro(t.total_cents) : '—'}</Text></View>
-      <Text style={[styles.footNote, { marginTop: 2, marginBottom: 14 }]}>IVA inclusa · importo confermato al pagamento</Text>
+        <Text style={styles.footSumTotal}>{t?.total_cents != null ? euro(t.total_cents) : '—'}</Text></View>
+      <Text style={[styles.footNote, { marginTop: 2 }]}>IVA inclusa · importo confermato al pagamento</Text>
+    </View>;
+    const footer = <View style={styles.payBar}>
+      <View style={{ flexShrink: 0 }}>
+        <Text style={styles.payBarLabel}>Totale</Text>
+        <Text style={styles.footTotal}>{t?.total_cents != null ? euro(t.total_cents) : '—'}</Text>
+      </View>
       <Pressable disabled={hasIssues || quote.item_count === 0 || loading || !methodOk} accessibilityRole="button"
         onPress={() => user ? router.push('/checkout') : router.push({ pathname: '/auth/sign-in', params: { next: '/checkout' } })}
         style={({ pressed }) => [styles.payButton, (hasIssues || !methodOk) && { opacity: 0.45 }, pressed && { opacity: 0.88 }]}>
-        <Text style={styles.payText}>{user ? 'Vai al pagamento' : 'Accedi e continua'}</Text>
+        <Text style={styles.payText} numberOfLines={1}>{user ? 'Vai al pagamento' : 'Accedi e continua'}</Text>
         <Icon name="arrow" size={18} color="#FFFFFF" strokeWidth={2.4} />
       </Pressable>
     </View>;
@@ -206,6 +213,7 @@ export default function CartScreen() {
           </Animated.View>;
         })}
       </View>
+      {quote.lines.length > 0 && summary}
       {suggestionsRow}
       {removed && <Animated.View entering={FadeInDown.springify().damping(18)} style={styles.snack} accessibilityLiveRegion="polite">
         <Text style={styles.snackText} numberOfLines={1}>Rimosso: {removed.name}</Text>
@@ -402,7 +410,11 @@ const styles = StyleSheet.create({
   footNote: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted },
   footRule: { height: 1, backgroundColor: '#EFECE3', marginVertical: 12 },
   footTotalLabel: { fontSize: 20, fontFamily: fonts.display, color: colors.text },
-  footTotal: { fontSize: 28, lineHeight: 34, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
-  payButton: { height: 58, borderRadius: 29, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  footTotal: { fontSize: 24, lineHeight: 28, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
+  payButton: { flex: 1, height: 54, borderRadius: 27, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 16 },
+  payBar: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  payBarLabel: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  summaryPlate: { marginTop: 12, padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  footSumTotal: { fontSize: 22, fontFamily: fonts.heavy, color: colors.text },
   payText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },
 });

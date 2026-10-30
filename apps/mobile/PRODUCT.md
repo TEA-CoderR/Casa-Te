@@ -6,7 +6,7 @@
 
 web
 
-(The same Expo / React Native codebase also builds the native customer app; this record covers the web shop. Below 900 px the web shop uses the phone layout, which is out of scope for desktop work and must stay unchanged.)
+(The same Expo / React Native codebase also builds the native customer app, published for internal testing on Google Play. Below 900 px the web shop uses the phone layout, design F "La Tenda" (see DESIGN.md); desktop work must not change it.)
 
 ## Users
 
@@ -14,7 +14,7 @@ Shoppers in and around Arezzo and Lucca who already know the CASA & TE stores, b
 
 ## Product Purpose
 
-CASA & TE is an Italian household-goods chain with 5 stores (Arezzo; Lucca 1–4) opening its first online sales channel. The web shop must feel like a real, trustworthy shop of the chain: browse and search products, check availability in a chosen store, add to cart, pick a fulfilment method (store pickup is always free, home delivery, pickup point), pay, follow the order. Current stage: a convincing demo for the company's managers, not yet a public launch.
+CASA & TE is an Italian household-goods chain with 5 stores (Arezzo; Lucca 1–4) opening its first online sales channel. The web shop must feel like a real, trustworthy shop of the chain: browse and search products, check availability in a chosen store, add to cart, pick a fulfilment method (store pickup is always free, home delivery, pickup point), pay, follow the order, request a return. Current stage (October 2026): live on staging data with the real catalogue (about 11,000 products with real photos), internal testing before the public launch.
 
 ## Positioning
 
@@ -42,7 +42,7 @@ Affordable everyday household goods with design sense (confirmed by the owner: "
 
 ## Evidence on Hand
 
-- Product photos for the demo catalogue are synthetic studio images (`apps/mobile/assets/demo`); real photography is pending.
+- Real catalogue from the ERP with real product photos; product descriptions are not available yet and must not be written by hand or generated.
 - No real reviews, customer counts, press or awards exist yet — none may be fabricated.
 
 ## Product Principles

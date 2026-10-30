@@ -13,7 +13,7 @@ import { Icon } from './Icon';
 /** Band height (below the status bar) once rolled up: just the buttons row. */
 const COLLAPSED = 70;
 /** Scroll distance over which the awning rolls up. */
-const RANGE = 110;
+const RANGE = 60;
 /** The "back to top" button appears after this much scrolling… */
 const TOP_AFTER = 360;
 /** …and hides again once the page has been still this long (ms). */
@@ -21,7 +21,8 @@ const TOP_IDLE = 2000;
 const EDGE = 12;
 
 /**
- * Department page header (design G, "la tenda si arrotola"): the striped awning with the department title.
+ * Department page header (design G, "la tenda si arrotola"): the striped awning with the department title in one row
+ * between the back and search buttons, so the products start high on the page.
  * Scrolling down rolls it up into a slim bar with a straight bottom edge (the scalloped valance is pulled up with
  * it), the title fades away and the round search button stretches into a white "Cerca in …" pill. The pill names
  * the department, but the search page always searches the whole catalogue. The chips scroll away with the
@@ -44,9 +45,10 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   const { width } = useWindowDimensions();
   const ref = useAnimatedRef<Animated.ScrollView>();
   const y = useSharedValue(0);
-  // Expanded band height (below the status bar): padding 14 + buttons 44 + gap 12 + title block + padding 18.
-  const [titleH, setTitleH] = useState(58);
-  const expanded = 14 + 44 + 12 + titleH + 18;
+  // Expanded band height (below the status bar): the title sits between the back and search buttons, so the band is
+  // one row high (padding 14 + the taller of buttons and title + padding 16) and the products start right below it.
+  const [titleH, setTitleH] = useState(48);
+  const expanded = 14 + Math.max(44, titleH) + 16;
   const exp = useDerivedValue(() => expanded);
   const [showTop, setShowTop] = useState(false);
 
@@ -76,7 +78,7 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   const lineStyle = useAnimatedStyle(() => ({ opacity: Math.max(0, (ease.value - 0.6) / 0.4) }));
   const titleStyle = useAnimatedStyle(() => ({
     opacity: Math.max(0, 1 - ease.value * 1.9),
-    transform: [{ translateY: -28 * ease.value }, { scale: 1 - 0.12 * ease.value }],
+    transform: [{ translateY: -10 * ease.value }],
   }));
   const pillMax = width - 16 - 44 - 10 - 16;
   const pillStyle = useAnimatedStyle(() => ({
@@ -98,10 +100,10 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
 
     <Animated.View style={[styles.band, bandStyle]}>
       <AwningStripes />
-      <Animated.View style={[styles.titleBlock, { top: insets.top + 14 + 44 + 12 }, titleStyle]}
+      <Animated.View style={[styles.titleBlock, { top: insets.top + 14 + Math.max(0, (44 - titleH) / 2), left: onBack ? 16 + 44 + 12 : 16 }, titleStyle]}
         onLayout={(e: LayoutChangeEvent) => { const h = Math.ceil(e.nativeEvent.layout.height); if (h && h !== titleH) setTitleH(h); }}>
-        <Text style={styles.title} accessibilityRole="header" numberOfLines={2}>{title}</Text>
-        {!!subtitle && <Text style={styles.subtitle} numberOfLines={2}>{subtitle}</Text>}
+        <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
+        {!!subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
       </Animated.View>
       <Animated.View pointerEvents="none" style={[styles.line, lineStyle]} />
     </Animated.View>
@@ -134,9 +136,9 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.page, overflow: 'hidden' },
   band: { position: 'absolute', left: 0, right: 0, top: 0, backgroundColor: colors.brand, overflow: 'hidden', zIndex: 3 },
-  titleBlock: { position: 'absolute', left: 16, right: 16, transformOrigin: 'left top' },
-  title: { fontFamily: fonts.display, color: '#FFFFFF', fontSize: 34, lineHeight: 38, letterSpacing: -0.3 },
-  subtitle: { fontSize: 14.5, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
+  titleBlock: { position: 'absolute', right: 16 + 44 + 10 },
+  title: { fontFamily: fonts.display, color: '#FFFFFF', fontSize: 25, lineHeight: 29, letterSpacing: -0.2 },
+  subtitle: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.onBrand },
   line: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 2, backgroundColor: colors.greenDark },
   edge: { position: 'absolute', left: 0, right: 0, zIndex: 3, overflow: 'hidden' },
   back: { position: 'absolute', left: 16, zIndex: 4 },

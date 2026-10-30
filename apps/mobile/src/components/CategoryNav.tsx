@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { CategoryRow } from '@casa-te/shared';
@@ -107,9 +107,11 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
  * scrolled into view, and a "list" button in front that opens every subcategory at once (SubcategorySheet),
  * so nothing is ever more than one tap away, however many there are.
  */
-export function SubcategoryTabs({ items, active, onSelect, onOpenAll }: {
+export function SubcategoryTabs({ items, active, onSelect, onOpenAll, trailing }: {
   items: Array<{ id: string | null; name: string }>; active: string | null;
   onSelect: (id: string | null) => void; onOpenAll: () => void;
+  /** A control at the end of the row (the filters button), outside the scrolling tabs. */
+  trailing?: ReactNode;
 }) {
   const scroll = useRef<ScrollView>(null);
   const [x, setX] = useState<Record<string, number>>({});
@@ -124,7 +126,7 @@ export function SubcategoryTabs({ items, active, onSelect, onOpenAll }: {
       style={({ pressed }) => [styles.allButton, pressed && { backgroundColor: colors.well }]}>
       <Icon name="menu" size={20} color={colors.text} strokeWidth={2.2} />
     </Pressable>
-    <ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs} accessibilityRole="tablist">
+    <ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.tabs} accessibilityRole="tablist">
       {items.map((it) => {
         const on = it.id === active;
         return <Pressable key={key(it.id)} onPress={() => onSelect(it.id)} accessibilityRole="tab" accessibilityState={{ selected: on }}
@@ -135,6 +137,7 @@ export function SubcategoryTabs({ items, active, onSelect, onOpenAll }: {
         </Pressable>;
       })}
     </ScrollView>
+    {trailing}
   </View>;
 }
 

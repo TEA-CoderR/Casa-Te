@@ -56,7 +56,7 @@ export default function ClubScreen() {
     </View>
 
     {PERKS.map((p) => <View key={p.title} style={styles.perk}>
-      <View style={styles.perkIcon}><Icon name={p.icon} size={22} strokeWidth={1.4} /></View>
+      <View style={styles.perkIcon}><Icon name={p.icon} size={24} color={colors.green} strokeWidth={1.6} /></View>
       <View style={{ flex: 1 }}><Text style={styles.perkTitle}>{p.title}</Text><Text style={styles.perkText}>{p.text}</Text></View>
     </View>)}
 
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   lead: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans },
   since: { fontSize: 13, color: colors.green, fontFamily: fonts.sansMedium, marginTop: 4 },
   perk: { flexDirection: 'row', gap: 14, alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.line },
-  perkIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
+  perkIcon: { width: 28, alignItems: 'center', justifyContent: 'center' },
   perkTitle: { fontSize: 16, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   perkText: { fontSize: 13, color: colors.muted, marginTop: 2, fontFamily: fonts.sans, lineHeight: 18 },
   section: { fontSize: 22, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text, marginTop: 28, marginBottom: 10 },
