@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChipCloud } from '@/components/ChipCloud';
+import { CategoryBrowser, SubcategorySheet, SubcategoryTabs, departmentCount, liveChildren } from '@/components/CategoryNav';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import type { CategoryRow } from '@casa-te/shared';
@@ -18,6 +18,9 @@ import { useQuery } from '@/lib/useQuery';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { useRecentSearches } from '@/store/recentSearches';
 import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared';
+
+/** Under review (preview only): ?vista=griglia shows the departments as photo tiles instead of the rail. */
+const BROWSER_LAYOUT: 'rail' | 'tiles' = typeof window !== 'undefined' && /[?&]vista=griglia/.test(window.location?.search ?? '') ? 'tiles' : 'rail';
 
 export default function CatalogScreen() {
   const params = useLocalSearchParams<{ category?: string; q?: string; search?: string; sort?: string; offerte?: string; evidenza?: string; code?: string }>();
@@ -43,8 +46,9 @@ export default function CatalogScreen() {
   const browsing = searchOpen && !wide && !debounced.trim();
   // Also hides empty subcategory tabs on department pages.
   const counts = useQuery('category-counts', fetchCategoryCounts);
-  const covers = useQuery(browsing ? 'category-covers' : null, () => fetchCategoryCovers());
+  const covers = useQuery(browsing || !wide ? 'category-covers' : null, () => fetchCategoryCovers());
   const [openDept, setOpenDept] = useState<string | null>(null);
+  const [allOpen, setAllOpen] = useState(false);
 
   useEffect(() => { if (params.category !== undefined) setCategoryId(params.category || null); }, [params.category]);
   // ?offerte=1: only discounted products ("In offerta"), within the chosen category.
@@ -283,13 +287,27 @@ export default function CatalogScreen() {
       </Screen>;
     }
 
+    // "Categorie" tab with nothing chosen: the category browser instead of every product in one list.
+    if (!categoryId && !collection) {
+      return <CategoryBrowser all={all} counts={counts.data} covers={covers.data} layout={BROWSER_LAYOUT}
+        onOpen={selectCategory} onSearch={() => { setSearchOpen(true); router.setParams({ search: '1' }); }} />;
+    }
+
+    const coverOf = (id: string) => covers.data?.[id]?.image ?? liveChildren(all, counts.data, id).map((c) => covers.data?.[c.id]?.image).find(Boolean) ?? null;
+    const sheetItems = parent
+      ? [{ id: parent.id, name: `Tutto in ${parent.name}`, count: counts.data ? departmentCount(all, counts.data, parent.id) : undefined, image: coverOf(parent.id), slug: parent.slug },
+        ...tabs.slice(1).map((t) => ({ id: t.id, name: t.name, count: counts.data?.[t.id as string], image: covers.data?.[t.id as string]?.image, slug: parent.slug }))]
+      : all.filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: c.name, count: counts.data ? departmentCount(all, counts.data, c.id) : undefined, image: coverOf(c.id), slug: c.slug }));
     const deptTitle = collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Tutti i prodotti';
     return <RollingAwning title={deptTitle}
       subtitle={loading && !items.length ? ' ' : `${count.toLocaleString('it-IT')} ${count === 1 ? 'prodotto disponibile' : 'prodotti disponibili'}${storeLabel ? ` a ${storeLabel}` : ''}`}
       onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
       onSearch={() => { setSearchOpen(true); router.setParams({ search: '1' }); }}
-      overlay={filterSheetPhone}
-      chips={<ChipCloud key={parent?.id ?? 'all'} items={tabs} active={activeTab} onSelect={selectCategory} moreLabel={parent ? 'categorie' : 'reparti'} />}>
+      overlay={<>{filterSheetPhone}
+        <SubcategorySheet visible={allOpen} onClose={() => setAllOpen(false)} title={parent?.name ?? 'Reparti'} items={sheetItems}
+          active={parent ? activeTab : categoryId} onSelect={selectCategory} />
+      </>}
+      chips={<SubcategoryTabs key={parent?.id ?? 'all'} items={tabs} active={activeTab} onSelect={selectCategory} onOpenAll={() => setAllOpen(true)} />}>
       <View style={styles.fBar}>
         <Text style={styles.fCount}>{loading && !items.length ? ' ' : `${shown.length} ${shown.length === 1 ? 'prodotto mostrato' : 'prodotti mostrati'}`}</Text>
         <Pressable onPress={() => setSheet('all')} accessibilityRole="button" accessibilityLabel={`Filtra e ordina${filterCount ? `, ${filterCount} attivi` : ''}`} style={styles.fButton}>
