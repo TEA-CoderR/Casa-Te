@@ -36,7 +36,7 @@ jobs:
           EXPO_PUBLIC_SUPABASE_URL: ${{ env.SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SUPABASE_KEY }}
       - name: Add headers
-        run: node tools/pages/cloudflare-headers.mjs apps/mobile/dist
+        run: mkdir -p /tmp/no-admin && node tools/pages/cloudflare-headers.mjs apps/mobile/dist /tmp/no-admin
       - name: Deploy preview
         if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
         run: |
