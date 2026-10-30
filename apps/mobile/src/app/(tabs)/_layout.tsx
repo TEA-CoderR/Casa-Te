@@ -67,12 +67,13 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
           accessibilityLabel={badge ? `${tab.title}, ${count} articoli` : tab.title}
           style={[styles.tab, on && styles.tabOn]}>
           <View>
-            <Icon name={tab.icon} size={22} color={on ? colors.text : '#FFFFFF'} strokeWidth={on ? 1.9 : 1.8}
+            <Icon name={tab.icon} size={21} color={on ? colors.text : '#FFFFFF'} strokeWidth={on ? 1.9 : 1.8}
               fill={on && tab.icon !== 'cart' ? colors.text : undefined} />
             {!!badge && !on && <Animated.View key={badge} entering={ZoomIn.springify()} style={styles.badge}>
               <Text style={styles.badgeText}>{badge}</Text></Animated.View>}
           </View>
-          {on && <Text style={styles.tabLabel} numberOfLines={1}>{tab.title}</Text>}
+          {/* Every tab is named, not only the chosen one: four icons alone leave the shop guessing. */}
+          <Text style={[styles.tabLabel, on && styles.tabLabelOn]} numberOfLines={1}>{tab.title}</Text>
         </Pressable>;
       })}
     </View>
@@ -100,9 +101,10 @@ const styles = StyleSheet.create({
   miniCtaText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   pill: { flexDirection: 'row', alignItems: 'center', height: 66, borderRadius: 33, paddingHorizontal: 7, backgroundColor: colors.green,
     shadowColor: '#143019', shadowOpacity: 0.35, shadowRadius: 28, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
-  tab: { flex: 1, height: 50, borderRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  tabOn: { flex: 1.6, backgroundColor: colors.yellow },
-  tabLabel: { fontSize: 14.5, fontFamily: fonts.heavy, color: colors.text, flexShrink: 1 },
+  tab: { flex: 1, height: 54, borderRadius: 22, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  tabOn: { backgroundColor: colors.yellow },
+  tabLabel: { fontSize: 11.5, fontFamily: fonts.sansBold, color: colors.onBrand },
+  tabLabelOn: { fontFamily: fonts.heavy, color: colors.text },
   badge: { position: 'absolute', top: -7, right: -12, minWidth: 19, height: 19, paddingHorizontal: 4, borderRadius: 10,
     backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
   badgeText: { fontSize: 11.5, fontFamily: fonts.heavy, color: colors.text },

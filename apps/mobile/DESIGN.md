@@ -286,13 +286,16 @@ Full-bleed Forest Green section: Garamond 54 headline naming the chosen store, a
 ## Phone app (design F "La Tenda")
 
 Below 900 px (and in the native app) the shop has its own visual world: the awning of a Tuscan shop front.
+The rules that keep it clean are in `AGENTS.md` ("Design rules") and checked by `npm run test:ui`.
 
-- **Awning band:** every phone page starts with a deep green band (`#1F4127`) with tone-on-tone vertical stripes (`#234A2C`, 22 px) and a scalloped valance edge (half-discs, one per stripe). Page titles sit on it in Bodoni Moda; secondary text in `#CFDDC6`. Stack pages use the striped band as their native header.
+- **Awning band:** every phone page starts with a deep green band (`#1F4127`) with tone-on-tone vertical stripes (`#234A2C`, 22 px) and a scalloped valance edge (half-discs, one per stripe). Page titles sit on it in Bodoni Moda; secondary text in `#CFDDC6`. Department pages keep the band one row high (back, title with product count, search) so products start near the top; scrolling rolls the valance up and the search button becomes a "Cerca in …" pill.
 - **Hanging cards:** the store card, the cart's pickup card and the active-order card hang from the valance (white, 20 px radius, soft offset shadow). Store, stock and free pickup are always named.
-- **Ground and plates:** warm ivory ground `#F5F3EC`; products always on white plates (20 px radius, no border), never on tinted circles. Tinted department tiles use the product photo with `multiply`.
-- **Signal colour:** the logo yellow `#F3E33A` only for the active tab pill, cart counts, price chips and the order-ready card. Discounts stay solid red `#C8231F`.
-- **Type:** Bodoni Moda (600) for page and section titles; Figtree for everything else; prices in Figtree ExtraBold with the euro sign and cents small and raised (`PriceTag`).
-- **Navigation:** a floating deep-green pill tab bar; the active tab is a yellow pill with its label. While shopping, a white mini-cart bar rises above it with the item count.
+- **Ground and plates:** warm ivory ground `#F5F3EC`; products, departments and subcategories always as photos on white plates with a hairline, never on tinted tiles or circles. Pale tints only for the home banners.
+- **Signal colour:** the logo yellow `#F3E33A` only for the active tab, cart counts, price chips and "ready"/"approved" states. Red `#C8231F` only for discounts and errors.
+- **Choices and states:** a choice is a white card with a radio on the left; the chosen one gets a green edge (`OptionCard`, `RadioMark`). Order and return status is a dot and words (`StatusMark`); messages are white plates with a coloured edge (`Notice`). Icons stand alone.
+- **Type:** Bodoni Moda (600) for page and section titles; Figtree for everything else, always through `fonts`; prices in Figtree ExtraBold with the euro sign and cents small and raised (`PriceTag`). The big price is the price the shopper pays; for non-members the Club price is a small red "Soci €x" line.
+- **Navigation:** a floating deep-green tab bar; every tab has an icon and its name, the active one on a yellow plate. "Categorie" opens a rail of departments with photo tiles of their subcategories (`CategoryBrowser`). Department pages show subcategories as one line of underlined tabs, with a list button that opens all of them in a sheet and a filters button at the end (`SubcategoryTabs`, `SubcategorySheet`). While shopping, a white mini-cart bar rises above the tab bar.
+- **Cart:** the breakdown (products, Club prices, discount, pickup/shipping, total) is a white plate in the page; the bottom bar holds only the total and "Vai al pagamento".
 - **Interaction:** "+" on a product turns into a stepper in place; the product page's buy bar becomes a stepper plus "Vai al carrello", with a toast on the first add; removing a cart line offers "Annulla"; orders are shown as a pickup pass with the code for the till above a tear line.
 
 ## Do's and Don'ts

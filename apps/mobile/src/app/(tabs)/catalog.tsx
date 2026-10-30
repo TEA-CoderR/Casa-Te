@@ -304,15 +304,13 @@ export default function CatalogScreen() {
         <SubcategorySheet visible={allOpen} onClose={() => setAllOpen(false)} title={parent?.name ?? 'Reparti'} items={sheetItems}
           active={parent ? activeTab : categoryId} onSelect={selectCategory} />
       </>}
-      chips={<SubcategoryTabs key={parent?.id ?? 'all'} items={tabs} active={activeTab} onSelect={selectCategory} onOpenAll={() => setAllOpen(true)} />}>
-      <View style={styles.fBar}>
-        <Text style={styles.fCount}>{loading && !items.length ? ' ' : `${shown.length} ${shown.length === 1 ? 'prodotto mostrato' : 'prodotti mostrati'}`}</Text>
-        <Pressable onPress={() => setSheet('all')} accessibilityRole="button" accessibilityLabel={`Filtra e ordina${filterCount ? `, ${filterCount} attivi` : ''}`} style={styles.fButton}>
-          <Icon name="sliders" size={17} color={colors.text} strokeWidth={2.2} /><Text style={styles.fButtonText}>Filtra e ordina</Text>
+      chips={<SubcategoryTabs key={parent?.id ?? 'all'} items={tabs} active={activeTab} onSelect={selectCategory} onOpenAll={() => setAllOpen(true)}
+        trailing={<Pressable onPress={() => setSheet('all')} accessibilityRole="button" accessibilityLabel={`Filtra e ordina${filterCount ? `, ${filterCount} attivi` : ''}`}
+          style={({ pressed }) => [styles.fButton, pressed && { backgroundColor: colors.well }]}>
+          <Icon name="sliders" size={20} color={colors.text} strokeWidth={2.2} />
           {filterCount > 0 && <View style={styles.fBadge}><Text style={styles.fBadgeText}>{filterCount}</Text></View>}
-        </Pressable>
-      </View>
-      <View style={{ paddingHorizontal: 16 }}>
+        </Pressable>} />}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
         {results}
         <View style={styles.fGrid}>{shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
         {more}
@@ -406,12 +404,9 @@ function Thumb({ image, slug, name, size }: { image: string | null; slug: string
 
 
 const styles = StyleSheet.create({
-  fBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, gap: 12 },
-  fCount: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.muted, flexShrink: 1 },
-  fButton: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: colors.line, backgroundColor: '#FFFFFF' },
-  fButtonText: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.text },
-  fBadge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-  fBadgeText: { fontSize: 12, fontFamily: fonts.heavy, color: '#FFFFFF' },
+  fButton: { width: 52, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderColor: colors.line },
+  fBadge: { position: 'absolute', top: 8, right: 7, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  fBadgeText: { fontSize: 11, fontFamily: fonts.heavy, color: '#FFFFFF' },
   fGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   fCell: { width: '48.6%', flexDirection: 'row' },
   sBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, height: 50, paddingLeft: 16, paddingRight: 6, borderRadius: 25, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: colors.yellow },
@@ -445,7 +440,7 @@ const styles = StyleSheet.create({
   sResultsHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
   sCount: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 16, marginBottom: 8 },
   sEmpty: { paddingTop: 64, paddingHorizontal: 32, alignItems: 'center' },
-  sEmptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#EFECE3', alignItems: 'center', justifyContent: 'center' },
+  sEmptyIcon: { alignItems: 'center', justifyContent: 'center' },
   sEmptyTitle: { fontSize: 23, lineHeight: 28, fontFamily: fonts.display, color: colors.text, textAlign: 'center', marginTop: 16, marginBottom: 6 },
   sEmptyText: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center' },
   sEmptyButton: { marginTop: 18, height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.green, justifyContent: 'center' },
