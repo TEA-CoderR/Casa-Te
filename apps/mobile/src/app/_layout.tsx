@@ -10,7 +10,6 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors, fonts } from '@/config/theme';
 import { PersistenceGate } from '@/components/PersistenceGate';
-import { AwningStripes } from '@/components/BrandHeader';
 import { useLayout } from '@/lib/hooks';
 import { isConfigured } from '@/lib/supabase';
 import { startSessionListener } from '@/store/session';
@@ -52,8 +51,8 @@ export default function RootLayout() {
           headerShadowVisible: false,
           headerTitleAlign: wide ? 'center' : 'left',
           headerStyle: { backgroundColor: wide ? colors.background : colors.brand },
-          // Phones: stack pages (checkout, order, account…) share the striped awning of the tab pages.
-          headerBackground: wide ? undefined : () => <View style={{ flex: 1, backgroundColor: colors.brand, overflow: 'hidden' }}><AwningStripes /></View>,
+          // Phones: stack pages (checkout, order, account…) share the solid green band of the tab pages.
+          headerBackground: wide ? undefined : () => <View style={{ flex: 1, backgroundColor: colors.brand }} />,
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: wide ? colors.background : colors.page },
         }}

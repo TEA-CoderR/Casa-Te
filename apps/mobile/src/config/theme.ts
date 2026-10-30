@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 
 /**
- * Brand look (design F "La Tenda"): the awning of a Tuscan shop front. Deep awning green with tone-on-tone
- * stripes and a scalloped edge frames every phone page; products sit on white plates on a warm ivory ground;
+ * Brand look (design F "La Tenda"): a solid deep green band (no stripes, straight edge) tops every phone page,
+ * cards may hang over its edge; products sit on white plates on a warm ivory ground;
  * the logo yellow is the single signal (active tab, price chips, cart count); red only for discounts.
  * No pale tinted fills for states or messages (the September demo's pale-green panels, pills and icon circles):
  * a choice gets a green edge and a radio, a status a dot and words, a message a white plate with a coloured edge.
@@ -12,9 +12,8 @@ export const colors = {
   /** Actions, links, active states (white text on it passes AA). */
   green: '#1F4127',
   greenDark: '#143019',
-  /** Awning band behind phone headers (stripes alternate `brand` and `stripe`). */
+  /** Solid band behind phone headers. */
   brand: '#1F4127',
-  stripe: '#234A2C',
   /** Text on the green band that is not the title (≥4.5:1 on the band). */
   onBrand: '#CFDDC6',
   /** The logo's yellow: active tab, price chips, cart count, the order-ready card. */

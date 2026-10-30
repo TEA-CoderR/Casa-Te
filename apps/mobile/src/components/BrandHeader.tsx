@@ -5,37 +5,18 @@ import { colors, fonts } from '@/config/theme';
 import { brandLogoStacked, STACKED_ASPECT } from '@/config/brand';
 import { Icon, type IconName } from './Icon';
 
-const STRIPE = 22;
-/** Enough stripes for the widest phone/tablet band; the band clips the rest. */
-const STRIPES = Array.from({ length: 48 }, (_, i) => i);
-
-/** The awning's tone-on-tone vertical stripes, painted behind the band's content. */
-export function AwningStripes({ width = STRIPE }: { width?: number }) {
-  return <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.stripes]}>
-    {STRIPES.map((i) => <View key={i} style={{ width, backgroundColor: i % 2 ? colors.stripe : colors.brand }} />)}
-  </View>;
-}
-
-/** The scalloped valance under the band: half-discs in the two stripe tones, one per stripe. */
-export function AwningEdge() {
-  return <View pointerEvents="none" style={styles.edge} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-    {STRIPES.map((i) => <View key={i} style={[styles.scallop, { backgroundColor: i % 2 ? colors.stripe : colors.brand }]} />)}
-  </View>;
-}
-
 /**
- * Phone header band (design F "La Tenda"): the striped awning of the shop front, edge to edge under the status bar,
- * ending in a scalloped edge. Sizes follow the design boards exactly:
+ * Phone header band: solid deep green, edge to edge under the status bar, with a straight bottom edge (cards may
+ * hang over it). Layouts:
  * - inline (default): [left] title + subtitle … [right] in one row (Carrello, Ordini, Ordine);
  * - `stacked`: the buttons row, then a large title below it (Reparto, Home greeting, Accesso);
- * - `plain`: solid green, no stripes and no valance (the search page).
  * `pad` = [top, horizontal, bottom] inside the band; `overlap` is extra bottom room for a card that hangs from it.
  */
-export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, right, overlap = 0, inScroll, stacked, plain,
+export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, right, overlap = 0, inScroll, stacked,
   titleSize, titleGap, pad = [14, 16, 18], children }: PropsWithChildren<{
   title?: string; subtitle?: string; logo?: boolean; logoHeight?: number; left?: ReactNode; right?: ReactNode; overlap?: number;
   /** Rendered inside the page's scroll view (Screen `top`): the status bar inset is painted by `StatusBand`. */
-  inScroll?: boolean; stacked?: boolean; plain?: boolean; titleSize?: number; titleGap?: number;
+  inScroll?: boolean; stacked?: boolean; titleSize?: number; titleGap?: number;
   pad?: [number, number, number];
 }>) {
   const insets = useSafeAreaInsets();
@@ -47,7 +28,6 @@ export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, righ
   // No zIndex: a card that hangs from the band (a later sibling in the scroll content) must paint over it.
   return <View>
     <View style={[styles.band, { paddingTop: (inScroll ? 0 : insets.top) + pad[0], paddingHorizontal: pad[1], paddingBottom: pad[2] + overlap }]}>
-      {!plain && <AwningStripes />}
       {(left || right || logo || (!stacked && !!title)) && <View style={styles.row}>
         {left}
         {logo && <Image source={brandLogoStacked} accessibilityLabel="Casa & Te — Per la tua casa e per te" accessibilityRole="header"
@@ -59,17 +39,16 @@ export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, righ
       {stacked && heading}
       {children}
     </View>
-    {!plain && <AwningEdge />}
   </View>;
 }
 
-/** The status bar area above a scrolling awning (Screen `header` when the band is the Screen `top`). */
+/** The status bar area above a scrolling band (Screen `header` when the band is the Screen `top`). */
 export function StatusBand() {
   const insets = useSafeAreaInsets();
-  return <View style={{ height: insets.top, backgroundColor: colors.brand, overflow: 'hidden', zIndex: 3 }}><AwningStripes /></View>;
+  return <View style={{ height: insets.top, backgroundColor: colors.brand, zIndex: 3 }} />;
 }
 
-/** A card that hangs from the awning's valance (store card, active order): pulls itself up over the band. */
+/** A card that hangs from the band's bottom edge (store card, active order): pulls itself up over the band. */
 export function HangingCard({ children, style, overlap = 34 }: PropsWithChildren<{ style?: ViewStyle; overlap?: number }>) {
   return <View style={[{ marginTop: -overlap - 12, marginHorizontal: 16, zIndex: 2, elevation: 6 }, style]}>{children}</View>;
 }
@@ -111,9 +90,6 @@ export function HeaderSearch({ onPress, placeholder, ...input }: TextInputProps 
 
 const styles = StyleSheet.create({
   band: { backgroundColor: colors.brand, overflow: 'hidden' },
-  stripes: { flexDirection: 'row' },
-  edge: { height: 12, flexDirection: 'row', overflow: 'hidden', marginTop: -1 },
-  scallop: { width: STRIPE, height: 22, borderRadius: 11, marginTop: -11 },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
   title: { fontFamily: fonts.display, color: '#FFFFFF', letterSpacing: -0.3 },
   subtitle: { fontSize: 14, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },

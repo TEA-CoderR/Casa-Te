@@ -9,7 +9,7 @@ import { Screen } from '@/components/Screen';
 import { Icon, type IconName } from '@/components/Icon';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { PrimaryButton } from '@/components/UI';
-import { AwningEdge, AwningStripes, StatusBand } from '@/components/BrandHeader';
+import { StatusBand } from '@/components/BrandHeader';
 import { StoreCard } from '@/components/StoreCard';
 import { colors, fonts } from '@/config/theme';
 import { fetchOrders, fetchProfile, updateProfile, type OrderWithItems } from '@/lib/api';
@@ -210,7 +210,6 @@ export default function ProfileScreen() {
     return <Screen header={<StatusBand />} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 28 }}
       top={<View>
         <View style={[styles.fHero, !user && { paddingBottom: 28 }]}>
-          <AwningStripes />
           {user ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <View style={styles.fAvatar}><Text style={styles.fAvatarText}>{initials(name || user.email || '')}</Text></View>
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -225,7 +224,6 @@ export default function ProfileScreen() {
             <Pressable onPress={() => go('/auth/sign-in')} accessibilityRole="button" style={styles.fSignIn}><Text style={styles.fSignInText}>Accedi o registrati</Text></Pressable>
           </>}
         </View>
-        <AwningEdge />
       </View>}>
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
       <View style={{ paddingHorizontal: 16, marginTop: hang }}>

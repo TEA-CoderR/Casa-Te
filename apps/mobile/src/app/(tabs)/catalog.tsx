@@ -175,7 +175,7 @@ export default function CatalogScreen() {
     if (searchOpen) {
       const q = query.trim().toLowerCase();
       const closeSearch = () => { setQuery(''); setDebounced(''); setSearchOpen(false); router.setParams({ q: undefined, search: undefined }); if (!categoryId && !collection && router.canGoBack()) router.back(); };
-      const header = <BrandHeader plain pad={[14, 16, 16]}>
+      const header = <BrandHeader pad={[14, 16, 16]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <HeaderBack onPress={closeSearch} />
           <View style={styles.sBox}>
