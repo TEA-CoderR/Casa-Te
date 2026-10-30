@@ -25,7 +25,7 @@ jobs:
       - name: Install
         run: if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
       - name: Unit tests (shared, admin, edge functions)
-        run: npm run test:shared && npm run test:admin && npm run test:functions
+        run: npm run test:ui && npm run test:shared && npm run test:admin && npm run test:functions
       - name: Database tests (migrations, RLS, order lifecycle, concurrency)
         run: sudo apt-get install -y postgresql-client >/dev/null && npm run test:db
       - name: Typecheck

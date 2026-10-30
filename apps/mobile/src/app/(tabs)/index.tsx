@@ -31,7 +31,9 @@ const ACTIVE = new Set(['paid', 'picking', 'ready', 'shipped']);
 const STEP: Record<string, number> = { paid: 1, picking: 2, ready: 3, shipped: 3 };
 /** Department tile tints (design F), each with a dark ink of the same hue for its text. */
 const TINTS = [
+  // ui-check: allow (department tiles of design F, not a state)
   { bg: '#F4DED6', ink: '#5B2414' }, { bg: '#DCE9F2', ink: '#173F5C' }, { bg: '#F5E6C8', ink: '#5A3A08' }, { bg: '#DCE7D3', ink: '#1F4127' },
+  // ui-check: allow (department tiles of design F, not a state)
   { bg: '#ECE6F3', ink: '#3E2A63' }, { bg: '#E2EEEC', ink: '#1C4744' }, { bg: '#F3E3EA', ink: '#5E2340' }, { bg: '#E9E6DC', ink: '#3F3A2A' },
 ];
 
@@ -77,7 +79,7 @@ function HomePhone() {
   const dept = topCategories.find((c) => coverFor(c)?.image) ?? topCategories[0];
   const deptCount = dept ? countFor(dept) : 0;
   const slides: Array<{ key: string; title: string; text: string; cta: string; bg: string; ink: string; image?: string | null; product?: CatalogProduct; onPress: () => void }> = [
-    ...(offerItems.length ? [{ key: 'offers', title: 'Le nostre migliori offerte', text: 'Sempre aggiornate, nel tuo negozio', cta: 'Scopri', bg: '#DCE7D3', ink: colors.green, product: offerItems[0], onPress: () => openCatalog({ offerte: '1' }) }] : []),
+    ...(offerItems.length ? [{ key: 'offers', title: 'Le nostre migliori offerte', text: 'Sempre aggiornate, nel tuo negozio', cta: 'Scopri', bg: '#DCE7D3', /* ui-check: allow (home banner of design F) */ ink: colors.green, product: offerItems[0], onPress: () => openCatalog({ offerte: '1' }) }] : []),
     { key: 'pickup', title: 'Ritiro sempre gratis', text: storeName ? `Ordina ora, ritira a ${storeName}` : 'Ordina ora, ritira nel tuo negozio', cta: 'Come funziona', bg: colors.yellow, ink: colors.text, product: featured.data?.items[0], onPress: () => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } }) },
     ...(dept ? [{ key: 'dept', title: dept.name, text: deptCount ? `${deptCount.toLocaleString('it-IT')} prodotti nel tuo negozio` : 'Scopri il reparto', cta: `Vai a ${dept.name}`, bg: '#F4DED6', ink: '#5B2414', image: coverFor(dept)?.image, onPress: () => openCatalog({ category: dept.id }) }] : []),
   ];
