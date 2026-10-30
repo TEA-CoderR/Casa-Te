@@ -1,0 +1,46 @@
+name: Preview web shop (branch)
+
+# A preview of the phone/web shop for a work branch, so a change can be tried on a real phone before merging.
+# Deployed as a Cloudflare Pages *preview* (not production): https://<branch-with-dashes>.<CF_SHOP_PROJECT>.pages.dev
+# www stays on main (deploy-cloudflare.yml). Same staging data as the live site; skipped without Cloudflare secrets.
+
+on:
+  push:
+    branches: ['feat/**', 'fix/**', 'design/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ vars.WEB_SUPABASE_URL || vars.STAGING_SUPABASE_URL || 'https://kejjinbapxnjbceirrtv.supabase.co' }}
+      SUPABASE_KEY: ${{ vars.WEB_SUPABASE_PUBLISHABLE_KEY || vars.STAGING_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_5owPpJOcvD_m6hcDD2Iv7Q_CCVylaXA' }}
+      SHOP_PROJECT: ${{ vars.CF_SHOP_PROJECT || 'casate-shop' }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: Export web shop
+        run: npm run build:web -w @casa-te/mobile
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SUPABASE_KEY }}
+      - name: Add headers
+        run: mkdir -p /tmp/no-admin && node tools/pages/cloudflare-headers.mjs apps/mobile/dist /tmp/no-admin
+      - name: Deploy preview
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        run: |
+          branch=$(echo "$GITHUB_REF_NAME" | tr -c 'A-Za-z0-9\n' '-' | tr 'A-Z' 'a-z')
+          out=$(npx --yes wrangler@3 pages deploy apps/mobile/dist --project-name "$SHOP_PROJECT" --branch "$branch" --commit-dirty=true 2>&1) || { echo "$out"; echo "::error title=wrangler::$(echo "$out" | tail -6 | tr '\n' ' ')"; exit 1; }
+          echo "$out"
+          echo "::notice title=Preview::https://$branch.$SHOP_PROJECT.pages.dev"
