@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { shownProduct, useClubMember } from '@/store/club';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { brandLogoOnWhite, LOGO_ASPECT } from '@/config/brand';
 import { router, useGlobalSearchParams, usePathname } from 'expo-router';
@@ -161,6 +162,7 @@ export function SiteHeader() {
 function SearchBox({ query, setQuery, onSubmit, storeId, categories }: {
   query: string; setQuery: (q: string) => void; onSubmit: () => void; storeId: string | null; categories: CategoryRow[];
 }) {
+  const member = useClubMember();
   const [focused, setFocused] = useState(false);
   const [debounced, setDebounced] = useState(query.trim());
   const [active, setActive] = useState(-1);
@@ -220,7 +222,8 @@ function SearchBox({ query, setQuery, onSubmit, storeId, categories }: {
       <Text style={styles.suggestLabel}>Prodotti</Text>
       {results.loading && !results.data ? <Text style={styles.suggestEmpty}>Ricerca in corso…</Text>
         : products.length === 0 ? <Text style={styles.suggestEmpty}>Nessun prodotto per «{debounced}»</Text>
-        : products.map((p, j) => {
+        : products.map((raw, j) => {
+          const p = shownProduct(raw, member);
           const i = depts.length + j;
           const discount = discountLabel(p.price_cents, p.compare_at_price_cents);
           return row(items[i], i, <>

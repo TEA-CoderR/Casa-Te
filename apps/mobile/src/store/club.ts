@@ -32,3 +32,18 @@ export function startClubListener() {
 }
 
 export const useClubMember = () => useClubStore((s) => s.member);
+
+/**
+ * The product as this customer sees it: the big price is always what they will pay. For a Club member a valid
+ * member price becomes the price, with the regular one struck through; everyone else sees the regular price and,
+ * separately, "Soci €x" (display only: quote_cart charges the member price to members only).
+ */
+export function shownProduct<T extends { price_cents: number; compare_at_price_cents: number | null; clubPrice: { cents: number; endsOn: string | null } | null }>(
+  p: T, member: boolean): T & { memberApplied: boolean } {
+  if (!member || !p.clubPrice) return { ...p, memberApplied: false };
+  return { ...p, price_cents: p.clubPrice.cents, compare_at_price_cents: Math.max(p.price_cents, p.compare_at_price_cents ?? 0), memberApplied: true };
+}
+
+export function useShownProduct<T extends Parameters<typeof shownProduct>[0]>(p: T) {
+  return shownProduct(p, useClubMember());
+}

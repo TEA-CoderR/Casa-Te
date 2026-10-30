@@ -12,6 +12,7 @@ import { atPlace, storeShortName } from './StoreSheet';
 import { useLayout, useStores } from '@/lib/hooks';
 import { transition, type WebState } from './site/shared';
 import { PriceTag } from './UI';
+import { useShownProduct } from '@/store/club';
 
 /** Availability is always about one store; name it so the customer knows which. */
 export function stockLabel(stock: number | null, store?: string): { text: string; available: boolean } {
@@ -33,10 +34,12 @@ export function FavoriteButton({ productId, name, size = 22, style, strokeWidth 
   </Pressable>;
 }
 
-export function ProductCard({ product, variant = 'grid', rail }: { product: CatalogProduct; variant?: 'grid' | 'list' | 'feature';
+export function ProductCard({ product: raw, variant = 'grid', rail }: { product: CatalogProduct; variant?: 'grid' | 'list' | 'feature';
   /** Home rail card (design F): taller photo area and no heart. */
   rail?: boolean }) {
   const { wide } = useLayout();
+  // The big price is what this customer pays (member price only for Club members).
+  const product = useShownProduct(raw);
   const add = useCartStore((s) => s.add);
   const quantity = useCartStore((s) => s.items[product.id] ?? 0);
   const { selected } = useStores();
@@ -62,9 +65,13 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
   </Animated.View> : cartButton;
   const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
   const unit = unitPriceLabel(product.price_cents, product.unit_quantity, product.unit);
-  // Club member price: shown as an offer, always marked "Soci" (only Club members pay it).
-  const soci = !!product.clubPrice;
-  const badge = discount ? `${soci ? 'Soci ' : ''}${discount.replace('-', '−')}` : '';
+  // Club member price: applied for members (marked "Prezzo Soci"); for everyone else a separate "Soci €x" line.
+  const soci = product.memberApplied;
+  const sociOffer = !!product.clubPrice && !product.memberApplied;
+  const sociPct = product.clubPrice ? discountLabel(product.clubPrice.cents, raw.price_cents) : null;
+  const sociCents = product.clubPrice?.cents ?? 0;
+  const badge = discount ? `${soci ? 'Soci ' : ''}${discount.replace('-', '−')}` : sociOffer && sociPct ? `Soci ${sociPct.replace('-', '−')}` : '';
+  const sociOfferText = sociOffer ? `Soci ${formatEuro(sociCents).replace(/€\s/, '€')}` : '';
   // Phone (design F): unit or struck price above the price tag (raised cents), red when discounted.
   const price = <View style={{ flexShrink: 1 }}>
     {(!!discount || !!unit) && <Text style={styles.small} numberOfLines={1}>
@@ -72,6 +79,7 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
       {!!discount && !!unit && ' · '}{unit ?? ''}</Text>}
     <PriceTag cents={product.price_cents} size={22} sale={!!discount} />
     {soci && <Text style={styles.soci} numberOfLines={1}>Prezzo Soci</Text>}
+    {sociOffer && <Text style={[styles.soci, styles.sociOffer]} numberOfLines={1}>{sociOfferText}</Text>}
   </View>;
 
   if (variant === 'list') return <View style={styles.row}>
@@ -97,14 +105,15 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
             <View style={[hovered && { transform: [{ scale: 1.035 }] }, transition('transform', 600)]}>
               <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={feature ? 0.1 : 0.09} aspect={feature ? 0.9 : 1.12} blend />
             </View>
-            {!!discount && <View style={[styles.discount, styles.discountDesk, feature && styles.discountBig]}>
-              <Text style={[styles.discountText, styles.discountTextDesk, feature && { fontSize: 16 }]} accessibilityLabel={`${soci ? 'Prezzo Soci, sconto' : 'Sconto'} ${discount.slice(1)}`}>{badge}</Text></View>}
+            {!!badge && <View style={[styles.discount, styles.discountDesk, feature && styles.discountBig]}>
+              <Text style={[styles.discountText, styles.discountTextDesk, feature && { fontSize: 16 }]} accessibilityLabel={badge.startsWith('Soci') ? `Prezzo Soci, ${badge.slice(5)}` : `Sconto ${badge}`}>{badge}</Text></View>}
           </View>
           <View style={styles.entryText}>
             {!!product.brand && <Text style={styles.entryBrand} numberOfLines={1}>{product.brand}</Text>}
             <Text style={[styles.entryName, feature && styles.entryNameBig, hovered && { color: colors.green }, transition('color')]} numberOfLines={2}>{product.name}</Text>
             {!!note && <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{note}</Text>}
-            {soci && <Text style={[styles.meta, styles.soci]} numberOfLines={1}>Prezzo Soci · solo per i membri del Club</Text>}
+            {soci && <Text style={[styles.meta, styles.soci]} numberOfLines={1}>Prezzo Soci · applicato al tuo account</Text>}
+            {sociOffer && <Text style={[styles.meta, styles.soci, styles.sociOffer]} numberOfLines={1}>{sociOfferText} · con il Club gratuito</Text>}
           </View>
         </>}
       </Pressable></Link>
@@ -126,6 +135,7 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
   const subline = !stock.available ? stock.text : discount
     ? <><Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number).replace(/€\s/, '€')}</Text>
         {soci ? <Text style={styles.soci}> · Prezzo Soci</Text> : unitShort ? ` · ${unitShort}` : ''}</>
+    : sociOffer ? <Text style={[styles.soci, styles.sociOffer]}>{sociOfferText}</Text>
     : unitShort ?? note;
   return <View style={[styles.card, rail && { paddingBottom: 12 }]}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
@@ -133,8 +143,8 @@ export function ProductCard({ product, variant = 'grid', rail }: { product: Cata
         <View style={{ width: rail ? 120 : 118, height: rail ? 120 : 118 }}>
           <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />
         </View>
-        {!!discount && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
-          <Text style={styles.discountText} accessibilityLabel={`${soci ? 'Prezzo Soci, sconto' : 'Sconto'} ${discount.slice(1)}`}>{badge}</Text></View>}
+        {!!badge && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
+          <Text style={styles.discountText} accessibilityLabel={badge.startsWith('Soci') ? `Prezzo Soci, ${badge.slice(5)}` : `Sconto ${badge}`}>{badge}</Text></View>}
       </View>
       <Text style={[styles.name, { marginTop: rail ? 6 : 4 }]} numberOfLines={2}>{product.name}</Text>
       <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>
@@ -158,6 +168,7 @@ const styles = StyleSheet.create({
   small: { fontSize: 11.5, color: colors.faint, fontFamily: fonts.sansMedium },
   compareSmall: { textDecorationLine: 'line-through' },
   soci: { color: colors.sale, fontFamily: fonts.sansBold, fontWeight: '700' },
+  sociOffer: { fontFamily: fonts.heavy, fontWeight: '800' },
   priceBig: { fontSize: 23, lineHeight: 26, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
   priceRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
   price: { fontSize: 18.5, fontFamily: fonts.serifMedium, color: colors.text },
