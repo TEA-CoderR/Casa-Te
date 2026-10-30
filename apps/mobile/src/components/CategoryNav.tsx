@@ -78,7 +78,7 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
           </Pressable>;
         })}
       </ScrollView>
-      <ScrollView ref={panel} style={styles.panel} contentContainerStyle={{ padding: 12, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={panel} style={styles.panel} contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 12, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
         {active && <>
           <Pressable onPress={() => onOpen(active.id)} accessibilityRole="link" accessibilityLabel={`Tutto in ${active.name}`}
             style={({ pressed }) => [styles.panelHead, pressed && { opacity: 0.7 }]}>
@@ -187,9 +187,9 @@ const styles = StyleSheet.create({
   panelHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 14, marginBottom: 14, borderBottomWidth: 1, borderColor: colors.line },
   panelTitle: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text },
   panelLink: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, rowGap: 16 },
-  cell: { width: '33.333%', paddingHorizontal: 4 },
-  cellName: { marginTop: 7, fontSize: 12, lineHeight: 15.5, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3, rowGap: 16 },
+  cell: { width: '33.333%', paddingHorizontal: 3 },
+  cellName: { marginTop: 7, fontSize: 12, lineHeight: 15.5, letterSpacing: -0.15, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
 
 
   photo: { backgroundColor: colors.photo, borderWidth: 1, borderColor: colors.photoLine, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
