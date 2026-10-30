@@ -61,7 +61,7 @@ export default function CartScreen() {
 
   if (!quote) return <Screen header={band} ground={wide ? undefined : colors.page}>{wide && <PageTitle title="Il tuo carrello" />}
     {error ? <Notice tone="error" title="Impossibile aggiornare il carrello" message="Controlla la connessione e riprova.">
-      <Pressable onPress={refresh}><Text style={{ color: colors.green, fontWeight: '600' }}>Riprova</Text></Pressable>
+      <Pressable onPress={refresh}><Text style={{ fontFamily: fonts.sansSemiBold, color: colors.green, fontWeight: '600' }}>Riprova</Text></Pressable>
     </Notice> : <Loading />}
   </Screen>;
 
@@ -164,7 +164,7 @@ export default function CartScreen() {
         {fulfilment === 'store'
           ? <StoreCard compact showStatus={false} label="Ritiro gratuito a" onPress={() => setDeliverySheet(true)} />
           : <Pressable onPress={() => setDeliverySheet(true)} accessibilityRole="button" style={styles.pCard}>
-              <View style={styles.pCircle}><Icon name={fulfilment === 'home' ? 'truck' : 'pin'} size={20} color={colors.green} strokeWidth={1.9} /></View>
+              <Icon name={fulfilment === 'home' ? 'truck' : 'pin'} size={26} color={colors.green} strokeWidth={1.9} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.pLabel}>{FULFILMENT_LABELS[fulfilment]}</Text>
                 <Text style={styles.pTitle}>{!methodOk ? 'Non disponibile: scegline un altro' : fulfilment === 'home' ? 'Indirizzo al passo successivo' : 'Punto scelto al passo successivo'}</Text>
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   footSoci: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.sale },
   compare: { flexDirection: 'row', alignItems: 'stretch', borderRadius: 16, borderWidth: 1.5, borderColor: colors.sale, overflow: 'hidden', marginBottom: 12 },
   compareCol: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, justifyContent: 'center' },
-  compareClub: { backgroundColor: '#FCEDEA' },
+  compareClub: { borderLeftWidth: 1, borderColor: colors.line },
   compareLabel: { fontSize: 11.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
   compareNow: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text, marginTop: 2 },
   compareSoci: { fontSize: 20, fontFamily: fonts.heavy, color: colors.sale, marginTop: 2 },
@@ -384,7 +384,6 @@ const styles = StyleSheet.create({
   countPillText: { fontSize: 13.5, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
   pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF',
     shadowColor: '#18201A', shadowOpacity: 0.12, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
-  pCircle: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
   pLabel: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
   pTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   pLink: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green },

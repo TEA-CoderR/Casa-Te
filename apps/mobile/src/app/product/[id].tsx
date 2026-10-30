@@ -91,7 +91,7 @@ export default function ProductDetailScreen() {
   // One buy box, placed beside the image on desktop and in a sticky footer on phones.
   const buy = <View style={{ gap: 10 }}>
     {added > 0 && <View style={styles.added} accessibilityLiveRegion="polite" accessibilityRole="alert">
-      <Icon name="check" size={18} color={colors.greenDark} />
+      <View style={styles.addedTick}><Icon name="check" size={15} color={colors.text} strokeWidth={3} /></View>
       <Text style={styles.addedText}>{added === 1 ? 'Aggiunto' : `${added} pezzi aggiunti`} al carrello</Text>
       <Link href="/cart" style={styles.addedLink}>Vai al carrello</Link>
     </View>}
@@ -396,7 +396,8 @@ const styles = StyleSheet.create({
   description: { fontSize: 13.5, lineHeight: 21, color: colors.muted, marginTop: 6, maxWidth: 560, fontFamily: fonts.sans },
   buyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   sku: { fontSize: 12, color: colors.muted, marginTop: 22, fontFamily: fonts.sans },
-  added: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#E8EFE6', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },
-  addedText: { flex: 1, fontSize: 14, color: colors.greenDark, fontFamily: fonts.sansMedium, fontWeight: '500' },
-  addedLink: { fontSize: 14, color: colors.greenDark, fontFamily: fonts.sansSemiBold, fontWeight: '600', textDecorationLine: 'underline' },
+  // Same confirmation as the phone toast: dark strip, yellow tick.
+  added: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.text, borderRadius: 4, paddingHorizontal: 14, paddingVertical: 10 },
+  addedText: { flex: 1, fontSize: 14, color: '#FFFFFF', fontFamily: fonts.sansSemiBold, fontWeight: '600' },
+  addedLink: { fontSize: 14, color: colors.yellow, fontFamily: fonts.sansBold, fontWeight: '700' },
 });

@@ -186,7 +186,7 @@ export default function SignInScreen() {
     <Text style={{ color: colors.green }} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text>.
   </Text>;
   const marketingBox = <Checkbox checked={marketing} onChange={setMarketing}>
-    <Text style={{ fontSize: 12, color: colors.muted, lineHeight: 18 }}>Voglio ricevere offerte e novità CASA & TE via email (facoltativo, revocabile in ogni momento).</Text>
+    <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: colors.muted, lineHeight: 18 }}>Voglio ricevere offerte e novità CASA & TE via email (facoltativo, revocabile in ogni momento).</Text>
   </Checkbox>;
 
   // Phone (design F, F-Accesso): the awning with the logo and a large title, an "Accedi / Crea account" switch,
@@ -311,7 +311,7 @@ export default function SignInScreen() {
           autoComplete="new-password" textContentType="newPassword" error={password2 && password2 !== password ? 'Le due password non coincidono.' : undefined}
           hint={password ? `Sicurezza: ${passwordStrength(password).label}` : undefined} />
         <Checkbox checked={terms} onChange={setTerms}>
-          <Text style={{ fontSize: 13, color: colors.text, lineHeight: 19 }}>Ho letto e accetto le <Text style={{ color: colors.green }} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e l'<Text style={{ color: colors.green }} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text> *</Text>
+          <Text style={{ fontFamily: fonts.sans, fontSize: 13, color: colors.text, lineHeight: 19 }}>Ho letto e accetto le <Text style={{ color: colors.green }} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e l'<Text style={{ color: colors.green }} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text> *</Text>
         </Checkbox>
         {marketingBox}
       </>}
@@ -375,5 +375,5 @@ const styles = StyleSheet.create({
   link: { fontSize: 14, color: colors.green, fontFamily: fonts.sansMedium, fontWeight: '500', textDecorationLine: 'underline' },
   divider: { height: 1, backgroundColor: colors.line, marginTop: 24, marginBottom: 18 },
   newHere: { fontSize: 14, color: colors.muted, fontFamily: fonts.sans, marginBottom: 10, textAlign: 'center' },
-  legal: { fontSize: 12, color: colors.muted, marginTop: 20, lineHeight: 17 },
+  legal: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 20, lineHeight: 17 },
 });

@@ -4,7 +4,7 @@ import { useCartStore } from '@/store/cart';
 import { usePreferences } from '@/store/preferences';
 import { useFavorites } from '@/store/favorites';
 import { useRecentSearches } from '@/store/recentSearches';
-import { colors } from '@/config/theme';
+import { colors, fonts } from '@/config/theme';
 
 const stores = [useCartStore, usePreferences, useFavorites, useRecentSearches];
 
@@ -27,7 +27,7 @@ export function PersistenceGate({ children }: PropsWithChildren) {
   return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: colors.background }}>
     {error ? <><Text>Impossibile caricare i dati salvati sul dispositivo.</Text>
       <Pressable style={{ padding: 16 }} onPress={() => { setError(false); setAttempt(attempt + 1); }}>
-        <Text style={{ color: colors.green, fontWeight: '600' }}>Riprova</Text>
+        <Text style={{ fontFamily: fonts.sansSemiBold, color: colors.green, fontWeight: '600' }}>Riprova</Text>
       </Pressable></> : <ActivityIndicator color={colors.green} />}
   </View>;
 }

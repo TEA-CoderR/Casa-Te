@@ -6,7 +6,7 @@ import { formatEuro } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
 import { colors as palette } from '@/config/theme';
-import { EmptyState, Loading, Notice, PageTitle, PrimaryButton } from '@/components/UI';
+import { EmptyState, Loading, Notice, orderStatusTone, PageTitle, PrimaryButton, StatusMark } from '@/components/UI';
 import { Icon } from '@/components/Icon';
 import { ProductImage } from '@/components/ProductImage';
 import { OrderTimeline } from '@/components/OrderTimeline';
@@ -57,10 +57,7 @@ export default function OrdersScreen() {
               <Text style={styles.pDate}>{new Date(order.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
               <Text style={styles.pNum}>{order.order_number} · {n} {n === 1 ? 'articolo' : 'articoli'}</Text>
             </View>
-            <View style={[styles.pPill, ready && { backgroundColor: colors.yellow }, done && { backgroundColor: '#EFECE3' }, order.status === 'pending_payment' && { backgroundColor: '#FFF4D6' }]}>
-              <View style={[styles.pPillDot, { backgroundColor: ready ? colors.text : done ? '#4E554B' : colors.green }]} />
-              <Text style={[styles.pPillText, { color: ready ? colors.text : done ? '#4E554B' : colors.green }]} numberOfLines={1}>{orderStatusLabel(order.status, order.fulfilment)}</Text>
-            </View>
+            <StatusMark label={orderStatusLabel(order.status, order.fulfilment)} tone={orderStatusTone(order.status)} />
           </View>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>{order.order_items.slice(0, 5).map((line) =>
             <View key={line.id} style={styles.pThumb}><View style={{ width: 46, height: 46 }}><ProductImage uri={imageUrl(line.image_path)} sku={line.sku} inset={0} /></View></View>)}</View>
@@ -89,10 +86,7 @@ export default function OrdersScreen() {
         <View style={styles.top}><View style={{ flex: 1 }}>
           <Text style={styles.date}>{new Date(order.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
           <Text style={styles.orderId}>{order.order_number}</Text></View>
-          <View style={[styles.status, order.status === 'ready' && { backgroundColor: colors.yellow }, order.status === 'pending_payment' && { backgroundColor: '#FFF4D6' },
-            (order.status === 'completed' || order.status === 'cancelled') && { backgroundColor: colors.well }]}>
-            <View style={[styles.statusDot, order.status === 'ready' && { backgroundColor: colors.text }]} />
-            <Text style={[styles.statusText, order.status === 'ready' && { color: colors.text }]}>{orderStatusLabel(order.status, order.fulfilment)}</Text></View></View>
+          <StatusMark label={orderStatusLabel(order.status, order.fulfilment)} tone={orderStatusTone(order.status)} /></View>
         <View style={styles.products}>{order.order_items.slice(0, 4).map((line) =>
           <View key={line.id} style={styles.thumb}><ProductImage uri={imageUrl(line.image_path)} sku={line.sku} inset={0.13} /></View>)}
           {order.order_items.length > 4 && <Text style={styles.more}>+{order.order_items.length - 4}</Text>}</View>
@@ -117,9 +111,6 @@ const styles = StyleSheet.create({
   pOrder: { padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
   pDate: { fontSize: 16, fontFamily: fonts.heavy, color: colors.text },
   pNum: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
-  pPill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: colors.mint, flexShrink: 0 },
-  pPillDot: { width: 6, height: 6, borderRadius: 3 },
-  pPillText: { fontSize: 12.5, fontFamily: fonts.heavy },
   pThumb: { width: 56, height: 56, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EFECE3', alignItems: 'center', justifyContent: 'center' },
   pBars: { flexDirection: 'row', gap: 4, marginTop: 14 },
   pBar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.line },
@@ -130,11 +121,9 @@ const styles = StyleSheet.create({
   bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.line },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   date: { fontSize: 16, fontFamily: fonts.heavy, color: colors.text }, orderId: { fontSize: 13, color: colors.muted, marginTop: 3, fontFamily: fonts.sansMedium },
-  status: { flexDirection: 'row', gap: 6, alignItems: 'center', paddingHorizontal: 12, height: 30, borderRadius: 15, backgroundColor: colors.mint },
-  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.green }, statusText: { color: colors.green, fontSize: 12.5, fontFamily: fonts.heavy },
   products: { flexDirection: 'row', gap: 8, marginTop: 14, alignItems: 'center' },
   thumb: { width: 56, height: 56, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EFECE3', overflow: 'hidden' },
-  more: { color: colors.muted, fontSize: 12 },
+  more: { fontFamily: fonts.sans, color: colors.muted, fontSize: 12 },
   totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12 },
   meta: { color: colors.muted, fontSize: 13, fontFamily: fonts.sansMedium }, total: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text },
   fulfilment: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 10 },

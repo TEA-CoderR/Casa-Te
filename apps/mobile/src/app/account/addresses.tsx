@@ -4,7 +4,7 @@ import { Redirect, router } from 'expo-router';
 import { friendlyError, validateAddress, type Address, type AddressRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { Checkbox, EmptyState, Loading, Notice, PrimaryButton, SecondaryButton, SectionTitle, TextField } from '@/components/UI';
-import { colors } from '@/config/theme';
+import { colors, fonts } from '@/config/theme';
 import { deleteAddress, fetchAddresses, saveAddress } from '@/lib/api';
 import { useQuery } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
@@ -60,7 +60,7 @@ export default function AddressesScreen() {
           onChangeText={(v) => set({ phone: v })} error={errors.phone} /></View>
       </View>
       <Checkbox checked={editing.isDefault} onChange={(v) => setEditing({ ...editing, isDefault: v })}>
-        <Text style={{ fontSize: 13, color: colors.text }}>Usa come indirizzo predefinito</Text></Checkbox>
+        <Text style={{ fontFamily: fonts.sans, fontSize: 13, color: colors.text }}>Usa come indirizzo predefinito</Text></Checkbox>
       {!!error && <Notice tone="error" message={error} />}
       <View style={{ gap: 10, marginTop: 12 }}>
         <PrimaryButton title="Salva indirizzo" loading={busy} onPress={save} icon="check" />
@@ -92,8 +92,8 @@ export default function AddressesScreen() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
   card: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.line, padding: 16, marginBottom: 12 },
-  title: { fontSize: 14, fontWeight: '600', color: colors.text },
-  text: { fontSize: 12, color: colors.muted, marginTop: 6, lineHeight: 19 },
+  title: { fontFamily: fonts.sansSemiBold, fontSize: 14, fontWeight: '600', color: colors.text },
+  text: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 6, lineHeight: 19 },
   actions: { flexDirection: 'row', gap: 20, marginTop: 10 },
-  action: { color: colors.green, fontWeight: '600', paddingVertical: 8 },
+  action: { fontFamily: fonts.sansSemiBold, color: colors.green, fontWeight: '600', paddingVertical: 8 },
 });

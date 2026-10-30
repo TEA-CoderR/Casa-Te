@@ -4,6 +4,8 @@ import { Platform } from 'react-native';
  * Brand look (design F "La Tenda"): the awning of a Tuscan shop front. Deep awning green with tone-on-tone
  * stripes and a scalloped edge frames every phone page; products sit on white plates on a warm ivory ground;
  * the logo yellow is the single signal (active tab, price chips, cart count); red only for discounts.
+ * No pale tinted fills for states or messages (the September demo's pale-green panels, pills and icon circles):
+ * a choice gets a green edge and a radio, a status a dot and words, a message a white plate with a coloured edge.
  * Keys `lime`, `cream`, `sand` and `stone` are kept for older screens and the desktop catalogue.
  */
 export const colors = {
@@ -17,8 +19,6 @@ export const colors = {
   onBrand: '#CFDDC6',
   /** The logo's yellow: active tab, price chips, cart count, the order-ready card. */
   yellow: '#F3E33A',
-  /** Pale green fills (icon circles, availability). */
-  mint: '#E3EEDD',
   lime: '#F3E9D6',
   cream: '#F4EFE6',
   sand: '#F6EEDF',

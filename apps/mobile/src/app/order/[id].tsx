@@ -7,7 +7,7 @@ import { formatEuro, formatShipping } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { OrderTimeline } from '@/components/OrderTimeline';
 import { ProductImage } from '@/components/ProductImage';
-import { EmptyState, Loading, Notice, PrimaryButton, SecondaryButton, SectionTitle, SummaryRow } from '@/components/UI';
+import { EmptyState, Loading, Notice, orderStatusTone, PrimaryButton, SecondaryButton, SectionTitle, StatusMark, SummaryRow } from '@/components/UI';
 import { colors, floatShadow, fonts } from '@/config/theme';
 import { cancelPendingOrder, fetchOrder, imageUrl, resumeCheckout } from '@/lib/api';
 import { useLayout, useStores } from '@/lib/hooks';
@@ -164,7 +164,7 @@ export default function OrderDetailScreen() {
         <Text style={styles.number}>{order.order_number}</Text>
         <Text style={styles.date}>{new Date(order.created_at).toLocaleString('it-IT', { dateStyle: 'long', timeStyle: 'short' })}</Text>
       </View>
-      <View style={styles.badge}><Text style={styles.badgeText}>{orderStatusLabel(order.status, order.fulfilment)}</Text></View>
+      <StatusMark label={orderStatusLabel(order.status, order.fulfilment)} tone={orderStatusTone(order.status)} />
     </View> : <View style={[styles.pass, floatShadow]} accessibilityLabel={`${HEADLINES[order.status] ?? orderStatusLabel(order.status, order.fulfilment)}. Ordine ${order.order_number}`}>
       {/* Phone (design F): the order as a pickup pass — status above, the code for the till below a tear line. */}
       <View style={styles.passTop}>
@@ -297,18 +297,16 @@ const styles = StyleSheet.create({
   action: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 54, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   actionText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  number: { fontSize: 22, fontWeight: '600', color: colors.text },
-  date: { fontSize: 12, color: colors.muted, marginTop: 4 },
-  badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: '#EBF1E5' },
-  badgeText: { color: colors.green, fontSize: 12, fontWeight: '600' },
+  number: { fontFamily: fonts.sansSemiBold, fontSize: 22, fontWeight: '600', color: colors.text },
+  date: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 4 },
   tracking: { marginTop: 12, padding: 14, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, gap: 4 },
-  trackingText: { color: colors.green, fontSize: 13, fontWeight: '500' },
+  trackingText: { fontFamily: fonts.sansMedium, color: colors.green, fontSize: 13, fontWeight: '500' },
   block: { fontSize: 14, lineHeight: 21, color: colors.text, fontFamily: fonts.sans },
-  link: { color: colors.green, marginTop: 10, fontWeight: '500' },
+  link: { fontFamily: fonts.sansMedium, color: colors.green, marginTop: 10, fontWeight: '500' },
   item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.line },
   thumb: { width: 56, height: 56, borderRadius: 12, backgroundColor: '#FFFFFF', overflow: 'hidden' },
   itemName: { flex: 1, fontSize: 14, color: colors.text, fontFamily: fonts.sansSemiBold },
-  itemMeta: { fontSize: 12, color: colors.muted, marginTop: 3 },
+  itemMeta: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 3 },
   itemTotal: { fontSize: 14, fontFamily: fonts.heavy, color: colors.text },
-  fine: { fontSize: 12, color: colors.muted, lineHeight: 17 },
+  fine: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, lineHeight: 17 },
 });

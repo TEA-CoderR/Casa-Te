@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { friendlyError } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { Notice, PrimaryButton, SecondaryButton, TextField } from '@/components/UI';
-import { colors } from '@/config/theme';
+import { colors, fonts } from '@/config/theme';
 import { deleteAccount } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
@@ -25,7 +25,7 @@ export default function DeleteAccountScreen() {
   return <Screen stack maxWidth={560}>
     <Notice tone="error" title="Eliminazione definitiva"
       message="Elimineremo il tuo profilo, gli indirizzi salvati e l'accesso. Gli ordini già effettuati vengono conservati in forma non collegata al profilo per gli obblighi fiscali di legge." />
-    <Text style={{ fontSize: 13, color: colors.text, marginVertical: 12, lineHeight: 20 }}>Per confermare scrivi ELIMINA qui sotto.</Text>
+    <Text style={{ fontFamily: fonts.sans, fontSize: 13, color: colors.text, marginVertical: 12, lineHeight: 20 }}>Per confermare scrivi ELIMINA qui sotto.</Text>
     <TextField label="Conferma" value={confirm} onChangeText={setConfirm} autoCapitalize="characters" />
     {!!error && <Notice tone="error" message={error} />}
     <PrimaryButton title="Elimina il mio account" icon="close" loading={busy} disabled={confirm.trim() !== 'ELIMINA'} onPress={run} />

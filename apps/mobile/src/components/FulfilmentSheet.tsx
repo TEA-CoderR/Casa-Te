@@ -5,10 +5,8 @@ import { formatShipping } from '@/lib/price';
 import { colors, fonts } from '@/config/theme';
 import { usePreferences } from '@/store/preferences';
 import { useDelivery } from '@/lib/hooks';
-import { Icon, type IconName } from './Icon';
+import { Icon } from './Icon';
 import { OptionCard } from './UI';
-
-const ICONS: Record<FulfilmentMethod, IconName> = { store: 'store', home: 'truck', pickup: 'pin' };
 
 /** Choose how to receive the order; prices come from the server quote. */
 export function FulfilmentSheet({ visible, onClose, quote, storeName, onChangeStore }: {
@@ -30,7 +28,7 @@ export function FulfilmentSheet({ visible, onClose, quote, storeName, onChangeSt
           const option = quote?.shipping[m];
           const soon = m !== 'store' && known && !deliveryOpen;
           const unavailable = soon || (quote ? !option : false);
-          return <OptionCard key={m} selected={fulfilment === m} disabled={unavailable} icon={ICONS[m]}
+          return <OptionCard key={m} selected={fulfilment === m} disabled={unavailable}
             title={m === 'store' ? `${FULFILMENT_LABELS.store} ${atPlace(storeName)}` : FULFILMENT_LABELS[m]}
             description={soon ? 'Prossimamente' : unavailable ? (quote?.weight_missing ? 'Non ancora disponibile per alcuni prodotti: scegli il ritiro' : 'Non disponibile per questo ordine') : m === 'store' ? "Quando l'ordine è pronto" : m === 'home' ? 'Indirizzo al passo successivo' : 'Scegli il punto al passo successivo'}
             right={option ? formatShipping(option.price_cents) : undefined}

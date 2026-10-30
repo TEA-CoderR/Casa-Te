@@ -6,6 +6,7 @@ import { useStores } from '@/lib/hooks';
 import { usePreferences } from '@/store/preferences';
 import { Icon } from './Icon';
 import { AwningMark } from './StoreCard';
+import { RadioMark } from './UI';
 
 export const storeShortName = (s: Pick<StoreRow, 'name'> | null | undefined) => s?.name.replace(/^CASA & TE\s*/, '') ?? '';
 /** Italian "a" before a place, "ad" before a vowel: "a Lucca", "ad Arezzo". */
@@ -45,7 +46,7 @@ export function StoreSheet({ visible, onClose }: { visible: boolean; onClose: ()
               <Text style={styles.meta}>{[s.pickup_enabled ? 'Ritiro gratuito' : 'Solo spedizione', s.opening_hours].filter(Boolean).join(' · ')}</Text>
               {showPlace && !!place && <Text style={styles.meta}>{place}</Text>}
             </View>
-            <View style={[styles.radio, on && styles.radioOn]}>{on && <View style={styles.radioDot} />}</View>
+            <RadioMark on={on} />
           </Pressable>;
         })}
       </ScrollView>
@@ -70,10 +71,7 @@ const styles = StyleSheet.create({
   confirm: { height: 56, borderRadius: 28, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   confirmText: { fontSize: 16.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   option: { flexDirection: 'row', gap: 14, padding: 14, paddingHorizontal: 16, borderRadius: 18, borderWidth: 1, borderColor: colors.line, alignItems: 'center' },
-  optionOn: { borderColor: colors.green, borderWidth: 2, backgroundColor: '#F1F6EE', padding: 13, paddingHorizontal: 15 },
-  radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#B9B4A6', alignItems: 'center', justifyContent: 'center' },
-  radioOn: { borderColor: colors.green },
-  radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.green },
+  optionOn: { borderColor: colors.green, borderWidth: 2, padding: 13, paddingHorizontal: 15 },
   name: { fontSize: 16, fontFamily: fonts.heavy, color: colors.text },
   meta: { fontSize: 13, color: colors.muted, marginTop: 2, lineHeight: 18, fontFamily: fonts.sans },
 });

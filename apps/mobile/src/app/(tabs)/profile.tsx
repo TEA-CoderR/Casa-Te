@@ -178,7 +178,7 @@ export default function ProfileScreen() {
   const tile = (icon: IconName, label: string, onPress: () => void, count?: number, tone?: 'red') =>
     <Pressable key={label} onPress={onPress} accessibilityRole="button" accessibilityLabel={count ? `${label}, ${count}` : label}
       style={({ pressed }) => [styles.pTile, pressed && { opacity: 0.8 }]}>
-      <View style={[styles.pCircle, tone === 'red' && { backgroundColor: '#FDECEC' }]}>
+      <View style={styles.pCircle}>
         <Icon name={icon} size={21} color={tone === 'red' ? colors.sale : colors.green} strokeWidth={1.9} />
         {!!count && <View style={[styles.pCount, tone === 'red' && { backgroundColor: colors.sale }]}><Text style={styles.pCountText}>{count}</Text></View>}
       </View>
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   welcomeTitle: { fontSize: 30, lineHeight: 35, fontFamily: fonts.serif, color: colors.text },
   welcomeText: { fontSize: 14, lineHeight: 21, color: colors.muted, fontFamily: fonts.sans, marginBottom: 4 },
 
-  activeOrder: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#E8EFE6', borderRadius: 12, padding: 16, marginTop: 22 },
+  activeOrder: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 12, padding: 16, marginTop: 22 },
   pulse: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.green },
   activeLabel: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans },
   activeStatus: { fontSize: 17, fontFamily: fonts.serif, color: colors.text, marginTop: 1 },
@@ -386,11 +386,12 @@ const styles = StyleSheet.create({
   pFloat: { backgroundColor: colors.yellow, shadowColor: '#18201A', shadowOpacity: 0.14, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 6 },
   pFollow: { height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.text, justifyContent: 'center' },
   pFollowText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
-  pDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.brand, borderWidth: 6, borderColor: colors.mint, marginHorizontal: 2 },
+  pDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.brand, borderWidth: 6, borderColor: colors.well, marginHorizontal: 2 },
   pStrong: { fontSize: 16, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text, marginTop: 1 },
   pLink: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
   pTile: { flex: 1, alignItems: 'flex-start', gap: 8, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 18, backgroundColor: '#FFFFFF' },
-  pCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  // The icon alone, no tinted circle behind it (design H); the box keeps room for the count.
+  pCircle: { width: 28, height: 28, alignItems: 'flex-start', justifyContent: 'center' },
   pCount: { position: 'absolute', top: -4, right: -8, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   pCountText: { fontSize: 11, fontFamily: fonts.heavy, fontWeight: '800', color: '#FFFFFF' },
   pTileText: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },

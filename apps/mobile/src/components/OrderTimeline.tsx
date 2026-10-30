@@ -8,7 +8,7 @@ const fmt = (iso: string) => new Date(iso).toLocaleString('it-IT', { day: 'numer
 export function OrderTimeline({ order, events = [] }: { order: Pick<OrderRow, 'status' | 'fulfilment'>; events?: OrderEventRow[] }) {
   if (order.status === 'cancelled') {
     return <View style={styles.cancelled}><Icon name="close" size={16} color={colors.danger} />
-      <Text style={{ color: colors.danger, fontSize: 12, flex: 1 }}>Ordine annullato</Text></View>;
+      <Text style={{ fontFamily: fonts.sans, color: colors.danger, fontSize: 12, flex: 1 }}>Ordine annullato</Text></View>;
   }
   const steps = orderTimeline(order.fulfilment);
   const current = steps.indexOf(order.status);
@@ -40,5 +40,5 @@ const styles = StyleSheet.create({
   dotNow: { backgroundColor: colors.yellow, borderColor: colors.yellow },
   stepText: { fontSize: 15, lineHeight: 20, color: '#7A7F74', fontFamily: fonts.sansSemiBold, paddingTop: 1 },
   at: { fontSize: 12.5, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
-  cancelled: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: '#F8E9E7' },
+  cancelled: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 12, paddingVertical: 4 },
 });

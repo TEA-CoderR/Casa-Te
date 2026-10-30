@@ -140,16 +140,16 @@ export default function ReturnRequestScreen() {
 
       <Text style={styles.h}>3. Come preferisci risolvere?</Text>
       <View style={{ gap: 8 }}>
-        <OptionCard selected={resolution === 'refund' || !exchangeOk} onPress={() => setResolution('refund')} icon="card" title="Rimborso"
+        <OptionCard selected={resolution === 'refund' || !exchangeOk} onPress={() => setResolution('refund')} title="Rimborso"
           description={chosen.length ? `Circa ${formatEuro(estimate)} (prezzo pagato, sconti inclusi; la spedizione non è rimborsata)` : 'Il prezzo pagato per gli articoli resi'} />
-        {exchangeOk && <OptionCard selected={resolution === 'exchange'} onPress={() => setResolution('exchange')} icon="recycle" title="Cambio con lo stesso prodotto"
+        {exchangeOk && <OptionCard selected={resolution === 'exchange'} onPress={() => setResolution('exchange')} title="Cambio con lo stesso prodotto"
           description="Lo ritiri in negozio quando porti l'articolo da cambiare" />}
       </View>
       {(resolution === 'refund' || !exchangeOk) && <>
         <Text style={styles.label}>Ricevi il rimborso</Text>
         <View style={{ gap: 8 }}>
-          <OptionCard selected={method === 'card'} onPress={() => setMethod('card')} icon="card" title="Sul metodo di pagamento" description="Accredito in 5–10 giorni lavorativi" />
-          <OptionCard selected={method === 'voucher'} onPress={() => setMethod('voucher')} icon="percent" title="Buono CASA & TE" description="Subito dopo la verifica in negozio, da usare online entro 12 mesi" />
+          <OptionCard selected={method === 'card'} onPress={() => setMethod('card')} title="Sul metodo di pagamento" description="Accredito in 5–10 giorni lavorativi" />
+          <OptionCard selected={method === 'voucher'} onPress={() => setMethod('voucher')} title="Buono CASA & TE" description="Subito dopo la verifica in negozio, da usare online entro 12 mesi" />
         </View>
       </>}
     </>}
