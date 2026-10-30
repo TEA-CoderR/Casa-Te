@@ -161,8 +161,9 @@ update public.products set name = left(public.clean_product_name(erp_name), 200)
 comment on column public.products.erp_name is 'Product name as imported from the ERP (before clean_product_name); staff edit `name`.';
 
 -- New products (ERP sync, imports, admin) get the same cleaning; later edits of `name` are left alone.
+-- Security definer: staff inserting through the admin cannot execute clean_product_name directly.
 create or replace function public.products_clean_name()
-returns trigger language plpgsql set search_path = '' as $$
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   if new.erp_name is null then new.erp_name := new.name; end if;
   new.name := left(public.clean_product_name(new.name), 200);
