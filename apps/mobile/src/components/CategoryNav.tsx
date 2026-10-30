@@ -35,18 +35,21 @@ export function CategoryPhoto({ image, slug, name, size, radius, bare }: {
   </View>;
 }
 
+/** Department last looked at, so "back" from a department page returns to the same place in the rail. */
+let lastDepartment: string | null = null;
+
 /**
  * "Categorie" tab on phones: the whole shop at two taps. Departments down a rail on the left, the chosen
  * department's subcategories as photo tiles on the right (the layout of the big grocery and household apps,
- * which carry the same 15–20 departments). `layout="tiles"` is the alternative under review: the departments as
- * a grid of photo plates, each opening its department page.
+ * which carry the same 15–20 departments).
  */
-export function CategoryBrowser({ all, counts, covers, layout = 'rail', onOpen, onSearch }: {
-  all: CategoryRow[]; counts: Counts; covers: Covers; layout?: 'rail' | 'tiles';
+export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
+  all: CategoryRow[]; counts: Counts; covers: Covers;
   onOpen: (id: string) => void; onSearch: () => void;
 }) {
   const departments = all.filter((c) => !c.parent_id && (!counts || departmentCount(all, counts, c.id) > 0));
-  const [dept, setDept] = useState<string | null>(null);
+  const [dept, setDeptState] = useState<string | null>(lastDepartment);
+  const setDept = (id: string) => { lastDepartment = id; setDeptState(id); };
   const active = departments.find((d) => d.id === dept) ?? departments[0] ?? null;
   const total = departments.reduce((sum, d) => sum + departmentCount(all, counts, d.id), 0);
   const cover = (id: string) => covers?.[id]?.image ?? liveChildren(all, counts, id).map((c) => covers?.[c.id]?.image).find(Boolean) ?? null;
@@ -59,25 +62,6 @@ export function CategoryBrowser({ all, counts, covers, layout = 'rail', onOpen, 
       <Text style={styles.searchText} numberOfLines={1}>{total ? `Cerca tra ${plural(total)}` : 'Cerca prodotti e marche'}</Text>
     </Pressable>
   </BrandHeader>;
-
-  if (layout === 'tiles') {
-    return <View style={styles.page}>
-      {header}
-      <ScrollView contentContainerStyle={styles.tiles}>
-        {departments.map((d) => {
-          const n = departmentCount(all, counts, d.id);
-          return <Pressable key={d.id} onPress={() => onOpen(d.id)} accessibilityRole="link" accessibilityLabel={`${d.name}, ${plural(n)}`}
-            style={({ pressed }) => [styles.tile, pressed && { opacity: 0.8 }]}>
-            <CategoryPhoto image={cover(d.id)} slug={d.slug} name={d.name} radius={0} bare />
-            <View style={styles.tileText}>
-              <Text style={styles.tileName} numberOfLines={1}>{d.name}</Text>
-              {counts && <Text style={styles.tileCount}>{plural(n)}</Text>}
-            </View>
-          </Pressable>;
-        })}
-      </ScrollView>
-    </View>;
-  }
 
   const subs = active ? liveChildren(all, counts, active.id) : [];
   return <View style={styles.page}>
@@ -207,11 +191,6 @@ const styles = StyleSheet.create({
   cell: { width: '33.333%', paddingHorizontal: 4 },
   cellName: { marginTop: 7, fontSize: 12, lineHeight: 15.5, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
 
-  tiles: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12, padding: 16, paddingBottom: 32 },
-  tile: { width: '48.4%', backgroundColor: '#FFFFFF', borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
-  tileText: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 12, borderTopWidth: 1, borderColor: colors.line },
-  tileName: { fontSize: 19, lineHeight: 23, fontFamily: fonts.display, color: colors.text },
-  tileCount: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 1 },
 
   photo: { backgroundColor: colors.photo, borderWidth: 1, borderColor: colors.photoLine, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   photoImage: { position: 'absolute', top: '12%', left: '12%', right: '12%', bottom: '12%' },

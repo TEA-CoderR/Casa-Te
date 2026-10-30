@@ -19,9 +19,6 @@ import { SiteFooter } from '@/components/site/SiteFooter';
 import { useRecentSearches } from '@/store/recentSearches';
 import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared';
 
-/** Under review (preview only): ?vista=griglia shows the departments as photo tiles instead of the rail. */
-const BROWSER_LAYOUT: 'rail' | 'tiles' = typeof window !== 'undefined' && /[?&]vista=griglia/.test(window.location?.search ?? '') ? 'tiles' : 'rail';
-
 export default function CatalogScreen() {
   const params = useLocalSearchParams<{ category?: string; q?: string; search?: string; sort?: string; offerte?: string; evidenza?: string; code?: string }>();
   const { selected } = useStores();
@@ -289,7 +286,7 @@ export default function CatalogScreen() {
 
     // "Categorie" tab with nothing chosen: the category browser instead of every product in one list.
     if (!categoryId && !collection) {
-      return <CategoryBrowser all={all} counts={counts.data} covers={covers.data} layout={BROWSER_LAYOUT}
+      return <CategoryBrowser all={all} counts={counts.data} covers={covers.data}
         onOpen={selectCategory} onSearch={() => { setSearchOpen(true); router.setParams({ search: '1' }); }} />;
     }
 
