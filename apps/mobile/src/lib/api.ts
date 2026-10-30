@@ -21,11 +21,10 @@ export type CatalogProduct = Pick<ProductRow,
   /** Units available in the selected store (null when no store is selected). */
   stock: number | null;
   /**
-   * Set when price_cents is the Club member price (shown like any offer: regular price struck through). quote_cart
-   * charges it to Club members only; others see "con Club gratuito" next to it.
+   * Valid Club member price, if any. price_cents stays the regular price (what everyone else pays);
+   * `shownProduct` puts the member price in front for Club members only. quote_cart decides what is charged.
    */
-  /** Member price shown as the offer; regularCents is what non-members pay (quote_cart decides). */
-  clubPrice: { endsOn: string | null; regularCents: number } | null;
+  clubPrice: { cents: number; endsOn: string | null } | null;
 };
 
 export type OrderWithItems = OrderRow & { order_items: OrderItemRow[] };
@@ -58,10 +57,9 @@ function toCatalogProduct(p: RawProduct, storeId: string | null): CatalogProduct
     .map((i) => imageUrl(i.path)).filter((u): u is string => Boolean(u));
   const stock = storeId ? (p.inventory ?? []).find((i) => i.store_id === storeId)?.quantity ?? 0 : null;
   const { product_images: _i, inventory: _s, ...rest } = p;
-  // A valid member price is the product's offer, like a store promotion (display only).
+  // The member price travels next to the regular one; the screens show the price this customer pays (`shownProduct`).
   const club = memberPrice(rest);
-  const offer = club ? { price_cents: club.cents, compare_at_price_cents: Math.max(rest.price_cents, rest.compare_at_price_cents ?? 0) } : {};
-  return { ...rest, ...offer, images, image: images[0] ?? null, stock, clubPrice: club ? { endsOn: club.endsOn, regularCents: rest.price_cents } : null };
+  return { ...rest, images, image: images[0] ?? null, stock, clubPrice: club ? { cents: club.cents, endsOn: club.endsOn } : null };
 }
 
 // ---- Catalogue ---------------------------------------------------------------

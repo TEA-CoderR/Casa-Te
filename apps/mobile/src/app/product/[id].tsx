@@ -27,7 +27,7 @@ import { SiteHeader } from '@/components/site/SiteHeader';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SITE_WIDTH, type WebState } from '@/components/site/shared';
 import { ALL_PRODUCTS } from '@/lib/links';
-import { useClubMember } from '@/store/club';
+import { shownProduct, useClubMember } from '@/store/club';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -49,11 +49,11 @@ export default function ProductDetailScreen() {
   const favorite = useFavorites((s) => s.ids.includes(id ?? ''));
   const toggleFavorite = useFavorites((s) => s.toggle);
   const isMember = useClubMember();
-  // Buttons show what this customer will pay: non-members pay the regular price of a Soci offer.
-  const payCents = (p: { price_cents: number; clubPrice: { regularCents: number } | null }) =>
-    p.clubPrice && !isMember ? p.clubPrice.regularCents : p.price_cents;
+  // Buttons show what this customer will pay (the shown price: member price only for Club members).
+  const payCents = (p: { price_cents: number }) => p.price_cents;
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
-  const { data: product, loading, error, refetch } = useQuery(id ? `product:${id}:${selected?.id}` : null, () => fetchProduct(id!, selected?.id ?? null));
+  const { data: rawProduct, loading, error, refetch } = useQuery(id ? `product:${id}:${selected?.id}` : null, () => fetchProduct(id!, selected?.id ?? null));
+  const product = rawProduct ? shownProduct(rawProduct, isMember) : rawProduct;
   const group = product?.variant_group ?? null;
   const variants = useQuery(group ? `variants:${group}:${selected?.id}` : null, () => fetchVariants(group!, selected?.id ?? null));
   const [folds, setFolds] = useState<string | null>(null);
@@ -108,14 +108,19 @@ export default function ProductDetailScreen() {
   const store = storeShortName(selected) || 'negozio';
   const discount = discountLabel(product.price_cents, product.compare_at_price_cents);
   const unitPrice = unitPriceLabel(product.price_cents, product.unit_quantity, product.unit);
-  // Club member price: shown as the offer and always marked "Prezzo Soci" (only Club members pay it).
+  // Club member price: members pay it (shown as the price, marked "Prezzo Soci"); everyone else pays the regular
+  // price, shown big, with the member price on its own line and the way into the Club.
   const soci = !!product.clubPrice;
-  const badge = discount ? `${soci ? 'Soci ' : ''}${discount.replace('-', '−')}` : '';
-  const sociText = product.clubPrice ? [isMember ? 'applicato al tuo account' : 'solo per i membri del Club · iscrizione gratuita',
-    product.clubPrice.endsOn ? untilLabel(product.clubPrice.endsOn) : null].filter(Boolean).join(' · ') : '';
+  const sociPct = product.clubPrice ? discountLabel(product.clubPrice.cents, rawProduct!.price_cents) : null;
+  const badge = discount ? `${product.memberApplied ? 'Soci ' : ''}${discount.replace('-', '−')}` : soci && sociPct ? `Soci ${sociPct.replace('-', '−')}` : '';
+  const until = product.clubPrice?.endsOn ? untilLabel(product.clubPrice.endsOn) : null;
+  const sociText = product.memberApplied ? ['applicato al tuo account', until].filter(Boolean).join(' · ')
+    : ['solo per i membri del Club · iscrizione gratuita', until].filter(Boolean).join(' · ');
   const sociLine = soci ? <Pressable onPress={() => router.push('/club')} accessibilityRole="link" style={styles.sociLine}
-    accessibilityLabel={`Prezzo Soci, ${sociText}`}>
-    <Text style={styles.sociText}><Text style={styles.sociStrong}>Prezzo Soci</Text> · {sociText}{isMember ? '' : ' ›'}</Text>
+    accessibilityLabel={product.memberApplied ? `Prezzo Soci, ${sociText}` : `Prezzo Soci ${formatEuro(product.clubPrice!.cents)}, ${sociText}`}>
+    <Text style={styles.sociText}>{product.memberApplied
+      ? <><Text style={styles.sociStrong}>Prezzo Soci</Text> · {sociText}</>
+      : <><Text style={styles.sociStrong}>Soci {formatEuro(product.clubPrice!.cents)}</Text> · {sociText} ›</>}</Text>
   </Pressable> : null;
   const pack = formatPackSize(product.unit_quantity, product.unit);
   const features: Array<{ icon: IconName; text: string }> = product.highlights.length
@@ -128,7 +133,7 @@ export default function ProductDetailScreen() {
     <View style={styles.priceRow}>
       <Text style={[styles.price, wide && { fontSize: 36 }, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
       {!!product.compare_at_price_cents && <Text style={styles.compare}>{formatEuro(product.compare_at_price_cents)}</Text>}
-      {!!discount && <View style={styles.discount}><Text style={styles.discountText}>{badge}</Text></View>}
+      {!!badge && <View style={styles.discount}><Text style={styles.discountText}>{badge}</Text></View>}
       {unitPrice ? <Text style={styles.vat}>{unitPrice}{pack ? ` · ${pack}` : ''}</Text> : <Text style={styles.vat}>IVA inclusa</Text>}
     </View>
     {sociLine}
@@ -222,7 +227,7 @@ export default function ProductDetailScreen() {
       <View style={styles.stage}>
         <View pointerEvents="none" style={styles.floor} />
         <View style={styles.stageImage}><ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0} /></View>
-        {!!discount && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{badge}</Text></View>}
+        {!!badge && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{badge}</Text></View>}
         <View style={styles.stageBar}>
           {round('back', 'Indietro', back)}
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -267,10 +272,10 @@ export default function ProductDetailScreen() {
         {related.data && related.data.items.filter((p) => p.id !== product.id).length > 0 && <>
           <Text style={styles.relatedTitle} accessibilityRole="header">Altro in {department?.name ?? 'questo reparto'}</Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>{related.data.items.filter((p) => p.id !== product.id).slice(0, 2).map((p) =>
-            <Pressable key={p.id} onPress={() => router.push(`/product/${p.id}`)} accessibilityRole="link" accessibilityLabel={`${p.name}, ${formatEuro(p.price_cents)}`} style={styles.related}>
+            <Pressable key={p.id} onPress={() => router.push(`/product/${p.id}`)} accessibilityRole="link" accessibilityLabel={`${p.name}, ${formatEuro(shownProduct(p, isMember).price_cents)}`} style={styles.related}>
               <View style={{ height: 92, alignItems: 'center', justifyContent: 'center' }}><View style={{ width: 84, height: 84 }}><ProductImage uri={p.image} sku={p.sku} inset={0} /></View></View>
               <Text style={styles.relatedName} numberOfLines={2}>{p.name}</Text>
-              <Text style={styles.relatedPrice}>{euro(p.price_cents)}</Text>
+              <Text style={styles.relatedPrice}>{euro(shownProduct(p, isMember).price_cents)}</Text>
             </Pressable>)}</View>
         </>}
       </View>

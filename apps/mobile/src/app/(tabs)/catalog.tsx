@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { shownProduct, useClubMember } from '@/store/club';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import type { CategoryRow } from '@casa-te/shared';
@@ -23,6 +24,7 @@ import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared'
 export default function CatalogScreen() {
   const params = useLocalSearchParams<{ category?: string; q?: string; search?: string; sort?: string; offerte?: string; evidenza?: string; code?: string }>();
   const { selected } = useStores();
+  const member = useClubMember();
   const { columns, wide } = useLayout();
   const [query, setQuery] = useState(params.q ?? '');
   const [debounced, setDebounced] = useState(query);
@@ -253,7 +255,8 @@ export default function CatalogScreen() {
               accessibilityRole="link" style={styles.sDept}><Text style={styles.sDeptText}>In {d.name}</Text><Icon name="arrow" size={14} color="#FFFFFF" strokeWidth={2.4} /></Pressable>)}
           </ScrollView>}
           <Text style={styles.sCount}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}${storeLabel ? ` a ${storeLabel}` : ''}`}</Text>
-          <View style={{ gap: 8 }}>{shown.map((p) => {
+          <View style={{ gap: 8 }}>{shown.map((raw) => {
+            const p = shownProduct(raw, member);
             const i = q ? p.name.toLowerCase().indexOf(q) : -1;
             const unit = unitPriceLabel(p.price_cents, p.unit_quantity, p.unit);
             return <Pressable key={p.id} onPress={() => { recent.remember(query); router.push(`/product/${p.id}`); }} accessibilityRole="link"
