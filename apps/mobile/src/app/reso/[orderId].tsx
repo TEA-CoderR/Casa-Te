@@ -177,7 +177,7 @@ export default function ReturnRequestScreen() {
           return <View key={i.id} style={[styles.cell, single && { width: '100%' }]}>
             <Pressable onPress={() => set(on ? 0 : 1)} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={`${i.name}, ${euro(i.unit_price_cents)}`}
               style={({ pressed }) => [styles.item, single && styles.itemWide, on && styles.itemOn, pressed && { opacity: 0.9 }]}>
-              <View style={[styles.itemPhoto, single && styles.itemPhotoWide]}><ProductImage uri={imageUrl(i.image_path)} sku={i.sku} label={i.name} inset={10} /></View>
+              <View style={[styles.itemPhoto, single && styles.itemPhotoWide]}><ProductImage uri={imageUrl(i.image_path)} sku={i.sku} label={i.name} inset={0.1} /></View>
               <View style={[styles.tick, on && styles.tickOn]}>{on && <Icon name="check" size={14} color="#FFFFFF" strokeWidth={3} />}</View>
               <View style={single && { flex: 1 }}>
                 <Text style={[styles.itemName, single && { marginTop: 0, minHeight: 0 }]} numberOfLines={2}>{i.name}</Text>

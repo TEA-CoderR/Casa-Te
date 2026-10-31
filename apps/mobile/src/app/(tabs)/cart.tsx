@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { EmptyReceipt } from '@/components/ShopMarks';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
 import { StoreCard } from '@/components/StoreCard';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { brandMonogramGreen, MONOGRAM_ASPECT } from '@/config/brand';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { FREE_SHIPPING_MAX_WEIGHT_G, FULFILMENT_LABELS, formatPackSize, formatWeight, freeShippingRemainingCents, type QuoteLine } from '@casa-te/shared';
 import { formatEuro, formatShipping } from '@/lib/price';
 import { FulfilmentSheet } from '@/components/FulfilmentSheet';
@@ -48,9 +48,14 @@ export default function CartScreen() {
     () => fetchProducts({ storeId: store?.id ?? null, ids, pageSize: 100 }));
   const { wide } = useLayout();
   const user = useUser();
-  // Suggestions change only when the set of products changes (not on quantity changes).
-  const suggestions = useQuery(ids.length ? `cart-suggestions:${store?.id}:${ids.join(',')}` : null,
-    () => fetchCartSuggestions(store?.id ?? null, ids, 10));
+  // Suggestions are picked when the cart page opens and then stay put: adding one of them turns its card into a
+  // stepper in place instead of reloading the row, so the shopper can add several. A new pick on the next visit.
+  const latest = useRef(ids); latest.current = ids;
+  const [basis, setBasis] = useState(ids);
+  useFocusEffect(useCallback(() => { setBasis(latest.current); }, []));
+  const basisIds = basis.length || !ids.length ? basis : ids;
+  const suggestions = useQuery(basisIds.length ? `cart-suggestions:${store?.id}:${basisIds.join(',')}` : null,
+    () => fetchCartSuggestions(store?.id ?? null, basisIds, 10));
 
   const band = wide ? undefined : <BrandHeader title="Carrello" titleSize={30} subtitle="Nessun articolo" pad={[14, 16, 18]}
     left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/')} />} />;
@@ -103,7 +108,8 @@ export default function CartScreen() {
     </View>
     <Icon name="chevron" size={18} color={colors.text} />
   </Pressable>;
-  const suggested = (suggestions.data ?? []).filter((p) => !items[p.id]);
+  // Products already in the cart when the row was picked stay out; the ones added from it stay, as steppers.
+  const suggested = (suggestions.data ?? []).filter((p) => !basisIds.includes(p.id));
   const suggestionsRow = suggested.length > 0 && <View style={styles.sugg}>
     <Text style={styles.suggTitle} accessibilityRole="header">Potrebbe servirti anche</Text>
     {fulfilment === 'home' && !overweight && remaining > 0
