@@ -1,4 +1,6 @@
 // Return / after-sales request for an order: items, reason, photos, refund or same-product exchange.
+// Laid out like the order page: the green band, then three numbered steps on white plates, and a bar at the
+// bottom with the estimated refund and "Invia richiesta". The amount charged back is decided by the server.
 import { useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, router, Stack, useLocalSearchParams } from 'expo-router';
@@ -8,17 +10,23 @@ import {
   type RefundMethod, type ReturnReason, type ReturnResolution,
 } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
+import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
+import { StepTag } from '@/components/ShopMarks';
 import { ProductImage } from '@/components/ProductImage';
 import { Icon } from '@/components/Icon';
-import { Loading, Notice, OptionCard, PrimaryButton } from '@/components/UI';
+import { Loading, Notice, OptionCard, RadioMark } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
 import { createReturnRequest, fetchOrder, fetchOrderReturns, imageUrl, uploadReturnPhoto } from '@/lib/api';
 import { formatEuro } from '@/lib/price';
 import { invalidate, useQuery } from '@/lib/useQuery';
-import { useStores } from '@/lib/hooks';
+import { useLayout, useStores } from '@/lib/hooks';
 import { useUser } from '@/store/session';
 
 const REASONS: ReturnReason[] = ['changed_mind', 'damaged', 'wrong_item', 'missing', 'other'];
+/** What each reason asks for, under its name. */
+const REASON_HINT: Partial<Record<ReturnReason, string>> = {
+  damaged: 'Ci servono una o più foto', wrong_item: 'Ci servono una o più foto', missing: 'Solo rimborso', other: 'Raccontaci cosa è successo',
+};
 const MAX_PHOTOS = 5;
 
 export default function ReturnRequestScreen() {
@@ -27,6 +35,7 @@ export default function ReturnRequestScreen() {
   const order = useQuery(orderId && user ? `orders:${orderId}` : null, () => fetchOrder(orderId!));
   const returns = useQuery(orderId && user ? `returns:${orderId}` : null, () => fetchOrderReturns(orderId!));
   const { stores } = useStores();
+  const { wide } = useLayout();
   const [qty, setQty] = useState<Record<string, number>>({});
   const [reason, setReason] = useState<ReturnReason | null>(null);
   const [note, setNote] = useState('');
@@ -86,103 +95,145 @@ export default function ReturnRequestScreen() {
     } catch (e) { setError(friendlyError(e)); } finally { setBusy(false); }
   };
 
-  return <Screen stack maxWidth={640} ground={colors.page}>
-    <Stack.Screen options={{ title: 'Reso e assistenza' }} />
-    <Text style={styles.lead}>Ordine {o.order_number}. Dopo l'approvazione porti gli articoli {store ? `nel negozio ${store.name.replace(/^CASA & TE\s*/, '')}` : 'in negozio'}: non serve spedire nulla.</Text>
+  const daysLeft = Math.max(1, Math.ceil(RETURN_WINDOW_DAYS - (days ?? 0)));
+  const storeName = store ? store.name.replace(/^CASA & TE\s*/, '').replace(/^(\S+)\s+(?!·)/, '$1 · ') : 'il negozio';
+  const refund = resolution === 'refund' || !exchangeOk;
+  const count = chosen.reduce((n, i) => n + (qty[i.id] ?? 0), 0);
+  const back = () => router.canGoBack() ? router.back() : router.replace({ pathname: '/order/[id]', params: { id: o.id } });
+  const header = wide ? undefined : <BrandHeader inScroll title="Reso e assistenza" subtitle={`Ordine ${o.order_number}`} titleSize={26} pad={[14, 16, 18]}
+    left={<HeaderBack onPress={back} />} />;
 
-    <Text style={styles.h}>1. Quali articoli?</Text>
-    <View style={styles.box}>{items.map((i, n) => {
+  // The bar at the bottom: what the request is worth so far, and the button.
+  const footer = <View style={styles.bar}>
+    <View style={{ flex: 1, minWidth: 0 }}>
+      <Text style={styles.barLabel} numberOfLines={1}>{!count ? 'Nessun articolo scelto' : refund ? `Rimborso stimato · ${count} ${count === 1 ? 'articolo' : 'articoli'}` : `Cambio · ${count} ${count === 1 ? 'articolo' : 'articoli'}`}</Text>
+      <Text style={styles.barValue} numberOfLines={1}>{!count ? '—' : refund ? formatEuro(estimate).replace(/€\s/, '€') : 'Stesso prodotto'}</Text>
+    </View>
+    <Pressable onPress={submit} disabled={busy || uploading} accessibilityRole="button"
+      style={({ pressed }) => [styles.send, (busy || uploading) && { opacity: 0.5 }, pressed && { opacity: 0.88 }]}>
+      <Text style={styles.sendText}>{busy ? 'Invio…' : 'Invia richiesta'}</Text>
+    </Pressable>
+  </View>;
+
+  return <Screen stack header={wide ? undefined : <StatusBand />} top={header} ground={colors.page} maxWidth={640} footer={footer}
+    contentContainerStyle={wide ? undefined : { padding: 0, paddingBottom: 24 }} bodyStyle={wide ? undefined : { paddingHorizontal: 16 }}>
+    <Stack.Screen options={{ title: 'Reso e assistenza', headerShown: wide }} />
+
+    {/* How it works, in three tags: nothing to ship, the store approves, the items go back to the store. */}
+    <View style={[styles.plate, styles.how]}>
+      {['Scegli gli articoli', 'Il negozio approva', `Li porti a ${storeName}`].map((t, i) => <View key={t} style={styles.howStep}>
+        <StepTag n={i + 1} /><Text style={styles.howText}>{t}</Text>
+      </View>)}
+    </View>
+
+    <Text style={styles.h} accessibilityRole="header">Cosa vuoi rendere?</Text>
+    <View style={styles.plate}>{items.map((i, n) => {
       const q = qty[i.id] ?? 0; const max = left[i.id] ?? 0;
       const set = (v: number) => setQty((s) => ({ ...s, [i.id]: Math.max(0, Math.min(max, v)) }));
-      return <View key={i.id} style={[styles.itemRow, n > 0 && styles.sep]}>
-        <View style={{ width: 48, height: 48 }}><ProductImage uri={imageUrl(i.image_path)} sku={i.sku} label={i.name} inset={0} /></View>
+      return <Pressable key={i.id} onPress={() => set(q ? 0 : 1)} accessibilityRole="checkbox" accessibilityState={{ checked: q > 0 }}
+        accessibilityLabel={`${i.name}, ${formatEuro(i.unit_price_cents)}`} style={[styles.itemRow, n > 0 && styles.sep]}>
+        <View style={[styles.check, q > 0 && styles.checkOn]}>{q > 0 && <Icon name="check" size={14} color="#FFFFFF" strokeWidth={3} />}</View>
+        <View style={styles.thumb}><ProductImage uri={imageUrl(i.image_path)} sku={i.sku} label={i.name} inset={0} /></View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.itemName} numberOfLines={2}>{i.name}</Text>
-          <Text style={styles.itemMeta}>{formatEuro(i.unit_price_cents)} · acquistati {i.quantity}{max < i.quantity ? ` · rendibili ${max}` : ''}</Text>
+          <Text style={styles.itemMeta}>{formatEuro(i.unit_price_cents).replace(/€\s/, '€')}{max > 1 ? ` · fino a ${max}` : ''}</Text>
         </View>
-        <View style={styles.stepper}>
-          <Pressable onPress={() => set(q - 1)} disabled={q === 0} accessibilityRole="button" accessibilityLabel={`Togli un ${i.name}`} style={[styles.step, q === 0 && { opacity: 0.3 }]}><Text style={styles.stepGlyph}>−</Text></Pressable>
+        {q > 0 && max > 1 && <View style={styles.stepper}>
+          <Pressable onPress={() => set(q - 1)} accessibilityRole="button" accessibilityLabel={`Togli un ${i.name}`} style={styles.step}><Text style={styles.stepGlyph}>−</Text></Pressable>
           <Text style={styles.stepValue} accessibilityLabel={`Da rendere: ${q}`}>{q}</Text>
           <Pressable onPress={() => set(q + 1)} disabled={q >= max} accessibilityRole="button" accessibilityLabel={`Aggiungi un ${i.name}`} style={[styles.step, q >= max && { opacity: 0.3 }]}><Text style={styles.stepGlyph}>+</Text></Pressable>
-        </View>
-      </View>;
-    })}</View>
-
-    <Text style={styles.h}>2. Perché?</Text>
-    <View style={styles.chips}>{REASONS.map((r) => {
-      const disabled = r === 'changed_mind' && !changeOk;
-      return <Pressable key={r} onPress={() => setReason(r)} disabled={disabled} accessibilityRole="radio" accessibilityState={{ checked: reason === r, disabled }}
-        style={[styles.chip, reason === r && styles.chipOn, disabled && { opacity: 0.4 }]}>
-        <Text style={[styles.chipText, reason === r && { color: '#FFFFFF' }]}>{RETURN_REASON_LABELS[r]}</Text>
+        </View>}
       </Pressable>;
     })}</View>
-    <Text style={styles.fine}>{changeOk ? `Puoi cambiare idea entro ${RETURN_WINDOW_DAYS} giorni dal ritiro o dalla consegna (ancora ${Math.max(1, Math.ceil(RETURN_WINDOW_DAYS - (days ?? 0)))}).`
-      : `Sono passati più di ${RETURN_WINDOW_DAYS} giorni: puoi chiedere assistenza per prodotti difettosi, danneggiati o sbagliati.`}
-      {' '}Prodotti cosmetici e per l'igiene aperti non si possono rendere per ripensamento.</Text>
+
+    <Text style={styles.h} accessibilityRole="header">Perché?</Text>
+    <View style={styles.plate} accessibilityRole="radiogroup">{REASONS.map((r, n) => {
+      const disabled = r === 'changed_mind' && !changeOk;
+      const on = reason === r;
+      const hint = r === 'changed_mind' ? (changeOk ? `Entro ${RETURN_WINDOW_DAYS} giorni dal ritiro: ne restano ${daysLeft}` : `Sono passati più di ${RETURN_WINDOW_DAYS} giorni dal ritiro`) : REASON_HINT[r];
+      return <Pressable key={r} onPress={() => setReason(r)} disabled={disabled} accessibilityRole="radio" accessibilityState={{ checked: on, disabled }}
+        style={[styles.reason, n > 0 && styles.sep, disabled && { opacity: 0.45 }]}>
+        <RadioMark on={on} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.reasonText, on && styles.reasonTextOn]}>{RETURN_REASON_LABELS[r]}</Text>
+          {!!hint && <Text style={styles.reasonHint}>{hint}</Text>}
+        </View>
+      </Pressable>;
+    })}</View>
+    {reason === 'changed_mind' && <Text style={styles.fine}>I prodotti cosmetici e per l’igiene aperti non si possono rendere per ripensamento.</Text>}
 
     {reason && <>
-      <Text style={styles.label}>{reason === 'other' ? 'Raccontaci cosa è successo' : 'Vuoi aggiungere qualcosa? (facoltativo)'}</Text>
-      <TextInput value={note} onChangeText={setNote} multiline maxLength={1000} placeholder="Es. la confezione era aperta, il colore non è quello ordinato…"
-        placeholderTextColor={colors.faint} accessibilityLabel="Messaggio per il negozio" style={styles.note} />
-
-      <Text style={styles.label}>Foto {photosNeeded ? '(obbligatorie)' : '(facoltative)'}</Text>
+      <Text style={styles.label}>{photosNeeded ? 'Foto del prodotto' : 'Foto (facoltative)'}</Text>
       <View style={styles.photos}>
         {photos.map((p) => <View key={p.path} style={styles.photo}>
           <Image source={{ uri: p.uri }} style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
           <Pressable onPress={() => setPhotos((s) => s.filter((x) => x.path !== p.path))} accessibilityRole="button" accessibilityLabel="Togli foto" style={styles.photoX}>
             <Icon name="close" size={12} color="#FFFFFF" strokeWidth={3} /></Pressable>
         </View>)}
-        {photos.length < MAX_PHOTOS && <Pressable onPress={pick} disabled={uploading} accessibilityRole="button" style={[styles.photo, styles.photoAdd]}>
-          <Icon name="share" size={20} color={colors.green} strokeWidth={2} />
-          <Text style={styles.photoAddText}>{uploading ? 'Carico…' : 'Aggiungi'}</Text>
+        {photos.length < MAX_PHOTOS && <Pressable onPress={pick} disabled={uploading} accessibilityRole="button" accessibilityLabel="Aggiungi foto"
+          style={({ pressed }) => [styles.photo, styles.photoAdd, pressed && { opacity: 0.7 }]}>
+          <Icon name="plus" size={22} color={colors.green} strokeWidth={2.2} />
+          <Text style={styles.photoAddText}>{uploading ? 'Carico…' : 'Foto'}</Text>
         </Pressable>}
       </View>
+      <Text style={styles.label}>{reason === 'other' ? 'Cosa è successo?' : 'Messaggio per il negozio (facoltativo)'}</Text>
+      <TextInput value={note} onChangeText={setNote} multiline maxLength={1000} placeholder="Es. la confezione era aperta, il colore non è quello ordinato…"
+        placeholderTextColor={colors.faint} accessibilityLabel="Messaggio per il negozio" style={styles.note} />
 
-      <Text style={styles.h}>3. Come preferisci risolvere?</Text>
+      <Text style={styles.h} accessibilityRole="header">Come preferisci risolvere?</Text>
       <View style={{ gap: 8 }}>
-        <OptionCard selected={resolution === 'refund' || !exchangeOk} onPress={() => setResolution('refund')} title="Rimborso"
-          description={chosen.length ? `Circa ${formatEuro(estimate)} (prezzo pagato, sconti inclusi; la spedizione non è rimborsata)` : 'Il prezzo pagato per gli articoli resi'} />
-        {exchangeOk && <OptionCard selected={resolution === 'exchange'} onPress={() => setResolution('exchange')} title="Cambio con lo stesso prodotto"
-          description="Lo ritiri in negozio quando porti l'articolo da cambiare" />}
+        <OptionCard selected={refund} onPress={() => setResolution('refund')} title="Rimborso"
+          description="Il prezzo pagato, sconti inclusi; la spedizione non è rimborsata" right={count ? formatEuro(estimate).replace(/€\s/, '€') : undefined} />
+        {exchangeOk && <OptionCard selected={!refund} onPress={() => setResolution('exchange')} title="Cambio con lo stesso prodotto"
+          description="Lo ritiri in negozio quando porti l’articolo" />}
       </View>
-      {(resolution === 'refund' || !exchangeOk) && <>
-        <Text style={styles.label}>Ricevi il rimborso</Text>
+      {refund && <>
+        <Text style={styles.label}>Dove ricevi il rimborso</Text>
         <View style={{ gap: 8 }}>
           <OptionCard selected={method === 'card'} onPress={() => setMethod('card')} title="Sul metodo di pagamento" description="Accredito in 5–10 giorni lavorativi" />
-          <OptionCard selected={method === 'voucher'} onPress={() => setMethod('voucher')} title="Buono CASA & TE" description="Subito dopo la verifica in negozio, da usare online entro 12 mesi" />
+          <OptionCard selected={method === 'voucher'} onPress={() => setMethod('voucher')} title="Buono CASA & TE" description="Subito dopo la verifica in negozio, valido 12 mesi online" />
         </View>
       </>}
     </>}
 
-    {!!error && <View style={{ marginTop: 14 }}><Notice tone="error" message={error} /></View>}
-    <View style={{ marginTop: 20 }}><PrimaryButton title="Invia richiesta" icon="check" loading={busy} disabled={uploading} onPress={submit} /></View>
-    <Text style={[styles.fine, { marginTop: 10, textAlign: 'center' }]}>Ti rispondiamo via email. Puoi seguire la richiesta nella pagina dell'ordine.</Text>
+    {!!error && <View style={{ marginTop: 16 }}><Notice tone="error" message={error} /></View>}
+    <Text style={[styles.fine, { marginTop: 18, textAlign: 'center' }]}>Ti rispondiamo via email, di solito entro 2 giorni lavorativi. Segui la richiesta nella pagina dell’ordine.</Text>
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  lead: { fontSize: 14, lineHeight: 20, color: colors.muted, fontFamily: fonts.sans, marginBottom: 6 },
-  h: { fontSize: 18, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text, marginTop: 22, marginBottom: 10 },
-  label: { fontSize: 13.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text, marginTop: 16, marginBottom: 6 },
-  box: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 12 },
-  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  plate: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14 },
+  how: { flexDirection: 'row', gap: 10, paddingVertical: 14, marginTop: 14 },
+  howStep: { flex: 1, alignItems: 'center', gap: 6 },
+  howText: { fontSize: 12.5, lineHeight: 16, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
+  h: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text, marginTop: 26, marginBottom: 10, marginLeft: 2 },
+  label: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.text, marginTop: 18, marginBottom: 8, marginLeft: 2 },
   sep: { borderTopWidth: 1, borderColor: '#EFECE3' },
-  itemName: { fontSize: 14, lineHeight: 18, fontFamily: fonts.sansSemiBold, color: colors.text },
-  itemMeta: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  check: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: '#B9B4A6', alignItems: 'center', justifyContent: 'center' },
+  checkOn: { backgroundColor: colors.green, borderColor: colors.green },
+  thumb: { width: 52, height: 52 },
+  itemName: { fontSize: 14.5, lineHeight: 19, fontFamily: fonts.sansSemiBold, color: colors.text },
+  itemMeta: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
   stepper: { flexDirection: 'row', alignItems: 'center', height: 38, borderRadius: 19, backgroundColor: colors.page, borderWidth: 1, borderColor: colors.line },
   step: { width: 34, height: 36, alignItems: 'center', justifyContent: 'center' },
   stepGlyph: { fontSize: 18, fontFamily: fonts.sansBold, color: colors.text },
   stepValue: { minWidth: 14, textAlign: 'center', fontSize: 15, fontFamily: fonts.heavy, color: colors.text },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 14, height: 40, borderRadius: 20, justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  chipOn: { backgroundColor: colors.green, borderColor: colors.green },
-  chipText: { fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.text },
-  fine: { fontSize: 12, lineHeight: 17, color: colors.muted, fontFamily: fonts.sans, marginTop: 8 },
-  note: { minHeight: 90, textAlignVertical: 'top', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: colors.line,
+  reason: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 13 },
+  reasonText: { fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.text },
+  reasonTextOn: { fontFamily: fonts.heavy },
+  reasonHint: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 1 },
+  fine: { fontSize: 12.5, lineHeight: 17, color: colors.muted, fontFamily: fonts.sans, marginTop: 8, marginHorizontal: 2 },
+  note: { minHeight: 84, textAlignVertical: 'top', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: colors.line,
     padding: 12, fontSize: 14.5, fontFamily: fonts.sans, color: colors.text },
   photos: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  photo: { width: 76, height: 76, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.photo },
+  photo: { width: 76, height: 76, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.photo },
   photoX: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  photoAdd: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.green, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  photoAdd: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.green, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', gap: 2 },
   photoAddText: { fontSize: 12, color: colors.green, fontFamily: fonts.sansBold },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  barLabel: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  barValue: { fontSize: 20, lineHeight: 25, fontFamily: fonts.heavy, color: colors.text },
+  send: { height: 52, paddingHorizontal: 22, borderRadius: 26, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  sendText: { fontSize: 16, fontFamily: fonts.sansBold, color: '#FFFFFF' },
 });
