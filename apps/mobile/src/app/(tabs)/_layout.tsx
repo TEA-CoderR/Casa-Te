@@ -1,8 +1,8 @@
-import type { ComponentProps } from 'react';
+import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { Tabs } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeOutDown, SlideInDown, ZoomIn } from 'react-native-reanimated';
 import { colors, fonts } from '@/config/theme';
 import { Icon, type IconName } from '@/components/Icon';
 import { useLayout } from '@/lib/hooks';
@@ -22,17 +22,33 @@ const tabs: Array<{ name: string; title: string; icon: IconName; hidden?: boolea
 ];
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 const visible = tabs.filter((t) => !t.hidden);
+/** How long the cart bar stays up after an add. */
+const BAR_MS = 3500;
 
 /**
  * Phone tab bar (design F): a floating deep-green pill on the ivory ground; the active tab is a yellow pill
  * with its label. With something in the cart, the Carrello tab shows the count on its icon and the total as
- * its label, so the cart is always in view without a bar covering the products.
+ * its label. Right after an add, a white cart bar rises above the tab bar for a few seconds ("Vai al carrello"),
+ * then goes away so it does not cover the products.
  */
 function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const count = cartItemCount(useCartStore((s) => s.items));
   const current = state.routes[state.index]?.name ?? 'index';
   const { quote } = useCartQuote();
+  // The cart bar: shown when the count goes up, hidden again after BAR_MS (each new add restarts the wait).
+  const [bar, setBar] = useState(false);
+  const before = useRef(count);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (count > before.current) {
+      setBar(true);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setBar(false), BAR_MS);
+    } else if (count === 0) setBar(false);
+    before.current = count;
+  }, [count]);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   // The cart is a full page with its own back button and checkout sheet (design F): no tab bar there.
   // The search page (catalog with ?search) is a focused page too.
   const params = state.routes[state.index]?.params as { search?: string } | undefined;
@@ -49,6 +65,18 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     else navigation.navigate(name);
   };
   return <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+    {bar && count > 0 && <Animated.View entering={SlideInDown.springify().damping(18)} exiting={FadeOutDown.duration(220)} style={styles.barWrap}
+      accessibilityLiveRegion="polite">
+      <Pressable onPress={() => { setBar(false); go('cart'); }} accessibilityRole="button" accessibilityLabel={`Vai al carrello, ${count} ${count === 1 ? 'articolo' : 'articoli'}`}
+        style={({ pressed }) => [styles.mini, pressed && { opacity: 0.92 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.miniLabel} numberOfLines={1}>{count === 1 ? '1 articolo nel carrello' : `${count} articoli nel carrello`}</Text>
+          {/* The total is the server quote (never computed here); hidden until it arrives. */}
+          <Text style={styles.miniTotal}>{total || ' '}</Text>
+        </View>
+        <View style={styles.miniCta}><Text style={styles.miniCtaText}>Vai al carrello</Text></View>
+      </Pressable>
+    </Animated.View>}
     <View style={styles.pill} accessibilityRole="tablist">
       {visible.map((tab) => {
         const on = current === tab.name || (tab.name === 'profile' && current === 'orders');
@@ -84,6 +112,14 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   dock: { backgroundColor: colors.page, paddingHorizontal: 12, paddingTop: 6, gap: 8 },
+  // Over the page, just above the tab bar: it does not push the content up while it is shown.
+  barWrap: { position: 'absolute', left: 12, right: 12, bottom: '100%', marginBottom: 2 },
+  mini: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 58, paddingLeft: 18, paddingRight: 8, borderRadius: 20, backgroundColor: '#FFFFFF',
+    shadowColor: '#18201A', shadowOpacity: 0.22, shadowRadius: 34, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
+  miniLabel: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  miniTotal: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text },
+  miniCta: { height: 44, paddingHorizontal: 16, borderRadius: 14, backgroundColor: colors.green, justifyContent: 'center' },
+  miniCtaText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   pill: { flexDirection: 'row', alignItems: 'center', height: 66, borderRadius: 33, paddingHorizontal: 7, backgroundColor: colors.green,
     shadowColor: '#143019', shadowOpacity: 0.35, shadowRadius: 28, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
   tab: { flex: 1, height: 54, borderRadius: 22, alignItems: 'center', justifyContent: 'center', gap: 3 },
