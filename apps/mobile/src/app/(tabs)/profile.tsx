@@ -9,7 +9,7 @@ import { Screen } from '@/components/Screen';
 import { Icon, type IconName } from '@/components/Icon';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { PrimaryButton } from '@/components/UI';
-import { BandEdge, StatusBand } from '@/components/BrandHeader';
+import { BAND_RADIUS, StatusBand } from '@/components/BrandHeader';
 import { StoreCard } from '@/components/StoreCard';
 import { colors, fonts } from '@/config/theme';
 import { fetchOrders, fetchProfile, updateProfile, type OrderWithItems } from '@/lib/api';
@@ -224,7 +224,6 @@ export default function ProfileScreen() {
             <Pressable onPress={() => go('/auth/sign-in')} accessibilityRole="button" style={styles.fSignIn}><Text style={styles.fSignInText}>Accedi o registrati</Text></Pressable>
           </>}
         </View>
-        <BandEdge />
       </View>}>
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
       <View style={{ paddingHorizontal: 16, marginTop: hang }}>
@@ -279,7 +278,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  fHero: { backgroundColor: colors.brand, paddingTop: 18, paddingHorizontal: 20, paddingBottom: 46, overflow: 'hidden' },
+  fHero: { backgroundColor: colors.brand, paddingTop: 18, paddingHorizontal: 20, paddingBottom: 46, overflow: 'hidden', borderBottomLeftRadius: BAND_RADIUS, borderBottomRightRadius: BAND_RADIUS },
   fAvatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
   fAvatarText: { fontSize: 21, fontFamily: fonts.heavy, color: colors.text },
   fHello: { fontSize: 28, lineHeight: 32, fontFamily: fonts.display, color: '#FFFFFF' },
