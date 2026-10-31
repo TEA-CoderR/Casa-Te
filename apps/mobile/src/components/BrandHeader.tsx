@@ -5,8 +5,8 @@ import { colors, fonts } from '@/config/theme';
 import { brandLogoStacked, STACKED_ASPECT } from '@/config/brand';
 import { Icon, type IconName } from './Icon';
 
-/** Radius of the band's rounded bottom corners (the cart and profile look). */
-export const BAND_RADIUS = 28;
+/** Radius of the band's bottom corners: a soft finish, smaller than the 20 px of the cards hanging over it, so the band reads as ground and the card as the object. */
+export const BAND_RADIUS = 16;
 const STRIPE = 22;
 /** Enough stripes for the widest phone/tablet band; the band clips the rest. */
 const STRIPES = Array.from({ length: 48 }, (_, i) => i);
