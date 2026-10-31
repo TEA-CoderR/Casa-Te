@@ -902,5 +902,9 @@ const dict: Record<string, string> = {
   "Operazione non possibile nello stato attuale del reso.": "当前退货状态下无法执行此操作。",
   "Reso non trovato.": "找不到该退货。",
   "Scrivi il motivo del rifiuto.": "请填写拒绝原因。",
+  "Nota per i clienti (facoltativa)": "给顾客的说明（可选）",
+  "Es. per chi valgono le offerte. Max 300 caratteri.": "例如：这些优惠适用于谁。最多 300 个字符。",
+  "Titolo pagina": "页面标题",
+  "Titolo della pagina {n}": "第 {n} 页的标题",
 };
 export default dict;

@@ -6,7 +6,7 @@ import { t } from '../lib/i18n';
 import { Empty, Field, Loading, Modal, Notice, PageHead, fmtDate } from '../components/ui';
 import { Icon } from '../components/Icon';
 
-type Draft = Partial<FlyerRow> & { page_paths: string[] };
+type Draft = Partial<FlyerRow> & { page_paths: string[]; page_titles: string[] };
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** Where a flyer stands for customers right now. */
@@ -32,7 +32,7 @@ export function FlyersPage() {
   const open = (f?: FlyerRow) => {
     setError('');
     folder.current = f?.id ?? crypto.randomUUID();
-    setEdit(f ? { ...f, page_paths: [...f.page_paths] } : { title: '', valid_from: today(), valid_to: null, pdf_path: null, page_paths: [], active: true });
+    setEdit(f ? { ...f, page_paths: [...f.page_paths], page_titles: [...(f.page_titles ?? [])] } : { title: '', valid_from: today(), valid_to: null, pdf_path: null, page_paths: [], page_titles: [], note: null, active: true });
   };
 
   const upload = async (file: File, name: string) => {
@@ -67,10 +67,12 @@ export function FlyersPage() {
   };
   const movePage = (from: number, to: number) => {
     if (!edit || to < 0 || to >= edit.page_paths.length) return;
-    const next = [...edit.page_paths];
-    const [p] = next.splice(from, 1);
-    next.splice(to, 0, p);
-    setEdit({ ...edit, page_paths: next });
+    // Titles move with their page.
+    const pages = [...edit.page_paths];
+    const titles = edit.page_paths.map((_, i) => edit.page_titles[i] ?? '');
+    const [p] = pages.splice(from, 1); pages.splice(to, 0, p);
+    const [tt] = titles.splice(from, 1); titles.splice(to, 0, tt);
+    setEdit({ ...edit, page_paths: pages, page_titles: titles });
   };
 
   const save = async () => {
@@ -79,6 +81,9 @@ export function FlyersPage() {
     const row = {
       title: edit.title?.trim() ?? '', valid_from: edit.valid_from || null, valid_to: edit.valid_to || null,
       pdf_path: edit.pdf_path ?? null, page_paths: edit.page_paths, active: edit.active ?? true,
+      note: edit.note?.trim() || null,
+      // One title per page, in page order; empty when not given.
+      page_titles: edit.page_paths.map((_, i) => (edit.page_titles[i] ?? '').trim()),
     };
     try {
       if (edit.id) unwrap(await supabase.from('flyers').update(row).eq('id', edit.id));
@@ -132,6 +137,8 @@ export function FlyersPage() {
           <Field label={t('Valido fino al')} hint={invalidDates ? t('La fine è prima dell’inizio.') : undefined}>
             <input type="date" value={edit.valid_to ?? ''} onChange={(e) => setEdit({ ...edit, valid_to: e.target.value || null })} /></Field>
         </div>
+        <Field label={t('Nota per i clienti (facoltativa)')} hint={t('Es. per chi valgono le offerte. Max 300 caratteri.')}>
+          <textarea value={edit.note ?? ''} maxLength={300} rows={2} onChange={(e) => setEdit({ ...edit, note: e.target.value })} /></Field>
         <label className="check"><input type="checkbox" checked={edit.active ?? true} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> {t('Pubblicato (visibile ai clienti nel periodo di validità)')}</label>
 
         <div className="field">{t('Pagine (immagini, nell’ordine di lettura)')}
@@ -141,8 +148,11 @@ export function FlyersPage() {
               <button type="button" className="ghost icon-btn" disabled={i === 0} onClick={() => movePage(i, i - 1)} aria-label={t('Sposta su')}><span className="flip"><Icon name="chevronDown" size={14} /></span></button>
               <span className="small muted">{i + 1}</span>
               <button type="button" className="ghost icon-btn" disabled={i === edit.page_paths.length - 1} onClick={() => movePage(i, i + 1)} aria-label={t('Sposta giù')}><Icon name="chevronDown" size={14} /></button>
-              <button type="button" className="ghost danger icon-btn" onClick={() => setEdit({ ...edit, page_paths: edit.page_paths.filter((x) => x !== p) })} aria-label={t('Rimuovi')}><Icon name="close" size={14} /></button>
+              <button type="button" className="ghost danger icon-btn" onClick={() => setEdit({ ...edit, page_paths: edit.page_paths.filter((x) => x !== p),
+                page_titles: edit.page_titles.filter((_, j) => j !== i) })} aria-label={t('Rimuovi')}><Icon name="close" size={14} /></button>
             </div>
+            <input value={edit.page_titles[i] ?? ''} maxLength={60} placeholder={t('Titolo pagina')} aria-label={t('Titolo della pagina {n}', { n: i + 1 })}
+              onChange={(e) => { const next = edit.page_paths.map((_, j) => edit.page_titles[j] ?? ''); next[i] = e.target.value; setEdit({ ...edit, page_titles: next }); }} />
           </div>)}</div>}
           <div className="row"><button type="button" className="secondary" disabled={busy} onClick={() => pageInput.current?.click()}>{busy ? t('Caricamento…') : t('Aggiungi pagine')}</button></div>
           <span className="small muted">{t('JPG, PNG o WEBP, in verticale (es. 1200×1700 px). Puoi selezionare più file insieme: vengono ordinati per nome.')}</span>

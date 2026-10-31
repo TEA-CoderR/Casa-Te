@@ -150,6 +150,10 @@ export type AppSettingsRow = {
 export type FlyerRow = {
   id: Uuid; title: string; valid_from: string | null; valid_to: string | null;
   pdf_path: string | null; page_paths: string[]; active: boolean; created_at: Timestamp; updated_at: Timestamp;
+  /** Short line shown with the flyer (who the offers are for). */
+  note: string | null;
+  /** Name of each page, same order as page_paths (may be shorter). */
+  page_titles: string[];
 };
 
 /** Back-office audit trail, written by triggers. */

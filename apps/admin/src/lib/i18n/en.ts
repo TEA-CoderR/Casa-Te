@@ -902,5 +902,9 @@ const dict: Record<string, string> = {
   "Operazione non possibile nello stato attuale del reso.": "Not possible in the current state of the return.",
   "Reso non trovato.": "Return not found.",
   "Scrivi il motivo del rifiuto.": "Write the reason for the rejection.",
+  "Nota per i clienti (facoltativa)": "Note for customers (optional)",
+  "Es. per chi valgono le offerte. Max 300 caratteri.": "E.g. who the offers are for. Max 300 characters.",
+  "Titolo pagina": "Page title",
+  "Titolo della pagina {n}": "Title of page {n}",
 };
 export default dict;
