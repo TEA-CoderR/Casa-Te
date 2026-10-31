@@ -270,7 +270,7 @@ export default function OrderDetailScreen() {
 function PassCode({ number, scan }: { number: string; scan: boolean }) {
   if (!scan) return <Text style={styles.passCode} selectable>{number}</Text>;
   return <View style={styles.passScan}>
-    <Barcode value={number} height={64} label={`Codice a barre dell’ordine ${number}`} />
+    <Barcode value={number} height={76} label={`Codice a barre dell’ordine ${number}`} />
     <Text style={styles.passScanNumber} selectable>{number}</Text>
   </View>;
 }
@@ -303,9 +303,9 @@ const styles = StyleSheet.create({
   passHint: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.muted },
   passCode: { alignSelf: 'stretch', textAlign: 'center', marginTop: 8, paddingVertical: 14, borderRadius: 16, backgroundColor: colors.page,
     fontSize: 32, letterSpacing: 4, fontFamily: fonts.heavy, color: colors.text, overflow: 'hidden' },
-  passScan: { alignSelf: 'stretch', marginTop: 8, paddingTop: 14, paddingBottom: 10, paddingHorizontal: 18, borderRadius: 16, backgroundColor: '#FFFFFF',
-    borderWidth: 1, borderColor: colors.line, alignItems: 'center' },
-  passScanNumber: { marginTop: 6, fontSize: 20, letterSpacing: 3, fontFamily: fonts.heavy, color: colors.text },
+  // No plate of its own: the pass is already white, and the barcode carries its own quiet zone at the sides.
+  passScan: { alignSelf: 'stretch', marginTop: 10, alignItems: 'center' },
+  passScanNumber: { marginTop: 8, fontSize: 20, letterSpacing: 3, fontFamily: fonts.heavy, color: colors.text },
   passName: { fontSize: 13, fontFamily: fonts.sansMedium, color: colors.muted, marginTop: 8 },
   card: { marginTop: 18, padding: 18, paddingBottom: 6, borderRadius: 22, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
   cardTitle: { fontSize: 21, lineHeight: 26, fontFamily: fonts.display, color: colors.text },
