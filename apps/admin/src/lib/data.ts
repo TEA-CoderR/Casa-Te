@@ -87,3 +87,14 @@ export function errorText(e: unknown): string {
   if (/check constraint/.test(msg)) return t('Valori non validi: controlla i campi.');
   return msg;
 }
+
+/**
+ * An order number typed or scanned whole ("CT26001024", the barcode on the customer's pass): the order's id,
+ * or null when it is not a full number or the staff member cannot see that order (RLS).
+ */
+export async function findOrderIdByNumber(text: string): Promise<string | null> {
+  const n = text.trim().toUpperCase();
+  if (!/^CT\d{6,}$/.test(n)) return null;
+  const { data } = await supabase.from('orders').select('id').eq('order_number', n).maybeSingle();
+  return (data as { id: string } | null)?.id ?? null;
+}

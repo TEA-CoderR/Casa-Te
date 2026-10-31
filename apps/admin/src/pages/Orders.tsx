@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FULFILMENT_LABELS, ORDER_STATUS_LABELS, formatEuro, type FulfilmentMethod, type OrderRow, type OrderStatus } from '@casa-te/shared';
 import { supabase, unwrap } from '../lib/supabase';
-import { useAsync, useDebounced, useStores } from '../lib/data';
+import { findOrderIdByNumber, useAsync, useDebounced, useStores } from '../lib/data';
 import { downloadCsv, toCsv } from '../lib/csv';
 import { useAuth } from '../lib/auth';
 import { Empty, Loading, Notice, PageHead, Pager, PaymentBadge, StatusBadge, fmtDate } from '../components/ui';
@@ -86,7 +86,9 @@ export function OrdersPage() {
     <PageHead title={t('Ordini')} subtitle={orders.data ? t('{n} ordini', { n: orders.data.count }) : undefined}
       actions={<button className="secondary" onClick={exportCsv} disabled={exporting}>{exporting ? t('Esportazione…') : t('Esporta CSV')}</button>} />
     <div className="toolbar">
-      <input type="search" placeholder={t('Numero, email, nome, telefono')} value={search} onChange={(e) => setSearch(e.target.value)} style={{ minWidth: 260 }} aria-label={t('Cerca ordini')} />
+      <input type="search" placeholder={t('Numero, email, nome, telefono')} value={search} onChange={(e) => setSearch(e.target.value)} style={{ minWidth: 260 }} aria-label={t('Cerca ordini')}
+        // Enter on a whole order number (or a scan of the pass's barcode) opens that order.
+        onKeyDown={async (e) => { if (e.key !== 'Enter') return; const id = await findOrderIdByNumber(search); if (id) navigate(`/orders/${id}`); }} />
       <select value={status} onChange={(e) => set('status', e.target.value)} aria-label={t('Stato')}>
         <option value="">{t('Tutti (esclusi non pagati)')}</option>
         {(Object.keys(ORDER_STATUS_LABELS) as OrderStatus[]).map((s) => <option key={s} value={s}>{t(ORDER_STATUS_LABELS[s])}</option>)}

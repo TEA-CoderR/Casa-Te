@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
-import { useStores } from '../lib/data';
+import { findOrderIdByNumber, useStores } from '../lib/data';
 import { addDays, daysBetween, isoDay, overviewRange } from '../lib/overview';
 import { Icon, type AdminIcon } from './Icon';
 import { dateLocale, t } from '../lib/i18n';
@@ -44,7 +44,8 @@ function SectionTabs() {
   </nav>;
 }
 
-/** Search in the top bar: Enter picks the obvious place (order numbers → orders), the menu offers the others. */
+/** Search in the top bar: a whole order number (or its scanned barcode) opens the order; otherwise Enter picks the
+ * obvious place (order numbers → orders), the menu offers the others. */
 function GlobalSearch({ manager }: { manager: boolean }) {
   const navigate = useNavigate();
   const [text, setText] = useState('');
@@ -61,9 +62,12 @@ function GlobalSearch({ manager }: { manager: boolean }) {
     ...(manager ? [{ label: t('Prodotti'), path: '/products' }, { label: t('Clienti'), path: '/customers' }] : [{ label: t('Magazzino'), path: '/inventory' }]),
   ];
   const go = (path: string) => { setOpen(false); setText(''); navigate(`${path}?q=${encodeURIComponent(q)}`); };
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!q) return;
+    // A whole order number (typed, or scanned from the pass's barcode: the scanner types it and Enter) opens the order.
+    const id = await findOrderIdByNumber(q);
+    if (id) { setOpen(false); setText(''); navigate(`/orders/${id}`); return; }
     go(/^ct\d/i.test(q) ? '/orders' : manager ? '/products' : '/inventory');
   };
   return <form className="top-search" role="search" ref={box} onSubmit={submit}>
