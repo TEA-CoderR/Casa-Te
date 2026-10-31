@@ -1,25 +1,28 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { friendlyError, isPhone, type ClubOffer, type ProfileRow } from '@casa-te/shared';
 import { formatEuro } from '@/lib/price';
 import { Screen } from '@/components/Screen';
-import { Icon, type IconName } from '@/components/Icon';
+import { Icon } from '@/components/Icon';
+import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
 import { Checkbox, Loading, Notice, PrimaryButton, SecondaryButton, TextField } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
 import { fetchClubOffers, fetchProfile, joinClub, setClubMembership } from '@/lib/api';
 import { useQuery } from '@/lib/useQuery';
-import { useClubSettings } from '@/lib/hooks';
+import { useClubSettings, useLayout } from '@/lib/hooks';
+
+/** Photo of the real Casa & Te card (straightened from the owner's photo). */
+const CARD = require('../../assets/club-card.webp');
 import { useUser } from '@/store/session';
 import { useClubStore } from '@/store/club';
 import { MemberCardLink, MemberCardView } from '@/components/MemberCard';
 
-const PERKS: Array<{ icon: IconName; title: string; text: string }> = [
-  { icon: 'crown', title: 'Più offerte', text: 'Su tanti articoli in offerta paghi il prezzo riservato al Club, come in negozio.' },
-  { icon: 'sparkle', title: 'Offerte riservate', text: 'Codici sconto solo per i membri, sempre visibili qui.' },
-  { icon: 'heart', title: 'Gratis, sempre', text: "L'iscrizione non costa nulla e puoi uscire quando vuoi." },
-  { icon: 'store', title: 'Hai già la tessera?', text: 'Collegala qui: la mostri dal telefono alla cassa e i punti restano in negozio.' },
-  { icon: 'cart', title: 'Al checkout', text: 'Usa i codici sia con il ritiro in negozio sia con la spedizione.' },
+/** What the Club gives, one line each (the card section below covers linking an existing card). */
+const PERKS = [
+  'Prezzi Soci anche online, come in negozio',
+  'Codici sconto riservati ai Soci',
+  'Gratis, e puoi uscire quando vuoi',
 ];
 
 const offerText = (o: ClubOffer) => o.kind === 'percent' ? `${o.value}% di sconto`
@@ -31,6 +34,7 @@ export default function ClubScreen() {
   const member = !!profile.data?.club_member_since;
   const offers = useQuery(user && member ? `club-offers:${user.id}` : null, fetchClubOffers);
   const club = useClubSettings();
+  const { wide } = useLayout();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -46,19 +50,24 @@ export default function ClubScreen() {
       : <MemberCardLink onLinked={() => void profile.refetch()} />}
   </>;
 
-  return <Screen stack>
-    <Stack.Screen options={{ title: 'Casa & Te Club' }} />
-    <View style={styles.hero}>
-      <Icon name="crown" size={40} color="#B07A1E" strokeWidth={1.3} />
-      <Text style={styles.title} accessibilityRole="header">Casa & Te Club</Text>
-      <Text style={styles.lead}>{club.tagline}</Text>
-      {member && <Text style={styles.since}>Membro dal {new Date(profile.data!.club_member_since!).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>}
-    </View>
+  const since = member ? new Date(profile.data!.club_member_since!).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const back = () => router.canGoBack() ? router.back() : router.replace('/');
+  // Phone: the shop's real Club card hangs from the band, like the store card on the home page.
+  const band = wide ? undefined : <BrandHeader inScroll title="Casa & Te Club" titleSize={30} pad={[14, 16, 96]} left={<HeaderBack onPress={back} />} />;
 
-    {PERKS.map((p) => <View key={p.title} style={styles.perk}>
-      <View style={styles.perkIcon}><Icon name={p.icon} size={24} color={colors.green} strokeWidth={1.6} /></View>
-      <View style={{ flex: 1 }}><Text style={styles.perkTitle}>{p.title}</Text><Text style={styles.perkText}>{p.text}</Text></View>
-    </View>)}
+  return <Screen stack header={wide ? undefined : <StatusBand />} top={band} ground={colors.page}
+    contentContainerStyle={wide ? undefined : { padding: 0, paddingBottom: 32 }} bodyStyle={wide ? undefined : { paddingHorizontal: 16 }}>
+    <Stack.Screen options={{ title: 'Casa & Te Club', headerShown: wide }} />
+    <View style={[styles.cardWrap, !wide && { marginTop: -88 }]}>
+      <Image source={CARD} accessibilityLabel="La tessera Casa & Te" resizeMode="cover" style={styles.cardImage} />
+    </View>
+    <Text style={styles.title} accessibilityRole="header">Sei uno di famiglia</Text>
+    <Text style={styles.lead}>{member ? `Sei nel Club dal ${since}.` : 'La tessera del negozio, ora anche online.'}</Text>
+
+    <View style={styles.perks}>{PERKS.map((p) => <View key={p} style={styles.perk}>
+      <Icon name="check" size={18} color={colors.green} strokeWidth={2.6} />
+      <Text style={styles.perkText}>{p}</Text>
+    </View>)}</View>
 
     {!!error && <Notice tone="error" message={error} />}
     {!user ? <View style={{ marginTop: 20 }}><PrimaryButton title="Accedi per iscriverti o collegare la tessera" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/club' } })} /></View>
@@ -142,22 +151,22 @@ function JoinForm({ profile, email, onJoined }: { profile: ProfileRow; email: st
 
 const styles = StyleSheet.create({
   form: { marginTop: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 16, gap: 4 },
-  formTitle: { fontSize: 20, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  formTitle: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text },
   formLead: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans, marginBottom: 10 },
   formRow: { flexDirection: 'row', gap: 10 },
   check: { fontSize: 13, color: colors.text, lineHeight: 19, fontFamily: fonts.sans },
   link: { color: colors.green, textDecorationLine: 'underline' },
   readOnly: { backgroundColor: colors.cream, color: colors.muted },
   fieldError: { fontSize: 12, color: colors.danger, fontFamily: fonts.sans, marginTop: -4, marginBottom: 6 },
-  hero: { backgroundColor: colors.sand, borderRadius: 16, padding: 24, alignItems: 'center', gap: 8, marginBottom: 18 },
-  title: { fontSize: 30, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  lead: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans },
-  since: { fontSize: 13, color: colors.green, fontFamily: fonts.sansMedium, marginTop: 4 },
-  perk: { flexDirection: 'row', gap: 14, alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.line },
-  perkIcon: { width: 28, alignItems: 'center', justifyContent: 'center' },
-  perkTitle: { fontSize: 16, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  perkText: { fontSize: 13, color: colors.muted, marginTop: 2, fontFamily: fonts.sans, lineHeight: 18 },
-  section: { fontSize: 22, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text, marginTop: 28, marginBottom: 10 },
+  cardWrap: { alignSelf: 'center', width: '100%', maxWidth: 420, aspectRatio: 1000 / 631, borderRadius: 18, backgroundColor: colors.green,
+    shadowColor: '#0A180C', shadowOpacity: 0.28, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
+  cardImage: { width: '100%', height: '100%', borderRadius: 18 },
+  title: { fontSize: 30, lineHeight: 35, fontFamily: fonts.display, color: colors.text, textAlign: 'center', marginTop: 24 },
+  lead: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans, marginTop: 4 },
+  perks: { marginTop: 20, paddingVertical: 6, paddingHorizontal: 16, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  perk: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 12 },
+  perkText: { flex: 1, fontSize: 15, lineHeight: 20, fontFamily: fonts.sansSemiBold, color: colors.text },
+  section: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text, marginTop: 28, marginBottom: 10 },
   empty: { fontSize: 14, color: colors.muted, fontFamily: fonts.sans, lineHeight: 20 },
   offer: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 14, padding: 14, marginBottom: 10 },
   offerTitle: { fontSize: 16, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
