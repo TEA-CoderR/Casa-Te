@@ -17,6 +17,22 @@ begin
   perform tests.eq(r.cover_path, 'test/overview.jpg', 'a product with a photo is the cover');
   select * into r from public.category_overview(array[(select sku from public.products where erp_code = '920500')]) where category_id = v_cat;
   perform tests.eq(r.cover_path, 'test/overview.jpg', 'an avoided product is still used when it is the only photo');
+
+  -- A cover chosen by hand wins, also for a department without products of its own; out of stock it falls back.
+  insert into public.product_images (product_id, path, sort) values (tests.product('920600'), 'test/chosen.jpg', 0);
+  update public.categories set cover_product_id = tests.product('920600') where id = v_cat;
+  select * into r from public.category_overview() where category_id = v_cat;
+  perform tests.eq(r.cover_path, 'test/chosen.jpg', 'the chosen cover is used');
+  perform tests.eq(r.products, 1100, 'the count is unchanged by the chosen cover');
+  declare v_dept uuid; begin
+    insert into public.categories (slug, name, cover_product_id) values ('test-overview-dept', 'Test dept', tests.product('920600')) returning id into v_dept;
+    select * into r from public.category_overview() where category_id = v_dept;
+    perform tests.eq(r.cover_path, 'test/chosen.jpg', 'a department without products gets its chosen cover');
+    perform tests.eq(r.products, 0, 'a department without products counts none of its own');
+  end;
+  update public.inventory set quantity = 0 where product_id = tests.product('920600');
+  select * into r from public.category_overview() where category_id = v_cat;
+  perform tests.eq(r.cover_path, 'test/overview.jpg', 'an out-of-stock chosen cover falls back to the automatic one');
 end $$;
 
 select tests.login(null, 'anon');
