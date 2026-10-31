@@ -6,6 +6,7 @@ import { Figtree_500Medium } from '@expo-google-fonts/figtree/500Medium';
 import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
 import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 import { Figtree_800ExtraBold } from '@expo-google-fonts/figtree/800ExtraBold';
+import { BandStripes } from '@/components/BrandHeader';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors, fonts } from '@/config/theme';
@@ -51,8 +52,8 @@ export default function RootLayout() {
           headerShadowVisible: false,
           headerTitleAlign: wide ? 'center' : 'left',
           headerStyle: { backgroundColor: wide ? colors.background : colors.brand },
-          // Phones: stack pages (checkout, order, account…) share the solid green band of the tab pages.
-          headerBackground: wide ? undefined : () => <View style={{ flex: 1, backgroundColor: colors.brand }} />,
+          // Phones: stack pages (checkout, order, account…) share the striped green band of the tab pages.
+          headerBackground: wide ? undefined : () => <View style={{ flex: 1, backgroundColor: colors.brand, overflow: 'hidden' }}><BandStripes /></View>,
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: wide ? colors.background : colors.page },
         }}

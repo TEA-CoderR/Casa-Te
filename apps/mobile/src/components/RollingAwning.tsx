@@ -7,7 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { colors, fonts } from '@/config/theme';
-import { BAND_RADIUS, HeaderBack } from './BrandHeader';
+import { BAND_RADIUS, BandStripes, HeaderBack } from './BrandHeader';
 import { Icon } from './Icon';
 
 /** Band height (below the status bar) once rolled up: just the buttons row. */
@@ -20,7 +20,7 @@ const TOP_AFTER = 360;
 const TOP_IDLE = 2000;
 
 /**
- * Department page header: a solid green band with the department title in one row between the back and search
+ * Department page header: a striped green band with the department title in one row between the back and search
  * buttons and rounded bottom corners, so the products start high on the page. Scrolling down the title fades away,
  * the band slims and the round search button stretches into a white "Cerca in …" pill. The pill names the department, but the
  * search page always searches the whole catalogue. The chips scroll away with the products. A "back to top" button
@@ -91,6 +91,7 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
     </Animated.ScrollView>
 
     <Animated.View style={[styles.band, bandStyle]}>
+      <BandStripes />
       <Animated.View style={[styles.titleBlock, { top: insets.top + 14 + Math.max(0, (44 - titleH) / 2), left: onBack ? 16 + 44 + 12 : 16 }, titleStyle]}
         onLayout={(e: LayoutChangeEvent) => { const h = Math.ceil(e.nativeEvent.layout.height); if (h && h !== titleH) setTitleH(h); }}>
         <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>

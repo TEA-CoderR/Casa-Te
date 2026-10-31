@@ -7,9 +7,19 @@ import { Icon, type IconName } from './Icon';
 
 /** Radius of the band's rounded bottom corners (the cart and profile look). */
 export const BAND_RADIUS = 28;
+const STRIPE = 22;
+/** Enough stripes for the widest phone/tablet band; the band clips the rest. */
+const STRIPES = Array.from({ length: 48 }, (_, i) => i);
+
+/** The band's tone-on-tone vertical stripes (a mown pitch), painted behind its content. */
+export function BandStripes() {
+  return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { flexDirection: 'row' }]}>
+    {STRIPES.map((i) => <View key={i} style={{ width: STRIPE, backgroundColor: i % 2 ? colors.stripe : colors.brand }} />)}
+  </View>;
+}
 
 /**
- * Phone header band: solid deep green, edge to edge under the status bar, with rounded bottom corners (cards may
+ * Phone header band: deep green with tone-on-tone stripes, edge to edge under the status bar, with rounded bottom corners (cards may
  * hang over it). Layouts:
  * - inline (default): [left] title + subtitle … [right] in one row (Carrello, Ordini, Ordine);
  * - `stacked`: the buttons row, then a large title below it (Reparto, Home greeting, Accesso);
@@ -31,6 +41,7 @@ export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, righ
   // No zIndex: a card that hangs from the band (a later sibling in the scroll content) must paint over it.
   return <View>
     <View style={[styles.band, { paddingTop: (inScroll ? 0 : insets.top) + pad[0], paddingHorizontal: pad[1], paddingBottom: pad[2] + overlap }]}>
+      <BandStripes />
       {(left || right || logo || (!stacked && !!title)) && <View style={styles.row}>
         {left}
         {logo && <Image source={brandLogoStacked} accessibilityLabel="Casa & Te — Per la tua casa e per te" accessibilityRole="header"
@@ -48,7 +59,7 @@ export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, righ
 /** The status bar area above a scrolling band (Screen `header` when the band is the Screen `top`). */
 export function StatusBand() {
   const insets = useSafeAreaInsets();
-  return <View style={{ height: insets.top, backgroundColor: colors.brand, zIndex: 3 }} />;
+  return <View style={{ height: insets.top, backgroundColor: colors.brand, overflow: 'hidden', zIndex: 3 }}><BandStripes /></View>;
 }
 
 /** A card that hangs from the band's bottom edge (store card, active order): pulls itself up over the band. */
