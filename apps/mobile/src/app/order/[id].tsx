@@ -4,6 +4,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { FULFILMENT_LABELS, PAYMENT_STATUS_LABELS, formatWeight, friendlyError, orderStatusLabel, orderTimeline } from '@casa-te/shared';
 import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
 import { formatEuro, formatShipping } from '@/lib/price';
+import { Barcode } from '@/components/Barcode';
 import { Screen } from '@/components/Screen';
 import { OrderTimeline } from '@/components/OrderTimeline';
 import { ProductImage } from '@/components/ProductImage';
@@ -82,7 +83,7 @@ export default function OrderDetailScreen() {
         <View style={styles.tear}><View style={[styles.notch, { left: -12 }]} /><View style={styles.tearLine} /><View style={[styles.notch, { right: -12 }]} /></View>
         <View style={styles.passBottom}>
           <Text style={styles.passHint}>{order.fulfilment === 'store' ? 'Mostra questo codice in cassa' : 'Numero d’ordine'}</Text>
-          <Text style={styles.passCode} selectable>{order.order_number}</Text>
+          <PassCode number={order.order_number} scan={order.fulfilment === 'store'} />
         </View>
       </View>
 
@@ -188,7 +189,7 @@ export default function OrderDetailScreen() {
       </View>
       <View style={styles.passBottom}>
         <Text style={styles.passHint}>{order.fulfilment === 'store' ? 'Mostra questo codice in cassa' : 'Numero d’ordine'}</Text>
-        <Text style={styles.passCode} selectable>{order.order_number}</Text>
+        <PassCode number={order.order_number} scan={order.fulfilment === 'store'} />
         {order.fulfilment === 'store' && <Text style={styles.passName}>Ritiro a nome di {order.customer_name}</Text>}
       </View>
     </View>}
@@ -262,6 +263,18 @@ export default function OrderDetailScreen() {
   </Screen>;
 }
 
+/**
+ * The order number on the pass. For pickup in store it is also a Code 128 barcode, so the till or the
+ * back office search reads it with the scanner (the scanner types the number and Enter).
+ */
+function PassCode({ number, scan }: { number: string; scan: boolean }) {
+  if (!scan) return <Text style={styles.passCode} selectable>{number}</Text>;
+  return <View style={styles.passScan}>
+    <Barcode value={number} height={64} label={`Codice a barre dell’ordine ${number}`} />
+    <Text style={styles.passScanNumber} selectable>{number}</Text>
+  </View>;
+}
+
 const styles = StyleSheet.create({
   pass: { borderRadius: 24, backgroundColor: '#FFFFFF', shadowColor: '#18201A', shadowOpacity: 0.16, shadowRadius: 26, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
   tlRow: { flexDirection: 'row', gap: 14, minHeight: 60 },
@@ -290,6 +303,9 @@ const styles = StyleSheet.create({
   passHint: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.muted },
   passCode: { alignSelf: 'stretch', textAlign: 'center', marginTop: 8, paddingVertical: 14, borderRadius: 16, backgroundColor: colors.page,
     fontSize: 32, letterSpacing: 4, fontFamily: fonts.heavy, color: colors.text, overflow: 'hidden' },
+  passScan: { alignSelf: 'stretch', marginTop: 8, paddingTop: 14, paddingBottom: 10, paddingHorizontal: 18, borderRadius: 16, backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: colors.line, alignItems: 'center' },
+  passScanNumber: { marginTop: 6, fontSize: 20, letterSpacing: 3, fontFamily: fonts.heavy, color: colors.text },
   passName: { fontSize: 13, fontFamily: fonts.sansMedium, color: colors.muted, marginTop: 8 },
   card: { marginTop: 18, padding: 18, paddingBottom: 6, borderRadius: 22, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
   cardTitle: { fontSize: 21, lineHeight: 26, fontFamily: fonts.display, color: colors.text },

@@ -24,14 +24,14 @@ export function code128(text: string): number[] {
   return [...codes, check, 106];
 }
 
-export function Barcode({ value, height = 72, color = '#000' }: { value: string; height?: number; color?: string }) {
+export function Barcode({ value, height = 72, color = '#000', label }: { value: string; height?: number; color?: string; label?: string }) {
   const widths = code128(value).flatMap((c) => [...PATTERNS[c]].map(Number));
   const quiet = 10;
   const total = widths.reduce((a, b) => a + b, 0) + quiet * 2;
   let x = quiet;
   const bars: Array<{ x: number; w: number }> = [];
   widths.forEach((w, i) => { if (i % 2 === 0) bars.push({ x, w }); x += w; });
-  return <View accessible accessibilityLabel={`Codice a barre della tessera ${value}`} style={{ backgroundColor: '#fff', width: '100%', height }}>
+  return <View accessible accessibilityLabel={label ?? `Codice a barre della tessera ${value}`} style={{ backgroundColor: '#fff', width: '100%', height }}>
     <Svg width="100%" height={height} viewBox={`0 0 ${total} ${height}`} preserveAspectRatio="none">
       {bars.map((b, i) => <Rect key={i} x={b.x} y={0} width={b.w} height={height} fill={color} />)}
     </Svg>
