@@ -46,6 +46,10 @@ export type CategoryRow = {
   show_on_home: boolean;
   /** Cover photo for the home circle (storage path in product-images, or https URL). */
   image_path: string | null;
+  /** Group heading of a subcategory inside its department ("Corpo", "Capelli"…); null = no heading. */
+  section?: string | null;
+  /** Product whose photo represents the category (null = automatic). */
+  cover_product_id?: Uuid | null;
   created_at: Timestamp; updated_at: Timestamp;
 };
 

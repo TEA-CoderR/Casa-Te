@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { Tabs } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeOutDown, SlideInDown, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutDown, ZoomIn } from 'react-native-reanimated';
 import { colors, fonts } from '@/config/theme';
 import { Icon, type IconName } from '@/components/Icon';
 import { useLayout } from '@/lib/hooks';
@@ -22,6 +22,8 @@ const tabs: Array<{ name: string; title: string; icon: IconName; hidden?: boolea
 ];
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 const visible = tabs.filter((t) => !t.hidden);
+/** The cart bar rises 12 px while it fades in (no spring: it settles at once), and fades out downwards. */
+const BAR_IN = FadeInDown.duration(220).withInitialValues({ opacity: 0, transform: [{ translateY: 12 }] });
 /** How long the cart bar stays up after an add. */
 const BAR_MS = 3500;
 
@@ -65,7 +67,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     else navigation.navigate(name);
   };
   return <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-    {bar && count > 0 && <Animated.View entering={SlideInDown.springify().damping(18)} exiting={FadeOutDown.duration(220)} style={styles.barWrap}
+    {bar && count > 0 && <Animated.View entering={BAR_IN} exiting={FadeOutDown.duration(180)}
       accessibilityLiveRegion="polite">
       <Pressable onPress={() => { setBar(false); go('cart'); }} accessibilityRole="button" accessibilityLabel={`Vai al carrello, ${count} ${count === 1 ? 'articolo' : 'articoli'}`}
         style={({ pressed }) => [styles.mini, pressed && { opacity: 0.92 }]}>
@@ -112,8 +114,6 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   dock: { backgroundColor: colors.page, paddingHorizontal: 12, paddingTop: 6, gap: 8 },
-  // Over the page, just above the tab bar: it does not push the content up while it is shown.
-  barWrap: { position: 'absolute', left: 12, right: 12, bottom: '100%', marginBottom: 2 },
   mini: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 58, paddingLeft: 18, paddingRight: 8, borderRadius: 20, backgroundColor: '#FFFFFF',
     shadowColor: '#18201A', shadowOpacity: 0.22, shadowRadius: 34, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
   miniLabel: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
