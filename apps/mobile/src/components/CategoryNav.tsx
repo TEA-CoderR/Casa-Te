@@ -17,6 +17,20 @@ export function departmentCount(all: CategoryRow[], counts: Counts, id: string) 
   return [id, ...all.filter((c) => c.parent_id === id).map((c) => c.id)].reduce((sum, x) => sum + (counts?.[x] ?? 0), 0);
 }
 
+/** "Elettrodomestici" is too long for the rail: a soft hyphen lets it break as "Elettro-domestici". */
+const railName = (name: string) => name.replace(/^(Elettro)(?=\p{L}{6,})/u, '$1\u00AD');
+
+/** Consecutive subcategories with the same section, in their order. */
+function groupBy(subs: CategoryRow[]) {
+  const out: Array<{ section: string | null; items: CategoryRow[] }> = [];
+  for (const c of subs) {
+    const section = c.section?.trim() || null;
+    const last = out[out.length - 1];
+    if (last && last.section === section) last.items.push(c); else out.push({ section, items: [c] });
+  }
+  return out;
+}
+
 /** Subcategories that have something to show (all of them until the counts arrive). */
 export function liveChildren(all: CategoryRow[], counts: Counts, id: string) {
   return all.filter((c) => c.parent_id === id && (!counts || (counts[c.id] ?? 0) > 0));
@@ -74,7 +88,7 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
             accessibilityRole="tab" accessibilityState={{ selected: on }}
             style={({ pressed }) => [styles.railItem, on && styles.railItemOn, pressed && !on && { backgroundColor: colors.well }]}>
             {on && <View style={styles.railMark} />}
-            <Text style={[styles.railText, on && styles.railTextOn]} numberOfLines={2}>{d.name}</Text>
+            <Text style={[styles.railText, on && styles.railTextOn]} numberOfLines={2}>{railName(d.name)}</Text>
           </Pressable>;
         })}
       </ScrollView>
@@ -88,14 +102,18 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
             </View>
             <Icon name="chevron" size={18} color={colors.text} strokeWidth={2.2} />
           </Pressable>
-          <View style={styles.grid}>
-            {subs.map((c) => <Pressable key={c.id} onPress={() => onOpen(c.id)} accessibilityRole="link"
-              accessibilityLabel={`${c.name}${counts ? `, ${plural(counts[c.id] ?? 0)}` : ''}`}
-              style={({ pressed }) => [styles.cell, pressed && { opacity: 0.7 }]}>
-              <CategoryPhoto image={covers?.[c.id]?.image} slug={active.slug} name={c.name} />
-              <Text style={styles.cellName} numberOfLines={2}>{c.name}</Text>
-            </Pressable>)}
-          </View>
+          {/* Subcategories in the order of the shop, under their group heading when the department has groups. */}
+          {groupBy(subs).map(({ section, items }) => <View key={section ?? 'all'}>
+            {!!section && <Text style={styles.section} accessibilityRole="header">{section}</Text>}
+            <View style={styles.grid}>
+              {items.map((c) => <Pressable key={c.id} onPress={() => onOpen(c.id)} accessibilityRole="link"
+                accessibilityLabel={`${c.name}${counts ? `, ${plural(counts[c.id] ?? 0)}` : ''}`}
+                style={({ pressed }) => [styles.cell, pressed && { opacity: 0.7 }]}>
+                <CategoryPhoto image={covers?.[c.id]?.image} slug={active.slug} name={c.name} />
+                <Text style={styles.cellName} numberOfLines={2}>{c.name}</Text>
+              </Pressable>)}
+            </View>
+          </View>)}
         </>}
       </ScrollView>
     </View>
@@ -190,7 +208,8 @@ const styles = StyleSheet.create({
   panelHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 14, marginBottom: 14, borderBottomWidth: 1, borderColor: colors.line },
   panelTitle: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text },
   panelLink: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3, rowGap: 16 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3, rowGap: 16, marginBottom: 18 },
+  section: { fontSize: 12.5, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginBottom: 10, marginLeft: 1 },
   cell: { width: '33.333%', paddingHorizontal: 3 },
   cellName: { marginTop: 7, fontSize: 12, lineHeight: 15.5, letterSpacing: -0.15, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
 
