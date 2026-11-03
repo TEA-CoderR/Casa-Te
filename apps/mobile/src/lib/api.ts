@@ -117,6 +117,22 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
   const needle = q.search ? searchKey(q.search) : '';
   // Products out of stock are listed only when searched for (or among the favourites): browsing shows what can be bought.
   const inStockOnly = !needle && !q.ids;
+  // A search in the default order is ranked in the database (in stock first, then how well the name matches).
+  const plain = !q.brands?.length && !q.colors?.length && q.priceMin == null && q.priceMax == null && !q.featured && !q.ids;
+  if (needle && (q.sort ?? 'featured') === 'featured' && plain) {
+    const hits = unwrap(await supabase.rpc('search_products', {
+      p_query: needle, p_store: q.storeId ?? null, p_category_ids: q.categoryIds?.length ? q.categoryIds : q.categoryId ? [q.categoryId] : null,
+      p_on_sale: !!q.onSale, p_limit: pageSize + 1, p_offset: from,
+    })) as Array<{ product_id: string; total: number }>;
+    const ids = hits.slice(0, pageSize).map((h) => h.product_id);
+    if (!ids.length) return { items: [], hasMore: false, total: hits[0]?.total ?? 0 };
+    let found = supabase.from('products').select(PRODUCT_FIELDS).in('id', ids);
+    if (q.storeId) found = found.eq('inventory.store_id', q.storeId);
+    const rows = unwrap(await found) as unknown as RawProduct[];
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const items = ids.map((id) => byId.get(id)).filter((r): r is RawProduct => !!r).map((r) => toCatalogProduct(r, q.storeId));
+    return { items, hasMore: hits.length > pageSize, total: Number(hits[0]?.total ?? items.length) };
+  }
   let query = supabase.from('products')
     .select(inStockOnly ? PRODUCT_FIELDS.replace('inventory(', 'inventory!inner(') : PRODUCT_FIELDS, { count: 'exact' }).eq('active', true);
   if (q.storeId) query = query.eq('inventory.store_id', q.storeId);
