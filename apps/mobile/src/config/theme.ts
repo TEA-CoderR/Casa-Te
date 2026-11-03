@@ -15,8 +15,16 @@ export const colors = {
   /** Awning band behind phone headers (stripes alternate `brand` and `stripe`). */
   brand: '#1F4127',
   stripe: '#234A2C',
-  /** Text on the green band that is not the title (≥4.5:1 on the band). */
+  /** Light text on the dark green (tab bar, green buttons, the order-confirmed page). */
   onBrand: '#CFDDC6',
+  /** Page headers (since the sign-in redesign): a white band with dark title, muted subtitle and light round buttons. */
+  band: '#FFFFFF',
+  bandText: '#18201A',
+  bandMuted: '#5F665C',
+  bandButton: '#F1F0EB',
+  /** The logo's own colours: lime lettering on the shop-sign green (the small sign in headers, the Club card). */
+  sign: '#3B6B31',
+  signInk: '#CDE434',
   /** The logo's yellow: active tab, price chips, cart count, the order-ready card. */
   yellow: '#F3E33A',
   lime: '#F3E9D6',
@@ -55,14 +63,15 @@ const family = (name: string, fallback: string) => Platform.OS === 'web' ? `${na
 const serifFallback = 'Georgia, "Times New Roman", serif';
 const sansFallback = 'system-ui, -apple-system, "Segoe UI", sans-serif';
 /**
- * Phone app (design F): Bodoni Moda (`display`) for page and section titles, Figtree for everything else,
+ * Phone app: Figtree everywhere (`display` = Figtree Bold for page and section titles, as on the sign-in pages),
  * prices in Figtree ExtraBold with raised cents. The desktop catalogue keeps EB Garamond (`serif*`).
  */
 export const fonts = {
   serif: family('EBGaramond_400Regular', serifFallback),
   serifMedium: family('EBGaramond_500Medium', serifFallback),
   serifBold: family('EBGaramond_500Medium', serifFallback),
-  display: family('BodoniModa_600SemiBold', serifFallback),
+  /** Page and section titles: Figtree Bold, as on the sign-in pages (Bodoni Moda until November 2026). */
+  display: family('Figtree_700Bold', sansFallback),
   sans: family('Figtree_400Regular', sansFallback),
   sansMedium: family('Figtree_500Medium', sansFallback),
   sansSemiBold: family('Figtree_600SemiBold', sansFallback),

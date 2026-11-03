@@ -195,7 +195,8 @@ export function SubcategorySheet({ visible, onClose, title, items, active, onSel
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.page },
-  search: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 46, marginTop: 14, paddingHorizontal: 16, borderRadius: 23, backgroundColor: '#FFFFFF' },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 52, marginTop: 14, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#FFFFFF',
+    borderWidth: 1.5, borderColor: '#8C9189' },
   searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
 
   split: { flex: 1, flexDirection: 'row' },

@@ -215,10 +215,11 @@ function HomePhone() {
 }
 
 const styles = StyleSheet.create({
-  hello: { fontSize: 34, lineHeight: 38, fontFamily: fonts.display, color: '#FFFFFF', letterSpacing: -0.3, marginTop: 20 },
-  helloSub: { fontSize: 15.5, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 4 },
-  search: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12, height: 54, paddingLeft: 18, paddingRight: 8, borderRadius: 27, backgroundColor: '#FFFFFF',
-    shadowColor: '#0A180C', shadowOpacity: 0.25, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 5 },
+  hello: { fontSize: 34, lineHeight: 40, fontFamily: fonts.display, color: colors.bandText, letterSpacing: -0.6, marginTop: 20 },
+  helloSub: { fontSize: 16, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 4 },
+  // Outlined like the sign-in fields.
+  search: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12, height: 54, paddingLeft: 16, paddingRight: 6, borderRadius: 12, backgroundColor: '#FFFFFF',
+    borderWidth: 1.5, borderColor: '#8C9189' },
   searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.muted },
   scan: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
   order: { marginHorizontal: 16, marginTop: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.yellow },

@@ -8,7 +8,7 @@ import { Icon } from '@/components/Icon';
 import { BrandLogo } from '@/components/BrandLogo';
 
 /** The logo in its own colours: lime lettering on the shop-sign green. */
-const SIGN = { ground: '#3B6B31', ink: '#CDE434' };
+const SIGN = { ground: colors.sign, ink: colors.signInk };
 import { useLayout } from '@/lib/hooks';
 import { isEmail, isValidPassword, MIN_PASSWORD, PASSWORD_HELP, passwordRules } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';

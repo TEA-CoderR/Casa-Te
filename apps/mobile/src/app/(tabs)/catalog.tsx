@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   skelLine: { height: 12, borderRadius: 6, backgroundColor: colors.well, marginTop: 7, marginLeft: 4 },
   fGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   fCell: { width: '48.6%', flexDirection: 'row' },
-  sBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, height: 50, paddingLeft: 16, paddingRight: 6, borderRadius: 25, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: colors.yellow },
+  sBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, height: 50, paddingLeft: 15, paddingRight: 6, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: colors.green },
   sInput: { flex: 1, minWidth: 0, height: 44, fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0, outlineStyle: 'none' } as object,
   sClear: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EFECE3', alignItems: 'center', justifyContent: 'center' },
   sHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

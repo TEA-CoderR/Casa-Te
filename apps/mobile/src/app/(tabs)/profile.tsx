@@ -9,7 +9,7 @@ import { Screen } from '@/components/Screen';
 import { Icon, type IconName } from '@/components/Icon';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { PrimaryButton } from '@/components/UI';
-import { AwningEdge, AwningStripes, StatusBand } from '@/components/BrandHeader';
+import { StatusBand } from '@/components/BrandHeader';
 import { StoreCard } from '@/components/StoreCard';
 import { colors, fonts } from '@/config/theme';
 import { fetchOrders, fetchProfile, updateProfile, type OrderWithItems } from '@/lib/api';
@@ -210,7 +210,6 @@ export default function ProfileScreen() {
     return <Screen header={<StatusBand />} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 28 }}
       top={<View>
         <View style={[styles.fHero, !user && { paddingBottom: 28 }]}>
-          <AwningStripes />
           {user ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <View style={styles.fAvatar}><Text style={styles.fAvatarText}>{initials(name || user.email || '')}</Text></View>
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -225,7 +224,6 @@ export default function ProfileScreen() {
             <Pressable onPress={() => go('/auth/sign-in')} accessibilityRole="button" style={styles.fSignIn}><Text style={styles.fSignInText}>Accedi o registrati</Text></Pressable>
           </>}
         </View>
-        <AwningEdge />
       </View>}>
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
       <View style={{ paddingHorizontal: 16, marginTop: hang }}>
@@ -280,13 +278,13 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  fHero: { backgroundColor: colors.brand, paddingTop: 18, paddingHorizontal: 20, paddingBottom: 46, overflow: 'hidden' },
+  fHero: { backgroundColor: colors.band, paddingTop: 18, paddingHorizontal: 20, paddingBottom: 46, overflow: 'hidden' },
   fAvatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
   fAvatarText: { fontSize: 21, fontFamily: fonts.heavy, color: colors.text },
-  fHello: { fontSize: 28, lineHeight: 32, fontFamily: fonts.display, color: '#FFFFFF' },
-  fEmail: { fontSize: 14, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
-  fEdit: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)', justifyContent: 'center' },
-  fEditText: { fontSize: 14, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  fHello: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.bandText, letterSpacing: -0.5 },
+  fEmail: { fontSize: 14, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 2 },
+  fEdit: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: colors.bandButton, justifyContent: 'center' },
+  fEditText: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.bandText },
   fSignIn: { alignSelf: 'flex-start', height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.yellow, justifyContent: 'center', marginTop: 14 },
   fSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
   fOrder: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.yellow,
@@ -369,14 +367,14 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: 12.5, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
 
   session: { marginTop: 36, alignItems: 'center', gap: 16 },
-  pHero: { backgroundColor: colors.brand, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 26, overflow: 'hidden' },
+  pHero: { backgroundColor: colors.band, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 26, overflow: 'hidden' },
   pWatermark: { position: 'absolute', right: -40, top: 10, width: 200, height: 112, opacity: 0.22 },
   pAvatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
   pAvatarText: { fontSize: 22, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
-  pHello: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: '#FFFFFF' },
-  pEmail: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.onBrand, marginTop: 2 },
-  pEdit: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)', justifyContent: 'center' },
-  pEditText: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: '#FFFFFF' },
+  pHello: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.bandText, letterSpacing: -0.5 },
+  pEmail: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.bandMuted, marginTop: 2 },
+  pEdit: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: colors.bandButton, justifyContent: 'center' },
+  pEditText: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.bandText },
   pMember: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 12, paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.18)' },
   pMemberText: { fontSize: 13, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.yellow },

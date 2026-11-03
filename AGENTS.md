@@ -24,7 +24,10 @@ Read `docs/ARCHITECTURE.md` and `docs/DECISIONS.md` first.
 7. Run `npm test` (needs `psql` + PostgreSQL binaries or `DATABASE_URL`) and `npm run typecheck` before committing.
 
 ## Design rules (customer app, `apps/mobile`)
-The phone app follows design F "La Tenda" (`apps/mobile/src/config/theme.ts`); the desktop shop is the printed catalogue.
+The phone app follows design F "La Tenda" (`apps/mobile/src/config/theme.ts`), unified in November 2026 with the sign-in pages:
+white header band (no striped awning), the logo as a small lime-on-green sign (`LogoSign`, `BrandLogo`), Figtree titles,
+outlined fields and search, green pill buttons; the floating dark-green tab bar, the Categorie rail and every animation stay.
+The desktop shop is the printed catalogue.
 The September demo (built with Codex) left generic AI patterns that kept coming back; do not reintroduce them.
 1. **Start from the shared components** in `components/UI.tsx` (`OptionCard`, `RadioMark`, `StatusMark`, `Notice`,
    `PrimaryButton`, `SecondaryButton`, `QuantityControl`, `EmptyState`, `PriceTag`…) and `components/ShopMarks.tsx`;
@@ -35,9 +38,9 @@ The September demo (built with Codex) left generic AI patterns that kept coming 
    (active tab, price chips, cart count, "ready"/"approved"); red only for discounts and errors.
 4. **Messages**: `Notice` — a white plate with a coloured edge and title, never a pale green/red/yellow panel.
 5. **Icons** stand alone, never inside a tinted circle; prefer signs from the shop (`StepTag`, `EmptyReceipt`, `AwningMark`).
-6. **Grounds**: ivory page (`colors.page`), white plates, warm neutrals (`well`, `stone`) for quiet fills.
+6. **Grounds**: white header band (`colors.band`), ivory page (`colors.page`), white plates, warm neutrals (`well`, `stone`) for quiet fills.
    Pale tints are only for content that is not a state (department tiles, the home banners, the desktop offers tile).
-7. **Type**: every text style sets `fontFamily` from `fonts` (Bodoni Moda titles, Figtree text); a `fontWeight` alone
+7. **Type**: every text style sets `fontFamily` from `fonts` (Figtree everywhere: `display` for titles); a `fontWeight` alone
    falls back to the system font on phones.
 8. `npm run test:ui` checks 2–4 and 7 (`tools/ui-check`); a deliberate exception carries
    `// ui-check: allow (<reason>)` on the line or the line above. New UI is compared with the boards before merging.

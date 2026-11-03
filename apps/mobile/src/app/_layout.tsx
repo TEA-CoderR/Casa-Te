@@ -10,7 +10,6 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors, fonts } from '@/config/theme';
 import { PersistenceGate } from '@/components/PersistenceGate';
-import { AwningStripes } from '@/components/BrandHeader';
 import { useLayout } from '@/lib/hooks';
 import { isConfigured } from '@/lib/supabase';
 import { startSessionListener } from '@/store/session';
@@ -43,17 +42,17 @@ export default function RootLayout() {
   return (
     <PersistenceGate>
       {/* Phones: every page starts with the green awning band (design F), so light status bar icons. */}
-      <StatusBar style={wide ? 'dark' : 'light'} />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
-          headerTintColor: wide ? colors.text : '#FFFFFF',
+          headerTintColor: colors.text,
           headerTitleStyle: wide ? { fontFamily: fonts.serif, fontSize: 21, color: colors.text }
-            : { fontFamily: fonts.display, fontSize: 21, color: '#FFFFFF' },
+            : { fontFamily: fonts.display, fontSize: 21, color: colors.bandText },
           headerShadowVisible: false,
           headerTitleAlign: wide ? 'center' : 'left',
-          headerStyle: { backgroundColor: wide ? colors.background : colors.brand },
-          // Phones: stack pages (checkout, order, account…) share the striped awning of the tab pages.
-          headerBackground: wide ? undefined : () => <View style={{ flex: 1, backgroundColor: colors.brand, overflow: 'hidden' }}><AwningStripes /></View>,
+          headerStyle: { backgroundColor: wide ? colors.background : colors.band },
+          // Phones: stack pages (checkout, order, account…) share the white band of the tab pages.
+          headerBackground: wide ? undefined : () => <View style={{ flex: 1, backgroundColor: colors.band, borderBottomWidth: 1, borderColor: colors.line }} />,
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: wide ? colors.background : colors.page },
         }}
