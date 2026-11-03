@@ -15,6 +15,7 @@ import { colors, fonts } from '@/config/theme';
 import { fetchFlyers } from '@/lib/api';
 import { useLayout } from '@/lib/hooks';
 import { useQuery } from '@/lib/useQuery';
+import { productList } from '@/lib/links';
 
 type Flyer = FlyerRow & { pdf: string | null; pages: string[] };
 
@@ -61,7 +62,7 @@ export default function FlyerScreen() {
     {error && !data ? <Notice tone="error" message="Impossibile caricare il volantino. Controlla la connessione e riprova." />
       : !data ? <Loading />
       : !data.length ? <EmptyState icon="flyer" title="Nessun volantino al momento" message="Il nuovo volantino arriva presto. Intanto guarda le offerte del negozio online.">
-          <PrimaryButton title="Vedi le offerte" onPress={() => router.push({ pathname: '/catalog', params: { offerte: '1', evidenza: '', category: '' } })} />
+          <PrimaryButton title="Vedi le offerte" onPress={() => router.push(productList({ offerte: '1' }, wide))} />
         </EmptyState>
       : data.map((flyer, n) => <FlyerSection key={flyer.id} flyer={flyer} hanging={!wide && n === 0} onOpen={(page) => setViewer({ flyer, page })} />)}
     {viewer && <FlyerViewer flyer={viewer.flyer} start={viewer.page} onClose={() => setViewer(null)} />}

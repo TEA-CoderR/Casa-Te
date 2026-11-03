@@ -26,7 +26,7 @@ import { BrandHeader, HeaderBack, HeaderButton } from '@/components/BrandHeader'
 import { SiteHeader } from '@/components/site/SiteHeader';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SITE_WIDTH, type WebState } from '@/components/site/shared';
-import { ALL_PRODUCTS } from '@/lib/links';
+import { ALL_PRODUCTS, productList } from '@/lib/links';
 import { shownProduct, useClubMember } from '@/store/club';
 
 export default function ProductDetailScreen() {
@@ -237,7 +237,7 @@ export default function ProductDetailScreen() {
         </View>
       </View>
       <View style={styles.phoneInfo}>
-        {!!department && <Pressable onPress={() => router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: department.id } })} accessibilityRole="link" hitSlop={6}>
+        {!!department && <Pressable onPress={() => router.push(productList({ category: department.id }, wide))} accessibilityRole="link" hitSlop={6}>
           <Text style={styles.phoneCrumb} numberOfLines={1}>{top ? `${top.name} › ${department.name}` : department.name}</Text></Pressable>}
         <Text style={styles.phoneTitle} accessibilityRole="header">{product.name}</Text>
         <View style={styles.phonePriceRow}>

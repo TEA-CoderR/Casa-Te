@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CategoryBrowser, SubcategorySheet, SubcategoryTabs, departmentCount, liveChildren } from '@/components/CategoryNav';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useRoute } from 'expo-router';
+import { productList } from '@/lib/links';
 import type { CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
@@ -19,10 +20,28 @@ import { SiteFooter } from '@/components/site/SiteFooter';
 import { useRecentSearches } from '@/store/recentSearches';
 import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared';
 
+/** First page of the lists seen recently (newest last), to reopen a department without waiting. */
+const firstPages = new Map<string, { items: CatalogProduct[]; hasMore: boolean; total: number | null }>();
+const remember = (key: string, page: { items: CatalogProduct[]; hasMore: boolean; total: number | null }) => {
+  firstPages.delete(key); firstPages.set(key, page);
+  if (firstPages.size > 24) firstPages.delete(firstPages.keys().next().value as string);
+};
+
+/** Grey cards in the shape of the product cards, while the first page loads. */
+function ProductSkeletons({ n = 6 }: { n?: number }) {
+  return <>{Array.from({ length: n }, (_, i) => <View key={i} style={styles.fCell} accessibilityElementsHidden>
+    <View style={styles.skel}><View style={styles.skelPhoto} /><View style={[styles.skelLine, { width: '86%' }]} />
+      <View style={[styles.skelLine, { width: '58%' }]} /><View style={[styles.skelLine, { width: '36%', height: 18, marginTop: 14 }]} /></View>
+  </View>)}</>;
+}
+
 export default function CatalogScreen() {
   const params = useLocalSearchParams<{ category?: string; q?: string; search?: string; sort?: string; offerte?: string; evidenza?: string; code?: string }>();
   const { selected } = useStores();
   const { columns, wide } = useLayout();
+  // The phone product list screen (tabs/prodotti) or the Categorie tab (browser and search): the name of this
+  // screen's own route (useSegments would give the focused screen, the same for both instances).
+  const isList = useRoute().name === 'prodotti';
   const [query, setQuery] = useState(params.q ?? '');
   const [debounced, setDebounced] = useState(query);
   const [categoryId, setCategoryId] = useState<string | null>(params.category || null);
@@ -48,6 +67,13 @@ export default function CatalogScreen() {
   const [allOpen, setAllOpen] = useState(false);
 
   useEffect(() => { if (params.category !== undefined) setCategoryId(params.category || null); }, [params.category]);
+  // Phones: a list asked of the Categorie tab (an old link, "/catalog?category=…") opens the list screen instead.
+  useEffect(() => {
+    if (wide || isList || params.search || params.q) return;
+    if (params.category || params.offerte === '1' || params.evidenza === '1') {
+      router.replace(productList({ category: params.category || '', offerte: params.offerte || '', evidenza: params.evidenza || '' }));
+    }
+  }, [wide, isList, params.category, params.offerte, params.evidenza, params.search, params.q]); // eslint-disable-line react-hooks/exhaustive-deps
   // ?offerte=1: only discounted products ("In offerta"), within the chosen category.
   const [onSale, setOnSale] = useState(params.offerte === '1');
   useEffect(() => { setOnSale(params.offerte === '1'); }, [params.offerte]);
@@ -87,34 +113,47 @@ export default function CatalogScreen() {
     brands: filters.brands, colors: filters.colors, priceMin: filters.price.min, priceMax: filters.price.max,
   });
   const key = JSON.stringify([selected?.id, requestScope, debounced, onSale, featuredOnly, filters.sort, filters.brands, filters.colors, filters.price]);
-  // Reload from page 0 whenever the filters change.
+  // Reload from page 0 whenever the filters change. The previous list goes away at once (no products of the
+  // department just left while the new ones load): the first page seen recently shows straight from memory and
+  // is refreshed underneath, otherwise placeholders stand in until it arrives.
   useEffect(() => {
     let active = true;
+    const cached = firstPages.get(key);
+    if (cached) { setItems(cached.items); setHasMore(cached.hasMore); setTotal(cached.total); }
+    else { setItems([]); setHasMore(false); setTotal(null); }
+    setPage(0); setError(null);
     setLoading(true);
     request(0)
-      .then((r) => { if (active) { setItems(r.items); setHasMore(r.hasMore); setTotal(r.total); setPage(0); setError(null); } })
+      .then((r) => { if (active) { remember(key, r); setItems(r.items); setHasMore(r.hasMore); setTotal(r.total); setPage(0); setError(null); } })
       .catch((e) => { if (active) setError(e); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
+  const [loadingMore, setLoadingMore] = useState(false);
   const loadMore = async () => {
-    setLoading(true);
+    setLoadingMore(true);
     try {
       const r = await request(page + 1);
       setItems((prev) => [...prev, ...r.items]); setHasMore(r.hasMore); setTotal(r.total); setPage(page + 1);
-    } catch (e) { setError(e); } finally { setLoading(false); }
+    } catch (e) { setError(e); } finally { setLoadingMore(false); }
   };
 
   const shown = filters.onlyAvailable ? items.filter((p) => p.stock === null || p.stock > 0) : items;
   const count = filters.onlyAvailable ? shown.length : total ?? shown.length;
   // Keep the URL in step with the chosen category, so the home links (same id again) and reloads keep working.
   const selectCategory = (id: string | null) => { setCategoryId(id); router.setParams({ category: id ?? undefined }); };
-  const canGoBackHere = () => !!collection || !!categoryId || router.canGoBack();
+  const canGoBackHere = () => isList || !!collection || !!categoryId || router.canGoBack();
+  // Phones: a list opens as its own screen; search opens on the Categorie tab (back returns here).
+  const openList = (params: { category?: string; offerte?: string; evidenza?: string }) => router.push(productList(params, wide));
+  const openSearch = () => isList ? router.navigate({ pathname: '/catalog', params: { search: '1', category: '', offerte: '', evidenza: '' } })
+    : (setSearchOpen(true), router.setParams({ search: '1' }));
   // Back steps out one level: close the search, subcategory → its department, department → all categories, then home.
   const leaveOffers = () => { setOnSale(false); setFeaturedOnly(false); router.setParams({ offerte: undefined, evidenza: undefined }); };
   const goBack = () => {
+    // The list screen goes back to the screen that opened it (Home, Categorie, search, a product).
+    if (isList && !wide) { if (router.canGoBack()) router.back(); else router.navigate('/catalog'); return; }
     if (searchOpen && query) { setQuery(''); setSearchOpen(false); return; }
     // Out of "In offerta" first: back lands on the whole catalogue, not on the offers again.
     if (collection) { leaveOffers(); return; }
@@ -170,7 +209,7 @@ export default function CatalogScreen() {
         const next = !onSale; setOnSale(next); if (next) setFeaturedOnly(false);
         router.setParams({ offerte: next ? '1' : undefined, evidenza: undefined });
       }} />;
-    const more = loading ? <Loading /> : hasMore ? <View style={{ marginTop: 16 }}><SecondaryButton title="Mostra altri prodotti" onPress={loadMore} /></View> : null;
+    const more = loadingMore ? <Loading /> : hasMore && !loading ? <View style={{ marginTop: 16 }}><SecondaryButton title="Mostra altri prodotti" onPress={loadMore} /></View> : null;
 
     if (searchOpen) {
       const q = query.trim().toLowerCase();
@@ -198,7 +237,7 @@ export default function CatalogScreen() {
         const n = c.parent_id ? counts.data?.[c.id] ?? 0 : 1;
         return n > 0 && words.every((w) => name.split(/[^a-z0-9]+/).some((part) => part.startsWith(w)));
       }).sort((a, b) => (counts.data?.[b.id] ?? 0) - (counts.data?.[a.id] ?? 0)).slice(0, 5) : [];
-      const openCategory = (id: string) => { recent.remember(query); setQuery(''); setSearchOpen(false); router.setParams({ search: undefined, q: undefined }); selectCategory(id); };
+      const openCategory = (id: string) => { recent.remember(query); openList({ category: id }); };
       return <Screen header={header} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
         {!debounced.trim() ? <View style={{ paddingHorizontal: 16, paddingTop: 22 }}>
           {/* Recent searches only while typing a new one (field focused, still empty): out of the way otherwise. */}
@@ -222,7 +261,7 @@ export default function CatalogScreen() {
             const n = [c.id, ...all.filter((x) => x.parent_id === c.id).map((x) => x.id)].reduce((sum, id) => sum + (counts.data?.[id] ?? 0), 0);
             const cover = covers.data?.[c.id]?.image ?? subs.map((x) => covers.data?.[x.id]?.image).find(Boolean) ?? null;
             const open = openDept === c.id && subs.length > 1;
-            const go = (id: string) => { setQuery(''); setOpenDept(null); setSearchOpen(false); router.setParams({ search: undefined }); selectCategory(id); };
+            const go = (id: string) => { setOpenDept(null); openList({ category: id }); };
             return <View key={c.id} style={i > 0 && { borderTopWidth: 1, borderColor: '#EFECE3' }}>
               <Pressable onPress={() => subs.length > 1 ? setOpenDept(open ? null : c.id) : go(c.id)}
                 accessibilityRole={subs.length > 1 ? 'button' : 'link'} accessibilityState={subs.length > 1 ? { expanded: open } : undefined}
@@ -278,7 +317,7 @@ export default function CatalogScreen() {
             <Text style={styles.sCaps}>PRODOTTI</Text>
             <Text style={styles.sCount}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}${storeLabel ? ` a ${storeLabel}` : ''}`}</Text>
           </View>
-          <View style={styles.fGrid}>{shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
+          <View style={styles.fGrid}>{loading && !items.length ? <ProductSkeletons n={4} /> : shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
           {more}
         </View>}
       </Screen>;
@@ -287,7 +326,7 @@ export default function CatalogScreen() {
     // "Categorie" tab with nothing chosen: the category browser instead of every product in one list.
     if (!categoryId && !collection) {
       return <CategoryBrowser all={all} counts={counts.data} covers={covers.data}
-        onOpen={selectCategory} onSearch={() => { setSearchOpen(true); router.setParams({ search: '1' }); }} />;
+        onOpen={(id) => openList({ category: id })} onSearch={openSearch} />;
     }
 
     const coverOf = (id: string) => covers.data?.[id]?.image ?? liveChildren(all, counts.data, id).map((c) => covers.data?.[c.id]?.image).find(Boolean) ?? null;
@@ -299,7 +338,7 @@ export default function CatalogScreen() {
     return <RollingAwning title={deptTitle}
       subtitle={loading && !items.length ? ' ' : `${count.toLocaleString('it-IT')} ${count === 1 ? 'prodotto disponibile' : 'prodotti disponibili'}${storeLabel ? ` a ${storeLabel}` : ''}`}
       onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
-      onSearch={() => { setSearchOpen(true); router.setParams({ search: '1' }); }}
+      onSearch={openSearch} resetKey={`${categoryId ?? ''}|${collection ?? ''}`}
       overlay={<>{filterSheetPhone}
         <SubcategorySheet visible={allOpen} onClose={() => setAllOpen(false)} title={parent?.name ?? 'Reparti'} items={sheetItems}
           active={parent ? activeTab : categoryId} onSelect={selectCategory} />
@@ -312,7 +351,7 @@ export default function CatalogScreen() {
         </Pressable>} />}>
       <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
         {results}
-        <View style={styles.fGrid}>{shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
+        <View style={styles.fGrid}>{loading && !items.length ? <ProductSkeletons /> : shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
         {more}
       </View>
     </RollingAwning>;
@@ -388,7 +427,7 @@ export default function CatalogScreen() {
           <ProductCard product={product} /></View>)}</View>
       : <View style={wide ? { flexDirection: 'row', flexWrap: 'wrap', columnGap: 24 } : undefined}>{shown.map((product) =>
           <View key={product.id} style={wide ? { width: '48%' } : undefined}><ProductCard product={product} variant="list" /></View>)}</View>}
-    {loading ? <Loading /> : hasMore ? <View style={{ marginTop: 24 }}><SecondaryButton title="Mostra altri prodotti" onPress={loadMore} /></View> : null}
+    {loading || loadingMore ? <Loading /> : hasMore ? <View style={{ marginTop: 24 }}><SecondaryButton title="Mostra altri prodotti" onPress={loadMore} /></View> : null}
   </Screen>;
 }
 
@@ -407,6 +446,9 @@ const styles = StyleSheet.create({
   fButton: { width: 52, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderColor: colors.line },
   fBadge: { position: 'absolute', top: 8, right: 7, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   fBadgeText: { fontSize: 11, fontFamily: fonts.heavy, color: '#FFFFFF' },
+  skel: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 14 },
+  skelPhoto: { width: '100%', aspectRatio: 1, borderRadius: 14, backgroundColor: colors.well, marginBottom: 12 },
+  skelLine: { height: 12, borderRadius: 6, backgroundColor: colors.well, marginTop: 7, marginLeft: 4 },
   fGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   fCell: { width: '48.6%', flexDirection: 'row' },
   sBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, height: 50, paddingLeft: 16, paddingRight: 6, borderRadius: 25, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: colors.yellow },

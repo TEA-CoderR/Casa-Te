@@ -18,7 +18,7 @@ import { useClubSettings, useDelivery, useLayout, useStores } from '@/lib/hooks'
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
 import { HomeDesktop } from '@/components/site/HomeDesktop';
-import { ALL_PRODUCTS } from '@/lib/links';
+import { ALL_PRODUCTS, productList } from '@/lib/links';
 
 /** Desktop web gets the catalogue-style home; phones and the native app keep the phone home. */
 export default function HomeScreen() {
@@ -65,7 +65,10 @@ function HomePhone() {
   const totalProducts = Object.values(counts.data ?? {}).reduce((a, b) => a + b, 0);
   const coverFor = (top: CategoryRow) => covers.data?.[top.id]?.image
     ? covers.data[top.id] : all.filter((c) => c.parent_id === top.id).map((c) => covers.data?.[c.id]).find((c) => c?.image);
-  const openCatalog = (params: Record<string, string>) => router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: '', ...params } });
+  // Lists (a department, the offers, "In evidenza") open as their own screen, so back returns here; search opens on Categorie.
+  const openCatalog = (params: Record<string, string>) => params.search
+    ? router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: '', ...params } })
+    : router.push(productList(params));
   const firstName = profile.data?.full_name?.trim().split(/\s+/)[0] ?? '';
   const active = (orders.data ?? []).find((o) => ACTIVE.has(o.status));
 
