@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, BackHandler, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { brandLogoStackedGreen, STACKED_ASPECT } from '@/config/brand';
 import { Icon } from '@/components/Icon';
 import { useLayout } from '@/lib/hooks';
 import { isEmail } from '@casa-te/shared';
@@ -26,6 +29,7 @@ function webRedirect(next?: string): string | undefined {
 }
 
 type Mode = 'password' | 'register' | 'code';
+type Step = 'welcome' | 'login' | 'code' | 'register' | 'privacy';
 const codeSent = (to: string) => `Abbiamo inviato un codice a ${to}. Inseriscilo qui sotto. Controlla anche lo spam.`;
 const MIN_PASSWORD = 8;
 
@@ -44,8 +48,13 @@ export default function SignInScreen() {
   const { next } = useLocalSearchParams<{ next?: string }>();
   const { wide } = useLayout();
   const [mode, setMode] = useState<Mode>('password');
+  // Phone only: which page of the flow is showing (the email code page shows whenever `awaiting` is set).
+  const [step, setStep] = useState<Step>('welcome');
+  const codeRef = useRef<TextInput>(null);
   // After sending a code (sign-in) or creating an account that must confirm its email.
   const [awaiting, setAwaiting] = useState<null | 'email' | 'signup'>(null);
+  // The code page opens with the keyboard up (autoFocus alone can miss while the page fades in).
+  useEffect(() => { if (!awaiting) return; const t = setTimeout(() => codeRef.current?.focus(), 250); return () => clearTimeout(t); }, [awaiting]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -89,7 +98,8 @@ export default function SignInScreen() {
   const register = async () => {
     if (!isEmail(email)) { setError('Inserisci un indirizzo email valido.'); return; }
     if (passwordStrength(password).score < 2) { setError(`Scegli una password di almeno ${MIN_PASSWORD} caratteri con lettere e numeri.`); return; }
-    if (password !== password2) { setError('Le due password non coincidono.'); return; }
+    // The phone asks the password once, with a show button; the wide form keeps the second field.
+    if (wide && password !== password2) { setError('Le due password non coincidono.'); return; }
     if (!terms) { setError('Per creare l’account devi accettare le Condizioni di vendita e l’Informativa privacy.'); return; }
     setBusy(true); setError(''); setInfo('');
     const { data, error: e } = await supabase.auth.signUp({ email: cleanEmail, password, options: { emailRedirectTo: webRedirect(next) } });
@@ -189,94 +199,140 @@ export default function SignInScreen() {
     <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: colors.muted, lineHeight: 18 }}>Voglio ricevere offerte e novità CASA & TE via email (facoltativo, revocabile in ogni momento).</Text>
   </Checkbox>;
 
-  // Phone (design F, F-Accesso): the awning with the logo and a large title, an "Accedi / Crea account" switch,
-  // fields grouped in a white card, and the email code as six boxes.
+  // Phone: one task per page on a plain white sheet (welcome → sign in / code / account → privacy → email code),
+  // a large sans title, outlined fields and one pill button at the bottom.
   if (!wide) {
-    const pTitle = awaiting === 'signup' ? 'Conferma la tua email' : awaiting === 'email' ? 'Controlla la tua email'
-      : mode === 'register' ? 'Crea il tuo account' : mode === 'code' ? 'Accedi con un codice' : 'Bentornato';
-    const pSub = awaiting ? 'Il codice è valido per pochi minuti.'
-      : mode === 'register' ? 'Bastano email e password: segui ordini e ritiri.'
-      : mode === 'code' ? 'Niente password: ti inviamo un codice via email.' : 'Accedi per ordinare e ritirare nel tuo negozio.';
-    const close = () => router.canGoBack() ? router.back() : router.replace('/');
-    const header = <BrandHeader logo logoHeight={34} stacked titleGap={22} titleSize={32} title={pTitle} subtitle={pSub} pad={[14, 20, 34]}
-      right={<HeaderBack icon="close" label="Chiudi" onPress={close} />} />;
-    const boxes = Math.max(6, code.length);
+    const verifying = !!awaiting;
+    const back = () => {
+      if (busy) return;
+      if (verifying) { setAwaiting(null); setCode(''); setError(''); setInfo(''); return; }
+      if (step === 'privacy') { setStep('register'); setError(''); return; }
+      if (step !== 'welcome') { switchMode('password'); setStep('welcome'); return; }
+      if (router.canGoBack()) router.back(); else router.replace('/');
+    };
+    const go = (to: Step) => { switchMode(to === 'code' ? 'code' : to === 'login' ? 'password' : 'register'); setStep(to); };
+    const rules = [
+      { ok: password.length >= MIN_PASSWORD, label: `Almeno ${MIN_PASSWORD} caratteri` },
+      { ok: /[A-Za-z]/.test(password) && /\d/.test(password), label: 'Lettere e numeri' },
+    ];
+    const toPrivacy = () => {
+      if (!isEmail(email)) { setError('Inserisci un indirizzo email valido.'); return; }
+      if (passwordStrength(password).score < 2) { setError(`Scegli una password di almeno ${MIN_PASSWORD} caratteri con lettere e numeri.`); return; }
+      setError(''); setStep('privacy');
+    };
     const full = code.length >= 6;
-    const fieldRow = (label: string, input: React.ReactNode, last: boolean) => <View style={[styles.pRow, !last && styles.pRule]}>
-      <Text style={styles.pLabel}>{label}</Text>{input}</View>;
-    return <Screen stack header={header} ground={colors.page} contentContainerStyle={{ padding: 16, paddingTop: 16 }}>
+    const boxes = Math.max(6, code.length);
+    const page = verifying ? 'verify' : step;
+
+    const emailInput = <AuthField label="Email" value={email} onChangeText={(v) => { setEmail(v); setError(''); }} keyboardType="email-address" autoCapitalize="none"
+      autoComplete="email" textContentType="emailAddress" autoFocus returnKeyType={step === 'code' ? 'go' : 'next'}
+      onSubmitEditing={step === 'code' ? sendCode : undefined} />;
+    const passwordInput = <AuthField label="Password" value={password} onChangeText={(v) => { setPassword(v); setError(''); }} secureTextEntry={!showPassword}
+      autoCapitalize="none" autoCorrect={false} autoComplete={step === 'register' ? 'new-password' : 'current-password'}
+      textContentType={step === 'register' ? 'newPassword' : 'password'} returnKeyType="go" onSubmitEditing={step === 'register' ? toPrivacy : signIn}
+      right={<Pressable onPress={() => setShowPassword((v) => !v)} accessibilityRole="button" accessibilityLabel={showPassword ? 'Nascondi la password' : 'Mostra la password'}
+        hitSlop={10} style={styles.eye}><Icon name={showPassword ? 'eyeOff' : 'eye'} size={24} color={colors.text} strokeWidth={1.8} /></Pressable>} />;
+    const errorLine = !!error && <Text style={styles.aError} accessibilityLiveRegion="polite">{error}</Text>;
+
+    const body = page === 'welcome' ? <View style={{ flex: 1 }}>
+      <View style={styles.aHero}>
+        <Image source={brandLogoStackedGreen} style={{ width: 132 * STACKED_ASPECT, height: 132 }} resizeMode="contain"
+          accessibilityLabel="Casa & Te — Per la tua casa e per te" accessibilityRole="header" />
+      </View>
+      <Text style={styles.aTitle}>{'Benvenuto in CASA\u00A0&\u00A0TE'}</Text>
+      <Text style={styles.aText}>Accedi o registrati: ordini dal tuo negozio, ritiri gratis e segui ogni ordine dall’app.</Text>
+    </View>
+    : page === 'login' ? <View>
+      <SmallLogo />
+      <Text style={styles.aTitle}>Accedi</Text>
+      <Text style={styles.aText}>Inserisci email e password.</Text>
+      <View style={styles.aFields}>{emailInput}{passwordInput}</View>
+      {errorLine}
+      <View style={styles.aLinks}>
+        <TextLink label="Password dimenticata?" onPress={() => go('code')} />
+        <TextLink label="Accedi con un codice email" onPress={() => go('code')} />
+      </View>
+    </View>
+    : page === 'code' ? <View>
+      <SmallLogo />
+      <Text style={styles.aTitle}>Accedi con un codice</Text>
+      <Text style={styles.aText}>Ti inviamo un codice via email: niente password. Funziona anche se l’hai dimenticata.</Text>
+      <View style={styles.aFields}>{emailInput}</View>
+      {errorLine}
+      <Text style={styles.aNote}>Password dimenticata? Accedi con il codice, poi vai su Profilo → Password per sceglierne una nuova.</Text>
+    </View>
+    : page === 'register' ? <View>
+      <SmallLogo />
+      <Text style={styles.aTitle}>Crea il tuo account</Text>
+      <Text style={styles.aText}>Bastano email e password.</Text>
+      <View style={styles.aFields}>{emailInput}{passwordInput}</View>
+      <View style={styles.aRules} accessibilityLabel={`Password: ${rules.map((r) => `${r.label} ${r.ok ? 'fatto' : 'da fare'}`).join(', ')}`}>
+        {rules.map((r) => <View key={r.label} style={styles.aRule}>
+          {r.ok ? <Icon name="check" size={16} color={colors.green} strokeWidth={2.6} /> : <View style={styles.aDot} />}
+          <Text style={[styles.aRuleText, r.ok && { color: colors.green }]}>{r.label}</Text>
+        </View>)}
+      </View>
+      {errorLine}
+    </View>
+    : page === 'privacy' ? <View>
+      <Text style={[styles.aTitle, { marginTop: 8 }]}>Preferenze privacy</Text>
+      <Text style={styles.aText}>Un’ultima cosa prima di creare l’account di <Text style={{ fontFamily: fonts.sansBold }}>{cleanEmail}</Text>.</Text>
+      <View style={styles.aToggles}>
+        <ToggleRow value={terms} onChange={(v) => { setTerms(v); setError(''); }} required
+          label="Ho letto e accetto le Condizioni di vendita e l’Informativa privacy (obbligatorio)." />
+        <ToggleRow value={marketing} onChange={setMarketing}
+          label="Voglio ricevere offerte e novità CASA & TE via email. Puoi cambiare idea quando vuoi." />
+      </View>
+      {errorLine}
+      <View style={styles.aRuleLine} />
+      <TextLink label="Condizioni di vendita" onPress={() => router.push('/legal/terms')} external />
+      <TextLink label="Informativa privacy" onPress={() => router.push('/legal/privacy')} external />
+      <Text style={styles.aNote}>Dopo, ti inviamo un codice via email per confermare l’indirizzo.</Text>
+    </View>
+    : <View>
+      <SmallLogo />
+      <Text style={styles.aTitle}>{awaiting === 'signup' ? 'Conferma la tua email' : 'Controlla la tua email'}</Text>
+      <Text style={styles.aText}>Abbiamo inviato un codice a <Text style={{ fontFamily: fonts.sansBold }}>{email.trim()}</Text>. Scrivilo qui sotto; controlla anche lo spam.</Text>
+      <Pressable style={styles.boxes} onPress={() => codeRef.current?.focus()} accessible={false}>
+        {Array.from({ length: boxes }, (_, i) => <View key={i} style={[styles.box, i === code.length && styles.boxOn]}>
+          <Text style={styles.boxText}>{code[i] ?? ''}</Text></View>)}
+        <TextInput ref={codeRef} value={code} onChangeText={(v) => { setCode(v.replace(/\D/g, '').slice(0, 10)); setError(''); }} keyboardType="number-pad" maxLength={10}
+          autoComplete="one-time-code" textContentType="oneTimeCode" autoFocus onSubmitEditing={verify} accessibilityLabel="Codice ricevuto via email"
+          caretHidden style={styles.codeInput} />
+      </Pressable>
+      {errorLine}
+      <View style={styles.aLinksRow}>
+        <TextLink label="Invia di nuovo il codice" onPress={awaiting === 'signup' ? resendConfirmation : sendCode} />
+        <TextLink label="Cambia email" onPress={() => { if (busy) return; setAwaiting(null); setCode(''); setError(''); setInfo(''); if (step === 'privacy') setStep('register'); }} />
+      </View>
+    </View>;
+
+    const footer = page === 'welcome' ? <View style={styles.aPair}>
+      <AuthButton title="Accedi" kind="outline" onPress={() => go('login')} style={{ flex: 1 }} />
+      <AuthButton title="Registrati" onPress={() => go('register')} style={{ flex: 1 }} />
+    </View>
+    : page === 'login' ? <AuthButton title="Accedi" busy={busy} onPress={signIn} />
+    : page === 'code' ? <AuthButton title="Invia il codice" busy={busy} onPress={sendCode} />
+    : page === 'register' ? <AuthButton title="Continua" onPress={toPrivacy} />
+    : page === 'privacy' ? <AuthButton title="Crea account" busy={busy} disabled={!terms} onPress={register} />
+    : <AuthButton title={full ? (awaiting === 'signup' ? 'Conferma e accedi' : 'Accedi') : `Inserisci le ${boxes} cifre`} busy={busy} disabled={!full} onPress={verify} />;
+
+    return <SafeAreaView style={styles.aSafe} edges={['top', 'bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
-      {awaiting ? <View>
-        <Text style={styles.pIntro}>Abbiamo inviato un codice a <Text style={{ fontFamily: fonts.sansBold, color: colors.text }}>{email.trim()}</Text>. Scrivilo qui sotto; controlla anche lo spam.</Text>
-        <View style={styles.boxes}>
-          {Array.from({ length: boxes }, (_, i) => <View key={i} style={[styles.box, i === code.length && styles.boxOn]}>
-            <Text style={styles.boxText}>{code[i] ?? ''}</Text></View>)}
-          <TextInput value={code} onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 10))} keyboardType="number-pad" maxLength={10}
-            autoComplete="one-time-code" textContentType="oneTimeCode" autoFocus onSubmitEditing={verify} accessibilityLabel="Codice ricevuto via email"
-            caretHidden style={styles.codeInput} />
-        </View>
-        {!!error && <Text style={styles.pError} accessibilityLiveRegion="polite">{error}</Text>}
-        <Pressable onPress={verify} disabled={!full || busy} accessibilityRole="button" accessibilityState={{ disabled: !full, busy }}
-          style={[styles.pPrimary, !full && { backgroundColor: colors.line }]}>
-          {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[styles.pPrimaryText, !full && { color: colors.muted }]}>
-            {full ? (awaiting === 'signup' ? 'Conferma e accedi' : 'Accedi') : `Inserisci le ${boxes} cifre`}</Text>}
+      <BackKey onBack={back} />
+      <View style={styles.aBar}>
+        <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={page === 'welcome' ? 'Chiudi' : 'Indietro'} hitSlop={10}
+          style={({ pressed }) => [styles.aBarButton, pressed && { opacity: 0.6 }]}>
+          <Icon name={page === 'welcome' ? 'close' : 'back'} size={page === 'welcome' ? 24 : 28} color={colors.text} strokeWidth={1.9} />
         </Pressable>
-        <View style={styles.pLinks}>
-          <Pressable onPress={awaiting === 'signup' ? resendConfirmation : sendCode} disabled={busy} accessibilityRole="button" hitSlop={6}><Text style={styles.pLink}>Invia di nuovo il codice</Text></Pressable>
-          <Pressable onPress={() => awaiting === 'signup' ? switchMode('register') : (setAwaiting(null), setCode(''), setError(''))} disabled={busy} accessibilityRole="button" hitSlop={6}>
-            <Text style={styles.pLink}>Cambia email</Text></Pressable>
-        </View>
-      </View> : <View>
-        {mode !== 'code' && <View style={styles.seg} accessibilityRole="tablist">
-          {([['password', 'Accedi'], ['register', 'Crea account']] as const).map(([m, label]) => <Pressable key={m} onPress={() => switchMode(m)}
-            accessibilityRole="tab" accessibilityState={{ selected: mode === m }} style={[styles.segItem, mode === m && styles.segOn]}>
-            <Text style={styles.segText}>{label}</Text></Pressable>)}
-        </View>}
-        <View style={[styles.pCard, mode !== 'code' && { marginTop: 14 }]}>
-          {fieldRow('Email', <TextInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email"
-            textContentType="emailAddress" autoFocus returnKeyType="next" placeholder="nome@esempio.it" placeholderTextColor={colors.faint} style={styles.pInput} accessibilityLabel="Email" />, mode === 'code')}
-          {mode !== 'code' && fieldRow('Password', <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TextInput value={password} onChangeText={setPassword} secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false}
-              autoComplete={mode === 'register' ? 'new-password' : 'current-password'} textContentType={mode === 'register' ? 'newPassword' : 'password'}
-              returnKeyType="go" onSubmitEditing={mode === 'register' ? register : signIn} placeholder={mode === 'register' ? `Almeno ${MIN_PASSWORD} caratteri` : ''}
-              placeholderTextColor={colors.faint} style={[styles.pInput, { flex: 1 }]} accessibilityLabel="Password" />
-            <Pressable onPress={() => setShowPassword((v) => !v)} accessibilityRole="button" hitSlop={8}><Text style={styles.pShow}>{showPassword ? 'Nascondi' : 'Mostra'}</Text></Pressable>
-          </View>, mode !== 'register')}
-          {mode === 'register' && fieldRow('Ripeti la password', <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TextInput value={password2} onChangeText={setPassword2} secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false} autoComplete="new-password"
-              textContentType="newPassword" returnKeyType="go" onSubmitEditing={register} placeholder="Scrivila di nuovo" placeholderTextColor={colors.faint}
-              style={[styles.pInput, { flex: 1 }]} accessibilityLabel="Ripeti la password" />
-            {!!password2 && <Icon name={password2 === password ? 'check' : 'close'} size={18} color={password2 === password ? colors.green : colors.danger} strokeWidth={2.6} />}
-          </View>, true)}
-        </View>
-        {mode === 'register' && !!password && (() => {
-          const st = passwordStrength(password);
-          return <View style={styles.meter} accessibilityLabel={`Sicurezza della password: ${st.label}`}>
-            <View style={styles.meterBars}>{[1, 2, 3, 4].map((i) => <View key={i} style={[styles.meterBar, i <= st.score && { backgroundColor: st.color }]} />)}</View>
-            <Text style={[styles.meterText, { color: st.color }]}>{st.label}</Text>
-          </View>;
-        })()}
-        {mode === 'register' && <Text style={styles.pHint}>Almeno {MIN_PASSWORD} caratteri con lettere e numeri. Più è lunga, meglio è: aggiungi maiuscole o simboli.</Text>}
-        {mode === 'register' && !!password2 && password2 !== password && <Text style={styles.pError}>Le due password non coincidono.</Text>}
-        {!!error && <Text style={styles.pError} accessibilityLiveRegion="polite">{error}</Text>}
-        {!!info && !awaiting && <Text style={styles.pIntro}>{info}</Text>}
-        {mode === 'register' && <View style={{ marginTop: 10, marginHorizontal: 2 }}>
-          <Checkbox checked={terms} onChange={setTerms}>
-            <Text style={styles.pCheck}>Ho letto e accetto le <Text style={styles.pLinkInline} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e l’<Text style={styles.pLinkInline} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text> <Text style={{ color: colors.danger }}>*</Text></Text>
-          </Checkbox>
-          {marketingBox}
-          <Text style={styles.pHint}>Ti invieremo un codice via email per confermare l’indirizzo prima di attivare l’account.</Text>
-        </View>}
-        <Pressable onPress={mode === 'register' ? register : mode === 'code' ? sendCode : signIn} disabled={busy} accessibilityRole="button" accessibilityState={{ busy }} style={styles.pPrimary}>
-          {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.pPrimaryText}>{mode === 'register' ? 'Crea account' : mode === 'code' ? 'Invia il codice' : 'Accedi'}</Text>}
-        </Pressable>
-        {mode !== 'register' && <Pressable onPress={() => switchMode(mode === 'code' ? 'password' : 'code')} disabled={busy} accessibilityRole="button" style={styles.pSecondary}>
-          <Icon name="mail" size={18} color={colors.green} strokeWidth={2} />
-          <Text style={styles.pSecondaryText}>{mode === 'code' ? 'Accedi con la password' : 'Accedi con un codice email'}</Text>
-        </Pressable>}
-        {mode === 'code' && <Text style={styles.pLegal}>Password dimenticata? Accedi con il codice, poi vai su Profilo → Password per sceglierne una nuova.</Text>}
-      </View>}
-    </Screen>;
+      </View>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.aBody} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <Animated.View key={page} entering={FadeIn.duration(180)} style={{ flexGrow: 1 }}>{body}</Animated.View>
+        </ScrollView>
+        <View style={styles.aFooter}>{footer}</View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>;
   }
 
   return <Screen stack maxWidth={480}>
@@ -337,38 +393,108 @@ export default function SignInScreen() {
   </Screen>;
 }
 
+/** Android back: one page back in the flow instead of closing it. */
+function BackKey({ onBack }: { onBack: () => void }) {
+  const latest = useRef(onBack);
+  latest.current = onBack;
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { latest.current(); return true; });
+    return () => sub.remove();
+  }, []);
+  return null;
+}
+
+function SmallLogo() {
+  return <Image source={brandLogoStackedGreen} style={{ width: 52 * STACKED_ASPECT, height: 52, marginBottom: 22 }} resizeMode="contain"
+    accessibilityLabel="Casa & Te" />;
+}
+
+/** Outlined field: the label sits inside as a placeholder and moves up to the edge once there is text or focus. */
+function AuthField({ label, right, value, ...input }: TextInputProps & { label: string; value: string; right?: React.ReactNode }) {
+  const [focused, setFocused] = useState(false);
+  const raised = focused || !!value;
+  return <View style={[styles.field, focused && styles.fieldOn]}>
+    {raised && <Text style={[styles.fieldLabel, focused && { color: colors.green }]}>{label}</Text>}
+    <TextInput {...input} value={value} placeholder={raised ? '' : label} placeholderTextColor="#8C9189" accessibilityLabel={label}
+      onFocus={(e) => { setFocused(true); input.onFocus?.(e); }} onBlur={(e) => { setFocused(false); input.onBlur?.(e); }}
+      style={[styles.fieldInput, raised && { paddingTop: 14 }]} />
+    {right}
+  </View>;
+}
+
+/** The pill at the bottom of each page: logo yellow with dark text, or outlined. */
+function AuthButton({ title, onPress, kind = 'fill', busy, disabled, style }: {
+  title: string; onPress: () => void; kind?: 'fill' | 'outline'; busy?: boolean; disabled?: boolean; style?: StyleProp<ViewStyle>;
+}) {
+  const off = disabled || busy;
+  return <Pressable onPress={onPress} disabled={off} accessibilityRole="button" accessibilityState={{ disabled: !!disabled, busy: !!busy }}
+    style={({ pressed }) => [styles.pill, kind === 'outline' ? styles.pillOutline : styles.pillFill, disabled && styles.pillOff, pressed && { opacity: 0.85 }, style]}>
+    {busy ? <ActivityIndicator color={colors.text} /> : <Text style={[styles.pillText, disabled && { color: colors.muted }]}>{title}</Text>}
+  </Pressable>;
+}
+
+function TextLink({ label, onPress, external }: { label: string; onPress: () => void; external?: boolean }) {
+  return <Pressable onPress={onPress} accessibilityRole="link" hitSlop={6} style={styles.tLink}>
+    <Text style={styles.tLinkText}>{label}</Text>
+    {external && <Icon name="arrow" size={16} color={colors.green} strokeWidth={2} />}
+  </Pressable>;
+}
+
+/** A consent line with an on/off switch on the right. */
+function ToggleRow({ label, value, onChange, required }: { label: string; value: boolean; onChange: (v: boolean) => void; required?: boolean }) {
+  return <Pressable onPress={() => onChange(!value)} accessibilityRole="switch" accessibilityState={{ checked: value }} accessibilityLabel={label} style={styles.tRow}>
+    <Text style={styles.tText}>{required && <Text style={{ color: colors.danger }}>* </Text>}{label}</Text>
+    <View style={[styles.switch, value && styles.switchOn]}>
+      <View style={[styles.knob, value && styles.knobOn]} />
+    </View>
+  </Pressable>;
+}
+
 const styles = StyleSheet.create({
-  seg: { flexDirection: 'row', padding: 4, borderRadius: 16, backgroundColor: colors.well },
-  segItem: { flex: 1, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  segOn: { backgroundColor: '#FFFFFF', shadowColor: '#18201A', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  segText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
-  pCard: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 6, borderBottomWidth: 1, borderColor: colors.line },
-  pRow: { paddingVertical: 10 },
-  pRule: { borderBottomWidth: 1, borderColor: '#EFECE3' },
-  pLabel: { fontSize: 12.5, fontFamily: fonts.sansBold, color: colors.muted },
-  pInput: { paddingTop: 4, paddingBottom: 0, fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0 } as object,
-  pShow: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green },
-  pError: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.danger, marginTop: 10, marginHorizontal: 4 },
-  pIntro: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: '#4E554B', marginHorizontal: 4, marginTop: 6 },
-  meter: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, marginHorizontal: 4 },
-  meterBars: { flex: 1, flexDirection: 'row', gap: 4 },
-  meterBar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.line },
-  meterText: { fontSize: 13, fontFamily: fonts.sansBold, minWidth: 90, textAlign: 'right' },
-  pHint: { fontSize: 12.5, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 6, marginHorizontal: 4 },
-  pCheck: { fontSize: 14, lineHeight: 20, fontFamily: fonts.sans, color: '#4E554B' },
-  pLegal: { fontSize: 13, lineHeight: 19, fontFamily: fonts.sans, color: colors.muted, marginTop: 12, marginHorizontal: 4 },
-  pLinkInline: { color: colors.green, fontFamily: fonts.sansBold, textDecorationLine: 'underline' },
-  pPrimary: { marginTop: 16, height: 58, borderRadius: 29, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-  pPrimaryText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },
-  pSecondary: { marginTop: 8, height: 52, borderRadius: 26, borderWidth: 1.5, borderColor: '#D5D0C3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  pSecondaryText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
-  boxes: { flexDirection: 'row', gap: 8, marginTop: 16 },
-  box: { flex: 1, height: 58, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
+  aSafe: { flex: 1, backgroundColor: '#FFFFFF' },
+  aBar: { height: 56, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center' },
+  aBarButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  aBody: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 20, paddingBottom: 24 },
+  aHero: { flex: 1, minHeight: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
+  aTitle: { fontSize: 34, lineHeight: 40, letterSpacing: -0.6, fontFamily: fonts.sansBold, color: colors.text },
+  aText: { marginTop: 14, fontSize: 17, lineHeight: 24, fontFamily: fonts.sans, color: '#2E352F' },
+  aNote: { marginTop: 18, fontSize: 14.5, lineHeight: 21, fontFamily: fonts.sans, color: colors.muted },
+  aFields: { marginTop: 28, gap: 18 },
+  aError: { marginTop: 12, fontSize: 14.5, lineHeight: 20, fontFamily: fonts.sansSemiBold, color: colors.danger },
+  aLinks: { marginTop: 18, alignItems: 'flex-start' },
+  aLinksRow: { marginTop: 14, flexDirection: 'row', justifyContent: 'space-between' },
+  aRules: { marginTop: 16, gap: 8 },
+  aRule: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  aDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#A3A79F', marginHorizontal: 5 },
+  aRuleText: { fontSize: 15, fontFamily: fonts.sans, color: colors.muted },
+  aToggles: { marginTop: 26, gap: 22 },
+  aRuleLine: { height: 1, backgroundColor: colors.line, marginTop: 26, marginBottom: 6 },
+  aFooter: { paddingHorizontal: 28, paddingTop: 10, paddingBottom: 16, backgroundColor: '#FFFFFF' },
+  aPair: { flexDirection: 'row', gap: 14 },
+  field: { minHeight: 60, borderWidth: 1.5, borderColor: '#8C9189', borderRadius: 8, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
+  fieldOn: { borderColor: colors.green, borderWidth: 2, paddingHorizontal: 15.5 },
+  fieldLabel: { position: 'absolute', left: 16, top: 7, fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  fieldInput: { flex: 1, height: 58, fontSize: 17, fontFamily: fonts.sans, color: colors.text, outlineWidth: 0, outlineStyle: 'none' } as object,
+  eye: { paddingLeft: 10, paddingVertical: 8 },
+  pill: { height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  pillFill: { backgroundColor: colors.yellow },
+  pillOutline: { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#5F665C' },
+  pillOff: { backgroundColor: colors.well, borderColor: colors.well },
+  pillText: { fontSize: 18, fontFamily: fonts.sansSemiBold, color: colors.text },
+  tLink: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
+  tLinkText: { fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.green, textDecorationLine: 'underline' },
+  tRow: { flexDirection: 'row', alignItems: 'center', gap: 18 },
+  tText: { flex: 1, fontSize: 16, lineHeight: 23, fontFamily: fonts.sans, color: colors.text },
+  switch: { width: 54, height: 32, borderRadius: 16, borderWidth: 2, borderColor: '#5F665C', justifyContent: 'center', paddingHorizontal: 4, backgroundColor: '#FFFFFF' },
+  switchOn: { backgroundColor: colors.green, borderColor: colors.green },
+  knob: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#5F665C' },
+  knobOn: { backgroundColor: '#FFFFFF', transform: [{ translateX: 22 }] },
+  boxes: { flexDirection: 'row', gap: 8, marginTop: 28 },
+  box: { flex: 1, height: 60, borderRadius: 8, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#8C9189', alignItems: 'center', justifyContent: 'center' },
   boxOn: { borderWidth: 2, borderColor: colors.green },
   boxText: { fontSize: 24, fontFamily: fonts.heavy, color: colors.text },
   codeInput: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.01, fontSize: 1, color: 'transparent' } as object,
-  pLinks: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  pLink: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.green, paddingVertical: 12 },
   show: { position: 'absolute', right: 14, top: 38, paddingVertical: 4 },
   showText: { fontSize: 13, color: colors.green, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
   links: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginTop: 16 },
