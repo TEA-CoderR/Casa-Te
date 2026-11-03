@@ -6,6 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Icon } from '@/components/Icon';
 import { BrandLogo } from '@/components/BrandLogo';
+
+/** The logo in its own colours: lime lettering on the shop-sign green. */
+const SIGN = { ground: '#3B6B31', ink: '#CDE434' };
 import { useLayout } from '@/lib/hooks';
 import { isEmail, isValidPassword, MIN_PASSWORD, PASSWORD_HELP, passwordRules } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
@@ -231,7 +234,7 @@ export default function SignInScreen() {
 
     const body = page === 'welcome' ? <View style={{ flex: 1 }}>
       <View style={styles.aHero}>
-        <BrandLogo width={290} tagline />
+        <View style={styles.aHeroSign}><BrandLogo width={210} tagline color={SIGN.ink} /></View>
       </View>
       <Text style={styles.aTitle}>{'Benvenuto in CASA\u00A0&\u00A0TE'}</Text>
       <Text style={styles.aText}>Accedi o registrati: ordini dal tuo negozio, ritiri gratis e segui ogni ordine dall’app.</Text>
@@ -400,7 +403,7 @@ function BackKey({ onBack }: { onBack: () => void }) {
 }
 
 function SmallLogo() {
-  return <View style={{ marginBottom: 26, alignSelf: 'flex-start' }}><BrandLogo width={118} /></View>;
+  return <View style={styles.aSign}><BrandLogo width={96} color={SIGN.ink} /></View>;
 }
 
 /** Outlined field: the label sits inside as a placeholder and moves up to the edge once there is text or focus. */
@@ -451,6 +454,8 @@ const styles = StyleSheet.create({
   aBarButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   aBody: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 20, paddingBottom: 24 },
   aHero: { flex: 1, minHeight: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
+  aHeroSign: { paddingVertical: 26, paddingHorizontal: 30, borderRadius: 24, backgroundColor: SIGN.ground },
+  aSign: { alignSelf: 'flex-start', marginBottom: 26, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 14, backgroundColor: SIGN.ground },
   aTitle: { fontSize: 34, lineHeight: 40, letterSpacing: -0.6, fontFamily: fonts.sansBold, color: colors.text },
   aText: { marginTop: 14, fontSize: 17, lineHeight: 24, fontFamily: fonts.sans, color: '#2E352F' },
   aNote: { marginTop: 18, fontSize: 14.5, lineHeight: 21, fontFamily: fonts.sans, color: colors.muted },
