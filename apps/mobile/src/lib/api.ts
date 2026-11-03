@@ -1,7 +1,7 @@
 // Data access for the customer app. All prices/stock/shipping come from the database; the app
 // never computes an amount that is charged.
 import {
-  flyerFileUrl, productImageUrl, type AppSettingsRow, type FlyerRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
+  flyerFileUrl, productImageUrl, searchKey, type AppSettingsRow, type FlyerRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
   type CreateOrderInput, type OrderEventRow, type OrderItemRow, type OrderRow, type PickupPointRow,
   type ClubOffer, type ProductReviewRow, type ProductRow, type ProfileRow, type Quote, type QuoteInput,
   type ReviewEligibility, type StoreRow, type CompanyRow,
@@ -114,7 +114,7 @@ export async function fetchOffers(storeId: string | null, limit: number): Promis
 export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogProduct[]; hasMore: boolean; total: number | null }> {
   const pageSize = q.pageSize ?? 40;
   const from = (q.page ?? 0) * pageSize;
-  const needle = q.search?.trim().toLowerCase().replace(/[%_,()]/g, ' ');
+  const needle = q.search ? searchKey(q.search) : '';
   // Products out of stock are listed only when searched for (or among the favourites): browsing shows what can be bought.
   const inStockOnly = !needle && !q.ids;
   let query = supabase.from('products')

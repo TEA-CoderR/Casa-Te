@@ -11,6 +11,7 @@ import { Screen } from '@/components/Screen';
 import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
 import { EmptyState, Loading, Notice, PrimaryButton } from '@/components/UI';
 import { Icon } from '@/components/Icon';
+import { RemoteImage } from '@/components/RemoteImage';
 import { colors, fonts } from '@/config/theme';
 import { fetchFlyers } from '@/lib/api';
 import { useLayout } from '@/lib/hooks';
@@ -80,7 +81,7 @@ function FlyerSection({ flyer, hanging, onOpen }: { flyer: Flyer; hanging: boole
     {!!cover && <Animated.View entering={FadeInDown.duration(380)} style={styles.coverWrap}>
       <Pressable onPress={() => onOpen(0)} accessibilityRole="button" accessibilityLabel={`Sfoglia ${flyer.title}`}
         style={({ pressed }) => [styles.cover, { aspectRatio: ratio }, pressed && { transform: [{ rotate: '-1deg' }, { scale: 0.985 }] }]}>
-        <Image source={{ uri: cover }} resizeMode="cover" style={styles.coverImage} accessibilityIgnoresInvertColors />
+        <RemoteImage uri={cover} contentFit="cover" style={styles.coverImage} />
       </Pressable>
       {left !== null && <View style={styles.tag} accessibilityElementsHidden>
         <View style={styles.tagHole} />
@@ -118,7 +119,7 @@ function FlyerSection({ flyer, hanging, onOpen }: { flyer: Flyer; hanging: boole
       <View style={styles.grid}>{flyer.pages.map((uri, i) => <Pressable key={uri} onPress={() => onOpen(i)} accessibilityRole="button"
         accessibilityLabel={`${pageName(flyer, i)}, pagina ${i + 1} di ${flyer.pages.length}`} style={({ pressed }) => [styles.cell, pressed && { opacity: 0.8 }]}>
         <View style={[styles.thumb, { aspectRatio: ratio }]}>
-          <Image source={{ uri }} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
+          <RemoteImage uri={uri} contentFit="cover" style={StyleSheet.absoluteFill} />
           <View style={styles.thumbNumber}><Text style={styles.thumbNumberText}>{i + 1}</Text></View>
         </View>
         <Text style={styles.thumbName} numberOfLines={1}>{pageName(flyer, i)}</Text>
@@ -170,7 +171,7 @@ function FlyerViewer({ flyer, start, onClose }: { flyer: Flyer; start: number; o
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.vStrip}>
           {flyer.pages.map((uri, i) => <Pressable key={uri} onPress={() => go(i)} accessibilityRole="button" accessibilityLabel={`Vai a ${pageName(flyer, i)}`}
             style={[styles.vThumb, i === page && styles.vThumbOn]}>
-            <Image source={{ uri }} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
+            <RemoteImage uri={uri} contentFit="cover" style={StyleSheet.absoluteFill} />
           </Pressable>)}
         </ScrollView>
       </>}

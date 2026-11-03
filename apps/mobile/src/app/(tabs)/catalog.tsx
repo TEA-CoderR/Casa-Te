@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CategoryBrowser, SubcategorySheet, SubcategoryTabs, departmentCount, liveChildren } from '@/components/CategoryNav';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { RemoteImage } from '@/components/RemoteImage';
 import { router, useLocalSearchParams, useRoute } from 'expo-router';
 import { productList } from '@/lib/links';
 import type { CategoryRow } from '@casa-te/shared';
@@ -279,8 +280,7 @@ export default function CatalogScreen() {
                   accessibilityLabel={x.name} style={({ pressed }) => [styles.sCell, pressed && { opacity: 0.75 }]}>
                   <View style={styles.sTile}>
                     {covers.data?.[x.id]?.image
-                      ? <Image source={{ uri: covers.data[x.id].image as string }} resizeMode="contain" accessibilityIgnoresInvertColors
-                          style={[styles.sTileImage, { mixBlendMode: 'multiply' } as object]} />
+                      ? <RemoteImage uri={covers.data[x.id].image as string} style={[styles.sTileImage, { mixBlendMode: 'multiply' } as object]} />
                       : <CategoryIcon slug={c.slug} name={x.name} size={34} strokeWidth={1.4} />}
                   </View>
                   <Text style={styles.sCellText} numberOfLines={2}>{x.name}</Text>
@@ -313,12 +313,14 @@ export default function CatalogScreen() {
               </Pressable>;
             })}</View>
           </View>}
+          {!loading && !shown.length ? <Text style={styles.sNoProducts}>Nessun prodotto con questo nome: apri il reparto qui sopra.</Text> : <>
           <View style={styles.sResultsHead}>
             <Text style={styles.sCaps}>PRODOTTI</Text>
             <Text style={styles.sCount}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}${storeLabel ? ` a ${storeLabel}` : ''}`}</Text>
           </View>
           <View style={styles.fGrid}>{loading && !items.length ? <ProductSkeletons n={4} /> : shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
           {more}
+          </>}
         </View>}
       </Screen>;
     }
@@ -435,8 +437,7 @@ export default function CatalogScreen() {
 function Thumb({ image, slug, name, size }: { image: string | null; slug: string; name: string; size: number }) {
   return <View style={{ width: size, height: size, borderRadius: size * 0.24, backgroundColor: colors.photo, borderWidth: 1, borderColor: colors.photoLine,
     overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
-    {image ? <Image source={{ uri: image }} resizeMode="contain" accessibilityIgnoresInvertColors
-        style={{ position: 'absolute', top: size * 0.1, left: size * 0.1, right: size * 0.1, bottom: size * 0.1 }} />
+    {image ? <RemoteImage uri={image} style={{ position: 'absolute', top: size * 0.1, left: size * 0.1, right: size * 0.1, bottom: size * 0.1 }} />
       : <CategoryIcon slug={slug} name={name} size={size * 0.55} strokeWidth={1.5} />}
   </View>;
 }
@@ -484,6 +485,7 @@ const styles = StyleSheet.create({
   sEmpty: { paddingTop: 64, paddingHorizontal: 32, alignItems: 'center' },
   sEmptyIcon: { alignItems: 'center', justifyContent: 'center' },
   sEmptyTitle: { fontSize: 23, lineHeight: 28, fontFamily: fonts.display, color: colors.text, textAlign: 'center', marginTop: 16, marginBottom: 6 },
+  sNoProducts: { marginTop: 18, fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: colors.muted },
   sEmptyText: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center' },
   sEmptyButton: { marginTop: 18, height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.green, justifyContent: 'center' },
   sEmptyButtonText: { fontSize: 15, fontFamily: fonts.sansBold, color: '#FFFFFF' },

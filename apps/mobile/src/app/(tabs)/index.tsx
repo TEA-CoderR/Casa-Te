@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { orderStatusLabel, type CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
@@ -12,6 +12,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
 import { BrandHeader, HangingCard, HeaderButton, HeaderSearch, StatusBand } from '@/components/BrandHeader';
 import { ProductImage } from '@/components/ProductImage';
+import { RemoteImage } from '@/components/RemoteImage';
 import { colors, fonts } from '@/config/theme';
 import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchFlyers, fetchOffers, fetchOrders, fetchProducts, fetchProfile, imageUrl, type CatalogProduct, type OrderWithItems } from '@/lib/api';
 import { useClubSettings, useDelivery, useLayout, useStores } from '@/lib/hooks';
@@ -145,7 +146,7 @@ function HomePhone() {
           {slides.map((s) => <Pressable key={s.key} onPress={s.onPress} accessibilityRole="link" accessibilityLabel={`${s.title}. ${s.text}. ${s.cta}`}
             style={[styles.slide, { width: slideWidth, backgroundColor: s.bg }]}>
             {(s.product || s.image) && <View style={[styles.slideArt, { backgroundColor: s.bg }]}>
-              {s.image ? <Image source={{ uri: s.image }} resizeMode="contain" style={{ width: '100%', height: '100%', mixBlendMode: 'multiply' } as object} accessibilityIgnoresInvertColors />
+              {s.image ? <RemoteImage uri={s.image} style={{ width: '100%', height: '100%', mixBlendMode: 'multiply' } as object} />
                 : <ProductImage uri={s.product!.image} sku={s.product!.sku} inset={0} aspect={168 / 180} blend backdrop={s.bg} />}
             </View>}
             <View style={styles.slideText}>
