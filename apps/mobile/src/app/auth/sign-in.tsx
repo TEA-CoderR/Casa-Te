@@ -4,7 +4,9 @@ import { ActivityIndicator, BackHandler, Image, KeyboardAvoidingView, Platform, 
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { brandLogoStackedGreen, STACKED_ASPECT } from '@/config/brand';
+// The shop sign (the app icon's lime lettering on green, cropped to the logo) marks every page.
+const SIGN_ASPECT = 904 / 416;
+const appIcon = require('../../../assets/brand/sign-tile.png');
 import { Icon } from '@/components/Icon';
 import { useLayout } from '@/lib/hooks';
 import { isEmail } from '@casa-te/shared';
@@ -236,8 +238,7 @@ export default function SignInScreen() {
 
     const body = page === 'welcome' ? <View style={{ flex: 1 }}>
       <View style={styles.aHero}>
-        <Image source={brandLogoStackedGreen} style={{ width: 132 * STACKED_ASPECT, height: 132 }} resizeMode="contain"
-          accessibilityLabel="Casa & Te — Per la tua casa e per te" accessibilityRole="header" />
+        <Image source={appIcon} style={styles.aIconBig} accessibilityLabel="Casa & Te" accessibilityRole="header" />
       </View>
       <Text style={styles.aTitle}>{'Benvenuto in CASA\u00A0&\u00A0TE'}</Text>
       <Text style={styles.aText}>Accedi o registrati: ordini dal tuo negozio, ritiri gratis e segui ogni ordine dall’app.</Text>
@@ -406,8 +407,7 @@ function BackKey({ onBack }: { onBack: () => void }) {
 }
 
 function SmallLogo() {
-  return <Image source={brandLogoStackedGreen} style={{ width: 52 * STACKED_ASPECT, height: 52, marginBottom: 22 }} resizeMode="contain"
-    accessibilityLabel="Casa & Te" />;
+  return <Image source={appIcon} style={styles.aIconSmall} accessibilityLabel="Casa & Te" />;
 }
 
 /** Outlined field: the label sits inside as a placeholder and moves up to the edge once there is text or focus. */
@@ -453,6 +453,8 @@ function ToggleRow({ label, value, onChange, required }: { label: string; value:
 
 const styles = StyleSheet.create({
   aSafe: { flex: 1, backgroundColor: '#FFFFFF' },
+  aIconBig: { width: 120 * SIGN_ASPECT, height: 120, borderRadius: 22 },
+  aIconSmall: { width: 50 * SIGN_ASPECT, height: 50, borderRadius: 10, marginBottom: 24 },
   aBar: { height: 56, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center' },
   aBarButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   aBody: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 20, paddingBottom: 24 },

@@ -10,4 +10,3 @@ export const MONOGRAM_ASPECT = 320 / 180;
 /** Stacked logo (butterflies over the name) on the phone awning, as in design F. */
 export const brandLogoStacked = require('../../assets/brand/logo-stacked-yellow.png');
 export const STACKED_ASPECT = 332 / 182;
-export const brandLogoStackedGreen = require('../../assets/brand/logo-stacked-green.png');
