@@ -29,7 +29,7 @@ const EDGE = 12;
  * products; the awning unrolls only back at the top of the page. A "back to top" button rises while scrolling and
  * hides once the page has been still for a moment.
  */
-export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, chips, overlay, children }: {
+export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, chips, overlay, resetKey, children }: {
   title: string; subtitle?: string; onBack?: () => void;
   /** Department named in the pill ("Cerca in Profumeria"); without it "Cerca in tutti i prodotti". */
   searchScope?: string;
@@ -39,6 +39,8 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   chips: ReactNode;
   /** Sheets and other overlays rendered over the page. */
   overlay?: ReactNode;
+  /** When it changes (another department or collection), the page goes back to the top. */
+  resetKey?: string;
   children: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
@@ -62,6 +64,7 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
     idle.current = setTimeout(() => setShowTop(false), TOP_IDLE);
   };
   useEffect(() => () => { if (idle.current) clearTimeout(idle.current); }, []);
+  useEffect(() => { ref.current?.scrollTo({ y: 0, animated: false }); }, [resetKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useAnimatedReaction(() => Math.round(y.value / 8), (now, before) => { if (before !== null && now !== before) scheduleOnRN(moved, now * 8); });
 
   const ease = useDerivedValue(() => {

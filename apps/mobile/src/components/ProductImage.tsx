@@ -1,4 +1,6 @@
-import { Image, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
+import { RemoteImage } from './RemoteImage';
 import { ProductVisual } from './ProductVisual';
 import { productImageCells } from '@/data/productImages';
 import { Icon } from './Icon';
@@ -16,9 +18,11 @@ export function ProductImage({ uri, sku, label, inset = 0.12, aspect = 1, blend,
   // the same view: the backdrop is painted here, right behind the photo, not only on the parent.
   const blendStyle = blend ? ({ mixBlendMode: 'multiply' } as object) : null;
   const backdropStyle = blend ? { backgroundColor: backdrop ?? colors.photo } : null;
-  if (uri) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [uri]);
+  if (uri && !failed) {
     return <View style={[{ width: '100%', aspectRatio: aspect, padding: `${inset * 100}%` as `${number}%` }, backdropStyle]}>
-      <Image source={{ uri }} resizeMode="contain" style={[{ width: '100%', height: '100%' }, blendStyle]} accessibilityLabel={label} />
+      <RemoteImage uri={uri} style={[{ width: '100%', height: '100%' }, blendStyle]} label={label} onFailed={() => setFailed(true)} />
     </View>;
   }
   if (sku && productImageCells[sku] !== undefined) return <ProductVisual id={sku} label={label} inset={inset} aspect={aspect} blend={blend} />;

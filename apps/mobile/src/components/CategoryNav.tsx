@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { CategoryRow } from '@casa-te/shared';
 import { colors, fonts } from '@/config/theme';
 import { BrandHeader } from './BrandHeader';
 import { CategoryIcon } from './CategoryIcon';
+import { RemoteImage } from './RemoteImage';
 import { Icon } from './Icon';
 
 type Covers = Record<string, { image: string | null }> | null | undefined;
@@ -44,7 +45,7 @@ export function CategoryPhoto({ image, slug, name, size, radius, bare }: {
 }) {
   return <View style={[styles.photo, bare && { borderWidth: 0 }, size ? { width: size, height: size, borderRadius: radius ?? size * 0.24 } : { width: '100%', aspectRatio: 1, borderRadius: radius ?? 14 }]}>
     {image
-      ? <Image source={{ uri: image }} resizeMode="contain" accessibilityIgnoresInvertColors style={[styles.photoImage, { mixBlendMode: 'multiply' } as object]} />
+      ? <RemoteImage uri={image} style={[styles.photoImage, { mixBlendMode: 'multiply' } as object]} />
       : <CategoryIcon slug={slug} name={name} size={size ? size * 0.5 : 30} strokeWidth={1.4} />}
   </View>;
 }

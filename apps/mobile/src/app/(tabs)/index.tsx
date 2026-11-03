@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { orderStatusLabel, type CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
@@ -12,13 +12,14 @@ import { Icon, type IconName } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
 import { BrandHeader, HangingCard, HeaderButton, HeaderSearch, StatusBand } from '@/components/BrandHeader';
 import { ProductImage } from '@/components/ProductImage';
+import { RemoteImage } from '@/components/RemoteImage';
 import { colors, fonts } from '@/config/theme';
 import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchFlyers, fetchOffers, fetchOrders, fetchProducts, fetchProfile, imageUrl, type CatalogProduct, type OrderWithItems } from '@/lib/api';
 import { useClubSettings, useDelivery, useLayout, useStores } from '@/lib/hooks';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
 import { HomeDesktop } from '@/components/site/HomeDesktop';
-import { ALL_PRODUCTS } from '@/lib/links';
+import { ALL_PRODUCTS, productList } from '@/lib/links';
 
 /** Desktop web gets the catalogue-style home; phones and the native app keep the phone home. */
 export default function HomeScreen() {
@@ -65,7 +66,10 @@ function HomePhone() {
   const totalProducts = Object.values(counts.data ?? {}).reduce((a, b) => a + b, 0);
   const coverFor = (top: CategoryRow) => covers.data?.[top.id]?.image
     ? covers.data[top.id] : all.filter((c) => c.parent_id === top.id).map((c) => covers.data?.[c.id]).find((c) => c?.image);
-  const openCatalog = (params: Record<string, string>) => router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: '', ...params } });
+  // Lists (a department, the offers, "In evidenza") open as their own screen, so back returns here; search opens on Categorie.
+  const openCatalog = (params: Record<string, string>) => params.search
+    ? router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: '', ...params } })
+    : router.push(productList(params));
   const firstName = profile.data?.full_name?.trim().split(/\s+/)[0] ?? '';
   const active = (orders.data ?? []).find((o) => ACTIVE.has(o.status));
 
@@ -142,7 +146,7 @@ function HomePhone() {
           {slides.map((s) => <Pressable key={s.key} onPress={s.onPress} accessibilityRole="link" accessibilityLabel={`${s.title}. ${s.text}. ${s.cta}`}
             style={[styles.slide, { width: slideWidth, backgroundColor: s.bg }]}>
             {(s.product || s.image) && <View style={[styles.slideArt, { backgroundColor: s.bg }]}>
-              {s.image ? <Image source={{ uri: s.image }} resizeMode="contain" style={{ width: '100%', height: '100%', mixBlendMode: 'multiply' } as object} accessibilityIgnoresInvertColors />
+              {s.image ? <RemoteImage uri={s.image} style={{ width: '100%', height: '100%', mixBlendMode: 'multiply' } as object} />
                 : <ProductImage uri={s.product!.image} sku={s.product!.sku} inset={0} aspect={168 / 180} blend backdrop={s.bg} />}
             </View>}
             <View style={styles.slideText}>

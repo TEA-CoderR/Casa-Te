@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { formatEuro, formatWeight, productImageUrl, type ProductRow } from '@casa-te/shared';
+import { formatEuro, formatWeight, productImageUrl, searchKey, type ProductRow } from '@casa-te/shared';
 import { SUPABASE_URL, supabase, unwrap } from '../lib/supabase';
 import { useAsync, useCategories, useDebounced, useLowStockThreshold } from '../lib/data';
 import { downloadCsv, toCsv } from '../lib/csv';
@@ -24,7 +24,7 @@ export function ProductsPage() {
 
   const products = useAsync(async () => {
     let query = supabase.from('products').select('*, product_images(path,sort), inventory(quantity)', { count: 'exact' });
-    if (q) query = query.ilike('search_text', `%${q.replace(/[%,()]/g, ' ')}%`);
+    if (searchKey(q)) query = query.ilike('search_text', `%${searchKey(q)}%`);
     if (categoryId) query = query.eq('category_id', categoryId);
     if (status !== 'all') query = query.eq('active', status === 'active');
     const res = await query.order('name').range(page * PAGE, page * PAGE + PAGE - 1);

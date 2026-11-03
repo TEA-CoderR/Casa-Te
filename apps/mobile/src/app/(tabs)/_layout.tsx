@@ -19,6 +19,8 @@ const tabs: Array<{ name: string; title: string; icon: IconName; hidden?: boolea
   // Favourites and orders stay tab routes (deep links, back stack), reached from the header heart and Profilo.
   { name: 'favorites', title: 'Preferiti', icon: 'heart', hidden: true },
   { name: 'orders', title: 'Ordini', icon: 'box', hidden: true },
+  // Product lists (department, subcategory, offers): their own screen under the Categorie tab.
+  { name: 'prodotti', title: 'Prodotti', icon: 'grid', hidden: true },
 ];
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 const visible = tabs.filter((t) => !t.hidden);
@@ -81,7 +83,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     </Animated.View>}
     <View style={styles.pill} accessibilityRole="tablist">
       {visible.map((tab) => {
-        const on = current === tab.name || (tab.name === 'profile' && current === 'orders');
+        const on = current === tab.name || (tab.name === 'profile' && current === 'orders') || (tab.name === 'catalog' && current === 'prodotti');
         const badge = tab.name === 'cart' && count > 0 ? (count > 99 ? '99+' : String(count)) : '';
         return <Pressable key={tab.name} onPress={() => go(tab.name)} accessibilityRole="tab" accessibilityState={{ selected: on }}
           accessibilityLabel={badge ? `${tab.title}, ${count} ${count === 1 ? 'articolo' : 'articoli'}${total ? `, ${total}` : ''}` : tab.title}
@@ -104,7 +106,8 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
 export default function TabsLayout() {
   const { wide } = useLayout();
   // Desktop web shop: the catalogue masthead (search, wordmark, departments) replaces the tab bar.
-  return <Tabs tabBar={wide ? () => <SiteHeader /> : (props) => <FloatingTabBar {...props} />} screenOptions={{
+  // Back follows the order the screens were opened in (a product list returns to Home or Categorie, whichever opened it).
+  return <Tabs backBehavior="history" tabBar={wide ? () => <SiteHeader /> : (props) => <FloatingTabBar {...props} />} screenOptions={{
     headerShown: false, tabBarPosition: wide ? 'top' : 'bottom',
   }}>
     {tabs.map((tab) => <Tabs.Screen key={tab.name} name={tab.name}

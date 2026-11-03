@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { InventoryMovementRow } from '@casa-te/shared';
+import { searchKey, type InventoryMovementRow } from '@casa-te/shared';
 import { supabase, unwrap } from '../lib/supabase';
 import { errorText, useAsync, useDebounced, useLowStockThreshold, useStores } from '../lib/data';
 import { useAuth } from '../lib/auth';
@@ -37,7 +37,7 @@ export function InventoryPage() {
     let query = supabase.from('products').select(`id,sku,name,barcode,inventory${lowOnly ? '!inner' : ''}(store_id,quantity)`, { count: 'exact' })
       .eq('inventory.store_id', activeStore);
     if (lowOnly) query = query.lte('inventory.quantity', threshold);
-    if (q) query = query.ilike('search_text', `%${q.replace(/[%,()]/g, ' ')}%`);
+    if (searchKey(q)) query = query.ilike('search_text', `%${searchKey(q)}%`);
     const res = await query.order('name').range(page * PAGE, page * PAGE + PAGE - 1);
     return { rows: unwrap(res) as Row[], count: res.count ?? 0 };
   }, [activeStore, q, page, lowOnly, threshold]);
