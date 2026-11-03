@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, BackHandler, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+import { ActivityIndicator, BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
   type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
-// The shop sign (the app icon's lime lettering on green, cropped to the logo) marks every page.
-const SIGN_ASPECT = 904 / 416;
-const appIcon = require('../../../assets/brand/sign-tile.png');
 import { Icon } from '@/components/Icon';
+import { BrandLogo } from '@/components/BrandLogo';
 import { useLayout } from '@/lib/hooks';
 import { isEmail } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
@@ -238,7 +236,7 @@ export default function SignInScreen() {
 
     const body = page === 'welcome' ? <View style={{ flex: 1 }}>
       <View style={styles.aHero}>
-        <Image source={appIcon} style={styles.aIconBig} accessibilityLabel="Casa & Te" accessibilityRole="header" />
+        <BrandLogo width={290} tagline />
       </View>
       <Text style={styles.aTitle}>{'Benvenuto in CASA\u00A0&\u00A0TE'}</Text>
       <Text style={styles.aText}>Accedi o registrati: ordini dal tuo negozio, ritiri gratis e segui ogni ordine dall’app.</Text>
@@ -407,7 +405,7 @@ function BackKey({ onBack }: { onBack: () => void }) {
 }
 
 function SmallLogo() {
-  return <Image source={appIcon} style={styles.aIconSmall} accessibilityLabel="Casa & Te" />;
+  return <View style={{ marginBottom: 26, alignSelf: 'flex-start' }}><BrandLogo width={118} /></View>;
 }
 
 /** Outlined field: the label sits inside as a placeholder and moves up to the edge once there is text or focus. */
@@ -453,8 +451,6 @@ function ToggleRow({ label, value, onChange, required }: { label: string; value:
 
 const styles = StyleSheet.create({
   aSafe: { flex: 1, backgroundColor: '#FFFFFF' },
-  aIconBig: { width: 120 * SIGN_ASPECT, height: 120, borderRadius: 22 },
-  aIconSmall: { width: 50 * SIGN_ASPECT, height: 50, borderRadius: 10, marginBottom: 24 },
   aBar: { height: 56, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center' },
   aBarButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   aBody: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 20, paddingBottom: 24 },
