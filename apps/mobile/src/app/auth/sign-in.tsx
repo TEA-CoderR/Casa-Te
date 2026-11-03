@@ -7,7 +7,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { Icon } from '@/components/Icon';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useLayout } from '@/lib/hooks';
-import { isEmail } from '@casa-te/shared';
+import { isEmail, isValidPassword, MIN_PASSWORD, PASSWORD_HELP, passwordRules } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { Checkbox, Notice, PageTitle, PrimaryButton, SecondaryButton, TextField } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
@@ -31,14 +31,12 @@ function webRedirect(next?: string): string | undefined {
 type Mode = 'password' | 'register' | 'code';
 type Step = 'welcome' | 'login' | 'code' | 'register' | 'privacy';
 const codeSent = (to: string) => `Abbiamo inviato un codice a ${to}. Inseriscilo qui sotto. Controlla anche lo spam.`;
-const MIN_PASSWORD = 8;
 
-/** Password strength for the meter: 0 = too short … 4 = strong. Minimum to register: 2 (8+ chars, letters and numbers). */
+/** Password strength for the meter: 0 = too short … 4 = strong. Minimum to register: 2 (the shared `passwordRules`). */
 export function passwordStrength(pw: string): { score: number; label: string; color: string } {
   if (pw.length < MIN_PASSWORD) return { score: pw ? 1 : 0, label: pw ? 'Troppo corta' : '', color: '#C8231F' };
   const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((r) => r.test(pw)).length;
-  const letters = /[A-Za-z]/.test(pw), digits = /\d/.test(pw);
-  if (!letters || !digits) return { score: 1, label: 'Debole: usa lettere e numeri', color: '#C8231F' };
+  if (!isValidPassword(pw)) return { score: 1, label: 'Debole: usa maiuscole, minuscole e numeri', color: '#C8231F' };
   if (pw.length >= 12 && kinds >= 3) return { score: 4, label: 'Forte', color: '#2E7D32' };
   if (kinds >= 3 || pw.length >= 12) return { score: 3, label: 'Buona', color: '#5C8A1F' };
   return { score: 2, label: 'Media', color: '#C98A00' };
@@ -97,7 +95,7 @@ export default function SignInScreen() {
 
   const register = async () => {
     if (!isEmail(email)) { setError('Inserisci un indirizzo email valido.'); return; }
-    if (passwordStrength(password).score < 2) { setError(`Scegli una password di almeno ${MIN_PASSWORD} caratteri con lettere e numeri.`); return; }
+    if (!isValidPassword(password)) { setError(`Scegli una password valida: ${PASSWORD_HELP.toLowerCase()}`); return; }
     // The phone asks the password once, with a show button; the wide form keeps the second field.
     if (wide && password !== password2) { setError('Le due password non coincidono.'); return; }
     if (!terms) { setError('Per creare l’account devi accettare le Condizioni di vendita e l’Informativa privacy.'); return; }
@@ -106,7 +104,7 @@ export default function SignInScreen() {
     setBusy(false);
     if (e) {
       setError(e.code === 'user_already_exists' ? 'Esiste già un account con questa email: accedi.'
-        : e.code === 'weak_password' ? 'Password troppo debole: usa lettere e numeri, almeno 8 caratteri.'
+        : e.code === 'weak_password' ? `Password troppo debole. ${PASSWORD_HELP}`
         : e.status === 429 ? 'Troppi tentativi. Riprova tra qualche minuto.' : 'Registrazione non riuscita. Riprova.');
       return;
     }
@@ -184,7 +182,7 @@ export default function SignInScreen() {
     <TextField label="Password" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false}
       autoComplete={mode === 'register' ? 'new-password' : 'current-password'} textContentType={mode === 'register' ? 'newPassword' : 'password'}
       returnKeyType="go" onSubmitEditing={mode === 'register' ? register : signIn}
-      hint={mode === 'register' ? `Almeno ${MIN_PASSWORD} caratteri.` : undefined} error={error} style={{ paddingRight: 80 }} />
+      hint={mode === 'register' ? PASSWORD_HELP : undefined} error={error} style={{ paddingRight: 80 }} />
     <Pressable onPress={() => setShowPassword((v) => !v)} accessibilityRole="button" style={styles.show} hitSlop={8}>
       <Text style={styles.showText}>{showPassword ? 'Nascondi' : 'Mostra'}</Text></Pressable>
   </View>;
@@ -211,13 +209,10 @@ export default function SignInScreen() {
       if (router.canGoBack()) router.back(); else router.replace('/');
     };
     const go = (to: Step) => { switchMode(to === 'code' ? 'code' : to === 'login' ? 'password' : 'register'); setStep(to); };
-    const rules = [
-      { ok: password.length >= MIN_PASSWORD, label: `Almeno ${MIN_PASSWORD} caratteri` },
-      { ok: /[A-Za-z]/.test(password) && /\d/.test(password), label: 'Lettere e numeri' },
-    ];
+    const rules = passwordRules(password);
     const toPrivacy = () => {
       if (!isEmail(email)) { setError('Inserisci un indirizzo email valido.'); return; }
-      if (passwordStrength(password).score < 2) { setError(`Scegli una password di almeno ${MIN_PASSWORD} caratteri con lettere e numeri.`); return; }
+      if (!isValidPassword(password)) { setError(`Scegli una password valida: ${PASSWORD_HELP.toLowerCase()}`); return; }
       setError(''); setStep('privacy');
     };
     const full = code.length >= 6;
@@ -421,14 +416,15 @@ function AuthField({ label, right, value, ...input }: TextInputProps & { label: 
   </View>;
 }
 
-/** The pill at the bottom of each page: logo yellow with dark text, or outlined. */
+/** The pill at the bottom of each page: brand green with white text, or outlined. */
 function AuthButton({ title, onPress, kind = 'fill', busy, disabled, style }: {
   title: string; onPress: () => void; kind?: 'fill' | 'outline'; busy?: boolean; disabled?: boolean; style?: StyleProp<ViewStyle>;
 }) {
   const off = disabled || busy;
   return <Pressable onPress={onPress} disabled={off} accessibilityRole="button" accessibilityState={{ disabled: !!disabled, busy: !!busy }}
     style={({ pressed }) => [styles.pill, kind === 'outline' ? styles.pillOutline : styles.pillFill, disabled && styles.pillOff, pressed && { opacity: 0.85 }, style]}>
-    {busy ? <ActivityIndicator color={colors.text} /> : <Text style={[styles.pillText, disabled && { color: colors.muted }]}>{title}</Text>}
+    {busy ? <ActivityIndicator color={kind === 'fill' ? '#FFFFFF' : colors.text} />
+      : <Text style={[styles.pillText, kind === 'fill' && { color: '#FFFFFF' }, disabled && { color: colors.muted }]}>{title}</Text>}
   </Pressable>;
 }
 
@@ -476,7 +472,7 @@ const styles = StyleSheet.create({
   fieldInput: { flex: 1, height: 58, fontSize: 17, fontFamily: fonts.sans, color: colors.text, outlineWidth: 0, outlineStyle: 'none' } as object,
   eye: { paddingLeft: 10, paddingVertical: 8 },
   pill: { height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  pillFill: { backgroundColor: colors.yellow },
+  pillFill: { backgroundColor: colors.green },
   pillOutline: { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#5F665C' },
   pillOff: { backgroundColor: colors.well, borderColor: colors.well },
   pillText: { fontSize: 18, fontFamily: fonts.sansSemiBold, color: colors.text },
