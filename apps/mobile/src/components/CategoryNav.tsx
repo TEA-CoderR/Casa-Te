@@ -11,7 +11,6 @@ import { Icon } from './Icon';
 type Covers = Record<string, { image: string | null }> | null | undefined;
 type Counts = Record<string, number> | null | undefined;
 
-const plural = (n: number) => `${n.toLocaleString('it-IT')} ${n === 1 ? 'prodotto' : 'prodotti'}`;
 
 /** Products in a department: its own plus its subcategories'. */
 export function departmentCount(all: CategoryRow[], counts: Counts, id: string) {
@@ -74,7 +73,7 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
     <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
       style={({ pressed }) => [styles.search, pressed && { opacity: 0.9 }]}>
       <Icon name="search" size={19} color={colors.text} strokeWidth={2.1} />
-      <Text style={styles.searchText} numberOfLines={1}>{total ? `Cerca tra ${plural(total)}` : 'Cerca prodotti e marche'}</Text>
+      <Text style={styles.searchText} numberOfLines={1}>Cerca prodotti, marche e reparti</Text>
     </Pressable>
   </BrandHeader>;
 
@@ -99,7 +98,7 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
             style={({ pressed }) => [styles.panelHead, pressed && { opacity: 0.7 }]}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.panelTitle} numberOfLines={1} accessibilityRole="header">{active.name}</Text>
-              <Text style={styles.panelLink}>Vedi tutti{counts ? ` · ${plural(departmentCount(all, counts, active.id))}` : ''}</Text>
+              <Text style={styles.panelLink}>Vedi tutti</Text>
             </View>
             <Icon name="chevron" size={18} color={colors.text} strokeWidth={2.2} />
           </Pressable>
@@ -108,7 +107,7 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
             {!!section && <Text style={styles.section} accessibilityRole="header">{section}</Text>}
             <View style={styles.grid}>
               {items.map((c) => <Pressable key={c.id} onPress={() => onOpen(c.id)} accessibilityRole="link"
-                accessibilityLabel={`${c.name}${counts ? `, ${plural(counts[c.id] ?? 0)}` : ''}`}
+                accessibilityLabel={c.name}
                 style={({ pressed }) => [styles.cell, pressed && { opacity: 0.7 }]}>
                 <CategoryPhoto image={covers?.[c.id]?.image} slug={active.slug} name={c.name} />
                 <Text style={styles.cellName} numberOfLines={2}>{c.name}</Text>
@@ -183,7 +182,6 @@ export function SubcategorySheet({ visible, onClose, title, items, active, onSel
             <CategoryPhoto image={it.image} slug={it.slug} name={it.name} size={48} radius={12} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={[styles.rowName, on && styles.rowNameOn]} numberOfLines={1}>{it.name}</Text>
-              {it.count !== undefined && <Text style={styles.rowCount}>{plural(it.count)}</Text>}
             </View>
             {on ? <Icon name="check" size={20} color={colors.green} strokeWidth={2.6} /> : <Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />}
           </Pressable>;

@@ -184,7 +184,6 @@ export default function CatalogScreen() {
     <View style={styles.deskTitleRow}>
       <Text style={styles.deskTitle} accessibilityRole="header" numberOfLines={1}>
         {searching ? `«${debounced.trim()}»` : collection ? title : parent?.name ?? 'Tutti i prodotti'}</Text>
-      <Text style={styles.deskCount}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}`}</Text>
     </View>
     {searching && <Pressable onPress={() => { setQuery(''); setSearchOpen(false); router.setParams({ q: undefined }); }} accessibilityRole="button" style={{ alignSelf: 'flex-start' }}>
       <Text style={styles.clearSearch}>Cancella la ricerca</Text></Pressable>}
@@ -268,7 +267,7 @@ export default function CatalogScreen() {
             return <RevealOnOpen key={c.id} open={open} style={i > 0 && { borderTopWidth: 1, borderColor: '#EDEDE9' }}>
               <Pressable onPress={() => subs.length > 1 ? setOpenDept(open ? null : c.id) : go(c.id)}
                 accessibilityRole={subs.length > 1 ? 'button' : 'link'} accessibilityState={subs.length > 1 ? { expanded: open } : undefined}
-                accessibilityLabel={`${c.name}${n ? `, ${n} ${n === 1 ? 'prodotto' : 'prodotti'}` : ''}`} style={styles.sRow}>
+                accessibilityLabel={c.name} style={styles.sRow}>
                 <Thumb image={cover} slug={c.slug} name={c.name} size={44} />
                 <Text style={styles.sRowText} numberOfLines={1}>{c.name}</Text>
                 <View style={open && { transform: [{ rotate: '90deg' }] }}><Icon name="chevron" size={18} color="#9A9F94" strokeWidth={2.2} /></View>
@@ -310,7 +309,6 @@ export default function CatalogScreen() {
                   <Text style={styles.sCatName} numberOfLines={1}>{c.name}</Text>
                   {!!top && top.id !== c.id && <Text style={styles.sCatPath} numberOfLines={1}>{top.name}</Text>}
                 </View>
-                <Text style={styles.sCatCount}>{(counts.data?.[c.id] ?? 0) || ''}</Text>
                 <Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
               </Pressable>;
             })}</View>
@@ -318,7 +316,7 @@ export default function CatalogScreen() {
           {!loading && !shown.length ? <Text style={styles.sNoProducts}>Nessun prodotto con questo nome: apri il reparto qui sopra.</Text> : <>
           <View style={styles.sResultsHead}>
             <Text style={styles.sCaps}>PRODOTTI</Text>
-            <Text style={styles.sCount}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}${storeLabel ? ` a ${storeLabel}` : ''}`}</Text>
+            <Text style={styles.sCount}>{storeLabel ? `Disponibilità a ${storeLabel}` : ' '}</Text>
           </View>
           <View style={styles.fGrid}>{loading && !items.length ? <ProductSkeletons n={4} /> : shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
           {more}
@@ -340,7 +338,7 @@ export default function CatalogScreen() {
       : all.filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: c.name, count: counts.data ? departmentCount(all, counts.data, c.id) : undefined, image: coverOf(c.id), slug: c.slug }));
     const deptTitle = collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Tutti i prodotti';
     return <RollingAwning title={deptTitle}
-      subtitle={loading && !items.length ? ' ' : `${count.toLocaleString('it-IT')} ${count === 1 ? 'prodotto disponibile' : 'prodotti disponibili'}${storeLabel ? ` a ${storeLabel}` : ''}`}
+      subtitle={storeLabel ? `Disponibili a ${storeLabel}` : undefined}
       onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
       onSearch={openSearch} resetKey={`${categoryId ?? ''}|${collection ?? ''}`}
       overlay={<>{filterSheetPhone}
@@ -413,7 +411,7 @@ export default function CatalogScreen() {
     </ScrollView>
 
     <View style={[styles.toolbar, wide && { marginTop: -36, marginBottom: 28, justifyContent: 'flex-end' }]}>
-      {!wide && <Text style={styles.count}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}`}</Text>}
+      {!wide && <Text style={styles.count}> </Text>}
       <View style={{ flexDirection: 'row', gap: 2 }} accessibilityRole="radiogroup" accessibilityLabel="Vista">
         {(['grid', 'list'] as const).map((v) => <Pressable key={v} onPress={() => setView(v)} accessibilityRole="radio"
           accessibilityState={{ checked: view === v }} accessibilityLabel={v === 'grid' ? 'Vista a griglia' : 'Vista a elenco'}

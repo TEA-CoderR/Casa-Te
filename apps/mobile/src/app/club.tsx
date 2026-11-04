@@ -4,7 +4,7 @@ import { router, Stack } from 'expo-router';
 import { friendlyError, isPhone, type ClubOffer, type ProfileRow } from '@casa-te/shared';
 import { formatEuro } from '@/lib/price';
 import { Screen } from '@/components/Screen';
-import { Icon } from '@/components/Icon';
+import { Icon, type IconName } from '@/components/Icon';
 import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
 import { Checkbox, Loading, Notice, PrimaryButton, SecondaryButton, TextField } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
@@ -19,10 +19,10 @@ import { useClubStore } from '@/store/club';
 import { MemberCardLink, MemberCardView } from '@/components/MemberCard';
 
 /** What the Club gives, one line each (the card section below covers linking an existing card). */
-const PERKS = [
-  'Prezzi Soci anche online, come in negozio',
-  'Codici sconto riservati ai Soci',
-  'Gratis, e puoi uscire quando vuoi',
+const PERKS: Array<{ icon: IconName; title: string; text: string }> = [
+  { icon: 'percent', title: 'Prezzi Soci', text: 'Anche online, come in negozio.' },
+  { icon: 'sparkle', title: 'Codici sconto', text: 'Riservati ai Soci, da usare al pagamento.' },
+  { icon: 'heart', title: 'Gratis', text: 'Nessun costo, e puoi uscire quando vuoi.' },
 ];
 
 const offerText = (o: ClubOffer) => o.kind === 'percent' ? `${o.value}% di sconto`
@@ -66,9 +66,11 @@ export default function ClubScreen() {
     <Text style={styles.title} accessibilityRole="header">Sei uno di famiglia</Text>
     <Text style={styles.lead}>{member ? `Sei nel Club dal ${since}.` : 'La tessera del negozio, ora anche online.'}</Text>
 
-    {(member || step === 'intro') && <View style={styles.perks}>{PERKS.map((p) => <View key={p} style={styles.perk}>
-      <Icon name="check" size={18} color={colors.green} strokeWidth={2.6} />
-      <Text style={styles.perkText}>{p}</Text>
+    {/* Three perks as three short columns: a shop sign, a word, a line (no check marks). */}
+    {(member || step === 'intro') && <View style={styles.perks}>{PERKS.map((p) => <View key={p.title} style={styles.perk}>
+      <Icon name={p.icon} size={28} color={colors.sign} strokeWidth={1.7} />
+      <Text style={styles.perkTitle}>{p.title}</Text>
+      <Text style={styles.perkText}>{p.text}</Text>
     </View>)}</View>}
 
     {!!error && <Notice tone="error" message={error} />}
@@ -171,9 +173,10 @@ const styles = StyleSheet.create({
   cardImage: { width: '100%', height: '100%', borderRadius: 18 },
   title: { fontSize: 30, lineHeight: 35, fontFamily: fonts.display, color: colors.text, textAlign: 'center', marginTop: 24 },
   lead: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans, marginTop: 4 },
-  perks: { marginTop: 20, paddingVertical: 6, paddingHorizontal: 16, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
-  perk: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 12 },
-  perkText: { flex: 1, fontSize: 15, lineHeight: 20, fontFamily: fonts.sansSemiBold, color: colors.text },
+  perks: { flexDirection: 'row', marginTop: 26, gap: 10 },
+  perk: { flex: 1, alignItems: 'center', gap: 6, paddingHorizontal: 2 },
+  perkTitle: { fontSize: 15, lineHeight: 19, fontFamily: fonts.sansBold, color: colors.text, textAlign: 'center', marginTop: 4 },
+  perkText: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center' },
   section: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text, marginTop: 28, marginBottom: 10 },
   empty: { fontSize: 14, color: colors.muted, fontFamily: fonts.sans, lineHeight: 20 },
   offer: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 14, padding: 14, marginBottom: 10 },

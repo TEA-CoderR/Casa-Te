@@ -83,7 +83,7 @@ function HomePhone() {
   const slides: Array<{ key: string; title: string; text: string; cta: string; bg: string; ink: string; image?: string | null; product?: CatalogProduct; onPress: () => void }> = [
     ...(offerItems.length ? [{ key: 'offers', title: 'Le nostre migliori offerte', text: 'Sempre aggiornate, nel tuo negozio', cta: 'Scopri', bg: '#EAF0E4', /* ui-check: allow (home banner, sage) */ ink: colors.green, product: offerItems[0], onPress: () => openCatalog({ offerte: '1' }) }] : []),
     { key: 'pickup', title: 'Ritiro sempre gratis', text: storeName ? `Ordina ora, ritira a ${storeName}` : 'Ordina ora, ritira nel tuo negozio', cta: 'Come funziona', bg: '#F2F3EE', /* ui-check: allow (home banner, stone) */ ink: colors.green, product: featured.data?.items[0], onPress: () => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } }) },
-    ...(dept ? [{ key: 'dept', title: dept.name, text: deptCount ? `${deptCount.toLocaleString('it-IT')} prodotti nel tuo negozio` : 'Scopri il reparto', cta: `Vai a ${dept.name}`, bg: '#F4F1EC', /* ui-check: allow (home banner, warm stone) */ ink: colors.text, image: coverFor(dept)?.image, onPress: () => openCatalog({ category: dept.id }) }] : []),
+    ...(dept ? [{ key: 'dept', title: dept.name, text: 'Scopri il reparto nel tuo negozio', cta: `Vai a ${dept.name}`, bg: '#F4F1EC', /* ui-check: allow (home banner, warm stone) */ ink: colors.text, image: coverFor(dept)?.image, onPress: () => openCatalog({ category: dept.id }) }] : []),
   ];
   const slideWidth = width - 32;
   const [slide, setSlide] = useState(0);
@@ -123,7 +123,7 @@ function HomePhone() {
     <Pressable onPress={() => openCatalog({ search: '1' })} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
       style={({ pressed }) => [styles.search, pressed && { opacity: 0.95 }]}>
       <Icon name="search" size={21} color={colors.text} strokeWidth={2.1} />
-      <Text style={styles.searchText} numberOfLines={1}>{totalProducts ? `Cerca tra ${totalProducts.toLocaleString('it-IT')} prodotti` : 'Cerca tra i nostri prodotti'}</Text>
+      <Text style={styles.searchText} numberOfLines={1}>Cerca prodotti, marche e reparti</Text>
       <Pressable onPress={() => openCatalog({ search: '1', code: '1' })} accessibilityRole="button" accessibilityLabel="Cerca per codice a barre" hitSlop={4} style={styles.scan}>
         <Icon name="scan" size={19} color={colors.text} strokeWidth={2} />
       </Pressable>
@@ -187,7 +187,7 @@ function HomePhone() {
         const cover = coverFor(category);
         const n = countFor(category);
         const across = topCategories.length % 4 === 0 ? 4 : 3;
-        return <Pressable key={category.id} accessibilityRole="link" accessibilityLabel={`Reparto ${category.name}${n ? `, ${n} prodotti` : ''}`}
+        return <Pressable key={category.id} accessibilityRole="link" accessibilityLabel={`Reparto ${category.name}`}
           style={({ pressed }) => [styles.department, { width: `${100 / across}%` }, pressed && { opacity: 0.75 }]} onPress={() => openCatalog({ category: category.id })}>
           <CategoryPhoto image={cover?.image} slug={category.slug} name={category.name} radius={16} />
           <Text style={styles.departmentName} numberOfLines={1}>{category.name}</Text>

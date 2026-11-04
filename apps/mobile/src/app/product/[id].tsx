@@ -114,6 +114,8 @@ export default function ProductDetailScreen() {
   const soci = !!product.clubPrice;
   const sociPct = product.clubPrice ? discountLabel(product.clubPrice.cents, rawProduct!.price_cents) : null;
   const badge = discount ? `${product.memberApplied ? 'Soci ' : ''}${discount.replace('-', '−')}` : soci && sociPct ? `Soci ${sociPct.replace('-', '−')}` : '';
+  const sociOffer = soci && !product.memberApplied;
+  const phoneRate = discount ? discount.replace('-', '−') : sociOffer && sociPct ? sociPct.replace('-', '−') : '';
   const until = product.clubPrice?.endsOn ? untilLabel(product.clubPrice.endsOn) : null;
   const sociText = product.memberApplied ? ['applicato al tuo account', until].filter(Boolean).join(' · ')
     : ['solo per i membri del Club · iscrizione gratuita', until].filter(Boolean).join(' · ');
@@ -121,7 +123,7 @@ export default function ProductDetailScreen() {
     accessibilityLabel={product.memberApplied ? `Prezzo Soci, ${sociText}` : `Prezzo Soci ${formatEuro(product.clubPrice!.cents)}, ${sociText}`}>
     <Text style={styles.sociText}>{product.memberApplied
       ? <><Text style={styles.sociStrong}>Prezzo Soci</Text> · {sociText}</>
-      : <><Text style={styles.sociStrong}>Soci {formatEuro(product.clubPrice!.cents)}</Text> · {sociText} ›</>}</Text>
+      : <><Text style={styles.sociStrong}>Prezzo Soci</Text> · {sociText} ›</>}</Text>
   </Pressable> : null;
   const pack = formatPackSize(product.unit_quantity, product.unit);
   const features: Array<{ icon: IconName; text: string }> = product.highlights.length
@@ -227,8 +229,8 @@ export default function ProductDetailScreen() {
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
       <View style={styles.stage}>
         <View style={styles.stageImage}><ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0} /></View>
-        {/* A badge only for a discount everyone gets; the members-only price is said in the Soci line under the price. */}
-        {!!discount && !!badge && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{badge}</Text></View>}
+        {/* The discount rate on the photo: "−25%" (the Soci line under the price says who it is for). */}
+        {!!phoneRate && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{phoneRate}</Text></View>}
         <View style={styles.stageBar}>
           {round('back', 'Indietro', back)}
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -242,8 +244,9 @@ export default function ProductDetailScreen() {
           <Text style={styles.phoneCrumb} numberOfLines={1}>{top ? `${top.name} › ${department.name}` : department.name}</Text></Pressable>}
         <Text style={styles.phoneTitle} accessibilityRole="header">{product.name}</Text>
         <View style={styles.phonePriceRow}>
-          <PriceTag cents={product.price_cents} size={38} sale={!!discount} />
-          <Text style={styles.phoneUnit}>{!!discount && <Text style={styles.phoneStruck}>{euro(product.compare_at_price_cents as number)}</Text>}
+          {/* Offers read as the struck regular price and the offer price (a members-only price for everyone to see). */}
+          <PriceTag cents={sociOffer ? product.clubPrice!.cents : product.price_cents} size={38} sale={!!discount || sociOffer} />
+          <Text style={styles.phoneUnit}>{(!!discount || sociOffer) && <Text style={styles.phoneStruck}>{euro(sociOffer ? product.price_cents : product.compare_at_price_cents as number)}</Text>}
             {[discount ? '' : null, unitPrice?.replace(/€\s/, '€').replace(/\s\/\s/, '/')].filter((x) => x !== null && x !== undefined).join(' · ')}</Text>
         </View>
         {sociLine}

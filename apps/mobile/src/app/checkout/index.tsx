@@ -296,8 +296,11 @@ export default function CheckoutScreen() {
           <View style={{ transform: [{ rotate: summaryOpen ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color={colors.text} strokeWidth={2.2} /></View>
         </Pressable>
         {summaryOpen && <View style={styles.sumBody}>
-          {quote.lines.map((l) => <View key={l.product_id} style={styles.sumLine}>
-            <Text style={styles.sumText} numberOfLines={1}>{l.quantity > 1 ? `${l.quantity} × ` : ''}{l.name}</Text><Text style={styles.sumText}>{euro(l.line_total_cents)}</Text></View>)}
+          {quote.lines.map((l) => <View key={l.product_id} style={styles.sumItem}>
+            <View style={styles.sumItemThumb}><ProductImage uri={imageUrl(l.image_path)} sku={l.sku} label={l.name} inset={0.04} /></View>
+            <Text style={[styles.sumText, { flex: 1 }]} numberOfLines={2}>{l.quantity > 1 ? `${l.quantity} × ` : ''}{l.name}</Text>
+            <Text style={[styles.sumText, { fontFamily: fonts.sansSemiBold }]}>{euro(l.line_total_cents)}</Text></View>)}
+          <View style={styles.sumRule} />
           {quote.discount_cents > 0 && <View style={styles.sumLine}><Text style={styles.sumText}>Sconto {quote.coupon?.code ?? ''}</Text><Text style={[styles.sumText, { color: colors.green }]}>-{euro(quote.discount_cents)}</Text></View>}
           <View style={styles.sumLine}><Text style={styles.sumText}>{FULFILMENT_LABELS[method]}</Text><Text style={styles.sumText}>{methodQuote ? formatShipping(methodQuote.price_cents).replace(/€\s/, '€') : '—'}</Text></View>
           <View style={styles.sumLine}><Text style={styles.sumText}>Peso</Text><Text style={styles.sumText}>{formatWeight(quote.total_weight_g)}</Text></View>
@@ -504,6 +507,9 @@ const styles = StyleSheet.create({
   sumHead: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 10 },
   sumThumb: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, overflow: 'hidden', padding: 2 },
   fSubPreview: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
+  sumItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+  sumItemThumb: { width: 44, height: 44, borderRadius: 10, borderWidth: 1, borderColor: colors.line, overflow: 'hidden', backgroundColor: '#FFFFFF' },
+  sumRule: { height: 1, backgroundColor: '#EDEDE9', marginVertical: 6 },
   sumTitle: { flex: 1, fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   sumBody: { paddingBottom: 12, gap: 6 },
   sumLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },

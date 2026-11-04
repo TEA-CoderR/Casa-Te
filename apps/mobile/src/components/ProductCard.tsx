@@ -135,11 +135,11 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
   const subline = !stock.available ? stock.text : discount
     ? <><Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number).replace(/€\s/, '€')}</Text>
         {soci ? <Text style={styles.soci}> · Prezzo Soci</Text> : unitShort ? ` · ${unitShort}` : ''}</>
-    : sociOffer ? <Text style={[styles.soci, styles.sociOffer]}>{sociOfferText}{sociPct ? <Text style={styles.sociPct}>  {sociPct.replace('-', '−')}</Text> : null}</Text>
+    : sociOffer ? <><Text style={styles.compareSmall}>{formatEuro(product.price_cents).replace(/€\s/, '€')}</Text><Text style={styles.soci}> · Prezzo Soci</Text></>
     : unitShort ?? note;
-  // Phone: the photo carries a badge only for a discount everyone gets; a members-only price is said once, in the line
-  // under the name ("Soci €3,99 −24%"), not twice.
-  const phoneBadge = discount ? badge : '';
+  // Phone: offers read as the struck regular price and the offer price, with the discount rate on the photo
+  // ("−25%"); a members-only offer is marked "Prezzo Soci" next to the struck price.
+  const phoneBadge = discount ? discount.replace('-', '−') : sociOffer && sociPct ? sociPct.replace('-', '−') : '';
   return <View style={[styles.card, rail && { paddingBottom: 12 }]}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={[styles.media, { height: rail ? 136 : 132 }]}>
@@ -153,7 +153,7 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
       <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>
     </Pressable></Link>
     {!rail && <FavoriteButton productId={product.id} name={product.name} size={19} strokeWidth={2} style={styles.heartCorner} />}
-    <View style={styles.bottom}><PriceTag cents={product.price_cents} size={22} sale={!!discount} />{phoneCart}</View>
+    <View style={styles.bottom}><PriceTag cents={sociOffer ? sociCents : product.price_cents} size={22} sale={!!discount || sociOffer} />{phoneCart}</View>
   </View>;
 }
 

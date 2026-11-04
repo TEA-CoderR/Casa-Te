@@ -84,7 +84,7 @@ export function FilterSheet({ visible, section, filters, onChange, onClose, face
           <Switch label="Solo disponibili nel mio negozio" on={filters.onlyAvailable} onPress={() => onChange({ ...filters, onlyAvailable: !filters.onlyAvailable })} />
         </>}
       </ScrollView>
-      <PrimaryButton title={total === null ? 'Mostra prodotti' : `Mostra ${total} ${total === 1 ? 'prodotto' : 'prodotti'}`} onPress={onClose} />
+      <PrimaryButton title={total === 0 ? 'Nessun prodotto: cambia i filtri' : 'Mostra i prodotti'} onPress={onClose} />
     </View>
   </Modal>;
 }

@@ -39,6 +39,9 @@ export default function CartScreen() {
   const fulfilment = usePreferences((s) => s.fulfilment);
   useDelivery();
   const [removed, setRemoved] = useState<{ id: string; name: string; qty: number } | null>(null);
+  // "Svuota carrello" asks once, in place (no system dialog).
+  const [confirmClear, setConfirmClear] = useState(false);
+  const clearCart = useCartStore((s) => s.clear);
   const [storeSheet, setStoreSheet] = useState(false);
   const [deliverySheet, setDeliverySheet] = useState(false);
   // Lines and totals for the chosen delivery, all computed by quote_cart.
@@ -219,6 +222,15 @@ export default function CartScreen() {
           </Animated.View>;
         })}
       </View>
+      {quote.lines.length > 0 && <View style={styles.clearRow}>
+        {confirmClear ? <>
+          <Text style={styles.clearAsk}>Svuotare il carrello?</Text>
+          <Pressable onPress={() => setConfirmClear(false)} accessibilityRole="button" hitSlop={8}><Text style={styles.clearNo}>Annulla</Text></Pressable>
+          <Pressable onPress={() => { setConfirmClear(false); setRemoved(null); clearCart(); }} accessibilityRole="button" hitSlop={8} style={styles.clearYes}>
+            <Text style={styles.clearYesText}>Sì, svuota</Text></Pressable>
+        </> : <Pressable onPress={() => setConfirmClear(true)} accessibilityRole="button" hitSlop={8} style={styles.clearLink}>
+          <Icon name="trash" size={16} color={colors.muted} strokeWidth={1.9} /><Text style={styles.clearText}>Svuota carrello</Text></Pressable>}
+      </View>}
       {quote.lines.length > 0 && summary}
       {suggestionsRow}
       {removed && <Animated.View entering={FadeInDown.springify().damping(18)} style={styles.snack} accessibilityLiveRegion="polite">
@@ -348,6 +360,13 @@ const styles = StyleSheet.create({
   compareSoci: { fontFamily: fonts.heavy, color: colors.sale },
   compareSave: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
   compareCtaText: { fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
+  clearRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 16, minHeight: 44, marginTop: 4 },
+  clearLink: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 },
+  clearText: { fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  clearAsk: { flex: 1, fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.text },
+  clearNo: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green },
+  clearYes: { height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.danger, justifyContent: 'center' },
+  clearYesText: { fontSize: 14, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   undo: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.well, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
   snack: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, borderRadius: 16, paddingHorizontal: 16, backgroundColor: colors.text },
   snackText: { flex: 1, fontSize: 14.5, fontFamily: fonts.sansSemiBold, color: '#FFFFFF' },
