@@ -66,12 +66,12 @@ export default function OrderDetailScreen() {
       [until ? 'Ritira entro' : 'Ordinato il', until ?? new Date(order.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })],
       ['Pagato', `${euro(order.total_cents)} · ${count} ${count === 1 ? 'articolo' : 'articoli'}`],
     ];
-    const header = <BrandHeader inScroll title="Il tuo ordine" titleSize={26} pad={[14, 16, 92]}
+    const header = <BrandHeader inScroll title="Il tuo ordine" titleSize={26} pad={[14, 16, 18]}
       left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/orders')} />} />;
     return <Screen header={<StatusBand />} top={header} ground={colors.page} onRefresh={refetch} refreshing={loading}
       contentContainerStyle={{ padding: 0, paddingBottom: 24 }} bodyStyle={{ paddingHorizontal: 16 }}>
       <Stack.Screen options={{ headerShown: false, title: `Ordine ${order.order_number}` }} />
-      <View style={[styles.pass, { marginTop: -96 }]} accessibilityLabel={`${HEADLINES[order.status] ?? ''}. Ordine ${order.order_number}`}>
+      <View style={[styles.pass, { marginTop: 4 }]} accessibilityLabel={`${HEADLINES[order.status] ?? ''}. Ordine ${order.order_number}`}>
         <View style={styles.passTop}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <View style={[styles.passDot, order.status === 'cancelled' && { backgroundColor: colors.danger, borderColor: colors.danger }]} />

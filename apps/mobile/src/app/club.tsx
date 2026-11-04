@@ -39,6 +39,7 @@ export default function ClubScreen() {
   const [error, setError] = useState('');
   // Not yet a member: one thing at a time — the card and what it gives, then either the sign-up or the old card.
   const [step, setStep] = useState<'intro' | 'join' | 'card'>('intro');
+  const [linkOpen, setLinkOpen] = useState(false);
 
   const leave = async () => {
     setBusy(true); setError('');
@@ -60,7 +61,7 @@ export default function ClubScreen() {
   return <Screen stack header={wide ? undefined : <StatusBand />} top={band} ground={colors.page}
     contentContainerStyle={wide ? undefined : { padding: 0, paddingBottom: 32 }} bodyStyle={wide ? undefined : { paddingHorizontal: 16 }}>
     <Stack.Screen options={{ title: 'Casa & Te Club', headerShown: wide }} />
-    <View style={[styles.cardWrap, !wide && { marginTop: -88 }]}>
+    <View style={[styles.cardWrap, !wide && { marginTop: -80 }]}>
       <Image source={CARD} accessibilityLabel="La tessera Casa & Te" resizeMode="cover" style={styles.cardImage} />
     </View>
     <Text style={styles.title} accessibilityRole="header">Sei uno di famiglia</Text>
@@ -90,7 +91,8 @@ export default function ClubScreen() {
             : cardSection}
         </>
       : <>
-          {cardSection}
+          {/* Members: a linked card shows first; without one, linking the shop card is a quiet option further down. */}
+          {card && cardSection}
           <Text style={styles.section} accessibilityRole="header">Le tue offerte</Text>
           {offers.loading && !offers.data ? <Loading /> : !offers.data?.length
             ? <Text style={styles.empty}>Al momento non ci sono offerte attive. Torna a trovarci presto.</Text>
@@ -103,6 +105,13 @@ export default function ClubScreen() {
                 <Text selectable style={styles.code} accessibilityLabel={`Codice ${o.code}`}>{o.code}</Text>
               </View>)}
           <Text style={styles.howto}>Inserisci il codice al checkout, nella sezione "Codice sconto".</Text>
+          {!card && !!profile.data && (linkOpen ? cardSection
+            : <Pressable onPress={() => setLinkOpen(true)} accessibilityRole="button" style={styles.linkRow}>
+                <Icon name="card" size={22} color={colors.sign} strokeWidth={1.8} />
+                <View style={{ flex: 1 }}><Text style={styles.linkTitle}>Hai anche la tessera del negozio?</Text>
+                  <Text style={styles.linkText}>Collegala al tuo account</Text></View>
+                <Icon name="chevron" size={18} color={colors.muted} strokeWidth={2.2} />
+              </Pressable>)}
           <View style={{ marginTop: 28 }}><SecondaryButton title="Esci dal Club" onPress={leave} disabled={busy} /></View>
         </>}
   </Screen>;
@@ -186,5 +195,8 @@ const styles = StyleSheet.create({
   choices: { marginTop: 22, gap: 10 },
   stepBack: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 18, paddingVertical: 6 },
   stepBackText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.green },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 24, padding: 14, borderRadius: 16, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
+  linkTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
+  linkText: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
   howto: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans, marginTop: 6 },
 });
