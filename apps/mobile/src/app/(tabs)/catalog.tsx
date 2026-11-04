@@ -337,7 +337,7 @@ export default function CatalogScreen() {
         ...tabs.slice(1).map((t) => ({ id: t.id, name: t.name, count: counts.data?.[t.id as string], image: covers.data?.[t.id as string]?.image, slug: parent.slug }))]
       : all.filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: c.name, count: counts.data ? departmentCount(all, counts.data, c.id) : undefined, image: coverOf(c.id), slug: c.slug }));
     const deptTitle = collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Tutti i prodotti';
-    return <RollingAwning title={deptTitle}
+    return <RollingAwning title={deptTitle} image={parent && !collection ? coverOf(activeTab && activeTab !== parent.id ? activeTab as string : parent.id) : null}
       onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
       onSearch={openSearch} resetKey={`${categoryId ?? ''}|${collection ?? ''}`}
       overlay={<>{filterSheetPhone}

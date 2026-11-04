@@ -8,10 +8,13 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { colors, fonts } from '@/config/theme';
 import { HeaderBack } from './BrandHeader';
+import { RemoteImage } from './RemoteImage';
 import { Icon } from './Icon';
 
 /** Band height (below the status bar) once rolled up: just the buttons row. */
-const COLLAPSED = 70;
+/** Space above and below the buttons row (compact since the band is white: no awning to roll up). */
+const PAD = 8;
+const COLLAPSED = PAD + 44 + PAD;
 /** Scroll distance over which the awning rolls up. */
 const RANGE = 60;
 /** The "back to top" button appears after this much scrolling… */
@@ -30,8 +33,10 @@ const EDGE = 4;
  * products; the awning unrolls only back at the top of the page. A "back to top" button rises while scrolling and
  * hides once the page has been still for a moment.
  */
-export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, chips, overlay, resetKey, children }: {
+export function RollingAwning({ title, subtitle, image, onBack, searchScope, onSearch, chips, overlay, resetKey, children }: {
   title: string; subtitle?: string; onBack?: () => void;
+  /** The department's cover photo, small, before the title (the list's sign). */
+  image?: string | null;
   /** Department named in the pill ("Cerca in Profumeria"); without it "Cerca in tutti i prodotti". */
   searchScope?: string;
   /** Opens the search page (it searches every department). */
@@ -51,7 +56,7 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   // Expanded band height (below the status bar): the title sits between the back and search buttons, so the band is
   // one row high (padding 14 + the taller of buttons and title + padding 16) and the products start right below it.
   const [titleH, setTitleH] = useState(48);
-  const expanded = 14 + Math.max(44, titleH) + 16;
+  const expanded = PAD + Math.max(44, titleH) + PAD;
   const exp = useDerivedValue(() => expanded);
   const [showTop, setShowTop] = useState(false);
 
@@ -92,21 +97,26 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   return <View style={styles.page}>
     <Animated.ScrollView ref={ref} onScroll={onScroll} scrollEventThrottle={16} showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingTop: insets.top + expanded + EDGE, paddingBottom: 24 }}>
-      <View style={{ paddingTop: 6 }}>{chips}</View>
+      <View>{chips}</View>
       {children}
     </Animated.ScrollView>
 
     <Animated.View style={[styles.band, bandStyle]}>
-      <Animated.View style={[styles.titleBlock, { top: insets.top + 14 + Math.max(0, (44 - titleH) / 2), left: onBack ? 16 + 44 + 12 : 16 }, titleStyle]}
+      <Animated.View style={[styles.titleBlock, { top: insets.top + PAD + Math.max(0, (44 - titleH) / 2), left: onBack ? 16 + 44 + 12 : 16 }, titleStyle]}
         onLayout={(e: LayoutChangeEvent) => { const h = Math.ceil(e.nativeEvent.layout.height); if (h && h !== titleH) setTitleH(h); }}>
-        <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
-        {!!subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          {!!image && <View style={styles.thumb}><RemoteImage uri={image} style={{ width: '100%', height: '100%' }} /></View>}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
+            {!!subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
+          </View>
+        </View>
       </Animated.View>
       <Animated.View pointerEvents="none" style={[styles.line, lineStyle]} />
     </Animated.View>
 
-    {onBack && <View style={[styles.back, { top: insets.top + 14 }]}><HeaderBack onPress={onBack} /></View>}
-    <Animated.View style={[styles.pill, { top: insets.top + 14 }, pillStyle]}>
+    {onBack && <View style={[styles.back, { top: insets.top + PAD }]}><HeaderBack onPress={onBack} /></View>}
+    <Animated.View style={[styles.pill, { top: insets.top + PAD }, pillStyle]}>
       <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel={`Cerca in ${searchScope ?? 'tutti i prodotti'}`}
         style={({ pressed }) => [styles.pillInner, pressed && { opacity: 0.8 }]}>
         <View style={{ width: 20, flexShrink: 0 }}><Icon name="search" size={20} color={colors.bandText} strokeWidth={2.1} /></View>
@@ -129,6 +139,7 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.page, overflow: 'hidden' },
   band: { position: 'absolute', left: 0, right: 0, top: 0, backgroundColor: colors.band, overflow: 'hidden', zIndex: 3 },
+  thumb: { width: 40, height: 40, borderRadius: 12, padding: 4, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
   titleBlock: { position: 'absolute', right: 16 + 44 + 10 },
   title: { fontFamily: fonts.display, color: colors.bandText, fontSize: 25, lineHeight: 29, letterSpacing: -0.5 },
   subtitle: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.bandMuted },
