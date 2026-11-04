@@ -33,8 +33,10 @@ const EDGE = 4;
  * products; the awning unrolls only back at the top of the page. A "back to top" button rises while scrolling and
  * hides once the page has been still for a moment.
  */
-export function RollingAwning({ title, subtitle, image, onBack, searchScope, onSearch, chips, overlay, resetKey, children }: {
+export function RollingAwning({ title, eyebrow, subtitle, image, onBack, searchScope, onSearch, chips, overlay, resetKey, children }: {
   title: string; subtitle?: string; onBack?: () => void;
+  /** Small line above the title: the department when the title is one of its subcategories. */
+  eyebrow?: string;
   /** The department's cover photo, small, before the title (the list's sign). */
   image?: string | null;
   /** Department named in the pill ("Cerca in Profumeria"); without it "Cerca in tutti i prodotti". */
@@ -107,7 +109,10 @@ export function RollingAwning({ title, subtitle, image, onBack, searchScope, onS
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           {!!image && <View style={styles.thumb}><RemoteImage uri={image} style={{ width: '100%', height: '100%' }} /></View>}
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
+            {!!eyebrow && <Text style={styles.eyebrow} numberOfLines={1}>{eyebrow}</Text>}
+            {/* Long names step down in size, then take two lines, instead of being cut. */}
+            <Text style={[styles.title, title.length > 22 ? styles.titleLong : title.length > 14 ? styles.titleMid : null]}
+              accessibilityRole="header" numberOfLines={title.length > 22 ? 2 : 1}>{title}</Text>
             {!!subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
           </View>
         </View>
@@ -142,6 +147,9 @@ const styles = StyleSheet.create({
   thumb: { width: 40, height: 40, borderRadius: 12, padding: 4, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
   titleBlock: { position: 'absolute', right: 16 + 44 + 10 },
   title: { fontFamily: fonts.display, color: colors.bandText, fontSize: 25, lineHeight: 29, letterSpacing: -0.5 },
+  titleMid: { fontSize: 21, lineHeight: 25, letterSpacing: -0.4 },
+  titleLong: { fontSize: 17.5, lineHeight: 21, letterSpacing: -0.2 },
+  eyebrow: { fontSize: 12.5, lineHeight: 15, fontFamily: fonts.sansSemiBold, color: colors.bandMuted },
   subtitle: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.bandMuted },
   line: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, backgroundColor: colors.line },
   back: { position: 'absolute', left: 16, zIndex: 4 },
