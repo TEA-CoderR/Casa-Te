@@ -40,12 +40,9 @@ begin
   perform tests.throws($q$insert into public.return_requests (order_id, store_id, reason, resolution, amount_cents) values (gen_random_uuid(), gen_random_uuid(), 'other', 'exchange', 0)$q$,
     'permission denied', 'no direct writes');
 
-  -- Exchange of the last unit (second request), then cancelled by the customer.
-  r := public.create_return_request(v_order, jsonb_build_array(jsonb_build_object('order_item_id', v_item, 'quantity', 1)),
-    'other', 'Colore diverso', 'exchange', null, '{}');
-  insert into t values ('ret2', r ->> 'id');
-  perform public.cancel_return_request((r ->> 'id')::uuid);
-  perform tests.eq(public.returnable_quantity(v_item), 1, 'cancelled return frees the unit');
+  -- One open request per order: a second one waits until the first is closed.
+  perform tests.throws(format($q$select public.create_return_request(%L, %L, 'other', 'Colore diverso', 'exchange', null, '{}')$q$,
+    v_order, jsonb_build_array(jsonb_build_object('order_item_id', v_item, 'quantity', 1))), 'return_already_open', 'one open request per order');
 end $$;
 reset role;
 
@@ -110,11 +107,16 @@ reset role;
 update public.orders set completed_at = now() - interval '20 days' where id = (select v::uuid from t where k = 'order');
 select tests.login('00000000-0000-0000-0000-00000000000a');
 set role authenticated;
-do $$ declare v_order uuid := (select v::uuid from t where k = 'order'); v_item uuid := (select v::uuid from t where k = 'item'); begin
+do $$ declare v_order uuid := (select v::uuid from t where k = 'order'); v_item uuid := (select v::uuid from t where k = 'item'); r jsonb; begin
   perform tests.throws(format($q$select public.create_return_request(%L, %L, 'changed_mind', null, 'refund', 'card', '{}')$q$,
     v_order, jsonb_build_array(jsonb_build_object('order_item_id', v_item, 'quantity', 1))), 'return_window_expired', '14 days for a change of mind');
+  r := public.create_return_request(v_order, jsonb_build_array(jsonb_build_object('order_item_id', v_item, 'quantity', 1)),
+    'damaged', null, 'exchange', null, array['00000000-0000-0000-0000-00000000000a/foto.jpg']);
+  perform tests.ok(r ? 'id', 'defects accepted later (the first request is closed)');
+  perform public.cancel_return_request((r ->> 'id')::uuid);
+  perform tests.eq(public.returnable_quantity(v_item), 1, 'cancelled return frees the unit');
   perform tests.ok(public.create_return_request(v_order, jsonb_build_array(jsonb_build_object('order_item_id', v_item, 'quantity', 1)),
-    'damaged', null, 'exchange', null, array['00000000-0000-0000-0000-00000000000a/foto.jpg']) ? 'id', 'defects accepted later');
+    'damaged', null, 'exchange', null, array['00000000-0000-0000-0000-00000000000a/foto.jpg']) ? 'id', 'a new request after cancelling');
 end $$;
 reset role;
 

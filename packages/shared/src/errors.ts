@@ -37,6 +37,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   return_note_required: 'Spiegaci brevemente il problema.',
   return_quantity_invalid: 'Quantità non valida per uno degli articoli.',
   return_items_required: 'Scegli almeno un articolo.',
+  return_already_open: 'Hai già una richiesta di reso aperta per questo ordine: aspetta la risposta del negozio, oppure annullala e inviane una nuova.',
   return_not_found: 'Richiesta di reso non trovata.',
   return_wrong_status: 'Questa operazione non è possibile nello stato attuale del reso.',
   return_reject_reason_required: 'Scrivi il motivo del rifiuto: lo vedrà il cliente.',

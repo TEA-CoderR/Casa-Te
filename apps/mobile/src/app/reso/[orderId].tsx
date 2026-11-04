@@ -7,7 +7,7 @@ import { Redirect, router, Stack, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeIn, FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import {
-  RETURN_GUARANTEE_DAYS, RETURN_REASON_LABELS, RETURN_WINDOW_DAYS, daysSinceHandover, friendlyError, returnableQuantities,
+  RETURN_GUARANTEE_DAYS, RETURN_REASON_LABELS, RETURN_WINDOW_DAYS, daysSinceHandover, friendlyError, hasOpenReturn, returnableQuantities,
   type RefundMethod, type ReturnReason, type ReturnResolution,
 } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
@@ -16,7 +16,7 @@ import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
 import { StepTag } from '@/components/ShopMarks';
 import { ProductImage } from '@/components/ProductImage';
 import { Icon } from '@/components/Icon';
-import { Loading, Notice, OptionCard } from '@/components/UI';
+import { Loading, Notice, OptionCard, SecondaryButton } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
 import { createReturnRequest, fetchOrder, fetchOrderReturns, imageUrl, uploadReturnPhoto } from '@/lib/api';
 import { formatEuro } from '@/lib/price';
@@ -82,6 +82,12 @@ export default function ReturnRequestScreen() {
   if (days === null || days > RETURN_GUARANTEE_DAYS || (!items.length && !sent)) return <Screen stack>
     <Stack.Screen options={{ title: 'Reso e assistenza' }} />
     <Notice title="Nessun articolo da rendere" message="Per questo ordine non è possibile aprire un nuovo reso. Per assistenza rivolgiti al negozio." />
+  </Screen>;
+  // One request at a time per order (also enforced by create_return_request).
+  if (!sent && hasOpenReturn(returns.data)) return <Screen stack>
+    <Stack.Screen options={{ title: 'Reso e assistenza' }} />
+    <Notice title="Hai già una richiesta aperta" message="Per questo ordine c’è già una richiesta di reso in corso. Aspetta la risposta del negozio, oppure annullala dalla pagina dell’ordine e inviane una nuova." />
+    <View style={{ marginTop: 12 }}><SecondaryButton title="Torna all’ordine" onPress={toOrder} /></View>
   </Screen>;
 
   const go = (to: number) => { setError(''); setForward(to > step); setStep(to); };

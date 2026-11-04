@@ -21,6 +21,9 @@ export const RETURN_WINDOW_DAYS = 14;
 export const RETURN_GUARANTEE_DAYS = 730;
 /** Statuses that still hold the returned units (rejected and cancelled requests free them). */
 export const RETURN_ACTIVE_STATUSES: ReturnStatus[] = ['requested', 'approved', 'received', 'refunded', 'exchanged'];
+/** Still being handled: while one of these exists, the order takes no new request (create_return_request: return_already_open). */
+export const RETURN_OPEN_STATUSES: ReturnStatus[] = ['requested', 'approved', 'received'];
+export const hasOpenReturn = (returns: Array<{ status: ReturnStatus }>) => returns.some((r) => RETURN_OPEN_STATUSES.includes(r.status));
 
 export const RETURN_STATUS_LABELS: Record<ReturnStatus, string> = {
   requested: 'In valutazione',

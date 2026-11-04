@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import {
   RETURN_GUARANTEE_DAYS, RETURN_REASON_LABELS, RETURN_STATUS_LABELS, RETURN_WINDOW_DAYS, REFUND_METHOD_LABELS,
-  daysSinceHandover, friendlyError, returnableQuantities, type OrderItemRow, type OrderRow, type ReturnWithItems,
+  daysSinceHandover, friendlyError, hasOpenReturn, returnableQuantities, type OrderItemRow, type OrderRow, type ReturnWithItems,
 } from '@casa-te/shared';
 import { Barcode } from '@/components/Barcode';
 import { Icon } from '@/components/Icon';
@@ -30,7 +30,8 @@ export function OrderReturns({ order }: { order: OrderRow & { order_items: Order
   const list = returns.data ?? [];
   const days = daysSinceHandover(order);
   const left = returnableQuantities(order.order_items, list);
-  const canAsk = days !== null && days <= RETURN_GUARANTEE_DAYS && Object.values(left).some((q) => q > 0);
+  const open = hasOpenReturn(list);
+  const canAsk = !open && days !== null && days <= RETURN_GUARANTEE_DAYS && Object.values(left).some((q) => q > 0);
   const names = new Map(order.order_items.map((i) => [i.id, i.name]));
 
   const cancel = async (id: string) => {
@@ -43,6 +44,7 @@ export function OrderReturns({ order }: { order: OrderRow & { order_items: Order
     <Text style={styles.title} accessibilityRole="header">Resi e assistenza</Text>
     {!!error && <Notice tone="error" message={error} />}
     {list.map((r) => <ReturnCard key={r.id} ret={r} names={names} busy={busy === r.id} onCancel={() => cancel(r.id)} />)}
+    {open && <Text style={styles.openNote}>Una richiesta alla volta: potrai chiederne un’altra quando questa sarà conclusa (o annullandola).</Text>}
     {canAsk && <Pressable onPress={() => router.push({ pathname: '/reso/[orderId]', params: { orderId: order.id } })} accessibilityRole="button"
       style={({ pressed }) => [styles.ask, pressed && { opacity: 0.85 }]}>
       <Icon name="recycle" size={19} color={colors.green} strokeWidth={2} />
@@ -84,6 +86,7 @@ function ReturnCard({ ret, names, busy, onCancel }: { ret: ReturnWithItems; name
 }
 
 const styles = StyleSheet.create({
+  openNote: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 2, marginHorizontal: 4 },
   wrap: { marginTop: 18, gap: 10 },
   title: { fontSize: 21, lineHeight: 26, fontFamily: fonts.display, color: colors.text, marginLeft: 4 },
   ask: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
