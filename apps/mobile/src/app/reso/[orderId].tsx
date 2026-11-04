@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.text, marginTop: 22, marginBottom: 8 },
   fine: { fontSize: 12.5, lineHeight: 17, color: colors.muted, fontFamily: fonts.sans, marginTop: 10, textAlign: 'center' },
   plate: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14 },
-  sep: { borderTopWidth: 1, borderColor: '#EFECE3' },
+  sep: { borderTopWidth: 1, borderColor: '#EDEDE9' },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   cell: { width: '48.5%', gap: 8 },
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   reasonText: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
 
   photos: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  photo: { width: '31%', aspectRatio: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.photo },
+  photo: { width: '31%', aspectRatio: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.photo, borderWidth: 1, borderColor: colors.line },
   photoX: { position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   photoAdd: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#B9B4A6', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', gap: 4 },
   photoAddNeeded: { borderColor: colors.green },
@@ -328,12 +328,12 @@ const styles = StyleSheet.create({
   sumItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
   sumThumb: { width: 36, height: 36 },
   sumName: { flex: 1, fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.text },
-  sumRule: { height: 1, backgroundColor: '#EFECE3', marginVertical: 8 },
+  sumRule: { height: 1, backgroundColor: '#EDEDE9', marginVertical: 8 },
   sumRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 34 },
   sumKey: { width: 82, fontSize: 13.5, fontFamily: fonts.sans, color: colors.muted },
   sumValue: { flex: 1, fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.text },
   sumEdit: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
-  sumTotal: { borderTopWidth: 1, borderColor: '#EFECE3', marginTop: 6, paddingTop: 10 },
+  sumTotal: { borderTopWidth: 1, borderColor: '#EDEDE9', marginTop: 6, paddingTop: 10 },
   sumTotalKey: { flex: 1, fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   sumTotalValue: { fontSize: 20, fontFamily: fonts.heavy, color: colors.text },
 

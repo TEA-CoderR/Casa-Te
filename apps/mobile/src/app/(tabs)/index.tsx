@@ -77,9 +77,9 @@ function HomePhone() {
   const dept = topCategories.find((c) => coverFor(c)?.image) ?? topCategories[0];
   const deptCount = dept ? countFor(dept) : 0;
   const slides: Array<{ key: string; title: string; text: string; cta: string; bg: string; ink: string; image?: string | null; product?: CatalogProduct; onPress: () => void }> = [
-    ...(offerItems.length ? [{ key: 'offers', title: 'Le nostre migliori offerte', text: 'Sempre aggiornate, nel tuo negozio', cta: 'Scopri', bg: '#DCE7D3', /* ui-check: allow (home banner of design F) */ ink: colors.green, product: offerItems[0], onPress: () => openCatalog({ offerte: '1' }) }] : []),
-    { key: 'pickup', title: 'Ritiro sempre gratis', text: storeName ? `Ordina ora, ritira a ${storeName}` : 'Ordina ora, ritira nel tuo negozio', cta: 'Come funziona', bg: colors.yellow, ink: colors.text, product: featured.data?.items[0], onPress: () => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } }) },
-    ...(dept ? [{ key: 'dept', title: dept.name, text: deptCount ? `${deptCount.toLocaleString('it-IT')} prodotti nel tuo negozio` : 'Scopri il reparto', cta: `Vai a ${dept.name}`, bg: '#F4DED6', ink: '#5B2414', image: coverFor(dept)?.image, onPress: () => openCatalog({ category: dept.id }) }] : []),
+    ...(offerItems.length ? [{ key: 'offers', title: 'Le nostre migliori offerte', text: 'Sempre aggiornate, nel tuo negozio', cta: 'Scopri', bg: '#EAF0E4', /* ui-check: allow (home banner, sage) */ ink: colors.green, product: offerItems[0], onPress: () => openCatalog({ offerte: '1' }) }] : []),
+    { key: 'pickup', title: 'Ritiro sempre gratis', text: storeName ? `Ordina ora, ritira a ${storeName}` : 'Ordina ora, ritira nel tuo negozio', cta: 'Come funziona', bg: '#F2F3EE', /* ui-check: allow (home banner, stone) */ ink: colors.green, product: featured.data?.items[0], onPress: () => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } }) },
+    ...(dept ? [{ key: 'dept', title: dept.name, text: deptCount ? `${deptCount.toLocaleString('it-IT')} prodotti nel tuo negozio` : 'Scopri il reparto', cta: `Vai a ${dept.name}`, bg: '#F4F1EC', /* ui-check: allow (home banner, warm stone) */ ink: colors.text, image: coverFor(dept)?.image, onPress: () => openCatalog({ category: dept.id }) }] : []),
   ];
   const slideWidth = width - 32;
   const [slide, setSlide] = useState(0);
@@ -97,8 +97,8 @@ function HomePhone() {
   const pill = (label: string, icon: IconName, onPress: () => void, sale?: boolean) =>
     <Pressable key={label} onPress={onPress} accessibilityRole="link"
       style={({ pressed }) => [styles.pill, sale && styles.pillSale, pressed && { opacity: 0.8 }]}>
-      <Icon name={icon} size={18} color={sale ? '#FFFFFF' : colors.green} strokeWidth={sale ? 2.2 : 2} />
-      <Text style={[styles.pillText, sale && { color: '#FFFFFF' }]}>{label}</Text>
+      <Icon name={icon} size={18} color={sale ? colors.sale : colors.green} strokeWidth={sale ? 2.2 : 2} />
+      <Text style={[styles.pillText, sale && { color: colors.sale }]}>{label}</Text>
     </Pressable>;
   const sectionHead = (id: string, title: string, link: string, onPress: () => void) => <View style={styles.section}>
     <Text style={styles.sectionTitle} accessibilityRole="header" nativeID={id}>{title}</Text>
@@ -126,7 +126,7 @@ function HomePhone() {
     {active && <Pressable onPress={() => router.push(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.order, pressed && { opacity: 0.9 }]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <Text style={styles.orderTitle} numberOfLines={1}>{active.status === 'ready' && active.fulfilment === 'store' ? 'Il tuo ordine è pronto al ritiro' : orderStatusLabel(active.status, active.fulfilment)}</Text>
-        <Icon name="chevron" size={20} color={colors.text} strokeWidth={2.2} />
+        <Icon name="chevron" size={20} color="#FFFFFF" strokeWidth={2.2} />
       </View>
       <Text style={styles.orderSub}>{active.order_number}{active.status === 'ready' && active.fulfilment === 'store' ? ' · mostra il codice in cassa' : ' · segui l’ordine'}</Text>
       <View style={styles.bars}>{[1, 2, 3, 4].map((i) => <View key={i} style={[styles.bar, i <= (STEP[active.status] ?? 1) && styles.barOn]} />)}</View>
@@ -222,15 +222,16 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#8C9189' },
   searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.muted },
   scan: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
-  order: { marginHorizontal: 16, marginTop: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.yellow },
-  orderTitle: { flexShrink: 1, fontSize: 15, fontFamily: fonts.heavy, color: colors.text },
-  orderSub: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: '#4A4512', marginTop: 2 },
+  // The order in progress: deep green with the lime signal on the progress bars.
+  order: { marginHorizontal: 16, marginTop: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.green },
+  orderTitle: { flexShrink: 1, fontSize: 15, fontFamily: fonts.heavy, color: '#FFFFFF' },
+  orderSub: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.onBrand, marginTop: 2 },
   bars: { flexDirection: 'row', gap: 4, marginTop: 10 },
-  bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(24,32,26,0.18)' },
-  barOn: { backgroundColor: colors.text },
+  bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
+  barOn: { backgroundColor: colors.yellow },
   pills: { paddingHorizontal: 16, paddingTop: 18, gap: 8 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingLeft: 12, paddingRight: 16, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  pillSale: { backgroundColor: colors.sale, borderColor: colors.sale },
+  pillSale: { borderColor: colors.sale },
   pillText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
   hero: { marginHorizontal: 16, height: 196, borderRadius: 24, overflow: 'hidden' },
   slide: { height: 196 },
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
   slideCtaText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 2, marginTop: 4 },
   dotHit: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#CFC9BA' },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D0D0CB' },
   dotOn: { width: 22, backgroundColor: colors.text },
   section: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12, gap: 12 },
   sectionTitle: { fontSize: 25, lineHeight: 30, fontFamily: fonts.display, color: colors.text },
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
   departments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, rowGap: 14 },
   department: { paddingHorizontal: 4 },
   departmentName: { marginTop: 6, fontSize: 13, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
-  pickup: { marginHorizontal: 16, marginTop: 28, padding: 20, borderRadius: 24, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
+  pickup: { marginHorizontal: 16, marginTop: 28, padding: 20, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   pickupTitle: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text },
   step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   stepTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },

@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, maxWidth: 520, alignSelf: 'center', marginHorizontal: 'auto',
     backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 16, paddingTop: 10, paddingBottom: 28, gap: 14,
     shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 30, shadowOffset: { width: 0, height: -8 } },
-  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: '#DCD7CA' },
+  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: '#DADAD5' },
   head: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingHorizontal: 4 },
   title: { fontSize: 26, lineHeight: 31, fontFamily: fonts.display, color: colors.text },
   sub: { fontSize: 14, color: colors.muted, marginTop: 4, lineHeight: 20, fontFamily: fonts.sans },

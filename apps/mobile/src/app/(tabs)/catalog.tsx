@@ -263,7 +263,7 @@ export default function CatalogScreen() {
             const cover = covers.data?.[c.id]?.image ?? subs.map((x) => covers.data?.[x.id]?.image).find(Boolean) ?? null;
             const open = openDept === c.id && subs.length > 1;
             const go = (id: string) => { setOpenDept(null); openList({ category: id }); };
-            return <View key={c.id} style={i > 0 && { borderTopWidth: 1, borderColor: '#EFECE3' }}>
+            return <View key={c.id} style={i > 0 && { borderTopWidth: 1, borderColor: '#EDEDE9' }}>
               <Pressable onPress={() => subs.length > 1 ? setOpenDept(open ? null : c.id) : go(c.id)}
                 accessibilityRole={subs.length > 1 ? 'button' : 'link'} accessibilityState={subs.length > 1 ? { expanded: open } : undefined}
                 accessibilityLabel={`${c.name}${n ? `, ${n} ${n === 1 ? 'prodotto' : 'prodotti'}` : ''}`} style={styles.sRow}>
@@ -303,7 +303,7 @@ export default function CatalogScreen() {
               const top = topOf(c.id);
               return <Pressable key={c.id} onPress={() => openCategory(c.id)} accessibilityRole="link"
                 accessibilityLabel={`${c.name}${top && top.id !== c.id ? `, in ${top.name}` : ''}`}
-                style={({ pressed }) => [styles.sCatRow, i > 0 && { borderTopWidth: 1, borderColor: '#EFECE3' }, pressed && { opacity: 0.7 }]}>
+                style={({ pressed }) => [styles.sCatRow, i > 0 && { borderTopWidth: 1, borderColor: '#EDEDE9' }, pressed && { opacity: 0.7 }]}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.sCatName} numberOfLines={1}>{c.name}</Text>
                   {!!top && top.id !== c.id && <Text style={styles.sCatPath} numberOfLines={1}>{top.name}</Text>}
@@ -447,14 +447,14 @@ const styles = StyleSheet.create({
   fButton: { width: 52, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderColor: colors.line },
   fBadge: { position: 'absolute', top: 8, right: 7, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   fBadgeText: { fontSize: 11, fontFamily: fonts.heavy, color: '#FFFFFF' },
-  skel: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 14 },
+  skel: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 14, borderWidth: 1, borderColor: colors.line },
   skelPhoto: { width: '100%', aspectRatio: 1, borderRadius: 14, backgroundColor: colors.well, marginBottom: 12 },
   skelLine: { height: 12, borderRadius: 6, backgroundColor: colors.well, marginTop: 7, marginLeft: 4 },
   fGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   fCell: { width: '48.6%', flexDirection: 'row' },
   sBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, height: 50, paddingLeft: 15, paddingRight: 6, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: colors.green },
   sInput: { flex: 1, minWidth: 0, height: 44, fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0, outlineStyle: 'none' } as object,
-  sClear: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EFECE3', alignItems: 'center', justifyContent: 'center' },
+  sClear: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EDEDE9', alignItems: 'center', justifyContent: 'center' },
   sHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sCaps: { fontSize: 13, letterSpacing: 0.6, fontFamily: fonts.heavy, color: colors.muted },
   sLink: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green, paddingVertical: 8 },
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   sRecentTerm: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1, height: 38 },
   sRecentX: { width: 34, height: 38, alignItems: 'center', justifyContent: 'center' },
   sRecentText: { fontSize: 14.5, fontFamily: fonts.sansSemiBold, color: colors.text },
-  sList: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
+  sList: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   sRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 64, paddingVertical: 10, paddingHorizontal: 16 },
   sSubs: { paddingHorizontal: 12, paddingBottom: 16 },
   sAll: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 4, marginBottom: 12, paddingHorizontal: 14, height: 42,
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
   viewButtonOn: { backgroundColor: colors.cream },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 8 },
   recent: { marginTop: 4, marginBottom: 10 },
-  recentPhone: { marginHorizontal: 16, marginTop: 6, marginBottom: 6, padding: 14, paddingTop: 6, borderRadius: 20, backgroundColor: '#FFFFFF' },
+  recentPhone: { marginHorizontal: 16, marginTop: 6, marginBottom: 6, padding: 14, paddingTop: 6, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   recentCaps: { fontSize: 12.5, letterSpacing: 0.6, color: colors.muted, fontFamily: fonts.heavy },
   recentChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   recentChip: { flexDirection: 'row', alignItems: 'center', height: 40, borderRadius: 20, backgroundColor: colors.page, paddingLeft: 12 },

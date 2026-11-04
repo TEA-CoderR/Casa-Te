@@ -34,11 +34,12 @@ The September demo (built with Codex) left generic AI patterns that kept coming 
    copy a screen's styles only after checking them against the design boards.
 2. **Choices** (delivery, address, store, refund…): white card, radio on the left, the chosen one gets a green edge only.
    No tinted fill, no thicker coloured frame with a fill, no icon that turns into a filled circle.
-3. **Status** (orders, returns): `StatusMark` — a dot and the words. The logo yellow is the single signal
+3. **Status** (orders, returns): `StatusMark` — a dot and the words. The logo lime (`colors.yellow`) is the single signal
    (active tab, price chips, cart count, "ready"/"approved"); red only for discounts and errors.
 4. **Messages**: `Notice` — a white plate with a coloured edge and title, never a pale green/red/yellow panel.
 5. **Icons** stand alone, never inside a tinted circle; prefer signs from the shop (`StepTag`, `EmptyReceipt`, `AwningMark`).
-6. **Grounds**: white header band (`colors.band`), ivory page (`colors.page`), white plates, warm neutrals (`well`, `stone`) for quiet fills.
+6. **Grounds**: white page and header band (`colors.page`, `colors.band`), white plates with a hairline (`colors.line`),
+   cool neutrals (`well`) for quiet fills; the shop-sign green (`colors.sign`) only for the logo and the Club.
    Pale tints are only for content that is not a state (department tiles, the home banners, the desktop offers tile).
 7. **Type**: every text style sets `fontFamily` from `fonts` (Figtree everywhere: `display` for titles); a `fontWeight` alone
    falls back to the system font on phones.

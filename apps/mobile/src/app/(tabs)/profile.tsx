@@ -241,10 +241,10 @@ export default function ProfileScreen() {
         </View>}
         <View style={{ marginTop: user ? 10 : 16 }}><StoreCard compact showStatus={false} label="Il tuo negozio" style={styles.fFlat} onPress={() => setStoreSheet(true)} /></View>
         {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={({ pressed }) => [styles.fClub, pressed && { opacity: 0.88 }]}>
-          <Icon name="crown" size={26} color="#7A5310" fill="#EBCB86" strokeWidth={1.6} />
+          <Icon name="crown" size={26} color={colors.signInk} strokeWidth={1.7} />
           <View style={{ flex: 1 }}><Text style={styles.fClubTitle}>Casa & Te Club</Text>
             <Text style={styles.fClubText}>{member ? 'Sei membro: guarda le offerte a te riservate.' : club.tagline}</Text></View>
-          <Icon name="chevron" size={18} color="#3D2A06" strokeWidth={2.2} />
+          <Icon name="chevron" size={18} color={colors.signInk} strokeWidth={2.2} />
         </Pressable>}
         {user && <><Text style={styles.fGroup} accessibilityRole="header">ACCOUNT</Text>
           <View style={styles.fList}>
@@ -287,24 +287,25 @@ const styles = StyleSheet.create({
   fEditText: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.bandText },
   fSignIn: { alignSelf: 'flex-start', height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.yellow, justifyContent: 'center', marginTop: 14 },
   fSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
-  fOrder: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.yellow,
+  fOrder: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.green,
     shadowColor: '#18201A', shadowOpacity: 0.14, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
-  fOrderLabel: { fontSize: 12.5, fontFamily: fonts.sansBold, color: '#4A4512' },
-  fOrderStatus: { fontSize: 16, fontFamily: fonts.heavy, color: colors.text, marginTop: 2 },
-  fFollow: { height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.text, justifyContent: 'center' },
-  fFollowText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  fOrderLabel: { fontSize: 12.5, fontFamily: fonts.sansBold, color: colors.onBrand },
+  fOrderStatus: { fontSize: 16, fontFamily: fonts.heavy, color: '#FFFFFF', marginTop: 2 },
+  fFollow: { height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.yellow, justifyContent: 'center' },
+  fFollowText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.text },
   fTiles: { flexDirection: 'row', gap: 10 },
-  fTile: { flex: 1, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
+  fTile: { flex: 1, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   fTileLabel: { fontSize: 14.5, fontFamily: fonts.heavy, color: colors.text, marginTop: 10 },
   fTileDetail: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted },
   fFlat: { shadowOpacity: 0, elevation: 0, borderBottomWidth: 1, borderColor: colors.line, borderRadius: 18 },
-  fClub: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10, padding: 16, borderRadius: 18, backgroundColor: '#F5E6C8' },
-  fClubTitle: { fontSize: 18, lineHeight: 22, fontFamily: fonts.display, color: '#3D2A06' },
-  fClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: '#3D2A06', marginTop: 2 },
+  // The Club in the colours of its card: lime on the shop-sign green.
+  fClub: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10, padding: 16, borderRadius: 18, backgroundColor: colors.sign },
+  fClubTitle: { fontSize: 18, lineHeight: 22, fontFamily: fonts.display, color: colors.signInk },
+  fClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: '#E6EEDC', marginTop: 2 },
   fGroup: { fontSize: 13, letterSpacing: 0.6, fontFamily: fonts.heavy, color: colors.muted, marginTop: 20, marginBottom: 8, marginLeft: 4 },
-  fList: { borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
+  fList: { borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   fRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 58, paddingVertical: 8, paddingHorizontal: 16 },
-  fRule: { borderTopWidth: 1, borderColor: '#EFECE3' },
+  fRule: { borderTopWidth: 1, borderColor: '#EDEDE9' },
   fTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
   fSub: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
   fSession: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 },
@@ -362,7 +363,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8, borderBottomWidth: 1, borderColor: colors.line },
   row: { flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 58, paddingVertical: 10, paddingHorizontal: 2 },
   rowLine: { borderBottomWidth: 1, borderColor: colors.line },
-  rowOn: { backgroundColor: '#FAF7F2' },
+  rowOn: { backgroundColor: '#F7F7F5' },
   rowTitle: { fontSize: 15.5, color: colors.text, fontFamily: fonts.sans },
   rowSub: { fontSize: 12.5, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
 
@@ -380,14 +381,14 @@ const styles = StyleSheet.create({
   pMemberText: { fontSize: 13, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.yellow },
   pSignIn: { alignSelf: 'flex-start', height: 44, paddingHorizontal: 20, borderRadius: 22, backgroundColor: colors.yellow, justifyContent: 'center', marginTop: 14 },
   pSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF' },
+  pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   pFloat: { backgroundColor: colors.yellow, shadowColor: '#18201A', shadowOpacity: 0.14, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 6 },
   pFollow: { height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.text, justifyContent: 'center' },
   pFollowText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   pDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.brand, borderWidth: 6, borderColor: colors.well, marginHorizontal: 2 },
   pStrong: { fontSize: 16, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text, marginTop: 1 },
   pLink: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
-  pTile: { flex: 1, alignItems: 'flex-start', gap: 8, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 18, backgroundColor: '#FFFFFF' },
+  pTile: { flex: 1, alignItems: 'flex-start', gap: 8, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   // The icon alone, no tinted circle behind it (design H); the box keeps room for the count.
   pCircle: { width: 28, height: 28, alignItems: 'flex-start', justifyContent: 'center' },
   pCount: { position: 'absolute', top: -4, right: -8, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
   pClubTitle: { fontSize: 18, lineHeight: 23, fontFamily: fonts.display, color: '#3D2A06' },
   pClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sansMedium, color: '#3D2A06', marginTop: 1 },
   pGroup: { fontSize: 12.5, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginTop: 12, marginLeft: 4 },
-  pList: { borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 16 },
+  pList: { borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 16, borderWidth: 1, borderColor: colors.line },
   pRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 56, paddingVertical: 10 },
   pRowTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   signOut: { alignSelf: 'stretch', height: 52, borderWidth: 1.5, borderColor: colors.line, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },

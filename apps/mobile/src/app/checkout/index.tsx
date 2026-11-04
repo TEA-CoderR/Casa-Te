@@ -321,7 +321,7 @@ export default function CheckoutScreen() {
           <Icon name="card" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Richiedo la fattura</Text>
           <View style={[styles.box, invoice && styles.boxOn]}>{invoice && <Icon name="check" size={14} color="#FFFFFF" strokeWidth={3} />}</View>
         </Pressable>
-        {invoice && <View style={{ borderTopWidth: 1, borderColor: '#EFECE3' }}>
+        {invoice && <View style={{ borderTopWidth: 1, borderColor: '#EDEDE9' }}>
           {field('invoice.taxCode', 'Codice fiscale', invoiceData.taxCode ?? '', (v) => setInvoiceData({ ...invoiceData, taxCode: v.toUpperCase() }), { autoCapitalize: 'characters', maxLength: 16 })}
           {field('invoice.vatNumber', 'Partita IVA (aziende)', invoiceData.vatNumber ?? '', (v) => setInvoiceData({ ...invoiceData, vatNumber: v }), { keyboardType: 'number-pad', maxLength: 13 }, !invoiceData.vatNumber)}
           {!!invoiceData.vatNumber && <>
@@ -480,9 +480,9 @@ const styles = StyleSheet.create({
   optionTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
   optionSub: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
   optionPrice: { fontSize: 14, fontFamily: fonts.heavy, color: colors.text },
-  group: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: colors.line },
+  group: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingHorizontal: 16, borderWidth: 1, borderColor: colors.line },
   fRow: { paddingVertical: 10 },
-  fRule: { borderBottomWidth: 1, borderColor: '#EFECE3' },
+  fRule: { borderBottomWidth: 1, borderColor: '#EDEDE9' },
   fLabel: { fontSize: 12.5, fontFamily: fonts.sansBold, color: colors.muted },
   fInput: { paddingTop: 4, paddingBottom: 0, fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0 } as object,
   fError: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.danger, marginTop: 4 },

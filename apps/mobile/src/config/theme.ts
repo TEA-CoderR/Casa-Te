@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 
 /**
+ * November 2026: white pages and header band, cool neutral hairlines and fills, the logo's lime as the signal,
+ * the shop-sign green for the logo and the Club, deep green for actions and the tab bar. Before that:
  * Brand look (design F "La Tenda"): the awning of a Tuscan shop front. Deep awning green with tone-on-tone
  * stripes and a scalloped edge frames every phone page; products sit on white plates on a warm ivory ground;
  * the logo yellow is the single signal (active tab, price chips, cart count); red only for discounts.
@@ -25,22 +27,23 @@ export const colors = {
   /** The logo's own colours: lime lettering on the shop-sign green (the small sign in headers, the Club card). */
   sign: '#3B6B31',
   signInk: '#CDE434',
-  /** The logo's yellow: active tab, price chips, cart count, the order-ready card. */
-  yellow: '#F3E33A',
+  /** The signal colour (active tab, price chips, cart count, the order card): the logo's lime since November 2026
+   * (it was a lemon yellow #F3E33A). */
+  yellow: '#D4E64A',
   lime: '#F3E9D6',
   cream: '#F4EFE6',
   sand: '#F6EEDF',
   /** Phone pages: warm ivory ground under white plates. */
-  page: '#F5F3EC',
+  page: '#FFFFFF',
   /** Quiet fills on the ivory ground (segmented controls, steppers). */
-  well: '#EAE6DB',
+  well: '#F2F2EF',
   background: '#FFFFFF',
   surface: '#FFFFFF',
   text: '#18201A',
   muted: '#5F665C',
   /** Secondary icons and inactive tabs: still ≥4.5:1 on white. */
   faint: '#6B7167',
-  line: '#E3DED1',
+  line: '#E8E8E3',
   /** Desktop print rules (hairlines between catalogue rows and sections). */
   rule: '#E4DCCD',
   /** Warm stone ground (desktop footer, closing tiles, hover fills). */
@@ -48,7 +51,7 @@ export const colors = {
   /** Product photographs always sit on white, like their studio backgrounds (owner's choice). */
   photo: '#FFFFFF',
   /** Thin frame around white photo plates on white pages. */
-  photoLine: '#E3DED1',
+  photoLine: '#E8E8E3',
   badge: '#C8231F',
   /** Discounts: solid red label and red sale price, meant to stand out. */
   sale: '#C8231F',

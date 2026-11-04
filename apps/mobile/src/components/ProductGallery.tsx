@@ -27,6 +27,6 @@ export function ProductGallery({ images, sku, label, inset = 0.1, blend }: { ima
 
 const styles = StyleSheet.create({
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingBottom: 14 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D9D3C7' },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D6D6D1' },
   dotOn: { backgroundColor: colors.text },
 });

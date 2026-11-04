@@ -118,7 +118,7 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   dock: { backgroundColor: colors.page, paddingHorizontal: 12, paddingTop: 6, gap: 8 },
   mini: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 58, paddingLeft: 18, paddingRight: 8, borderRadius: 20, backgroundColor: '#FFFFFF',
-    shadowColor: '#18201A', shadowOpacity: 0.22, shadowRadius: 34, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
+    shadowColor: '#18201A', shadowOpacity: 0.22, shadowRadius: 34, shadowOffset: { width: 0, height: 14 }, elevation: 8, borderWidth: 1, borderColor: colors.line },
   miniLabel: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
   miniTotal: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text },
   miniCta: { height: 44, paddingHorizontal: 16, borderRadius: 14, backgroundColor: colors.green, justifyContent: 'center' },

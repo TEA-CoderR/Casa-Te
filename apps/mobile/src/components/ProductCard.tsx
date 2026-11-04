@@ -156,7 +156,7 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
 
 const styles = StyleSheet.create({
   card: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 10,
-    borderBottomWidth: 1, borderColor: colors.line },
+    borderWidth: 1, borderColor: colors.line },
   media: { backgroundColor: colors.surface, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   heart: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 6, right: 6, zIndex: 2 },
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   entryName: { fontSize: 19, lineHeight: 23, fontFamily: fonts.serif, color: colors.text },
   entryNameBig: { fontSize: 28, lineHeight: 32 },
   entryBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, gap: 8, marginTop: 'auto' },
-  row: { flexDirection: 'row', gap: 12, padding: 10, marginBottom: 8, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center' },
+  row: { flexDirection: 'row', gap: 12, padding: 10, marginBottom: 8, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', borderWidth: 1, borderColor: colors.line },
   rowLink: { flex: 1, flexDirection: 'row', gap: 14, alignItems: 'center' },
   rowMedia: { width: 84, borderRadius: 8, backgroundColor: colors.surface, overflow: 'hidden' },
   rowSide: { alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', gap: 8 },

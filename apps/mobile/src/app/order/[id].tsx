@@ -141,7 +141,7 @@ export default function OrderDetailScreen() {
             <Text style={styles.itemName} numberOfLines={2}>{item.quantity > 1 ? `${item.quantity} × ` : ''}{item.name}</Text>
             <Text style={styles.itemTotal}>{euro(item.line_total_cents)}</Text>
           </View>)}
-          <View style={{ height: 1, backgroundColor: '#EFECE3', marginVertical: 4 }} />
+          <View style={{ height: 1, backgroundColor: '#EDEDE9', marginVertical: 4 }} />
           <SummaryRow label="Prodotti" value={euro(order.subtotal_cents)} />
           {order.discount_cents > 0 && <SummaryRow label={`Sconto ${order.coupon_code ?? ''}`} value={`-${euro(order.discount_cents)}`} tone="green" />}
           <SummaryRow label={order.fulfilment === 'store' ? 'Ritiro in negozio' : 'Spedizione'} value={formatShipping(order.shipping_cents).replace(/€\s/, '€')} />
@@ -276,7 +276,7 @@ function PassCode({ number, scan }: { number: string; scan: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  pass: { borderRadius: 24, backgroundColor: '#FFFFFF', shadowColor: '#18201A', shadowOpacity: 0.16, shadowRadius: 26, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
+  pass: { borderRadius: 24, backgroundColor: '#FFFFFF', shadowColor: '#18201A', shadowOpacity: 0.16, shadowRadius: 26, shadowOffset: { width: 0, height: 14 }, elevation: 8, borderWidth: 1, borderColor: colors.line },
   tlRow: { flexDirection: 'row', gap: 14, minHeight: 60 },
   tlDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#D5D0C3', alignItems: 'center', justifyContent: 'center' },
   tlDone: { backgroundColor: colors.green, borderColor: colors.green },
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   tlLine: { flex: 1, width: 2, backgroundColor: colors.line, marginVertical: 4 },
   stepTitle: { fontSize: 15.5, fontFamily: fonts.sansSemiBold, color: colors.text },
   stepSub: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
-  fold: { marginTop: 12, borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
+  fold: { marginTop: 12, borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   foldHead: { height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   foldTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
   reorder: { marginTop: 12, height: 54, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   passScan: { alignSelf: 'stretch', marginTop: 10, alignItems: 'center' },
   passScanNumber: { marginTop: 8, fontSize: 20, letterSpacing: 3, fontFamily: fonts.heavy, color: colors.text },
   passName: { fontSize: 13, fontFamily: fonts.sansMedium, color: colors.muted, marginTop: 8 },
-  card: { marginTop: 18, padding: 18, paddingBottom: 6, borderRadius: 22, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
+  card: { marginTop: 18, padding: 18, paddingBottom: 6, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   cardTitle: { fontSize: 21, lineHeight: 26, fontFamily: fonts.display, color: colors.text },
   actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
   action: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 54, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },

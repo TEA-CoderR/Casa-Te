@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   step: { width: 40, height: 46, alignItems: 'center', justifyContent: 'center' },
   quantityValue: { fontSize: 17, fontFamily: fonts.heavy, fontWeight: '800', minWidth: 22, textAlign: 'center', color: colors.text },
   empty: { paddingTop: 64, alignItems: 'center', paddingHorizontal: 20 },
-  emptyIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  emptyIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line },
   emptyTitle: { fontSize: 26, lineHeight: 31, fontFamily: fonts.display, color: colors.text, marginTop: 20, textAlign: 'center' },
   emptyMessage: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', marginTop: 10, fontFamily: fonts.sans },
   fieldLabel: { fontSize: 13, color: colors.muted, marginBottom: 6, marginLeft: 2, fontFamily: fonts.sansBold, fontWeight: '700' },

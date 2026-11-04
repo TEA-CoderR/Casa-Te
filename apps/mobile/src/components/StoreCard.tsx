@@ -68,7 +68,7 @@ export function StoreCard({ onPress, label = 'Ritiro gratuito nel tuo negozio', 
 
 const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF',
-    shadowColor: '#18201A', shadowOpacity: 0.12, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
+    shadowColor: '#18201A', shadowOpacity: 0.12, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6, borderWidth: 1, borderColor: colors.line },
   compact: { gap: 12, paddingVertical: 12 },
   label: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
   name: { fontSize: 19, lineHeight: 23, fontFamily: fonts.display, color: colors.text, marginTop: 1 },

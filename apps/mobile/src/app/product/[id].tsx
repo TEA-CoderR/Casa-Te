@@ -261,7 +261,7 @@ export default function ProductDetailScreen() {
         </Pressable>
         <View style={styles.folds}>{sections.map((f, i) => {
           const open = openKey === f.key;
-          return <View key={f.key} style={i > 0 && { borderTopWidth: 1, borderColor: '#EFECE3' }}>
+          return <View key={f.key} style={i > 0 && { borderTopWidth: 1, borderColor: '#EDEDE9' }}>
             <Pressable onPress={() => setFolds(open ? '' : f.key)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={styles.foldHead}>
               <Text style={styles.foldTitle}>{f.title}</Text>
               <View style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color={colors.text} strokeWidth={2.2} /></View>
@@ -337,20 +337,20 @@ const styles = StyleSheet.create({
   sociStrong: { fontFamily: fonts.sansBold, fontWeight: '700' },
   phoneStruck: { textDecorationLine: 'line-through' },
   phoneUnit: { fontSize: 14, fontFamily: fonts.sans, color: colors.muted, paddingBottom: 6, flexShrink: 1 },
-  phoneCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
+  phoneCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   stockRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   stockDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2E9B3A' },
   stockState: { fontSize: 12.5, fontFamily: fonts.heavy, letterSpacing: 0.5, color: '#2E6B34' },
   phoneCardTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   phoneCardText: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
   phoneLink: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green },
-  folds: { marginTop: 12, borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
+  folds: { marginTop: 12, borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   foldHead: { height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   foldTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
   foldBody: { paddingHorizontal: 16, paddingBottom: 16, marginTop: -6 },
   foldText: { fontSize: 15, lineHeight: 22, fontFamily: fonts.sans, color: '#4E554B' },
   relatedTitle: { fontSize: 21, lineHeight: 26, fontFamily: fonts.display, color: colors.text, marginTop: 24, marginBottom: 10 },
-  related: { flex: 1, padding: 8, borderRadius: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
+  related: { flex: 1, padding: 8, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   relatedName: { fontSize: 13, lineHeight: 16, fontFamily: fonts.sansSemiBold, color: colors.text, marginTop: 4 },
   relatedPrice: { fontSize: 15, fontFamily: fonts.heavy, color: colors.text, marginTop: 4 },
   addPhone: { height: 60, borderRadius: 30, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 20 },
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
   media: { backgroundColor: colors.photo, marginHorizontal: -20, marginTop: -20, marginBottom: 22, borderBottomWidth: 1, borderColor: colors.photoLine },
   overlay: { position: 'absolute', left: 12, right: 12, flexDirection: 'row', justifyContent: 'space-between' },
   round: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#3A2E1A', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+    shadowColor: '#3A2E1A', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2, borderWidth: 1, borderColor: colors.line },
   roundBare: { backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0 },
   roundLeft: { backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0 },
   roundRight: { flexDirection: 'row', gap: 6 },

@@ -332,7 +332,7 @@ function ClubCompare({ total, saving }: { total: number; saving: number }) {
     </View>
     <View style={styles.compareCta}>
       <Text style={styles.compareCtaText}>Iscriviti{'\n'}gratis</Text>
-      <Icon name="chevron" size={16} color="#FFFFFF" strokeWidth={2.4} />
+      <Icon name="chevron" size={16} color={colors.signInk} strokeWidth={2.4} />
     </View>
   </Pressable>;
 }
@@ -350,16 +350,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 1, marginTop: 3 },
   sociOfferText: { fontSize: 11.5, color: colors.sale, fontFamily: fonts.sans },
   footSoci: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.sale },
-  compare: { flexDirection: 'row', alignItems: 'stretch', borderRadius: 16, borderWidth: 1.5, borderColor: colors.sale, overflow: 'hidden', marginBottom: 12 },
+  compare: { flexDirection: 'row', alignItems: 'stretch', borderRadius: 16, borderWidth: 1, borderColor: colors.line, overflow: 'hidden', marginBottom: 12 },
   compareCol: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, justifyContent: 'center' },
   compareClub: { borderLeftWidth: 1, borderColor: colors.line },
   compareLabel: { fontSize: 11.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
   compareNow: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text, marginTop: 2 },
   compareSoci: { fontSize: 20, fontFamily: fonts.heavy, color: colors.sale, marginTop: 2 },
   compareSave: { fontSize: 11.5, color: colors.sale, fontFamily: fonts.sans },
-  compareCta: { width: 86, backgroundColor: colors.sale, alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 6 },
-  compareCtaText: { fontSize: 13, lineHeight: 16, color: '#FFFFFF', fontFamily: fonts.sansBold, fontWeight: '700', textAlign: 'center' },
-  undo: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.cream, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
+  // The Club in the colours of its card.
+  compareCta: { width: 86, backgroundColor: colors.sign, alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 6 },
+  compareCtaText: { fontSize: 13, lineHeight: 16, color: colors.signInk, fontFamily: fonts.sansBold, fontWeight: '700', textAlign: 'center' },
+  undo: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.well, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
   snack: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, borderRadius: 16, paddingHorizontal: 16, backgroundColor: colors.text },
   snackText: { flex: 1, fontSize: 14.5, fontFamily: fonts.sansSemiBold, color: '#FFFFFF' },
   snackLink: { fontSize: 14.5, fontFamily: fonts.heavy, color: colors.yellow },
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
   deliveryTitle: { fontSize: 16.5, fontFamily: fonts.serif, color: colors.text },
   deliveryText: { fontSize: 12, color: colors.muted, marginTop: 2, lineHeight: 17, fontFamily: fonts.sans },
   modify: { fontSize: 12.5, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium, fontWeight: '500' },
-  banner: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#F5ECDD', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16 },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.well, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16 },
   bannerTitle: { fontSize: 19, fontFamily: fonts.serif, color: colors.text },
   pSoci: { fontSize: 11, color: colors.sale, fontFamily: fonts.sansBold, fontWeight: '700' },
   memberSaved: { fontSize: 13, color: colors.sale, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginTop: 8 },
@@ -397,11 +398,11 @@ const styles = StyleSheet.create({
   countPill: { backgroundColor: colors.yellow, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
   countPillText: { fontSize: 13.5, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
   pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF',
-    shadowColor: '#18201A', shadowOpacity: 0.12, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
+    shadowColor: '#18201A', shadowOpacity: 0.12, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6, borderWidth: 1, borderColor: colors.line },
   pLabel: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
   pTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   pLink: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green },
-  pLine: { flexDirection: 'row', gap: 12, paddingVertical: 8, paddingLeft: 8, paddingRight: 12, borderRadius: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
+  pLine: { flexDirection: 'row', gap: 12, paddingVertical: 8, paddingLeft: 8, paddingRight: 12, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   pThumb: { width: 80, height: 80, borderRadius: 12, backgroundColor: colors.photo, alignItems: 'center', justifyContent: 'center' },
   pName: { flex: 1, fontSize: 14.5, lineHeight: 18, fontFamily: fonts.sansSemiBold, color: colors.text },
   pPrice: { fontSize: 17, fontFamily: fonts.heavy, color: colors.text },
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
   footLabel: { fontSize: 15, fontFamily: fonts.sans, color: colors.muted },
   footFree: { color: colors.green, fontFamily: fonts.heavy },
   footNote: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted },
-  footRule: { height: 1, backgroundColor: '#EFECE3', marginVertical: 12 },
+  footRule: { height: 1, backgroundColor: '#EDEDE9', marginVertical: 12 },
   footTotalLabel: { fontSize: 20, fontFamily: fonts.display, color: colors.text },
   footTotal: { fontSize: 24, lineHeight: 28, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
   payButton: { flex: 1, height: 54, borderRadius: 27, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 16 },
