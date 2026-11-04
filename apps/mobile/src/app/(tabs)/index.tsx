@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { setStatusBarStyle } from 'expo-status-bar';
 import { orderStatusLabel, type CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
@@ -10,7 +11,8 @@ import { StoreCard } from '@/components/StoreCard';
 import { StepTag } from '@/components/ShopMarks';
 import { Icon, type IconName } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
-import { BrandHeader, HangingCard, HeaderButton, HeaderSearch, StatusBand } from '@/components/BrandHeader';
+import { BrandLogo } from '@/components/BrandLogo';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '@/components/ProductImage';
 import { RemoteImage } from '@/components/RemoteImage';
 import { colors, fonts } from '@/config/theme';
@@ -31,6 +33,9 @@ const ACTIVE = new Set(['paid', 'picking', 'ready', 'shipped']);
 /** Steps of an order, for the progress bar on the order card (pickup and delivery both have four). */
 const STEP: Record<string, number> = { paid: 1, picking: 2, ready: 3, shipped: 3 };
 function HomePhone() {
+  const insets = useSafeAreaInsets();
+  // Light status bar over the green band while Home is on screen.
+  useFocusEffect(useCallback(() => { setStatusBarStyle('light'); return () => setStatusBarStyle('dark'); }, []));
   const { selected } = useStores();
   const user = useUser();
   const { width } = useWindowDimensions();
@@ -105,7 +110,15 @@ function HomePhone() {
     <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8}><Text style={styles.link}>{link}</Text></Pressable>
   </View>;
 
-  const header = <BrandHeader logo inScroll pad={[16, 20, 40]} right={<HeaderButton icon="heart" label="Preferiti" onPress={() => router.push('/favorites')} />}>
+  // Home: the one brand moment of the app — a solid deep-green band with the logo in lime, the greeting and the
+  // search, rounded at the bottom, with the store card hanging over its edge (like the big Italian grocery apps).
+  const header = <View style={styles.band}>
+    <View style={styles.bandRow}>
+      <BrandLogo width={92} color={colors.signInk} />
+      <View style={{ flex: 1 }} />
+      <Pressable onPress={() => router.push('/favorites')} accessibilityRole="button" accessibilityLabel="Preferiti" hitSlop={4}
+        style={({ pressed }) => [styles.bandButton, pressed && { opacity: 0.7 }]}><Icon name="heart" size={21} color="#FFFFFF" strokeWidth={1.9} /></Pressable>
+    </View>
     <Text style={styles.hello} accessibilityRole="header">{firstName ? `Ciao, ${firstName}` : 'Ciao!'}</Text>
     <Text style={styles.helloSub}>Cosa ti serve per casa oggi?</Text>
     <Pressable onPress={() => openCatalog({ search: '1' })} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
@@ -116,9 +129,9 @@ function HomePhone() {
         <Icon name="scan" size={19} color={colors.text} strokeWidth={2} />
       </Pressable>
     </Pressable>
-  </BrandHeader>;
+  </View>;
 
-  return <Screen header={<StatusBand />} top={header} ground={colors.page} refreshing={featured.loading && !!featured.data} onRefresh={refresh}
+  return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.green }} />} top={header} ground={colors.page} refreshing={featured.loading && !!featured.data} onRefresh={refresh}
     contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
     <View style={{ marginTop: -30, marginHorizontal: 16 }}><StoreCard onPress={() => setStoreSheet(true)} /></View>
@@ -215,11 +228,13 @@ function HomePhone() {
 }
 
 const styles = StyleSheet.create({
-  hello: { fontSize: 34, lineHeight: 40, fontFamily: fonts.display, color: colors.bandText, letterSpacing: -0.6, marginTop: 20 },
-  helloSub: { fontSize: 16, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 4 },
+  band: { backgroundColor: colors.green, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 54, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  bandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
+  bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  hello: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, color: '#FFFFFF', letterSpacing: -0.6, marginTop: 18 },
+  helloSub: { fontSize: 15.5, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
   // Outlined like the sign-in fields.
-  search: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12, height: 54, paddingLeft: 16, paddingRight: 6, borderRadius: 12, backgroundColor: '#FFFFFF',
-    borderWidth: 1.5, borderColor: '#8C9189' },
+  search: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 16, paddingRight: 6, borderRadius: 14, backgroundColor: '#FFFFFF' },
   searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.muted },
   scan: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
   // The order in progress: deep green with the lime signal on the progress bars.
