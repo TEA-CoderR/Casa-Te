@@ -229,7 +229,7 @@ export default function ProfileScreen() {
         {/* One plain grouped list (the order in progress and the store card are on Home). */}
         <Text style={styles.fGroup} accessibilityRole="header">I TUOI ACQUISTI</Text>
         <View style={styles.fList}>
-          {user && prow('Ordini e resi', () => go('/orders'), orderCount ? `${orderCount} ${orderCount === 1 ? 'ordine' : 'ordini'}` : 'Segui ordini e ritiri', true)}
+          {user && prow('Ordini', () => go('/orders'), orderCount ? `${orderCount} ${orderCount === 1 ? 'ordine' : 'ordini'}` : 'Segui ordini e ritiri', true)}
           {prow('Preferiti', () => go('/favorites'), favourites ? `${favourites} ${favourites === 1 ? 'prodotto' : 'prodotti'}` : 'I prodotti salvati con il cuore', !user)}
           {prow('Il tuo negozio', () => setStoreSheet(true), selected ? `CASA & TE ${storeName}` : 'Scegli il negozio')}
           {user && prow('Indirizzi', () => go('/account/addresses'), 'Per la consegna a domicilio')}

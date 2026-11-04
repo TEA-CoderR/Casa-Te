@@ -5,6 +5,7 @@ import { router, Stack } from 'expo-router';
 import { FULFILMENT_LABELS, formatWeight, friendlyError, isPhone, validateAddress, validateInvoice, type Address, type AddressRow, type CreateOrderInput, type FulfilmentMethod, type InvoiceDetails, type PickupPointRow } from '@casa-te/shared';
 import { formatEuro, formatShipping } from '@/lib/price';
 import { Screen } from '@/components/Screen';
+import { RevealInput, RevealOnOpen } from '@/components/Reveal';
 import { Icon, type IconName } from '@/components/Icon';
 import { FulfilmentSheet } from '@/components/FulfilmentSheet';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
@@ -180,7 +181,7 @@ export default function CheckoutScreen() {
     const field = (key: string, label: string, value: string, onChange: (v: string) => void, extra: object = {}, last = false) =>
       <View key={key} style={[styles.fRow, !last && styles.fRule]}>
         <Text style={styles.fLabel}>{label}</Text>
-        <TextInput value={value} onChangeText={onChange} accessibilityLabel={label} placeholderTextColor={colors.faint} style={styles.fInput}
+        <RevealInput value={value} onChangeText={onChange} accessibilityLabel={label} placeholderTextColor={colors.faint} style={styles.fInput}
           {...({ dataSet: { invalid: err(key) ? 'true' : 'false' } } as object)} {...extra} />
         {!!err(key) && <Text style={styles.fError} accessibilityLiveRegion="polite">{err(key)}</Text>}
       </View>;
@@ -287,7 +288,7 @@ export default function CheckoutScreen() {
         {method !== 'home' && field('phone', 'Telefono', phone, setPhone, { keyboardType: 'phone-pad', autoComplete: 'tel', placeholder: 'Per contattarti se serve' }, true)}
       </View>
 
-      <View style={[styles.group, { marginTop: 22 }]}>
+      <RevealOnOpen open={summaryOpen} style={[styles.group, { marginTop: 22 }]}>
         <Pressable onPress={() => setSummaryOpen(!summaryOpen)} accessibilityRole="button" accessibilityState={{ expanded: summaryOpen }} style={styles.sumHead}>
           <View style={{ flexDirection: 'row' }}>{quote.lines.slice(0, 3).map((l, i) =>
             <View key={l.product_id} style={[styles.sumThumb, i > 0 && { marginLeft: -10 }]}><ProductImage uri={imageUrl(l.image_path)} sku={l.sku} inset={0.04} /></View>)}</View>
@@ -301,33 +302,46 @@ export default function CheckoutScreen() {
           <View style={styles.sumLine}><Text style={styles.sumText}>{FULFILMENT_LABELS[method]}</Text><Text style={styles.sumText}>{methodQuote ? formatShipping(methodQuote.price_cents).replace(/€\s/, '€') : '—'}</Text></View>
           <View style={styles.sumLine}><Text style={styles.sumText}>Peso</Text><Text style={styles.sumText}>{formatWeight(quote.total_weight_g)}</Text></View>
         </View>}
-      </View>
+      </RevealOnOpen>
 
       <View style={[styles.group, { marginTop: 10 }]}>
         {coupon && !quote.coupon_error ? <View style={[styles.sumHead, { justifyContent: 'space-between' }]}>
           <Text style={styles.sumTitle}>Codice {quote.coupon?.code ?? coupon} applicato</Text>
           <Pressable onPress={() => { setCoupon(''); setCouponInput(''); }} accessibilityRole="button"><Text style={styles.linkPhone}>Rimuovi</Text></Pressable>
-        </View> : !couponOpen ? <Pressable onPress={() => setCouponOpen(true)} accessibilityRole="button" style={styles.sumHead}>
-          <Icon name="percent" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Hai un codice sconto?</Text><Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
-        </Pressable> : <View style={[styles.fRow, { flexDirection: 'row', alignItems: 'flex-end', gap: 10 }]}>
-          <View style={{ flex: 1 }}><Text style={styles.fLabel}>Codice sconto</Text>
-            <TextInput value={couponInput} autoCapitalize="characters" autoCorrect={false} autoFocus onChangeText={(v) => setCouponInput(v.toUpperCase())}
-              onSubmitEditing={() => setCoupon(couponInput.trim())} style={styles.fInput} accessibilityLabel="Codice sconto" />
-            {!!coupon && !!quote.coupon_error && <Text style={styles.fError}>{friendlyError(quote.coupon_error)}</Text>}</View>
-          <Pressable onPress={() => setCoupon(couponInput.trim())} disabled={!couponInput.trim()} accessibilityRole="button" style={styles.apply}><Text style={styles.applyText}>Applica</Text></Pressable>
+        </View> : <View>
+          {/* Opens and closes from the same row; the field scrolls above the keyboard. */}
+          <Pressable onPress={() => setCouponOpen(!couponOpen)} accessibilityRole="button" accessibilityState={{ expanded: couponOpen }} style={styles.sumHead}>
+            <Icon name="percent" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Hai un codice sconto?</Text>
+            <View style={{ transform: [{ rotate: couponOpen ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color="#9A9F94" strokeWidth={2.2} /></View>
+          </Pressable>
+          {couponOpen && <View style={[styles.fRow, { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingTop: 0 }]}>
+            <View style={{ flex: 1 }}>
+              <RevealInput value={couponInput} autoCapitalize="characters" autoCorrect={false} autoFocus onChangeText={(v) => setCouponInput(v.toUpperCase())}
+                onSubmitEditing={() => setCoupon(couponInput.trim())} placeholder="Scrivi il codice" placeholderTextColor={colors.faint} style={styles.fInput} accessibilityLabel="Codice sconto" />
+              {!!coupon && !!quote.coupon_error && <Text style={styles.fError}>{friendlyError(quote.coupon_error)}</Text>}</View>
+            <Pressable onPress={() => setCoupon(couponInput.trim())} disabled={!couponInput.trim()} accessibilityRole="button" style={[styles.apply, !couponInput.trim() && { opacity: 0.4 }]}><Text style={styles.applyText}>Applica</Text></Pressable>
+          </View>}
         </View>}
         <View style={styles.fRule} />
-        {notesOpen || notes ? <View style={styles.fRow}><Text style={styles.fLabel}>Note per il negozio (facoltative)</Text>
-          <TextInput value={notes} onChangeText={setNotes} multiline maxLength={500} autoFocus={!notes} style={[styles.fInput, { minHeight: 60, textAlignVertical: 'top' }]} accessibilityLabel="Note per il negozio" /></View>
-          : <Pressable onPress={() => setNotesOpen(true)} accessibilityRole="button" style={styles.sumHead}>
-            <Icon name="list" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Aggiungi una nota per il negozio</Text><Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
-          </Pressable>}
+        <View>
+          <Pressable onPress={() => setNotesOpen(!notesOpen)} accessibilityRole="button" accessibilityState={{ expanded: notesOpen }} style={styles.sumHead}>
+            <Icon name="list" size={18} color={colors.green} strokeWidth={2} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={[styles.sumTitle, { flex: 0 }]}>{notes ? 'Nota per il negozio' : 'Aggiungi una nota per il negozio'}</Text>
+              {!notesOpen && !!notes && <Text style={styles.fSubPreview} numberOfLines={1}>{notes}</Text>}
+            </View>
+            <View style={{ transform: [{ rotate: notesOpen ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color="#9A9F94" strokeWidth={2.2} /></View>
+          </Pressable>
+          {notesOpen && <View style={[styles.fRow, { paddingTop: 0 }]}>
+            <RevealInput value={notes} onChangeText={setNotes} multiline maxLength={500} autoFocus placeholder="Es. citofono, orario preferito…" placeholderTextColor={colors.faint}
+              style={[styles.fInput, { minHeight: 60, textAlignVertical: 'top' }]} accessibilityLabel="Note per il negozio" /></View>}
+        </View>
         <View style={styles.fRule} />
         <Pressable onPress={() => setInvoice(!invoice)} accessibilityRole="checkbox" accessibilityState={{ checked: invoice }} style={styles.sumHead}>
           <Icon name="card" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Richiedo la fattura</Text>
           <View style={[styles.box, invoice && styles.boxOn]}>{invoice && <Icon name="check" size={14} color="#FFFFFF" strokeWidth={3} />}</View>
         </Pressable>
-        {invoice && <View style={{ borderTopWidth: 1, borderColor: '#EDEDE9' }}>
+        {invoice && <RevealOnOpen open={invoice} style={{ borderTopWidth: 1, borderColor: '#EDEDE9' }}>
           {field('invoice.taxCode', 'Codice fiscale', invoiceData.taxCode ?? '', (v) => setInvoiceData({ ...invoiceData, taxCode: v.toUpperCase() }), { autoCapitalize: 'characters', maxLength: 16 })}
           {field('invoice.vatNumber', 'Partita IVA (aziende)', invoiceData.vatNumber ?? '', (v) => setInvoiceData({ ...invoiceData, vatNumber: v }), { keyboardType: 'number-pad', maxLength: 13 }, !invoiceData.vatNumber)}
           {!!invoiceData.vatNumber && <>
@@ -335,7 +349,7 @@ export default function CheckoutScreen() {
             {field('invoice.sdiCode', 'Codice SDI', invoiceData.sdiCode ?? '', (v) => setInvoiceData({ ...invoiceData, sdiCode: v.toUpperCase() }), { maxLength: 7, autoCapitalize: 'characters' })}
             {field('invoice.pec', 'PEC (in alternativa al codice SDI)', invoiceData.pec ?? '', (v) => setInvoiceData({ ...invoiceData, pec: v }), { keyboardType: 'email-address', autoCapitalize: 'none' }, true)}
           </>}
-        </View>}
+        </RevealOnOpen>}
       </View>
 
       {!!seller && <Text style={styles.finePhone}>Venditore: {seller.legal_name} · P.IVA {seller.vat_number}. Paghi sulla pagina sicura di Stripe: i dati della carta non passano dai nostri server. Recesso entro 14 giorni.</Text>}
@@ -489,6 +503,7 @@ const styles = StyleSheet.create({
   fError: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.danger, marginTop: 4 },
   sumHead: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 10 },
   sumThumb: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, overflow: 'hidden', padding: 2 },
+  fSubPreview: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
   sumTitle: { flex: 1, fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   sumBody: { paddingBottom: 12, gap: 6 },
   sumLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { friendlyError } from '@casa-te/shared';
 import { colors, fonts } from '@/config/theme';
@@ -8,6 +8,7 @@ import { invalidate, useQuery } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
 import { Stars, StarInput } from './Stars';
 import { Notice, PrimaryButton } from './UI';
+import { RevealInput } from './Reveal';
 
 /** Reviews from verified buyers, and the form to write or edit one's own. */
 export function ProductReviews({ productId, average, count, onChanged }: { productId: string; average: number | null; count: number; onChanged: () => void }) {
@@ -62,7 +63,7 @@ export function ProductReviews({ productId, average, count, onChanged }: { produ
         ? <View style={styles.form}>
             <Text style={styles.formTitle}>{mine ? 'Modifica la tua recensione' : 'La tua recensione'}</Text>
             <StarInput value={rating} onChange={setRating} />
-            <TextInput value={comment} onChangeText={setComment} placeholder="Racconta com'è il prodotto (facoltativo)" placeholderTextColor={colors.faint}
+            <RevealInput value={comment} onChangeText={setComment} placeholder="Racconta com'è il prodotto (facoltativo)" placeholderTextColor={colors.faint}
               multiline maxLength={2000} accessibilityLabel="Commento" style={styles.input} />
             <PrimaryButton title={mine ? 'Aggiorna recensione' : 'Pubblica recensione'} onPress={send} loading={busy} />
             <Pressable onPress={() => setOpen(false)} accessibilityRole="button" style={{ alignSelf: 'center', padding: 8 }}><Text style={styles.link}>Annulla</Text></Pressable>

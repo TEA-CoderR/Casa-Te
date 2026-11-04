@@ -11,6 +11,7 @@ import {
   type RefundMethod, type ReturnReason, type ReturnResolution,
 } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
+import { RevealInput } from '@/components/Reveal';
 import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
 import { StepTag } from '@/components/ShopMarks';
 import { ProductImage } from '@/components/ProductImage';
@@ -232,7 +233,7 @@ export default function ReturnRequestScreen() {
           </Pressable>}
         </View>
         <Text style={styles.label}>Messaggio per il negozio{reason === 'other' ? '' : ' (facoltativo)'}</Text>
-        <TextInput value={note} onChangeText={setNote} multiline maxLength={1000} placeholder="Es. la confezione era aperta, il colore non è quello ordinato…"
+        <RevealInput value={note} onChangeText={setNote} multiline maxLength={1000} placeholder="Es. la confezione era aperta, il colore non è quello ordinato…"
           placeholderTextColor={colors.faint} accessibilityLabel="Messaggio per il negozio" style={styles.note} />
       </>}
 

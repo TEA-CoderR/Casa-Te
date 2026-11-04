@@ -1,8 +1,9 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import { useRef, type PropsWithChildren, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { colors, fonts } from '@/config/theme';
 import { Icon, type IconName } from './Icon';
 import { useLayout } from '@/lib/hooks';
+import { useReveal } from './Reveal';
 
 /** Desktop web: square-cut controls and sans labels, like the rest of the desktop catalogue. */
 const deskButton = { borderRadius: 4 } as const;
@@ -87,11 +88,14 @@ export function EmptyState({ title, message, icon = 'bag', art, children }: Prop
 }
 
 export function TextField({ label, error, hint, ...props }: TextInputProps & { label: string; error?: string; hint?: string }) {
-  return <View style={{ marginBottom: 12 }}>
+  const box = useRef<View>(null);
+  const reveal = useReveal();
+  return <View ref={box} style={{ marginBottom: 12 }}>
     <Text style={styles.fieldLabel}>{label}</Text>
     <TextInput placeholderTextColor={colors.faint} accessibilityLabel={label} {...props}
       // data-invalid lets the checkout scroll to and focus the first field with an error (web).
       {...({ dataSet: { invalid: error ? 'true' : 'false' } } as object)}
+      onFocus={(e) => { reveal(box.current); props.onFocus?.(e); }}
       style={[styles.input, error ? { borderColor: colors.danger, borderWidth: 1.5 } : null, props.style]} />
     {error ? <Text style={styles.fieldError} accessibilityLiveRegion="polite">{error}</Text> : hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
   </View>;

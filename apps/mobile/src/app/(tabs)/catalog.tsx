@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CategoryBrowser, SubcategorySheet, SubcategoryTabs, departmentCount, liveChildren } from '@/components/CategoryNav';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { RemoteImage } from '@/components/RemoteImage';
+import { RevealOnOpen } from '@/components/Reveal';
 import { router, useLocalSearchParams, useRoute } from 'expo-router';
 import { productList } from '@/lib/links';
 import type { CategoryRow } from '@casa-te/shared';
@@ -263,7 +264,8 @@ export default function CatalogScreen() {
             const cover = covers.data?.[c.id]?.image ?? subs.map((x) => covers.data?.[x.id]?.image).find(Boolean) ?? null;
             const open = openDept === c.id && subs.length > 1;
             const go = (id: string) => { setOpenDept(null); openList({ category: id }); };
-            return <View key={c.id} style={i > 0 && { borderTopWidth: 1, borderColor: '#EDEDE9' }}>
+            // The opened department scrolls to the top, so its heading and subcategories are in view (the one above closes).
+            return <RevealOnOpen key={c.id} open={open} style={i > 0 && { borderTopWidth: 1, borderColor: '#EDEDE9' }}>
               <Pressable onPress={() => subs.length > 1 ? setOpenDept(open ? null : c.id) : go(c.id)}
                 accessibilityRole={subs.length > 1 ? 'button' : 'link'} accessibilityState={subs.length > 1 ? { expanded: open } : undefined}
                 accessibilityLabel={`${c.name}${n ? `, ${n} ${n === 1 ? 'prodotto' : 'prodotti'}` : ''}`} style={styles.sRow}>
@@ -286,7 +288,7 @@ export default function CatalogScreen() {
                   <Text style={styles.sCellText} numberOfLines={2}>{x.name}</Text>
                 </Pressable>)}</View>
               </View>}
-            </View>;
+            </RevealOnOpen>;
           })}</View>
         </View>
         : !loading && !error && !shown.length && !catHits.length ? <View style={styles.sEmpty}>

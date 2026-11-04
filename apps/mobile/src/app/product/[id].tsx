@@ -6,6 +6,7 @@ import { Link, useLocalSearchParams, router, Stack } from 'expo-router';
 import { formatPackSize, formatWeight, type CategoryRow } from '@casa-te/shared';
 import { discountLabel, formatEuro, unitPriceLabel, untilLabel } from '@/lib/price';
 import { Screen } from '@/components/Screen';
+import { RevealOnOpen } from '@/components/Reveal';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductImage } from '@/components/ProductImage';
 import { FavoriteButton, stockLabel } from '@/components/ProductCard';
@@ -261,13 +262,13 @@ export default function ProductDetailScreen() {
         </Pressable>
         <View style={styles.folds}>{sections.map((f, i) => {
           const open = openKey === f.key;
-          return <View key={f.key} style={i > 0 && { borderTopWidth: 1, borderColor: '#EDEDE9' }}>
+          return <RevealOnOpen key={f.key} open={open} style={i > 0 && { borderTopWidth: 1, borderColor: '#EDEDE9' }}>
             <Pressable onPress={() => setFolds(open ? '' : f.key)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={styles.foldHead}>
               <Text style={styles.foldTitle}>{f.title}</Text>
               <View style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color={colors.text} strokeWidth={2.2} /></View>
             </Pressable>
             {open && <View style={styles.foldBody}>{f.body}</View>}
-          </View>;
+          </RevealOnOpen>;
         })}</View>
         {related.data && related.data.items.filter((p) => p.id !== product.id).length > 0 && <>
           <Text style={styles.relatedTitle} accessibilityRole="header">Altro in {department?.name ?? 'questo reparto'}</Text>

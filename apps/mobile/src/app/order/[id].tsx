@@ -6,6 +6,7 @@ import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
 import { formatEuro, formatShipping } from '@/lib/price';
 import { Barcode } from '@/components/Barcode';
 import { Screen } from '@/components/Screen';
+import { RevealOnOpen } from '@/components/Reveal';
 import { OrderTimeline } from '@/components/OrderTimeline';
 import { ProductImage } from '@/components/ProductImage';
 import { EmptyState, Loading, Notice, orderStatusTone, PrimaryButton, SecondaryButton, SectionTitle, StatusMark, SummaryRow } from '@/components/UI';
@@ -130,7 +131,7 @@ export default function OrderDetailScreen() {
           <Icon name="phone" size={19} color={colors.green} strokeWidth={2} /><Text style={styles.actionText}>Chiama il negozio</Text></Pressable>}
       </View>
 
-      <View style={styles.fold}>
+      <RevealOnOpen open={itemsOpen} style={styles.fold}>
         <Pressable onPress={() => setItemsOpen(!itemsOpen)} accessibilityRole="button" accessibilityState={{ expanded: itemsOpen }} style={styles.foldHead}>
           <Text style={styles.foldTitle}>Articoli nell’ordine</Text>
           <View style={{ transform: [{ rotate: itemsOpen ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color={colors.text} strokeWidth={2.2} /></View>
@@ -147,7 +148,7 @@ export default function OrderDetailScreen() {
           <SummaryRow label={order.fulfilment === 'store' ? 'Ritiro in negozio' : 'Spedizione'} value={formatShipping(order.shipping_cents).replace(/€\s/, '€')} />
           <SummaryRow label="Pagamento" value={PAYMENT_STATUS_LABELS[order.payment_status]} />
         </View>}
-      </View>
+      </RevealOnOpen>
 
       <OrderReturns order={order} />
 
