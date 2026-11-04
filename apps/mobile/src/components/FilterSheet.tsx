@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   track: { width: 50, height: 30, borderRadius: 15, backgroundColor: '#D0D0CB' },
   knob: { position: 'absolute', top: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
-  chipOn: { backgroundColor: colors.green, borderColor: colors.green },
+  chipOn: { backgroundColor: colors.action, borderColor: colors.action },
   chipText: { fontSize: 14, color: colors.text, fontFamily: fonts.sansBold },
   empty: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans, paddingVertical: 6 },
 });

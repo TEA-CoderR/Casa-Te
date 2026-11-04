@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   fieldInput: { flex: 1, height: 58, fontSize: 17, fontFamily: fonts.sans, color: colors.text, outlineWidth: 0, outlineStyle: 'none' } as object,
   eye: { paddingLeft: 10, paddingVertical: 8 },
   pill: { height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  pillFill: { backgroundColor: colors.green },
+  pillFill: { backgroundColor: colors.action },
   pillOutline: { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#5F665C' },
   pillOff: { backgroundColor: colors.well, borderColor: colors.well },
   pillText: { fontSize: 18, fontFamily: fonts.sansSemiBold, color: colors.text },

@@ -12,11 +12,13 @@ import { Platform } from 'react-native';
  */
 export const colors = {
   /** Actions, links, active states (white text on it passes AA). */
-  green: '#1F4127',
+  green: '#2F5A27',
   greenDark: '#143019',
   /** Awning band behind phone headers (stripes alternate `brand` and `stripe`). */
   brand: '#1F4127',
   stripe: '#234A2C',
+  /** Filled controls (buttons, add, selected chips): ink on the white pages; the brand greens are small accents. */
+  action: '#18201A',
   /** Light text on the dark green (tab bar, green buttons, the order-confirmed page). */
   onBrand: '#CFDDC6',
   /** Page headers (since the sign-in redesign): a white band with dark title, muted subtitle and light round buttons. */

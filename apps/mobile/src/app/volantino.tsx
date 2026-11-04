@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.muted },
 
   actions: { flexDirection: 'row', gap: 10, marginTop: 18 },
-  primary: { flex: 1, height: 54, borderRadius: 27, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  primary: { flex: 1, height: 54, borderRadius: 27, backgroundColor: colors.action, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   primaryText: { fontSize: 16.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   secondary: { height: 54, paddingHorizontal: 22, borderRadius: 27, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { fontSize: 16, fontFamily: fonts.sansBold, color: colors.text },

@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, lineHeight: 31, fontFamily: fonts.display, color: colors.text },
   sub: { fontSize: 14, color: colors.muted, marginTop: 4, lineHeight: 20, fontFamily: fonts.sans },
   close: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
-  confirm: { height: 56, borderRadius: 28, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  confirm: { height: 56, borderRadius: 28, backgroundColor: colors.action, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   confirmText: { fontSize: 16.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   option: { flexDirection: 'row', gap: 14, padding: 14, paddingHorizontal: 16, borderRadius: 18, borderWidth: 1, borderColor: colors.line, alignItems: 'center' },
   optionOn: { borderColor: colors.green, borderWidth: 2, padding: 13, paddingHorizontal: 15 },

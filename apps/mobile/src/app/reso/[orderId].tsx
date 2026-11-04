@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
 
   footer: { gap: 10 },
   footerHint: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted, textAlign: 'center' },
-  next: { height: 54, borderRadius: 27, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  next: { height: 54, borderRadius: 27, backgroundColor: colors.action, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   nextOff: { opacity: 0.4 },
   nextText: { fontSize: 16.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
 

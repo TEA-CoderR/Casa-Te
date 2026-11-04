@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   footRule: { height: 1, backgroundColor: '#EDEDE9', marginVertical: 12 },
   footTotalLabel: { fontSize: 20, fontFamily: fonts.display, color: colors.text },
   footTotal: { fontSize: 24, lineHeight: 28, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
-  payButton: { flex: 1, height: 54, borderRadius: 27, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 16 },
+  payButton: { flex: 1, height: 54, borderRadius: 27, backgroundColor: colors.action, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 16 },
   payBar: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   payBarLabel: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted },
   summaryPlate: { marginTop: 12, padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },

@@ -58,6 +58,9 @@ function Shortcut({ icon, label, detail, onPress, square }: { icon: IconName; la
   </Pressable>;
 }
 
+/** Photo of the real Casa & Te card. */
+const CLUB_CARD = require('../../../assets/club-card.webp');
+
 export default function ProfileScreen() {
   const user = useUser();
   const storeId = usePreferences((s) => s.storeId);
@@ -221,10 +224,10 @@ export default function ProfileScreen() {
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
       <View style={{ paddingHorizontal: 16 }}>
         {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={({ pressed }) => [styles.fClub, { marginTop: 4 }, pressed && { opacity: 0.88 }]}>
-          <Icon name="crown" size={26} color={colors.signInk} strokeWidth={1.7} />
+          <Image source={CLUB_CARD} style={styles.fClubCard} accessibilityIgnoresInvertColors />
           <View style={{ flex: 1 }}><Text style={styles.fClubTitle}>Casa & Te Club</Text>
             <Text style={styles.fClubText}>{member ? 'Sei membro: guarda le offerte a te riservate.' : club.tagline}</Text></View>
-          <Icon name="chevron" size={18} color={colors.signInk} strokeWidth={2.2} />
+          <Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
         </Pressable>}
         {/* One plain grouped list (the order in progress and the store card are on Home). */}
         <Text style={styles.fGroup} accessibilityRole="header">I TUOI ACQUISTI</Text>
@@ -276,9 +279,11 @@ const styles = StyleSheet.create({
   fSignIn: { alignSelf: 'flex-start', height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.yellow, justifyContent: 'center', marginTop: 14 },
   fSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
   // The Club in the colours of its card: lime on the shop-sign green.
-  fClub: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10, padding: 16, borderRadius: 18, backgroundColor: colors.sign },
-  fClubTitle: { fontSize: 18, lineHeight: 22, fontFamily: fonts.display, color: colors.signInk },
-  fClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: '#E6EEDC', marginTop: 2 },
+  // The Club as its real card, small, on a white plate.
+  fClub: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10, padding: 12, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  fClubCard: { width: 64, height: 40, borderRadius: 6 },
+  fClubTitle: { fontSize: 16, lineHeight: 20, fontFamily: fonts.display, color: colors.text },
+  fClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
   fGroup: { fontSize: 13, letterSpacing: 0.6, fontFamily: fonts.heavy, color: colors.muted, marginTop: 20, marginBottom: 8, marginLeft: 4 },
   fList: { borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   fRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 58, paddingVertical: 8, paddingHorizontal: 16 },

@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 29, lineHeight: 35, fontFamily: fonts.display, color: colors.text },
   serifTitle: { fontSize: 31, lineHeight: 37, fontFamily: fonts.serif, fontWeight: '400', letterSpacing: -0.2 },
   subtitle: { fontSize: 13.5, color: colors.muted, marginTop: 3, fontFamily: fonts.sansMedium },
-  button: { minHeight: 56, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: colors.green,
+  button: { minHeight: 56, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: colors.action,
     borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   buttonText: { fontSize: 17, fontFamily: fonts.sansBold, fontWeight: '700', color: '#fff', flexShrink: 1, textAlign: 'center' },
   secondary: { minHeight: 52, borderRadius: 999, borderWidth: 1.5, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },

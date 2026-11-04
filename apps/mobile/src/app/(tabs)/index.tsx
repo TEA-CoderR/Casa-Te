@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
-import { setStatusBarStyle } from 'expo-status-bar';
+import { router } from 'expo-router';
 import { orderStatusLabel, type CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
@@ -10,7 +9,7 @@ import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { StoreCard } from '@/components/StoreCard';
 import { Icon, type IconName } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
-import { BrandLogo } from '@/components/BrandLogo';
+import { LogoSign } from '@/components/BrandHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '@/components/ProductImage';
 import { RemoteImage } from '@/components/RemoteImage';
@@ -33,8 +32,6 @@ const ACTIVE = new Set(['paid', 'picking', 'ready', 'shipped']);
 const STEP: Record<string, number> = { paid: 1, picking: 2, ready: 3, shipped: 3 };
 function HomePhone() {
   const insets = useSafeAreaInsets();
-  // Light status bar over the green band while Home is on screen.
-  useFocusEffect(useCallback(() => { setStatusBarStyle('light'); return () => setStatusBarStyle('dark'); }, []));
   const { selected } = useStores();
   const user = useUser();
   const { width } = useWindowDimensions();
@@ -101,7 +98,7 @@ function HomePhone() {
   const quick = (label: string, icon: IconName, onPress: () => void) =>
     <Pressable key={label} onPress={onPress} accessibilityRole="link" accessibilityLabel={label}
       style={({ pressed }) => [styles.quickItem, pressed && { opacity: 0.75 }]}>
-      <View style={styles.quickSign}><Icon name={icon} size={24} color="#FFFFFF" strokeWidth={1.9} /></View>
+      <View style={styles.quickSign}><Icon name={icon} size={24} color={colors.green} strokeWidth={1.8} /></View>
       <Text style={styles.quickText} numberOfLines={1}>{label}</Text>
     </Pressable>;
   const sectionHead = (id: string, title: string, link: string, onPress: () => void) => <View style={styles.section}>
@@ -113,10 +110,10 @@ function HomePhone() {
   // search, rounded at the bottom, with the store card hanging over its edge (like the big Italian grocery apps).
   const header = <View style={styles.band}>
     <View style={styles.bandRow}>
-      <BrandLogo width={92} color={colors.signInk} />
+      <LogoSign height={34} />
       <View style={{ flex: 1 }} />
       <Pressable onPress={() => router.push('/favorites')} accessibilityRole="button" accessibilityLabel="Preferiti" hitSlop={4}
-        style={({ pressed }) => [styles.bandButton, pressed && { opacity: 0.7 }]}><Icon name="heart" size={21} color="#FFFFFF" strokeWidth={1.9} /></Pressable>
+        style={({ pressed }) => [styles.bandButton, pressed && { opacity: 0.7 }]}><Icon name="heart" size={21} color={colors.text} strokeWidth={1.9} /></Pressable>
     </View>
     <Text style={styles.hello} accessibilityRole="header">{firstName ? `Ciao, ${firstName}` : 'Ciao!'}</Text>
     <Text style={styles.helloSub}>Cosa ti serve per casa oggi?</Text>
@@ -130,15 +127,15 @@ function HomePhone() {
     </Pressable>
   </View>;
 
-  return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.green }} />} top={header} ground={colors.page} refreshing={featured.loading && !!featured.data} onRefresh={refresh}
+  return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.band }} />} top={header} ground={colors.page} refreshing={featured.loading && !!featured.data} onRefresh={refresh}
     contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-    <View style={{ marginTop: -30, marginHorizontal: 16 }}><StoreCard onPress={() => setStoreSheet(true)} /></View>
+    <View style={{ marginTop: 14, marginHorizontal: 16 }}><StoreCard onPress={() => setStoreSheet(true)} /></View>
 
     {active && <Pressable onPress={() => router.push(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.order, pressed && { opacity: 0.9 }]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <Text style={styles.orderTitle} numberOfLines={1}>{active.status === 'ready' && active.fulfilment === 'store' ? 'Il tuo ordine è pronto al ritiro' : orderStatusLabel(active.status, active.fulfilment)}</Text>
-        <Icon name="chevron" size={20} color="#FFFFFF" strokeWidth={2.2} />
+        <Icon name="chevron" size={20} color={colors.muted} strokeWidth={2.2} />
       </View>
       <Text style={styles.orderSub}>{active.order_number}{active.status === 'ready' && active.fulfilment === 'store' ? ' · mostra il codice in cassa' : ' · segui l’ordine'}</Text>
       <View style={styles.bars}>{[1, 2, 3, 4].map((i) => <View key={i} style={[styles.bar, i <= (STEP[active.status] ?? 1) && styles.barOn]} />)}</View>
@@ -214,25 +211,27 @@ function HomePhone() {
 }
 
 const styles = StyleSheet.create({
-  band: { backgroundColor: colors.green, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 54, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  // Home: white like every page; the brand shows in the logo sign, the greens and the lime, in small doses.
+  band: { backgroundColor: colors.band, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
   bandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
-  bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
-  hello: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, color: '#FFFFFF', letterSpacing: -0.6, marginTop: 18 },
-  helloSub: { fontSize: 15.5, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
+  bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
+  hello: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, color: colors.text, letterSpacing: -0.6, marginTop: 18 },
+  helloSub: { fontSize: 15.5, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
   // Outlined like the sign-in fields.
-  search: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 16, paddingRight: 6, borderRadius: 14, backgroundColor: '#FFFFFF' },
+  search: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 16, paddingRight: 6, borderRadius: 14, backgroundColor: '#FFFFFF',
+    borderWidth: 1.5, borderColor: '#8C9189' },
   searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.muted },
   scan: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
   // The order in progress: deep green with the lime signal on the progress bars.
-  order: { marginHorizontal: 16, marginTop: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.green },
-  orderTitle: { flexShrink: 1, fontSize: 15, fontFamily: fonts.heavy, color: '#FFFFFF' },
-  orderSub: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.onBrand, marginTop: 2 },
+  order: { marginHorizontal: 16, marginTop: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  orderTitle: { flexShrink: 1, fontSize: 15, fontFamily: fonts.heavy, color: colors.text },
+  orderSub: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 2 },
   bars: { flexDirection: 'row', gap: 4, marginTop: 10 },
-  bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
-  barOn: { backgroundColor: colors.yellow },
+  bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.well },
+  barOn: { backgroundColor: colors.green },
   quick: { flexDirection: 'row', paddingHorizontal: 12, paddingTop: 22 },
   quickItem: { flex: 1, alignItems: 'center', gap: 8 },
-  quickSign: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  quickSign: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   quickText: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.text },
   hero: { marginHorizontal: 16, height: 196, borderRadius: 24, overflow: 'hidden' },
   slide: { height: 196 },
