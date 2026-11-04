@@ -135,16 +135,19 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
   const subline = !stock.available ? stock.text : discount
     ? <><Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number).replace(/€\s/, '€')}</Text>
         {soci ? <Text style={styles.soci}> · Prezzo Soci</Text> : unitShort ? ` · ${unitShort}` : ''}</>
-    : sociOffer ? <Text style={[styles.soci, styles.sociOffer]}>{sociOfferText}</Text>
+    : sociOffer ? <Text style={[styles.soci, styles.sociOffer]}>{sociOfferText}{sociPct ? <Text style={styles.sociPct}>  {sociPct.replace('-', '−')}</Text> : null}</Text>
     : unitShort ?? note;
+  // Phone: the photo carries a badge only for a discount everyone gets; a members-only price is said once, in the line
+  // under the name ("Soci €3,99 −24%"), not twice.
+  const phoneBadge = discount ? badge : '';
   return <View style={[styles.card, rail && { paddingBottom: 12 }]}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={[styles.media, { height: rail ? 136 : 132 }]}>
         <View style={{ width: rail ? 120 : 118, height: rail ? 120 : 118 }}>
           <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />
         </View>
-        {!!badge && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
-          <Text style={styles.discountText} accessibilityLabel={badge.startsWith('Soci') ? `Prezzo Soci, ${badge.slice(5)}` : `Sconto ${badge}`}>{badge}</Text></View>}
+        {!!phoneBadge && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
+          <Text style={styles.discountText} accessibilityLabel={phoneBadge.startsWith('Soci') ? `Prezzo Soci, ${phoneBadge.slice(5)}` : `Sconto ${phoneBadge}`}>{phoneBadge}</Text></View>}
       </View>
       <Text style={[styles.name, { marginTop: rail ? 6 : 4 }]} numberOfLines={2}>{product.name}</Text>
       <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>
@@ -169,6 +172,7 @@ const styles = StyleSheet.create({
   compareSmall: { textDecorationLine: 'line-through' },
   soci: { color: colors.sale, fontFamily: fonts.sansBold, fontWeight: '700' },
   sociOffer: { fontFamily: fonts.heavy, fontWeight: '800' },
+  sociPct: { fontFamily: fonts.sansBold, fontWeight: '700' },
   priceBig: { fontSize: 23, lineHeight: 26, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
   priceRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
   price: { fontSize: 18.5, fontFamily: fonts.serifMedium, color: colors.text },

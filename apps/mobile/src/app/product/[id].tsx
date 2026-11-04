@@ -225,9 +225,9 @@ export default function ProductDetailScreen() {
       <Stack.Screen options={{ title: product.name, headerShown: false }} />
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
       <View style={styles.stage}>
-        <View pointerEvents="none" style={styles.floor} />
         <View style={styles.stageImage}><ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0} /></View>
-        {!!badge && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{badge}</Text></View>}
+        {/* A badge only for a discount everyone gets; the members-only price is said in the Soci line under the price. */}
+        {!!discount && !!badge && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{badge}</Text></View>}
         <View style={styles.stageBar}>
           {round('back', 'Indietro', back)}
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -243,7 +243,7 @@ export default function ProductDetailScreen() {
         <View style={styles.phonePriceRow}>
           <PriceTag cents={product.price_cents} size={38} sale={!!discount} />
           <Text style={styles.phoneUnit}>{!!discount && <Text style={styles.phoneStruck}>{euro(product.compare_at_price_cents as number)}</Text>}
-            {[discount ? '' : null, unitPrice?.replace(/€\s/, '€').replace(/\s\/\s/, '/'), 'IVA inclusa'].filter((x) => x !== null && x !== undefined).join(' · ')}</Text>
+            {[discount ? '' : null, unitPrice?.replace(/€\s/, '€').replace(/\s\/\s/, '/')].filter((x) => x !== null && x !== undefined).join(' · ')}</Text>
         </View>
         {sociLine}
         {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
@@ -321,8 +321,8 @@ const styles = StyleSheet.create({
   crumb: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
   crumbSep: { fontSize: 13, color: colors.rule, fontFamily: fonts.sans },
   titleWide: { fontSize: 48, lineHeight: 52, letterSpacing: -0.8 },
-  stage: { height: 380, backgroundColor: colors.photo, borderBottomLeftRadius: 32, borderBottomRightRadius: 32, borderBottomWidth: 1, borderColor: colors.line },
-  floor: { position: 'absolute', top: 318, alignSelf: 'center', width: 180, height: 22, borderRadius: 90, backgroundColor: 'rgba(24,32,26,0.14)', filter: 'blur(9px)' } as object,
+  // Plain white stage on the white page: the photo alone, no floor shadow or rounded edge.
+  stage: { height: 380, backgroundColor: colors.photo },
   stageImage: { position: 'absolute', top: 58, alignSelf: 'center', width: 270, height: 270 },
   stageBar: { position: 'absolute', top: 14, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
   roundPhone: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },

@@ -317,23 +317,16 @@ function LinePrice({ line, compareUnit, wide }: { line: QuoteLine; compareUnit: 
   </View>;
 }
 
-/** For non-members: the cart total with and without the Club, side by side, and the way in. */
+/** For non-members: one line with what the cart would cost with the Club, and the way in. */
 function ClubCompare({ total, saving }: { total: number; saving: number }) {
-  return <Pressable onPress={() => router.push('/club')} accessibilityRole="link" style={styles.compare}
-    accessibilityLabel={`Totale ${formatEuro(total)}, con il Club ${formatEuro(total - saving)}. Iscriviti gratis`}>
-    <View style={styles.compareCol}>
-      <Text style={styles.compareLabel}>Senza Club</Text>
-      <Text style={styles.compareNow}>{euroTight(total)}</Text>
+  return <Pressable onPress={() => router.push('/club')} accessibilityRole="link" style={({ pressed }) => [styles.compare, pressed && { opacity: 0.85 }]}
+    accessibilityLabel={`Con il Club pagheresti ${formatEuro(total - saving)}, risparmi ${formatEuro(saving)}. Iscriviti gratis`}>
+    <Icon name="crown" size={24} color={colors.sign} strokeWidth={1.8} />
+    <View style={{ flex: 1 }}>
+      <Text style={styles.compareNow}>Con il Club pagheresti <Text style={styles.compareSoci}>{euroTight(total - saving)}</Text></Text>
+      <Text style={styles.compareSave}>Risparmi {euroTight(saving)} · <Text style={styles.compareCtaText}>Iscriviti gratis</Text></Text>
     </View>
-    <View style={[styles.compareCol, styles.compareClub]}>
-      <Text style={[styles.compareLabel, { color: colors.sale }]}>Con il Club</Text>
-      <Text style={styles.compareSoci}>{euroTight(total - saving)}</Text>
-      <Text style={styles.compareSave}>risparmi {euroTight(saving)}</Text>
-    </View>
-    <View style={styles.compareCta}>
-      <Text style={styles.compareCtaText}>Iscriviti{'\n'}gratis</Text>
-      <Icon name="chevron" size={16} color={colors.signInk} strokeWidth={2.4} />
-    </View>
+    <Icon name="chevron" size={18} color={colors.muted} strokeWidth={2.2} />
   </Pressable>;
 }
 
@@ -350,16 +343,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 1, marginTop: 3 },
   sociOfferText: { fontSize: 11.5, color: colors.sale, fontFamily: fonts.sans },
   footSoci: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.sale },
-  compare: { flexDirection: 'row', alignItems: 'stretch', borderRadius: 16, borderWidth: 1, borderColor: colors.line, overflow: 'hidden', marginBottom: 12 },
-  compareCol: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, justifyContent: 'center' },
-  compareClub: { borderLeftWidth: 1, borderColor: colors.line },
-  compareLabel: { fontSize: 11.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
-  compareNow: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text, marginTop: 2 },
-  compareSoci: { fontSize: 20, fontFamily: fonts.heavy, color: colors.sale, marginTop: 2 },
-  compareSave: { fontSize: 11.5, color: colors.sale, fontFamily: fonts.sans },
-  // The Club in the colours of its card.
-  compareCta: { width: 86, backgroundColor: colors.sign, alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 6 },
-  compareCtaText: { fontSize: 13, lineHeight: 16, color: colors.signInk, fontFamily: fonts.sansBold, fontWeight: '700', textAlign: 'center' },
+  compare: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.line, paddingVertical: 12, paddingHorizontal: 14, marginBottom: 12 },
+  compareNow: { fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.text },
+  compareSoci: { fontFamily: fonts.heavy, color: colors.sale },
+  compareSave: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
+  compareCtaText: { fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
   undo: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.well, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
   snack: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, borderRadius: 16, paddingHorizontal: 16, backgroundColor: colors.text },
   snackText: { flex: 1, fontSize: 14.5, fontFamily: fonts.sansSemiBold, color: '#FFFFFF' },

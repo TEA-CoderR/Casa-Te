@@ -8,7 +8,6 @@ import { ProductCard } from '@/components/ProductCard';
 import { CategoryPhoto } from '@/components/CategoryNav';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { StoreCard } from '@/components/StoreCard';
-import { StepTag } from '@/components/ShopMarks';
 import { Icon, type IconName } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -99,11 +98,11 @@ function HomePhone() {
     return () => clearInterval(t);
   }, [slides.length, slideWidth]);
 
-  const pill = (label: string, icon: IconName, onPress: () => void, sale?: boolean) =>
-    <Pressable key={label} onPress={onPress} accessibilityRole="link"
-      style={({ pressed }) => [styles.pill, sale && styles.pillSale, pressed && { opacity: 0.8 }]}>
-      <Icon name={icon} size={18} color={sale ? colors.sale : colors.green} strokeWidth={sale ? 2.2 : 2} />
-      <Text style={[styles.pillText, sale && { color: colors.sale }]}>{label}</Text>
+  const quick = (label: string, icon: IconName, onPress: () => void) =>
+    <Pressable key={label} onPress={onPress} accessibilityRole="link" accessibilityLabel={label}
+      style={({ pressed }) => [styles.quickItem, pressed && { opacity: 0.75 }]}>
+      <View style={styles.quickSign}><Icon name={icon} size={24} color="#FFFFFF" strokeWidth={1.9} /></View>
+      <Text style={styles.quickText} numberOfLines={1}>{label}</Text>
     </Pressable>;
   const sectionHead = (id: string, title: string, link: string, onPress: () => void) => <View style={styles.section}>
     <Text style={styles.sectionTitle} accessibilityRole="header" nativeID={id}>{title}</Text>
@@ -145,12 +144,13 @@ function HomePhone() {
       <View style={styles.bars}>{[1, 2, 3, 4].map((i) => <View key={i} style={[styles.bar, i <= (STEP[active.status] ?? 1) && styles.barOn]} />)}</View>
     </Pressable>}
 
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills} style={{ flexGrow: 0 }}>
-      {pill('Offerte', 'percent', () => openCatalog({ offerte: '1' }), true)}
-      {!!flyers.data?.length && pill('Volantino', 'flyer', () => router.push('/volantino'))}
-      {pill('Ordini', 'box', () => router.push('/orders'))}
-      {club.enabled ? pill('Club', 'card', () => router.push('/club')) : pill('Preferiti', 'heart', () => router.push('/favorites'))}
-    </ScrollView>
+    {/* Quick actions: four round signs in one row, all visible at once (no sideways scroll). */}
+    <View style={styles.quick}>
+      {quick('Offerte', 'percent', () => openCatalog({ offerte: '1' }))}
+      {flyers.data?.length ? quick('Volantino', 'flyer', () => router.push('/volantino')) : quick('Preferiti', 'heart', () => router.push('/favorites'))}
+      {quick('Ordini', 'box', () => router.push('/orders'))}
+      {club.enabled ? quick('Club', 'crown', () => router.push('/club')) : quick('Profilo', 'user', () => router.push('/profile'))}
+    </View>
 
     {slides.length > 0 && <View style={{ marginTop: 20 }}>
       <View style={styles.hero}>
@@ -203,20 +203,6 @@ function HomePhone() {
         </ScrollView>}
     </View>
 
-    <View style={styles.pickup}>
-      <Text style={styles.pickupTitle} accessibilityRole="header">Il ritiro in negozio è gratis</Text>
-      <View style={{ gap: 14, marginTop: 14 }}>
-        {([
-          ['Ordina e paga in app', 'Prezzi e disponibilità del tuo negozio'],
-          ['Ti scriviamo quando è pronto', 'Ricevi un’email con il codice dell’ordine'],
-          ['Ritira entro 14 giorni', selected?.opening_hours ?? 'Negli orari del negozio'],
-        ] as const).map(([title, text], i) => <View key={title} style={styles.step}>
-          {/* Numbered hanging price tags (design H), not icons in tinted circles. */}
-          <StepTag n={i + 1} />
-          <View style={{ flex: 1 }}><Text style={styles.stepTitle}>{title}</Text><Text style={styles.stepText}>{text}</Text></View>
-        </View>)}
-      </View>
-    </View>
 
     <View style={styles.footer}>
       {([['Privacy', 'privacy'], ['Termini di vendita', 'terms'], ['Spedizioni e ritiro', 'shipping']] as const).map(([label, doc]) =>
@@ -244,10 +230,10 @@ const styles = StyleSheet.create({
   bars: { flexDirection: 'row', gap: 4, marginTop: 10 },
   bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
   barOn: { backgroundColor: colors.yellow },
-  pills: { paddingHorizontal: 16, paddingTop: 18, gap: 8 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingLeft: 12, paddingRight: 16, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  pillSale: { borderColor: colors.sale },
-  pillText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
+  quick: { flexDirection: 'row', paddingHorizontal: 12, paddingTop: 22 },
+  quickItem: { flex: 1, alignItems: 'center', gap: 8 },
+  quickSign: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  quickText: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.text },
   hero: { marginHorizontal: 16, height: 196, borderRadius: 24, overflow: 'hidden' },
   slide: { height: 196 },
   slideArt: { position: 'absolute', right: 6, bottom: 0, width: 168, height: 180 },
@@ -268,11 +254,6 @@ const styles = StyleSheet.create({
   departments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, rowGap: 14 },
   department: { paddingHorizontal: 4 },
   departmentName: { marginTop: 6, fontSize: 13, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
-  pickup: { marginHorizontal: 16, marginTop: 28, padding: 20, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  pickupTitle: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text },
-  step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  stepTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
-  stepText: { fontSize: 13.5, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted },
   footer: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6, paddingHorizontal: 20, paddingTop: 22 },
   footerLink: { fontSize: 13, color: colors.green, fontFamily: fonts.sansSemiBold, textDecorationLine: 'underline' },
 });

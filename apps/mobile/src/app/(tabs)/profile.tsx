@@ -200,16 +200,9 @@ export default function ProfileScreen() {
         <View style={{ flex: 1, minWidth: 0 }}><Text style={styles.fTitle}>{title}</Text>{!!subtitle && <Text style={styles.fSub} numberOfLines={1}>{subtitle}</Text>}</View>
         <Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
       </Pressable>;
-    const ftile = (icon: IconName, label: string, detail: string, onPress: () => void) =>
-      <Pressable key={label} onPress={onPress} accessibilityRole="link" accessibilityLabel={`${label}${detail ? `, ${detail}` : ''}`} style={({ pressed }) => [styles.fTile, pressed && { opacity: 0.85 }]}>
-        <Icon name={icon} size={24} color={colors.green} strokeWidth={1.8} />
-        <Text style={styles.fTileLabel}>{label}</Text>
-        <Text style={styles.fTileDetail} numberOfLines={1}>{detail || ' '}</Text>
-      </Pressable>;
-    const hang = user ? -36 : 0;
     return <Screen header={<StatusBand />} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 28 }}
       top={<View>
-        <View style={[styles.fHero, !user && { paddingBottom: 28 }]}>
+        <View style={styles.fHero}>
           {user ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <View style={styles.fAvatar}><Text style={styles.fAvatarText}>{initials(name || user.email || '')}</Text></View>
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -226,26 +219,21 @@ export default function ProfileScreen() {
         </View>
       </View>}>
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-      <View style={{ paddingHorizontal: 16, marginTop: hang }}>
-        {active && <Pressable onPress={() => go(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.fOrder, pressed && { opacity: 0.9 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.fOrderLabel}>Ordine in corso · {active.order_number}</Text>
-            <Text style={styles.fOrderStatus}>{orderStatusLabel(active.status, active.fulfilment)}</Text>
-          </View>
-          <View style={styles.fFollow}><Text style={styles.fFollowText}>Segui</Text></View>
-        </Pressable>}
-        {user && <View style={[styles.fTiles, active && { marginTop: 14 }]}>
-          {ftile('box', 'Ordini', orderCount ? String(orderCount) : '', () => go('/orders'))}
-          {ftile('pin', 'Indirizzi', 'Consegna', () => go('/account/addresses'))}
-          {ftile('heart', 'Preferiti', favourites ? String(favourites) : '', () => go('/favorites'))}
-        </View>}
-        <View style={{ marginTop: user ? 10 : 16 }}><StoreCard compact showStatus={false} label="Il tuo negozio" style={styles.fFlat} onPress={() => setStoreSheet(true)} /></View>
-        {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={({ pressed }) => [styles.fClub, pressed && { opacity: 0.88 }]}>
+      <View style={{ paddingHorizontal: 16 }}>
+        {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={({ pressed }) => [styles.fClub, { marginTop: 4 }, pressed && { opacity: 0.88 }]}>
           <Icon name="crown" size={26} color={colors.signInk} strokeWidth={1.7} />
           <View style={{ flex: 1 }}><Text style={styles.fClubTitle}>Casa & Te Club</Text>
             <Text style={styles.fClubText}>{member ? 'Sei membro: guarda le offerte a te riservate.' : club.tagline}</Text></View>
           <Icon name="chevron" size={18} color={colors.signInk} strokeWidth={2.2} />
         </Pressable>}
+        {/* One plain grouped list (the order in progress and the store card are on Home). */}
+        <Text style={styles.fGroup} accessibilityRole="header">I TUOI ACQUISTI</Text>
+        <View style={styles.fList}>
+          {user && prow('Ordini e resi', () => go('/orders'), orderCount ? `${orderCount} ${orderCount === 1 ? 'ordine' : 'ordini'}` : 'Segui ordini e ritiri', true)}
+          {prow('Preferiti', () => go('/favorites'), favourites ? `${favourites} ${favourites === 1 ? 'prodotto' : 'prodotti'}` : 'I prodotti salvati con il cuore', !user)}
+          {prow('Il tuo negozio', () => setStoreSheet(true), selected ? `CASA & TE ${storeName}` : 'Scegli il negozio')}
+          {user && prow('Indirizzi', () => go('/account/addresses'), 'Per la consegna a domicilio')}
+        </View>
         {user && <><Text style={styles.fGroup} accessibilityRole="header">ACCOUNT</Text>
           <View style={styles.fList}>
             {prow('Dati personali', () => go('/account/edit'), [name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono', true)}
@@ -278,7 +266,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  fHero: { backgroundColor: colors.band, paddingTop: 18, paddingHorizontal: 20, paddingBottom: 46, overflow: 'hidden' },
+  fHero: { backgroundColor: colors.band, paddingTop: 18, paddingHorizontal: 20, paddingBottom: 22, overflow: 'hidden' },
   fAvatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
   fAvatarText: { fontSize: 21, fontFamily: fonts.heavy, color: colors.text },
   fHello: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.bandText, letterSpacing: -0.5 },
@@ -287,17 +275,6 @@ const styles = StyleSheet.create({
   fEditText: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.bandText },
   fSignIn: { alignSelf: 'flex-start', height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.yellow, justifyContent: 'center', marginTop: 14 },
   fSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
-  fOrder: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.green,
-    shadowColor: '#18201A', shadowOpacity: 0.14, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
-  fOrderLabel: { fontSize: 12.5, fontFamily: fonts.sansBold, color: colors.onBrand },
-  fOrderStatus: { fontSize: 16, fontFamily: fonts.heavy, color: '#FFFFFF', marginTop: 2 },
-  fFollow: { height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.yellow, justifyContent: 'center' },
-  fFollowText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.text },
-  fTiles: { flexDirection: 'row', gap: 10 },
-  fTile: { flex: 1, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  fTileLabel: { fontSize: 14.5, fontFamily: fonts.heavy, color: colors.text, marginTop: 10 },
-  fTileDetail: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted },
-  fFlat: { shadowOpacity: 0, elevation: 0, borderBottomWidth: 1, borderColor: colors.line, borderRadius: 18 },
   // The Club in the colours of its card: lime on the shop-sign green.
   fClub: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10, padding: 16, borderRadius: 18, backgroundColor: colors.sign },
   fClubTitle: { fontSize: 18, lineHeight: 22, fontFamily: fonts.display, color: colors.signInk },
