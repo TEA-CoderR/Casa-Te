@@ -12,10 +12,10 @@ import { Platform } from 'react-native';
  */
 export const colors = {
   /** Actions, links, active states (white text on it passes AA). */
-  green: '#1F4127',
-  greenDark: '#143019',
+  green: '#3B6B31',
+  greenDark: '#2C5225',
   /** Awning band behind phone headers (stripes alternate `brand` and `stripe`). */
-  brand: '#1F4127',
+  brand: '#3B6B31',
   stripe: '#234A2C',
   /** Light text on the dark green (tab bar, green buttons, the order-confirmed page). */
   onBrand: '#CFDDC6',
