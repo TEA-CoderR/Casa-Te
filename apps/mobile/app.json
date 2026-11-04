@@ -10,15 +10,49 @@
     "ios": {
       "bundleIdentifier": "it.casate.app",
       "supportsTablet": true,
-      "infoPlist": { "ITSAppUsesNonExemptEncryption": false }
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "it.casate.app",
-      "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#3B6B31" }
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#3B6B31"
+      }
     },
-    "plugins": ["expo-router", "expo-web-browser", ["expo-image-picker", { "photosPermission": "Le foto servono solo per mostrare al negozio un prodotto danneggiato o sbagliato in una richiesta di reso.", "cameraPermission": false, "microphonePermission": false }]],
-    "experiments": { "typedRoutes": true },
-    "web": { "bundler": "metro", "output": "single", "favicon": "./assets/icon.png" },
-    "extra": { "router": { "origin": false } }
+    "plugins": [
+      "expo-router",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Le foto servono solo per mostrare al negozio un prodotto danneggiato o sbagliato in una richiesta di reso.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#3B6B31",
+          "image": "./assets/brand/splash-mono.png",
+          "imageWidth": 104
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/icon.png"
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
   }
 }

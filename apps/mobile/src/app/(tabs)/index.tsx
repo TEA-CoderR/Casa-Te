@@ -9,7 +9,6 @@ import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { StoreCard } from '@/components/StoreCard';
 import { Icon, type IconName } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
-import { LogoSign } from '@/components/BrandHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '@/components/ProductImage';
 import { RemoteImage } from '@/components/RemoteImage';
@@ -106,16 +105,14 @@ function HomePhone() {
     <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8}><Text style={styles.link}>{link}</Text></Pressable>
   </View>;
 
-  // Home: the one brand moment of the app — a solid deep-green band with the logo in lime, the greeting and the
-  // search, rounded at the bottom, with the store card hanging over its edge (like the big Italian grocery apps).
+  // Home: the one brand moment of the app — the greeting and the search on the white band; the logo lives in the
+  // opening animation (AnimatedSplash), so the page starts straight with the person and the shop.
   const header = <View style={styles.band}>
     <View style={styles.bandRow}>
-      <LogoSign height={34} />
-      <View style={{ flex: 1 }} />
+      <Text style={[styles.hello, { flex: 1 }]} accessibilityRole="header" numberOfLines={1}>{firstName ? `Ciao, ${firstName}` : 'Ciao!'}</Text>
       <Pressable onPress={() => router.push('/favorites')} accessibilityRole="button" accessibilityLabel="Preferiti" hitSlop={4}
         style={({ pressed }) => [styles.bandButton, pressed && { opacity: 0.7 }]}><Icon name="heart" size={21} color={colors.text} strokeWidth={1.9} /></Pressable>
     </View>
-    <Text style={styles.hello} accessibilityRole="header">{firstName ? `Ciao, ${firstName}` : 'Ciao!'}</Text>
     <Text style={styles.helloSub}>Cosa ti serve per casa oggi?</Text>
     <Pressable onPress={() => openCatalog({ search: '1' })} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
       style={({ pressed }) => [styles.search, pressed && { opacity: 0.95 }]}>
@@ -215,7 +212,7 @@ const styles = StyleSheet.create({
   band: { backgroundColor: colors.band, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
   bandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
   bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
-  hello: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, color: colors.text, letterSpacing: -0.6, marginTop: 18 },
+  hello: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, color: colors.text, letterSpacing: -0.6 },
   helloSub: { fontSize: 15.5, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
   // Outlined like the sign-in fields.
   search: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 16, paddingRight: 6, borderRadius: 14, backgroundColor: '#FFFFFF',

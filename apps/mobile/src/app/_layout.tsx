@@ -10,6 +10,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors, fonts } from '@/config/theme';
 import { PersistenceGate } from '@/components/PersistenceGate';
+import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { useLayout } from '@/lib/hooks';
 import { isConfigured } from '@/lib/supabase';
 import { startSessionListener } from '@/store/session';
@@ -36,10 +37,10 @@ export default function RootLayout() {
   });
   const { wide } = useLayout();
   useEffect(() => { if (isConfigured) { startSessionListener(); startClubListener(); } }, []);
-  if (!isConfigured) return <NotConfigured />;
+  if (!isConfigured) return <><NotConfigured /><AnimatedSplash ready skip /></>;
   // Native needs the faces registered before first render; the web shop falls back to system fonts meanwhile.
   if (Platform.OS !== 'web' && !fontsLoaded && !fontError) return null;
-  return (
+  return (<View style={{ flex: 1 }}>
     <PersistenceGate>
       {/* Phones: every page starts with the green awning band (design F), so light status bar icons. */}
       <StatusBar style="dark" />
@@ -73,5 +74,7 @@ export default function RootLayout() {
         <Stack.Screen name="volantino" options={{ title: 'Volantino' }} />
       </Stack>
     </PersistenceGate>
-  );
+    {/* The opening animation (desktop shop: none, the catalogue opens straight away). */}
+    <AnimatedSplash ready skip={wide} />
+  </View>);
 }
