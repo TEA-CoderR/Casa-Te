@@ -316,7 +316,7 @@ export default function CatalogScreen() {
           {!loading && !shown.length ? <Text style={styles.sNoProducts}>Nessun prodotto con questo nome: apri il reparto qui sopra.</Text> : <>
           <View style={styles.sResultsHead}>
             <Text style={styles.sCaps}>PRODOTTI</Text>
-            <Text style={styles.sCount}>{storeLabel ? `Disponibilità a ${storeLabel}` : ' '}</Text>
+            <Text style={styles.sCount}> </Text>
           </View>
           <View style={styles.fGrid}>{loading && !items.length ? <ProductSkeletons n={4} /> : shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
           {more}
@@ -338,7 +338,6 @@ export default function CatalogScreen() {
       : all.filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: c.name, count: counts.data ? departmentCount(all, counts.data, c.id) : undefined, image: coverOf(c.id), slug: c.slug }));
     const deptTitle = collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Tutti i prodotti';
     return <RollingAwning title={deptTitle}
-      subtitle={storeLabel ? `Disponibili a ${storeLabel}` : undefined}
       onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
       onSearch={openSearch} resetKey={`${categoryId ?? ''}|${collection ?? ''}`}
       overlay={<>{filterSheetPhone}
