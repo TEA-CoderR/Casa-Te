@@ -19,11 +19,7 @@ import { useClubStore } from '@/store/club';
 import { MemberCardLink, MemberCardView } from '@/components/MemberCard';
 
 /** What the Club gives, one line each (the card section below covers linking an existing card). */
-const PERKS: Array<{ title: string; text: string }> = [
-  { title: 'Prezzi Soci', text: 'Anche online, come in negozio.' },
-  { title: 'Codici sconto', text: 'Riservati ai Soci, da usare al pagamento.' },
-  { title: 'Gratis', text: 'Nessun costo, e puoi uscire quando vuoi.' },
-];
+const PERKS = ['Prezzi Soci', 'Codici sconto', 'Gratis'];
 
 const offerText = (o: ClubOffer) => o.kind === 'percent' ? `${o.value}% di sconto`
   : o.kind === 'fixed' ? `${formatEuro(o.value)} di sconto` : 'Spedizione gratuita';
@@ -65,13 +61,10 @@ export default function ClubScreen() {
       <Image source={CARD} accessibilityLabel="La tessera Casa & Te" resizeMode="cover" style={styles.cardImage} />
     </View>
     <Text style={styles.title} accessibilityRole="header">Sei uno di famiglia</Text>
-    <Text style={styles.lead}>{member ? `Sei nel Club dal ${since}.` : 'La tessera del negozio, ora anche online.'}</Text>
+    {member && <Text style={styles.lead}>Sei nel Club dal {since}.</Text>}
 
-    {/* Three perks as three short columns of words only, between hairlines (no icons, no check marks). */}
-    {(member || step === 'intro') && <View style={styles.perks}>{PERKS.map((p, i) => <View key={p.title} style={[styles.perk, i > 0 && styles.perkRule]}>
-      <Text style={styles.perkTitle}>{p.title}</Text>
-      <Text style={styles.perkText}>{p.text}</Text>
-    </View>)}</View>}
+    {/* The perks as three words on one line: the card says the rest; details come in the sign-up step. */}
+    {(member || step === 'intro') && <Text style={styles.perks}>{PERKS.join('  ·  ')}</Text>}
 
     {!!error && <Notice tone="error" message={error} />}
     {!user ? <View style={{ marginTop: 20 }}><PrimaryButton title="Accedi per iscriverti o collegare la tessera" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/club' } })} /></View>
@@ -147,7 +140,7 @@ function JoinForm({ profile, email, onJoined }: { profile: ProfileRow; email: st
 
   return <View style={styles.form}>
     <Text style={styles.formTitle} accessibilityRole="header">Iscriviti gratis</Text>
-    <Text style={styles.formLead}>Bastano pochi dati: li usiamo solo per il Club.</Text>
+    <Text style={styles.formLead}>Bastano pochi dati: li usiamo solo per il Club. È gratis e puoi uscire quando vuoi.</Text>
     <View style={styles.formRow}>
       <View style={{ flex: 1 }}><TextField label="Nome" value={first} onChangeText={setFirst} autoComplete="given-name" textContentType="givenName" error={errors.first} /></View>
       <View style={{ flex: 1 }}><TextField label="Cognome" value={last} onChangeText={setLast} autoComplete="family-name" textContentType="familyName" error={errors.last} /></View>
@@ -181,11 +174,7 @@ const styles = StyleSheet.create({
   cardImage: { width: '100%', height: '100%', borderRadius: 18 },
   title: { fontSize: 30, lineHeight: 35, fontFamily: fonts.display, color: colors.text, textAlign: 'center', marginTop: 24 },
   lead: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans, marginTop: 4 },
-  perks: { flexDirection: 'row', marginTop: 24, paddingVertical: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line },
-  perk: { flex: 1, alignItems: 'center', gap: 4, paddingHorizontal: 8 },
-  perkRule: { borderLeftWidth: 1, borderColor: colors.line },
-  perkTitle: { fontSize: 16, lineHeight: 20, fontFamily: fonts.display, color: colors.sign, textAlign: 'center' },
-  perkText: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center' },
+  perks: { marginTop: 14, fontSize: 16, lineHeight: 22, fontFamily: fonts.sansBold, color: colors.sign, textAlign: 'center' },
   section: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text, marginTop: 28, marginBottom: 10 },
   empty: { fontSize: 14, color: colors.muted, fontFamily: fonts.sans, lineHeight: 20 },
   offer: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 14, padding: 14, marginBottom: 10 },
