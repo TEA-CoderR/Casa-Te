@@ -200,10 +200,16 @@ export default function CheckoutScreen() {
         {pending > 0 ? <Pressable onPress={revealFirstError} accessibilityRole="button">
           <Text style={styles.footerError} accessibilityRole="alert">{pending === 1 ? 'Manca un dato' : `Mancano ${pending} dati`} · <Text style={{ textDecorationLine: 'underline' }}>mostra</Text></Text></Pressable>
           : !!submitError && <Text style={styles.footerError} accessibilityRole="alert">{submitError}</Text>}
+        {/* The consent sits right above the button it unlocks; the button stays green and says what it does. */}
+        <Pressable onPress={() => setAccepted(!accepted)} accessibilityRole="checkbox" accessibilityState={{ checked: accepted }} style={styles.terms}>
+          <View style={[styles.box, accepted && styles.boxOn]}>{accepted && <Icon name="check" size={15} color="#FFFFFF" strokeWidth={3} />}</View>
+          <Text style={styles.termsText}>Accetto le <Text style={styles.linkPhone} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e l’<Text style={styles.linkPhone} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text></Text>
+        </Pressable>
+        {fieldError('accepted')}
         <Pressable onPress={pay} disabled={busy} accessibilityRole="button" accessibilityState={{ disabled: !ready, busy }}
-          style={({ pressed }) => [styles.payButton, !accepted && styles.payOff, pressed && accepted && { opacity: 0.88 }]}>
+          style={({ pressed }) => [styles.payButton, pressed && { opacity: 0.88 }]}>
           {busy && <ActivityIndicator color="#FFFFFF" />}
-          <Text style={[styles.payText, !accepted && { color: colors.muted }]}>{busy ? 'Pagamento in corso…' : accepted ? (total !== null ? `Paga ${euro(total)} con carta` : 'Scegli la consegna') : 'Accetta i termini per pagare'}</Text>
+          <Text style={styles.payText}>{busy ? 'Pagamento in corso…' : total !== null ? `Paga ${euro(total)} con carta` : 'Scegli la consegna'}</Text>
         </Pressable>
         <View style={styles.secureRow}><Icon name="lock" size={13} color={colors.muted} strokeWidth={2.2} /><Text style={styles.secure}>Pagamento sicuro con Stripe</Text></View>
       </View>}>
@@ -332,11 +338,6 @@ export default function CheckoutScreen() {
         </View>}
       </View>
 
-      <Pressable onPress={() => setAccepted(!accepted)} accessibilityRole="checkbox" accessibilityState={{ checked: accepted }} style={styles.terms}>
-        <View style={[styles.box, accepted && styles.boxOn]}>{accepted && <Icon name="check" size={15} color="#FFFFFF" strokeWidth={3} />}</View>
-        <Text style={styles.termsText}>Ho letto e accetto le <Text style={styles.linkPhone} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e l’<Text style={styles.linkPhone} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text></Text>
-      </Pressable>
-      {fieldError('accepted')}
       {!!seller && <Text style={styles.finePhone}>Venditore: {seller.legal_name} · P.IVA {seller.vat_number}. Paghi sulla pagina sicura di Stripe: i dati della carta non passano dai nostri server. Recesso entro 14 giorni.</Text>}
     </Screen>;
   }
@@ -496,14 +497,13 @@ const styles = StyleSheet.create({
   applyText: { fontSize: 14, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   box: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: '#B9B4A6', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   boxOn: { backgroundColor: colors.green, borderColor: colors.green },
-  terms: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 14, padding: 4 },
-  termsText: { flex: 1, fontSize: 14, lineHeight: 20, fontFamily: fonts.sans, color: '#4E554B' },
+  terms: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, paddingVertical: 2 },
+  termsText: { flex: 1, fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: '#4E554B' },
   linkPhone: { color: colors.green, fontFamily: fonts.sansBold, textDecorationLine: 'underline' },
   finePhone: { fontSize: 12.5, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 12, marginHorizontal: 4 },
   payLabel: { fontSize: 15, fontFamily: fonts.sans, color: '#4E554B' },
   payTotal: { fontSize: 26, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
   payButton: { marginTop: 10, height: 58, borderRadius: 29, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  payOff: { backgroundColor: colors.line },
   payText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   secureRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8 },
   row: { flexDirection: 'row', gap: 10 },

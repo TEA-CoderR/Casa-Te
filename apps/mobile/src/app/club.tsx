@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { friendlyError, isPhone, type ClubOffer, type ProfileRow } from '@casa-te/shared';
 import { formatEuro } from '@/lib/price';
@@ -37,6 +37,8 @@ export default function ClubScreen() {
   const { wide } = useLayout();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Not yet a member: one thing at a time — the card and what it gives, then either the sign-up or the old card.
+  const [step, setStep] = useState<'intro' | 'join' | 'card'>('intro');
 
   const leave = async () => {
     setBusy(true); setError('');
@@ -64,20 +66,26 @@ export default function ClubScreen() {
     <Text style={styles.title} accessibilityRole="header">Sei uno di famiglia</Text>
     <Text style={styles.lead}>{member ? `Sei nel Club dal ${since}.` : 'La tessera del negozio, ora anche online.'}</Text>
 
-    <View style={styles.perks}>{PERKS.map((p) => <View key={p} style={styles.perk}>
+    {(member || step === 'intro') && <View style={styles.perks}>{PERKS.map((p) => <View key={p} style={styles.perk}>
       <Icon name="check" size={18} color={colors.green} strokeWidth={2.6} />
       <Text style={styles.perkText}>{p}</Text>
-    </View>)}</View>
+    </View>)}</View>}
 
     {!!error && <Notice tone="error" message={error} />}
     {!user ? <View style={{ marginTop: 20 }}><PrimaryButton title="Accedi per iscriverti o collegare la tessera" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/club' } })} /></View>
       : profile.loading && !profile.data ? <Loading />
-      : !member ? <>
-          {club.enabled ? !profile.data ? <View style={{ marginTop: 20 }}><Notice tone="error" message="Impossibile caricare i tuoi dati. Riprova più tardi." /></View>
+      : !member ? step === 'intro' ? <View style={styles.choices}>
+          {club.enabled && <PrimaryButton title="Iscriviti gratis" icon="crown" onPress={() => setStep('join')} />}
+          <SecondaryButton title="Ho già la tessera Casa & Te" onPress={() => setStep('card')} />
+          {!club.enabled && <Notice message="Al momento il Club non accetta nuove iscrizioni." />}
+        </View>
+        : <>
+          <Pressable onPress={() => setStep('intro')} accessibilityRole="button" hitSlop={6} style={styles.stepBack}>
+            <Icon name="back" size={18} color={colors.green} strokeWidth={2.2} /><Text style={styles.stepBackText}>Indietro</Text></Pressable>
+          {step === 'join' ? !profile.data ? <View style={{ marginTop: 20 }}><Notice tone="error" message="Impossibile caricare i tuoi dati. Riprova più tardi." /></View>
             : <JoinForm profile={profile.data} email={user.email ?? ''}
               onJoined={async () => { useClubStore.getState().set(true); await profile.refetch(); }} />
-            : <View style={{ marginTop: 20 }}><Notice message="Al momento il Club non accetta nuove iscrizioni." /></View>}
-          {cardSection}
+            : cardSection}
         </>
       : <>
           {cardSection}
@@ -156,7 +164,7 @@ const styles = StyleSheet.create({
   formRow: { flexDirection: 'row', gap: 10 },
   check: { fontSize: 13, color: colors.text, lineHeight: 19, fontFamily: fonts.sans },
   link: { color: colors.green, textDecorationLine: 'underline' },
-  readOnly: { backgroundColor: colors.cream, color: colors.muted },
+  readOnly: { backgroundColor: colors.well, color: colors.muted },
   fieldError: { fontSize: 12, color: colors.danger, fontFamily: fonts.sans, marginTop: -4, marginBottom: 6 },
   cardWrap: { alignSelf: 'center', width: '100%', maxWidth: 420, aspectRatio: 1000 / 631, borderRadius: 18, backgroundColor: colors.green,
     shadowColor: '#0A180C', shadowOpacity: 0.28, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
@@ -172,5 +180,8 @@ const styles = StyleSheet.create({
   offerTitle: { fontSize: 16, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   offerMeta: { fontSize: 12, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
   code: { fontSize: 15, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.green, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.green, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  choices: { marginTop: 22, gap: 10 },
+  stepBack: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 18, paddingVertical: 6 },
+  stepBackText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.green },
   howto: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans, marginTop: 6 },
 });
