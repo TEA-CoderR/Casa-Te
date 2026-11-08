@@ -1,19 +1,17 @@
 import { useState } from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { orderStatusLabel, type CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryPhoto } from '@/components/CategoryNav';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
-import { AwningMark, storeStatus } from '@/components/StoreCard';
+import { storeStatus } from '@/components/StoreCard';
+import { HomePosters, type Poster } from '@/components/HomePosters';
 import { useClubMember } from '@/store/club';
-
-const CLUB_CARD = require('../../../assets/club-card.webp');
 import { Icon } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RemoteImage } from '@/components/RemoteImage';
 import { colors, fonts } from '@/config/theme';
 import { fetchCategories, fetchCategoryCovers, fetchFlyers, fetchOffers, fetchOrders, fetchProducts, type OrderWithItems } from '@/lib/api';
 import { useClubSettings, useLayout, useStores } from '@/lib/hooks';
@@ -72,7 +70,16 @@ function HomePhone() {
   const status = storeStatus(selected?.opening_hours);
   const until = flyer?.valid_to ? new Date(`${flyer.valid_to}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : null;
 
-  // Section title: EB Garamond like the printed catalogue (and the desktop shop), a quiet link on the right.
+  const best = [...offerItems].filter((p) => p.image)
+    .sort((x, y) => (1 - y.price_cents / (y.compare_at_price_cents || y.price_cents)) - (1 - x.price_cents / (x.compare_at_price_cents || x.price_cents)))[0];
+  const posters: Poster[] = [
+    ...(best ? [{ kind: 'offer' as const, product: best, onPress: () => openCatalog({ offerte: '1' }) }] : []),
+    ...(flyer && flyerCover ? [{ kind: 'flyer' as const, title: flyer.title, until, cover: flyerCover, onPress: () => router.push('/volantino') }] : []),
+    ...(club.enabled ? [{ kind: 'club' as const, member, onPress: () => router.push('/club') }] : []),
+    { kind: 'pickup' as const, store: storeName, onPress: () => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } }) },
+  ];
+
+  // Section title in heavy Figtree, like the posters; a quiet link on the right.
   const sectionHead = (title: string, link: string | null, onPress: () => void) => <View style={styles.section}>
     <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
     {!!link && <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8} style={styles.linkRow}>
@@ -120,18 +127,7 @@ function HomePhone() {
       <View style={styles.bars}>{[1, 2, 3, 4].map((n) => <View key={n} style={[styles.bar, n <= (STEP[active.status] ?? 0) && styles.barOn]} />)}</View>
     </Pressable>}
 
-    {/* The flyer of the week, as the printed flyer itself: its cover on the left, the title set like a catalogue. */}
-    {!!flyer && !!flyerCover && <Pressable onPress={() => router.push('/volantino')} accessibilityRole="link"
-      accessibilityLabel={`Volantino ${flyer.title}${until ? `, fino al ${until}` : ''}. Sfoglia`}
-      style={({ pressed }) => [styles.flyer, pressed && { opacity: 0.92 }]}>
-      <View style={styles.flyerCover}><RemoteImage uri={flyerCover} style={{ width: '100%', height: '100%' }} /></View>
-      <View style={{ flex: 1, minWidth: 0, justifyContent: 'center' }}>
-        <Text style={styles.eyebrow}>VOLANTINO</Text>
-        <Text style={styles.flyerTitle} numberOfLines={3}>{flyer.title}</Text>
-        {!!until && <Text style={styles.flyerDates}>Fino al {until}</Text>}
-        <View style={styles.flyerCta}><Text style={styles.flyerCtaText}>Sfoglia</Text><Icon name="arrow" size={15} color={colors.text} strokeWidth={2.2} /></View>
-      </View>
-    </Pressable>}
+    <View style={{ marginTop: 16 }}><HomePosters posters={posters} /></View>
 
     {offerItems.length > 0 && <View style={{ paddingTop: 30 }}>
       {sectionHead('Offerte', 'Tutte', () => openCatalog({ offerte: '1' }))}
@@ -158,17 +154,6 @@ function HomePhone() {
       })}</View>
     </View>}
 
-    {/* The Club as the real card, not an icon. */}
-    {club.enabled && <Pressable onPress={() => router.push('/club')} accessibilityRole="link" accessibilityLabel="Casa & Te Club"
-      style={({ pressed }) => [styles.club, pressed && { opacity: 0.92 }]}>
-      <Image source={CLUB_CARD} style={styles.clubCard} accessibilityIgnoresInvertColors />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.clubTitle}>Casa & Te Club</Text>
-        <Text style={styles.clubText} numberOfLines={2}>{member ? 'La tua tessera e i Prezzi Soci' : 'Prezzi Soci e codici sconto, gratis'}</Text>
-      </View>
-      <Icon name="chevron" size={20} color={colors.text} strokeWidth={2.2} />
-    </Pressable>}
-
     <View style={{ paddingTop: 30 }}>
       {sectionHead('In evidenza', 'Tutti', () => featured.data?.picked ? openCatalog({ evidenza: '1' }) : router.push(ALL_PRODUCTS))}
       {featured.error && !featured.data ? <View style={{ paddingHorizontal: 16 }}><Notice tone="error" message="Impossibile caricare i prodotti. Controlla la connessione e riprova." /></View>
@@ -176,12 +161,6 @@ function HomePhone() {
           {featured.data.items.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}
         </ScrollView>}
     </View>
-
-    {/* Free pickup, said once and quietly, with the shop sign. */}
-    <Pressable onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } })} accessibilityRole="link" style={styles.pickup}>
-      <AwningMark size={34} />
-      <Text style={styles.pickupText}>Ritiro sempre gratis{storeName ? ` a ${storeName}` : ' nel tuo negozio'}</Text>
-    </Pressable>
 
     <View style={styles.footer}>
       {([['Privacy', 'privacy'], ['Termini di vendita', 'terms'], ['Spedizioni e ritiro', 'shipping']] as const).map(([label, doc]) =>
@@ -197,7 +176,7 @@ const styles = StyleSheet.create({
   bandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   storeLine: { flex: 1, minWidth: 0, paddingVertical: 4 },
   storeEyebrow: { fontSize: 11, letterSpacing: 1.2, fontFamily: fonts.sansBold, color: colors.muted },
-  storeName: { flexShrink: 1, fontSize: 24, lineHeight: 30, fontFamily: fonts.serifMedium, color: colors.text, letterSpacing: -0.2 },
+  storeName: { flexShrink: 1, fontSize: 21, lineHeight: 27, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
   storeDot: { width: 7, height: 7, borderRadius: 4 },
   storeStatus: { fontSize: 13, fontFamily: fonts.sansMedium, color: colors.muted },
   bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
@@ -211,17 +190,8 @@ const styles = StyleSheet.create({
   bars: { flexDirection: 'row', gap: 4, marginTop: 10 },
   bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.well },
   barOn: { backgroundColor: colors.green },
-  // The flyer: the cover as a printed page (square corners, a soft drop), the words beside it.
-  flyer: { flexDirection: 'row', gap: 18, marginHorizontal: 16, marginTop: 18, padding: 16, borderRadius: 4, backgroundColor: colors.well },
-  flyerCover: { width: 118, aspectRatio: 0.71, backgroundColor: '#FFFFFF', borderRadius: 2, overflow: 'hidden',
-    shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
-  eyebrow: { fontSize: 11, letterSpacing: 1.4, fontFamily: fonts.sansBold, color: colors.green },
-  flyerTitle: { fontSize: 28, lineHeight: 31, fontFamily: fonts.serifMedium, color: colors.text, marginTop: 6, letterSpacing: -0.3 },
-  flyerDates: { fontSize: 13.5, fontFamily: fonts.sansMedium, color: colors.muted, marginTop: 6 },
-  flyerCta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, alignSelf: 'flex-start', borderBottomWidth: 1.5, borderColor: colors.text, paddingBottom: 2 },
-  flyerCtaText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
   section: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12, gap: 12 },
-  sectionTitle: { fontSize: 30, lineHeight: 34, fontFamily: fonts.serifMedium, color: colors.text, letterSpacing: -0.4 },
+  sectionTitle: { fontSize: 26, lineHeight: 31, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.8 },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   link: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
   rail: { paddingHorizontal: 16, gap: 10, paddingBottom: 1 },
@@ -229,12 +199,6 @@ const styles = StyleSheet.create({
   departments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 16 },
   department: { paddingHorizontal: 5 },
   departmentName: { marginTop: 7, fontSize: 13, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
-  club: { flexDirection: 'row', alignItems: 'center', gap: 16, marginHorizontal: 16, marginTop: 30, paddingVertical: 14, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line },
-  clubCard: { width: 92, height: 58, borderRadius: 6, transform: [{ rotate: '-4deg' }] },
-  clubTitle: { fontSize: 22, lineHeight: 26, fontFamily: fonts.serifMedium, color: colors.text },
-  clubText: { fontSize: 13.5, fontFamily: fonts.sansMedium, color: colors.muted, marginTop: 2 },
-  pickup: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginTop: 28 },
-  pickupText: { flex: 1, fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.text },
   footer: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6, paddingHorizontal: 20, paddingTop: 22 },
   footerLink: { fontSize: 13, color: colors.muted, fontFamily: fonts.sansSemiBold, textDecorationLine: 'underline' },
 });

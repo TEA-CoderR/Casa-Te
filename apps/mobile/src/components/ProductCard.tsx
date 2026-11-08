@@ -155,7 +155,10 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
       <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>
     </Pressable></Link>
     {!rail && <FavoriteButton productId={product.id} name={product.name} size={19} strokeWidth={2} style={styles.heartCorner} />}
-    <View style={styles.bottom}><PriceTag cents={sociOffer ? sociCents : product.price_cents} size={22} sale={!!discount || sociOffer} />{phoneCart}</View>
+    <View style={styles.bottom}>{rail
+      // Home rails: the price on the lime chip of the shop sign (the posters use the same chip).
+      ? <View style={styles.priceChip}><PriceTag cents={sociOffer ? sociCents : product.price_cents} size={20} color={colors.sign} /></View>
+      : <PriceTag cents={sociOffer ? sociCents : product.price_cents} size={22} sale={!!discount || sociOffer} />}{phoneCart}</View>
   </View>;
 }
 
@@ -164,6 +167,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.line },
   media: { backgroundColor: colors.surface, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   railCard: { padding: 0, paddingBottom: 0, borderWidth: 0, borderRadius: 0, backgroundColor: 'transparent' },
+  priceChip: { backgroundColor: colors.signInk, borderRadius: 10, paddingHorizontal: 8, paddingBottom: 1 },
   railMedia: { height: 162, borderRadius: 4, backgroundColor: colors.well },
   heart: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 6, right: 6, zIndex: 2 },
