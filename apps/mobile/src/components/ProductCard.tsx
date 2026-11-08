@@ -154,8 +154,8 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
         <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={feature ? 0.14 : 0.12} aspect={feature ? 0.86 : 1} blend backdrop={colors.well} />
         {!!phoneBadge && <Text style={styles.tileBadge} accessibilityLabel={`Sconto ${phoneBadge}`}>{phoneBadge}</Text>}
       </View>
-      <Text style={styles.tileBrand} numberOfLines={1}>{(product.brand ?? '').toUpperCase() || ' '}</Text>
-      <Text style={[styles.tileName, feature && styles.tileNameBig]} numberOfLines={2}>{product.name}</Text>
+      {!!product.brand && <Text style={styles.tileBrand} numberOfLines={1}>{product.brand.toUpperCase()}</Text>}
+      <Text style={[styles.tileName, { marginTop: product.brand ? 3 : 10 }, feature && styles.tileNameBig]} numberOfLines={2}>{product.name}</Text>
     </Pressable></Link>
     {!rail && <FavoriteButton productId={product.id} name={product.name} size={18} strokeWidth={1.5} style={styles.tileHeart} />}
     <View style={styles.tileBottom}>
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   tileBadge: { position: 'absolute', left: 10, top: 10, fontSize: 12, fontFamily: fonts.sansSemiBold, color: colors.sale, letterSpacing: 0.3 },
   tileHeart: { position: 'absolute', top: 2, right: 2, zIndex: 2 },
   tileBrand: { fontSize: 10.5, letterSpacing: 1.2, fontFamily: fonts.label, color: colors.muted, marginTop: 10 },
-  tileName: { fontSize: 13.5, lineHeight: 18, height: 36, fontFamily: fonts.sans, color: colors.text, marginTop: 3 },
+  tileName: { fontSize: 13.5, lineHeight: 18, height: 36, fontFamily: fonts.sans, color: colors.text },
   tileNameBig: { fontSize: 15, lineHeight: 20, height: 40 },
   tileBottom: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 6, marginTop: 6 },
   tilePrice: { fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.text, letterSpacing: -0.1 },
