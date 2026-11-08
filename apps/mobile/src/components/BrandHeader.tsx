@@ -49,7 +49,7 @@ export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, righ
     <View style={[styles.band, { paddingTop: (inScroll ? 0 : insets.top) + pad[0], paddingHorizontal: pad[1], paddingBottom: pad[2] + overlap }]}>
       {(left || right || logo || (!stacked && !!title)) && <View style={styles.row}>
         {left}
-        {logo && <LogoSign height={logoHeight} />}
+        {logo && <BrandLogo width={logoHeight * 1.9} color={colors.bandText} />}
         {!stacked && heading}
         <View style={{ flex: 1 }} />
         {right}

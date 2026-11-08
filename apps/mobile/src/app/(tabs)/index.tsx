@@ -109,17 +109,14 @@ function HomePhone() {
     <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8}><Text style={styles.link}>{link}</Text></Pressable>
   </View>;
 
-  // Home: the one brand moment of the app — a solid deep-green band with the logo in lime, the greeting and the
-  // search, rounded at the bottom, with the store card hanging over its edge (like the big Italian grocery apps).
+  // Home: the lime band with the logo and the search, the store card hanging from its edge (the Esselunga pattern).
   const header = <View style={styles.band}>
     <View style={styles.bandRow}>
-      <BrandLogo width={92} color={colors.signInk} />
+      <BrandLogo width={96} color={colors.bandText} />
       <View style={{ flex: 1 }} />
       <Pressable onPress={() => router.push('/favorites')} accessibilityRole="button" accessibilityLabel="Preferiti" hitSlop={4}
-        style={({ pressed }) => [styles.bandButton, pressed && { opacity: 0.7 }]}><Icon name="heart" size={21} color="#FFFFFF" strokeWidth={1.9} /></Pressable>
+        style={({ pressed }) => [styles.bandButton, pressed && { opacity: 0.7 }]}><Icon name="heart" size={21} color={colors.bandText} strokeWidth={1.9} /></Pressable>
     </View>
-    <Text style={styles.hello} accessibilityRole="header">{firstName ? `Ciao, ${firstName}` : 'Ciao!'}</Text>
-    <Text style={styles.helloSub}>Cosa ti serve per casa oggi?</Text>
     <Pressable onPress={() => openCatalog({ search: '1' })} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
       style={({ pressed }) => [styles.search, pressed && { opacity: 0.95 }]}>
       <Icon name="search" size={21} color={colors.text} strokeWidth={2.1} />
@@ -130,7 +127,7 @@ function HomePhone() {
     </Pressable>
   </View>;
 
-  return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.green }} />} top={header} ground={colors.page} refreshing={featured.loading && !!featured.data} onRefresh={refresh}
+  return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.band }} />} top={header} ground={colors.page} refreshing={featured.loading && !!featured.data} onRefresh={refresh}
     contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
     <View style={{ marginTop: -30, marginHorizontal: 16 }}><StoreCard onPress={() => setStoreSheet(true)} /></View>
@@ -143,14 +140,6 @@ function HomePhone() {
       <Text style={styles.orderSub}>{active.order_number}{active.status === 'ready' && active.fulfilment === 'store' ? ' · mostra il codice in cassa' : ' · segui l’ordine'}</Text>
       <View style={styles.bars}>{[1, 2, 3, 4].map((i) => <View key={i} style={[styles.bar, i <= (STEP[active.status] ?? 1) && styles.barOn]} />)}</View>
     </Pressable>}
-
-    {/* Quick actions: four round signs in one row, all visible at once (no sideways scroll). */}
-    <View style={styles.quick}>
-      {quick('Offerte', 'percent', () => openCatalog({ offerte: '1' }))}
-      {flyers.data?.length ? quick('Volantino', 'flyer', () => router.push('/volantino')) : quick('Preferiti', 'heart', () => router.push('/favorites'))}
-      {quick('Ordini', 'box', () => router.push('/orders'))}
-      {club.enabled ? quick('Club', 'crown', () => router.push('/club')) : quick('Profilo', 'user', () => router.push('/profile'))}
-    </View>
 
     {slides.length > 0 && <View style={{ marginTop: 20 }}>
       <View style={styles.hero}>
@@ -214,13 +203,13 @@ function HomePhone() {
 }
 
 const styles = StyleSheet.create({
-  band: { backgroundColor: colors.green, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 54, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  band: { backgroundColor: colors.band, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 54 },
   bandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
-  bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
   hello: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, color: '#FFFFFF', letterSpacing: -0.6, marginTop: 18 },
   helloSub: { fontSize: 15.5, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
   // Outlined like the sign-in fields.
-  search: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 16, paddingRight: 6, borderRadius: 14, backgroundColor: '#FFFFFF' },
+  search: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 16, paddingRight: 6, borderRadius: 14, backgroundColor: '#FFFFFF' },
   searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.muted },
   scan: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
   // The order in progress: deep green with the lime signal on the progress bars.

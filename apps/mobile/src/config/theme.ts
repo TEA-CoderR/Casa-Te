@@ -19,11 +19,11 @@ export const colors = {
   stripe: '#234A2C',
   /** Light text on the dark green (tab bar, green buttons, the order-confirmed page). */
   onBrand: '#CFDDC6',
-  /** Page headers (since the sign-in redesign): a white band with dark title, muted subtitle and light round buttons. */
-  band: '#FFFFFF',
-  bandText: '#18201A',
-  bandMuted: '#5F665C',
-  bandButton: '#F1F0EB',
+  /** Page headers: the logo lime with deep green ink (November 2026, after the Esselunga reference; white before). */
+  band: '#D4E64A',
+  bandText: '#1F4127',
+  bandMuted: '#3C5A2E',
+  bandButton: 'rgba(255,255,255,0.55)',
   /** The logo's own colours: lime lettering on the shop-sign green (the small sign in headers, the Club card). */
   sign: '#3B6B31',
   signInk: '#CDE434',
