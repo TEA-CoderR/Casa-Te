@@ -105,13 +105,12 @@ function HomePhone() {
     <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8}><Text style={styles.link}>{link}</Text></Pressable>
   </View>;
 
-  const header = <BrandHeader logo inScroll pad={[16, 20, 40]} right={<HeaderButton icon="heart" label="Preferiti" onPress={() => router.push('/favorites')} />}>
-    <Text style={styles.hello} accessibilityRole="header">{firstName ? `Ciao, ${firstName}` : 'Ciao!'}</Text>
-    <Text style={styles.helloSub}>Cosa ti serve per casa oggi?</Text>
+  // La Tenda 2.0: the awning with the logo large and the search, nothing else to read.
+  const header = <BrandHeader logo logoHeight={50} inScroll pad={[14, 20, 40]} right={<HeaderButton icon="heart" label="Preferiti" onPress={() => router.push('/favorites')} />}>
     <Pressable onPress={() => openCatalog({ search: '1' })} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
       style={({ pressed }) => [styles.search, pressed && { opacity: 0.95 }]}>
       <Icon name="search" size={21} color={colors.text} strokeWidth={2.1} />
-      <Text style={styles.searchText} numberOfLines={1}>{totalProducts ? `Cerca tra ${totalProducts.toLocaleString('it-IT')} prodotti` : 'Cerca tra i nostri prodotti'}</Text>
+      <Text style={styles.searchText} numberOfLines={1}>Cerca prodotti e marche</Text>
       <Pressable onPress={() => openCatalog({ search: '1', code: '1' })} accessibilityRole="button" accessibilityLabel="Cerca per codice a barre" hitSlop={4} style={styles.scan}>
         <Icon name="scan" size={19} color={colors.text} strokeWidth={2} />
       </Pressable>
@@ -131,13 +130,6 @@ function HomePhone() {
       <Text style={styles.orderSub}>{active.order_number}{active.status === 'ready' && active.fulfilment === 'store' ? ' · mostra il codice in cassa' : ' · segui l’ordine'}</Text>
       <View style={styles.bars}>{[1, 2, 3, 4].map((i) => <View key={i} style={[styles.bar, i <= (STEP[active.status] ?? 1) && styles.barOn]} />)}</View>
     </Pressable>}
-
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills} style={{ flexGrow: 0 }}>
-      {pill('Offerte', 'percent', () => openCatalog({ offerte: '1' }), true)}
-      {!!flyers.data?.length && pill('Volantino', 'flyer', () => router.push('/volantino'))}
-      {pill('Ordini', 'box', () => router.push('/orders'))}
-      {club.enabled ? pill('Club', 'card', () => router.push('/club')) : pill('Preferiti', 'heart', () => router.push('/favorites'))}
-    </ScrollView>
 
     {slides.length > 0 && <View style={{ marginTop: 20 }}>
       <View style={styles.hero}>

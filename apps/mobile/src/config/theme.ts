@@ -18,7 +18,7 @@ export const colors = {
   /** Text on the green band that is not the title (≥4.5:1 on the band). */
   onBrand: '#CFDDC6',
   /** The logo's yellow: active tab, price chips, cart count, the order-ready card. */
-  yellow: '#F3E33A',
+  yellow: '#D4E64A',
   lime: '#F3E9D6',
   cream: '#F4EFE6',
   sand: '#F6EEDF',
