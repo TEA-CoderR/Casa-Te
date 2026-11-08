@@ -273,8 +273,8 @@ const styles = StyleSheet.create({
   fEmail: { fontSize: 14, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 2 },
   fEdit: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: colors.bandButton, justifyContent: 'center' },
   fEditText: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.bandText },
-  fSignIn: { alignSelf: 'flex-start', height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.yellow, justifyContent: 'center', marginTop: 14 },
-  fSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
+  fSignIn: { alignSelf: 'flex-start', height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.green, justifyContent: 'center', marginTop: 14 },
+  fSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   // The Club in the colours of its card: lime on the shop-sign green.
   fClub: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10, padding: 16, borderRadius: 18, backgroundColor: colors.sign },
   fClubTitle: { fontSize: 18, lineHeight: 22, fontFamily: fonts.display, color: colors.signInk },
