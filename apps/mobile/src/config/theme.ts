@@ -22,8 +22,13 @@ export const colors = {
   lime: '#F3E9D6',
   cream: '#F4EFE6',
   sand: '#F6EEDF',
-  /** Phone pages: warm ivory ground under white plates. */
-  page: '#F5F3EC',
+  /** Phone pages: white (November 2026, after the Esselunga reference); was a warm ivory. */
+  page: '#FFFFFF',
+  /** Page header band: the logo lime with deep green ink (was the striped green awning). */
+  band: '#D4E64A',
+  bandInk: '#1F4127',
+  bandMuted: '#3C5A2E',
+  bandButton: 'rgba(255,255,255,0.55)',
   /** Quiet fills on the ivory ground (segmented controls, steppers). */
   well: '#EAE6DB',
   background: '#FFFFFF',

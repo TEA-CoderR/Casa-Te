@@ -7,7 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { colors, fonts } from '@/config/theme';
-import { AwningEdge, AwningStripes, HeaderBack } from './BrandHeader';
+import { HeaderBack } from './BrandHeader';
 import { Icon } from './Icon';
 
 /** Band height (below the status bar) once rolled up: just the buttons row. */
@@ -86,7 +86,7 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   const pillMax = width - 16 - 44 - 10 - 16;
   const pillStyle = useAnimatedStyle(() => ({
     width: 44 + (pillMax - 44) * ease.value,
-    backgroundColor: interpolateColor(Math.min(1, ease.value / 0.35), [0, 1], ['rgba(255,255,255,0.12)', '#FFFFFF']),
+    backgroundColor: interpolateColor(Math.min(1, ease.value / 0.35), [0, 1], [colors.bandButton, '#FFFFFF']),
     shadowOpacity: ease.value > 0.5 ? 0.22 : 0,
     elevation: ease.value > 0.5 ? 4 : 0,
   }));
@@ -102,7 +102,6 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
     </Animated.ScrollView>
 
     <Animated.View style={[styles.band, bandStyle]}>
-      <AwningStripes />
       <Animated.View style={[styles.titleBlock, { top: insets.top + 14 + Math.max(0, (44 - titleH) / 2), left: onBack ? 16 + 44 + 12 : 16 }, titleStyle]}
         onLayout={(e: LayoutChangeEvent) => { const h = Math.ceil(e.nativeEvent.layout.height); if (h && h !== titleH) setTitleH(h); }}>
         <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
@@ -110,14 +109,14 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
       </Animated.View>
       <Animated.View pointerEvents="none" style={[styles.line, lineStyle]} />
     </Animated.View>
-    <Animated.View pointerEvents="none" style={[styles.edge, edgeStyle]}><Animated.View style={edgeInner}><AwningEdge /></Animated.View></Animated.View>
+
 
     {onBack && <View style={[styles.back, { top: insets.top + 14 }]}><HeaderBack onPress={onBack} /></View>}
     <Animated.View style={[styles.pill, { top: insets.top + 14 }, pillStyle]}>
       <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel={`Cerca in ${searchScope ?? 'tutti i prodotti'}`}
         style={({ pressed }) => [styles.pillInner, pressed && { opacity: 0.8 }]}>
         <View style={{ width: 20, height: 20 }}>
-          <Animated.View style={[StyleSheet.absoluteFill, whiteIcon]}><Icon name="search" size={20} color="#FFFFFF" strokeWidth={2.1} /></Animated.View>
+          <Animated.View style={[StyleSheet.absoluteFill, whiteIcon]}><Icon name="search" size={20} color={colors.bandInk} strokeWidth={2.1} /></Animated.View>
           <Animated.View style={[StyleSheet.absoluteFill, darkIcon]}><Icon name="search" size={20} color={colors.text} strokeWidth={2.1} /></Animated.View>
         </View>
         <Animated.Text style={[styles.pillText, labelStyle]} numberOfLines={1}>
@@ -138,10 +137,10 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.page, overflow: 'hidden' },
-  band: { position: 'absolute', left: 0, right: 0, top: 0, backgroundColor: colors.brand, overflow: 'hidden', zIndex: 3 },
+  band: { position: 'absolute', left: 0, right: 0, top: 0, backgroundColor: colors.band, overflow: 'hidden', zIndex: 3 },
   titleBlock: { position: 'absolute', right: 16 + 44 + 10 },
-  title: { fontFamily: fonts.display, color: '#FFFFFF', fontSize: 25, lineHeight: 29, letterSpacing: -0.2 },
-  subtitle: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.onBrand },
+  title: { fontFamily: fonts.display, color: colors.bandInk, fontSize: 25, lineHeight: 29, letterSpacing: -0.2 },
+  subtitle: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.bandMuted },
   line: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 2, backgroundColor: colors.greenDark },
   edge: { position: 'absolute', left: 0, right: 0, zIndex: 3, overflow: 'hidden' },
   back: { position: 'absolute', left: 16, zIndex: 4 },

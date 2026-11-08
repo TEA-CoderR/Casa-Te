@@ -2,7 +2,7 @@ import { useState, type PropsWithChildren, type ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '@/config/theme';
-import { brandLogoStacked, STACKED_ASPECT } from '@/config/brand';
+import { brandLogoStackedGreen as brandLogoStacked, STACKED_ASPECT } from '@/config/brand';
 import { Icon, type IconName } from './Icon';
 
 const STRIPE = 22;
@@ -47,7 +47,6 @@ export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, righ
   // No zIndex: a card that hangs from the band (a later sibling in the scroll content) must paint over it.
   return <View>
     <View style={[styles.band, { paddingTop: (inScroll ? 0 : insets.top) + pad[0], paddingHorizontal: pad[1], paddingBottom: pad[2] + overlap }]}>
-      {!plain && <AwningStripes />}
       {(left || right || logo || (!stacked && !!title)) && <View style={styles.row}>
         {left}
         {logo && <Image source={brandLogoStacked} accessibilityLabel="Casa & Te — Per la tua casa e per te" accessibilityRole="header"
@@ -59,14 +58,13 @@ export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, righ
       {stacked && heading}
       {children}
     </View>
-    {!plain && <AwningEdge />}
   </View>;
 }
 
 /** The status bar area above a scrolling awning (Screen `header` when the band is the Screen `top`). */
 export function StatusBand() {
   const insets = useSafeAreaInsets();
-  return <View style={{ height: insets.top, backgroundColor: colors.brand, overflow: 'hidden', zIndex: 3 }}><AwningStripes /></View>;
+  return <View style={{ height: insets.top, backgroundColor: colors.band, overflow: 'hidden', zIndex: 3 }} />;
 }
 
 /** A card that hangs from the awning's valance (store card, active order): pulls itself up over the band. */
@@ -80,7 +78,7 @@ export function HeaderButton({ icon, label, onPress, count, filled }: {
 }) {
   return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={4}
     style={({ pressed }) => [styles.button, pressed && { opacity: 0.7 }]}>
-    <Icon name={icon} size={icon === 'search' ? 20 : 21} color="#FFFFFF" strokeWidth={icon === 'search' ? 2.1 : 1.8} fill={filled ? '#FFFFFF' : undefined} />
+    <Icon name={icon} size={icon === 'search' ? 20 : 21} color={colors.bandInk} strokeWidth={icon === 'search' ? 2.1 : 1.8} fill={filled ? colors.bandInk : undefined} />
     {!!count && <View style={styles.count}><Text style={styles.countText}>{count > 99 ? '99+' : count}</Text></View>}
   </Pressable>;
 }
@@ -89,7 +87,7 @@ export function HeaderButton({ icon, label, onPress, count, filled }: {
 export function HeaderBack({ onPress, icon = 'back', label = 'Indietro' }: { onPress: () => void; icon?: IconName; label?: string }) {
   return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={6}
     style={({ pressed }) => [styles.button, pressed && { opacity: 0.7 }]}>
-    <Icon name={icon} size={icon === 'close' ? 18 : 22} color="#FFFFFF" strokeWidth={2.3} />
+    <Icon name={icon} size={icon === 'close' ? 18 : 22} color={colors.bandInk} strokeWidth={2.3} />
   </Pressable>;
 }
 
@@ -110,14 +108,14 @@ export function HeaderSearch({ onPress, placeholder, ...input }: TextInputProps 
 }
 
 const styles = StyleSheet.create({
-  band: { backgroundColor: colors.brand, overflow: 'hidden' },
+  band: { backgroundColor: colors.band, overflow: 'hidden' },
   stripes: { flexDirection: 'row' },
   edge: { height: 12, flexDirection: 'row', overflow: 'hidden', marginTop: -1 },
   scallop: { width: STRIPE, height: 22, borderRadius: 11, marginTop: -11 },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
-  title: { fontFamily: fonts.display, color: '#FFFFFF', letterSpacing: -0.3 },
-  subtitle: { fontSize: 14, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
-  button: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  title: { fontFamily: fonts.display, color: colors.bandInk, letterSpacing: -0.3 },
+  subtitle: { fontSize: 14, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 2 },
+  button: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
   count: { position: 'absolute', top: 1, right: -1, minWidth: 19, height: 19, borderRadius: 10, paddingHorizontal: 4,
     backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
   countText: { fontSize: 11.5, fontFamily: fonts.heavy, color: colors.text },

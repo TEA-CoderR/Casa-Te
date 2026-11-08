@@ -78,7 +78,7 @@ function HomePhone() {
   const deptCount = dept ? countFor(dept) : 0;
   const slides: Array<{ key: string; title: string; text: string; cta: string; bg: string; ink: string; image?: string | null; product?: CatalogProduct; onPress: () => void }> = [
     ...(offerItems.length ? [{ key: 'offers', title: 'Le nostre migliori offerte', text: 'Sempre aggiornate, nel tuo negozio', cta: 'Scopri', bg: '#DCE7D3', /* ui-check: allow (home banner of design F) */ ink: colors.green, product: offerItems[0], onPress: () => openCatalog({ offerte: '1' }) }] : []),
-    { key: 'pickup', title: 'Ritiro sempre gratis', text: storeName ? `Ordina ora, ritira a ${storeName}` : 'Ordina ora, ritira nel tuo negozio', cta: 'Come funziona', bg: colors.yellow, ink: colors.text, product: featured.data?.items[0], onPress: () => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } }) },
+    { key: 'pickup', title: 'Ritiro sempre gratis', text: storeName ? `Ordina ora, ritira a ${storeName}` : 'Ordina ora, ritira nel tuo negozio', cta: 'Come funziona', bg: '#E4EEDC', /* ui-check: allow (home banner, sage) */ ink: colors.green, product: featured.data?.items[0], onPress: () => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } }) },
     ...(dept ? [{ key: 'dept', title: dept.name, text: deptCount ? `${deptCount.toLocaleString('it-IT')} prodotti nel tuo negozio` : 'Scopri il reparto', cta: `Vai a ${dept.name}`, bg: '#F4DED6', ink: '#5B2414', image: coverFor(dept)?.image, onPress: () => openCatalog({ category: dept.id }) }] : []),
   ];
   const slideWidth = width - 32;

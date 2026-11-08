@@ -89,7 +89,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
           accessibilityLabel={badge ? `${tab.title}, ${count} ${count === 1 ? 'articolo' : 'articoli'}${total ? `, ${total}` : ''}` : tab.title}
           style={[styles.tab, on && styles.tabOn]}>
           <View>
-            <Icon name={tab.icon} size={21} color={on ? colors.text : '#FFFFFF'} strokeWidth={on ? 1.9 : 1.8}
+            <Icon name={tab.icon} size={21} color={colors.text} strokeWidth={on ? 1.9 : 1.8}
               fill={on && tab.icon !== 'cart' ? colors.text : undefined} />
             {!!badge && !on && <Animated.View key={badge} entering={ZoomIn.springify()} style={styles.badge}>
               <Text style={styles.badgeText}>{badge}</Text></Animated.View>}
@@ -123,14 +123,15 @@ const styles = StyleSheet.create({
   miniTotal: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text },
   miniCta: { height: 44, paddingHorizontal: 16, borderRadius: 14, backgroundColor: colors.green, justifyContent: 'center' },
   miniCtaText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
-  pill: { flexDirection: 'row', alignItems: 'center', height: 66, borderRadius: 33, paddingHorizontal: 7, backgroundColor: colors.green,
-    shadowColor: '#143019', shadowOpacity: 0.35, shadowRadius: 28, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
+  // White floating bar (November 2026): hairline and a soft shadow, the chosen tab on the logo lime.
+  pill: { flexDirection: 'row', alignItems: 'center', height: 66, borderRadius: 33, paddingHorizontal: 7, backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: colors.line, shadowColor: '#143019', shadowOpacity: 0.12, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   tab: { flex: 1, height: 54, borderRadius: 22, alignItems: 'center', justifyContent: 'center', gap: 3 },
   tabOn: { backgroundColor: colors.yellow },
-  tabLabel: { fontSize: 11.5, fontFamily: fonts.sansBold, color: colors.onBrand },
-  tabTotal: { fontFamily: fonts.heavy, color: '#FFFFFF' },
+  tabLabel: { fontSize: 11.5, fontFamily: fonts.sansBold, color: colors.muted },
+  tabTotal: { fontFamily: fonts.heavy, color: colors.text },
   tabLabelOn: { fontFamily: fonts.heavy, color: colors.text },
   badge: { position: 'absolute', top: -7, right: -12, minWidth: 19, height: 19, paddingHorizontal: 4, borderRadius: 10,
-    backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 11.5, fontFamily: fonts.heavy, color: colors.text },
+    backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontSize: 11.5, fontFamily: fonts.heavy, color: '#FFFFFF' },
 });
