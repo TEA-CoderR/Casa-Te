@@ -1,20 +1,22 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { orderStatusLabel, type CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryPhoto } from '@/components/CategoryNav';
-import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
-import { StoreCard } from '@/components/StoreCard';
-import { Icon, type IconName } from '@/components/Icon';
+import { StoreSheet, storeShortName } from '@/components/StoreSheet';
+import { AwningMark, storeStatus } from '@/components/StoreCard';
+import { useClubMember } from '@/store/club';
+
+const CLUB_CARD = require('../../../assets/club-card.webp');
+import { Icon } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ProductImage } from '@/components/ProductImage';
 import { RemoteImage } from '@/components/RemoteImage';
 import { colors, fonts } from '@/config/theme';
-import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchFlyers, fetchOffers, fetchOrders, fetchProducts, fetchProfile, imageUrl, type CatalogProduct, type OrderWithItems } from '@/lib/api';
-import { useClubSettings, useDelivery, useLayout, useStores } from '@/lib/hooks';
+import { fetchCategories, fetchCategoryCovers, fetchFlyers, fetchOffers, fetchOrders, fetchProducts, type OrderWithItems } from '@/lib/api';
+import { useClubSettings, useLayout, useStores } from '@/lib/hooks';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
 import { HomeDesktop } from '@/components/site/HomeDesktop';
@@ -33,15 +35,13 @@ function HomePhone() {
   const insets = useSafeAreaInsets();
   const { selected } = useStores();
   const user = useUser();
-  const { width } = useWindowDimensions();
   const [storeSheet, setStoreSheet] = useState(false);
   const storeName = storeShortName(selected).replace(/^(\S+)\s+(?!·)/, '$1 · ');
   const club = useClubSettings();
-  const profile = useQuery(user ? `profile:${user.id}` : null, () => fetchProfile(user!.id));
+  const member = useClubMember();
   const orders = useQuery<OrderWithItems[]>(user ? `orders:list:${user.id}` : null, fetchOrders);
   useRefetchOnFocus(orders.refetch);
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
-  const counts = useQuery('category-counts', fetchCategoryCounts);
   const covers = useQuery('category-covers', () => fetchCategoryCovers());
   const featured = useQuery(selected ? `featured:${selected.id}` : null,
     // Products starred "In evidenza" in the admin; while none is starred, the start of the catalogue.
@@ -59,61 +59,44 @@ function HomePhone() {
   const allTop = all.filter((c) => !c.parent_id);
   const chosen = allTop.filter((c) => c.show_on_home);
   const topCategories = (chosen.length ? chosen : allTop).slice(0, chosen.length ? 8 : 6);
-  const countFor = (top: CategoryRow) => {
-    const ids = new Set([top.id, ...all.filter((c) => c.parent_id === top.id).map((c) => c.id)]);
-    return [...ids].reduce((sum, id) => sum + (counts.data?.[id] ?? 0), 0);
-  };
-  const totalProducts = Object.values(counts.data ?? {}).reduce((a, b) => a + b, 0);
   const coverFor = (top: CategoryRow) => covers.data?.[top.id]?.image
     ? covers.data[top.id] : all.filter((c) => c.parent_id === top.id).map((c) => covers.data?.[c.id]).find((c) => c?.image);
   // Lists (a department, the offers, "In evidenza") open as their own screen, so back returns here; search opens on Categorie.
   const openCatalog = (params: Record<string, string>) => params.search
     ? router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: '', ...params } })
     : router.push(productList(params));
-  const firstName = profile.data?.full_name?.trim().split(/\s+/)[0] ?? '';
   const active = (orders.data ?? []).find((o) => ACTIVE.has(o.status));
 
-  // Hero carousel (design F): offers, free pickup, a department — real data only.
-  const dept = topCategories.find((c) => coverFor(c)?.image) ?? topCategories[0];
-  const deptCount = dept ? countFor(dept) : 0;
-  const slides: Array<{ key: string; title: string; text: string; cta: string; bg: string; ink: string; image?: string | null; product?: CatalogProduct; onPress: () => void }> = [
-    ...(offerItems.length ? [{ key: 'offers', title: 'Le nostre migliori offerte', text: 'Sempre aggiornate, nel tuo negozio', cta: 'Scopri', bg: '#EAF0E4', /* ui-check: allow (home banner, sage) */ ink: colors.green, product: offerItems[0], onPress: () => openCatalog({ offerte: '1' }) }] : []),
-    { key: 'pickup', title: 'Ritiro sempre gratis', text: storeName ? `Ordina ora, ritira a ${storeName}` : 'Ordina ora, ritira nel tuo negozio', cta: 'Come funziona', bg: '#F2F3EE', /* ui-check: allow (home banner, stone) */ ink: colors.green, product: featured.data?.items[0], onPress: () => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } }) },
-    ...(dept ? [{ key: 'dept', title: dept.name, text: 'Scopri il reparto nel tuo negozio', cta: `Vai a ${dept.name}`, bg: '#F4F1EC', /* ui-check: allow (home banner, warm stone) */ ink: colors.text, image: coverFor(dept)?.image, onPress: () => openCatalog({ category: dept.id }) }] : []),
-  ];
-  const slideWidth = width - 32;
-  const [slide, setSlide] = useState(0);
-  const pager = useRef<ScrollView>(null);
-  const touched = useRef(false);
-  useEffect(() => {
-    if (slides.length < 2) return;
-    const t = setInterval(() => {
-      if (touched.current) return;
-      setSlide((i) => { const next = (i + 1) % slides.length; pager.current?.scrollTo({ x: next * slideWidth, animated: true }); return next; });
-    }, 5000);
-    return () => clearInterval(t);
-  }, [slides.length, slideWidth]);
+  const flyer = flyers.data?.[0];
+  const flyerCover = flyer?.pages[0];
+  const status = storeStatus(selected?.opening_hours);
+  const until = flyer?.valid_to ? new Date(`${flyer.valid_to}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : null;
 
-  const quick = (label: string, icon: IconName, onPress: () => void) =>
-    <Pressable key={label} onPress={onPress} accessibilityRole="link" accessibilityLabel={label}
-      style={({ pressed }) => [styles.quickItem, pressed && { opacity: 0.75 }]}>
-      <View style={styles.quickSign}><Icon name={icon} size={24} color={colors.green} strokeWidth={1.8} /></View>
-      <Text style={styles.quickText} numberOfLines={1}>{label}</Text>
-    </Pressable>;
-  const sectionHead = (id: string, title: string, link: string, onPress: () => void) => <View style={styles.section}>
-    <Text style={styles.sectionTitle} accessibilityRole="header" nativeID={id}>{title}</Text>
-    <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8}><Text style={styles.link}>{link}</Text></Pressable>
+  // Section title: EB Garamond like the printed catalogue (and the desktop shop), a quiet link on the right.
+  const sectionHead = (title: string, link: string | null, onPress: () => void) => <View style={styles.section}>
+    <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
+    {!!link && <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8} style={styles.linkRow}>
+      <Text style={styles.link}>{link}</Text><Icon name="arrow" size={14} color={colors.text} strokeWidth={2.2} /></Pressable>}
   </View>;
 
-  // Home: the one brand moment of the app — the greeting and the search on the white band; the logo lives in the
-  // opening animation (AnimatedSplash), so the page starts straight with the person and the shop.
+  // Home header: no greeting and no logo (the logo opens the app). The store is one line you can tap, then the search.
   const header = <View style={styles.band}>
     <View style={styles.bandRow}>
-      <Text style={[styles.hello, { flex: 1 }]} accessibilityRole="header" numberOfLines={1}>{firstName ? `Ciao, ${firstName}` : 'Ciao!'}</Text>
+      <Pressable onPress={() => setStoreSheet(true)} accessibilityRole="button" accessibilityLabel={storeName ? `Il tuo negozio: ${storeName}. Cambia negozio` : 'Scegli il tuo negozio'}
+        style={({ pressed }) => [styles.storeLine, pressed && { opacity: 0.7 }]}>
+        <Text style={styles.storeEyebrow} numberOfLines={1}>IL TUO NEGOZIO</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={styles.storeName} numberOfLines={1}>{storeName || 'Scegli il negozio'}</Text>
+          <View style={{ transform: [{ rotate: '90deg' }] }}><Icon name="chevron" size={16} color={colors.text} strokeWidth={2.4} /></View>
+        </View>
+        {!!status && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {status.open !== null && <View style={[styles.storeDot, { backgroundColor: status.open ? colors.green : colors.muted }]} />}
+          <Text style={styles.storeStatus} numberOfLines={1}>{status.text}</Text>
+        </View>}
+      </Pressable>
       <Pressable onPress={() => router.push('/favorites')} accessibilityRole="button" accessibilityLabel="Preferiti" hitSlop={4}
         style={({ pressed }) => [styles.bandButton, pressed && { opacity: 0.7 }]}><Icon name="heart" size={21} color={colors.text} strokeWidth={1.9} /></Pressable>
     </View>
-    <Text style={styles.helloSub}>Cosa ti serve per casa oggi?</Text>
     <Pressable onPress={() => openCatalog({ search: '1' })} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
       style={({ pressed }) => [styles.search, pressed && { opacity: 0.95 }]}>
       <Icon name="search" size={21} color={colors.text} strokeWidth={2.1} />
@@ -127,7 +110,6 @@ function HomePhone() {
   return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.band }} />} top={header} ground={colors.page} refreshing={featured.loading && !!featured.data} onRefresh={refresh}
     contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-    <View style={{ marginTop: 14, marginHorizontal: 16 }}><StoreCard onPress={() => setStoreSheet(true)} /></View>
 
     {active && <Pressable onPress={() => router.push(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.order, pressed && { opacity: 0.9 }]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -135,68 +117,71 @@ function HomePhone() {
         <Icon name="chevron" size={20} color={colors.muted} strokeWidth={2.2} />
       </View>
       <Text style={styles.orderSub}>{active.order_number}{active.status === 'ready' && active.fulfilment === 'store' ? ' · mostra il codice in cassa' : ' · segui l’ordine'}</Text>
-      <View style={styles.bars}>{[1, 2, 3, 4].map((i) => <View key={i} style={[styles.bar, i <= (STEP[active.status] ?? 1) && styles.barOn]} />)}</View>
+      <View style={styles.bars}>{[1, 2, 3, 4].map((n) => <View key={n} style={[styles.bar, n <= (STEP[active.status] ?? 0) && styles.barOn]} />)}</View>
     </Pressable>}
 
-    {/* Quick actions: four round signs in one row, all visible at once (no sideways scroll). */}
-    <View style={styles.quick}>
-      {quick('Offerte', 'percent', () => openCatalog({ offerte: '1' }))}
-      {flyers.data?.length ? quick('Volantino', 'flyer', () => router.push('/volantino')) : quick('Preferiti', 'heart', () => router.push('/favorites'))}
-      {quick('Ordini', 'box', () => router.push('/orders'))}
-      {club.enabled ? quick('Club', 'crown', () => router.push('/club')) : quick('Profilo', 'user', () => router.push('/profile'))}
-    </View>
-
-    {slides.length > 0 && <View style={{ marginTop: 20 }}>
-      <View style={styles.hero}>
-        <ScrollView ref={pager} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScrollBeginDrag={() => { touched.current = true; }}
-          onMomentumScrollEnd={(e) => setSlide(Math.round(e.nativeEvent.contentOffset.x / slideWidth))}>
-          {slides.map((s) => <Pressable key={s.key} onPress={s.onPress} accessibilityRole="link" accessibilityLabel={`${s.title}. ${s.text}. ${s.cta}`}
-            style={[styles.slide, { width: slideWidth, backgroundColor: s.bg }]}>
-            {(s.product || s.image) && <View style={[styles.slideArt, { backgroundColor: s.bg }]}>
-              {s.image ? <RemoteImage uri={s.image} style={{ width: '100%', height: '100%', mixBlendMode: 'multiply' } as object} />
-                : <ProductImage uri={s.product!.image} sku={s.product!.sku} inset={0} aspect={168 / 180} blend backdrop={s.bg} />}
-            </View>}
-            <View style={styles.slideText}>
-              <Text style={[styles.slideTitle, { color: s.ink }]}>{s.title}</Text>
-              <Text style={[styles.slideBody, { color: s.ink }]}>{s.text}</Text>
-              <View style={styles.slideCta}><Text style={styles.slideCtaText}>{s.cta}</Text><Icon name="arrow" size={15} color="#FFFFFF" strokeWidth={2.4} /></View>
-            </View>
-          </Pressable>)}
-        </ScrollView>
+    {/* The flyer of the week, as the printed flyer itself: its cover on the left, the title set like a catalogue. */}
+    {!!flyer && !!flyerCover && <Pressable onPress={() => router.push('/volantino')} accessibilityRole="link"
+      accessibilityLabel={`Volantino ${flyer.title}${until ? `, fino al ${until}` : ''}. Sfoglia`}
+      style={({ pressed }) => [styles.flyer, pressed && { opacity: 0.92 }]}>
+      <View style={styles.flyerCover}><RemoteImage uri={flyerCover} style={{ width: '100%', height: '100%' }} /></View>
+      <View style={{ flex: 1, minWidth: 0, justifyContent: 'center' }}>
+        <Text style={styles.eyebrow}>VOLANTINO</Text>
+        <Text style={styles.flyerTitle} numberOfLines={3}>{flyer.title}</Text>
+        {!!until && <Text style={styles.flyerDates}>Fino al {until}</Text>}
+        <View style={styles.flyerCta}><Text style={styles.flyerCtaText}>Sfoglia</Text><Icon name="arrow" size={15} color={colors.text} strokeWidth={2.2} /></View>
       </View>
-      {slides.length > 1 && <View style={styles.dots}>{slides.map((s, i) =>
-        <Pressable key={s.key} accessibilityRole="button" accessibilityLabel={`Mostra ${s.title}`}
-          onPress={() => { touched.current = true; setSlide(i); pager.current?.scrollTo({ x: i * slideWidth, animated: true }); }}
-          style={styles.dotHit}><View style={[styles.dot, i === slide && styles.dotOn]} /></Pressable>)}</View>}
+    </Pressable>}
+
+    {offerItems.length > 0 && <View style={{ paddingTop: 30 }}>
+      {sectionHead('Offerte', 'Tutte', () => openCatalog({ offerte: '1' }))}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.rail}>
+        {offerItems.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}
+      </ScrollView>
     </View>}
 
-    {!!topCategories.length && <View style={{ paddingTop: 16, paddingHorizontal: 16 }}>
+    {!!topCategories.length && <View style={{ paddingTop: 30, paddingHorizontal: 16 }}>
       <View style={[styles.section, { paddingHorizontal: 0 }]}>
         <Text style={styles.sectionTitle} accessibilityRole="header">Reparti</Text>
-        <Pressable onPress={() => router.push(ALL_PRODUCTS)} accessibilityRole="link" hitSlop={8}>
-          <Text style={styles.link}>{allTop.length > topCategories.length ? `Tutti i ${allTop.length} reparti` : 'Tutti i reparti'}</Text></Pressable>
+        <Pressable onPress={() => router.push(ALL_PRODUCTS)} accessibilityRole="link" hitSlop={8} style={styles.linkRow}>
+          <Text style={styles.link}>Tutti</Text><Icon name="arrow" size={14} color={colors.text} strokeWidth={2.2} /></Pressable>
       </View>
-      {/* Departments as product photos on white plates, like the Categorie tab: 4 across for 8, 3 across for 6. */}
+      {/* Departments as products on a quiet ground, no frames: the photos carry the page. */}
       <View style={styles.departments}>{topCategories.map((category) => {
         const cover = coverFor(category);
-        const n = countFor(category);
         const across = topCategories.length % 4 === 0 ? 4 : 3;
         return <Pressable key={category.id} accessibilityRole="link" accessibilityLabel={`Reparto ${category.name}`}
           style={({ pressed }) => [styles.department, { width: `${100 / across}%` }, pressed && { opacity: 0.75 }]} onPress={() => openCatalog({ category: category.id })}>
-          <CategoryPhoto image={cover?.image} slug={category.slug} name={category.name} radius={16} />
+          <View style={styles.deptPlate}><CategoryPhoto image={cover?.image} slug={category.slug} name={category.name} radius={0} bare /></View>
           <Text style={styles.departmentName} numberOfLines={1}>{category.name}</Text>
         </Pressable>;
       })}</View>
     </View>}
 
-    <View style={{ paddingTop: 28 }}>
-      {sectionHead('h-evidenza', 'In evidenza', 'Vedi tutti', () => featured.data?.picked ? openCatalog({ evidenza: '1' }) : router.push(ALL_PRODUCTS))}
+    {/* The Club as the real card, not an icon. */}
+    {club.enabled && <Pressable onPress={() => router.push('/club')} accessibilityRole="link" accessibilityLabel="Casa & Te Club"
+      style={({ pressed }) => [styles.club, pressed && { opacity: 0.92 }]}>
+      <Image source={CLUB_CARD} style={styles.clubCard} accessibilityIgnoresInvertColors />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.clubTitle}>Casa & Te Club</Text>
+        <Text style={styles.clubText} numberOfLines={2}>{member ? 'La tua tessera e i Prezzi Soci' : 'Prezzi Soci e codici sconto, gratis'}</Text>
+      </View>
+      <Icon name="chevron" size={20} color={colors.text} strokeWidth={2.2} />
+    </Pressable>}
+
+    <View style={{ paddingTop: 30 }}>
+      {sectionHead('In evidenza', 'Tutti', () => featured.data?.picked ? openCatalog({ evidenza: '1' }) : router.push(ALL_PRODUCTS))}
       {featured.error && !featured.data ? <View style={{ paddingHorizontal: 16 }}><Notice tone="error" message="Impossibile caricare i prodotti. Controlla la connessione e riprova." /></View>
         : !featured.data ? <Loading /> : <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.rail}>
           {featured.data.items.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}
         </ScrollView>}
     </View>
 
+    {/* Free pickup, said once and quietly, with the shop sign. */}
+    <Pressable onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } })} accessibilityRole="link" style={styles.pickup}>
+      <AwningMark size={34} />
+      <Text style={styles.pickupText}>Ritiro sempre gratis{storeName ? ` a ${storeName}` : ' nel tuo negozio'}</Text>
+    </Pressable>
 
     <View style={styles.footer}>
       {([['Privacy', 'privacy'], ['Termini di vendita', 'terms'], ['Spedizioni e ritiro', 'shipping']] as const).map(([label, doc]) =>
@@ -208,48 +193,49 @@ function HomePhone() {
 }
 
 const styles = StyleSheet.create({
-  // Home: white like every page; the brand shows in the logo sign, the greens and the lime, in small doses.
-  band: { backgroundColor: colors.band, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
-  bandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
+  band: { backgroundColor: colors.band, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 10 },
+  bandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  storeLine: { flex: 1, minWidth: 0, paddingVertical: 4 },
+  storeEyebrow: { fontSize: 11, letterSpacing: 1.2, fontFamily: fonts.sansBold, color: colors.muted },
+  storeName: { flexShrink: 1, fontSize: 24, lineHeight: 30, fontFamily: fonts.serifMedium, color: colors.text, letterSpacing: -0.2 },
+  storeDot: { width: 7, height: 7, borderRadius: 4 },
+  storeStatus: { fontSize: 13, fontFamily: fonts.sansMedium, color: colors.muted },
   bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
-  hello: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, color: colors.text, letterSpacing: -0.6 },
-  helloSub: { fontSize: 15.5, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
-  // Outlined like the sign-in fields.
-  search: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 16, paddingRight: 6, borderRadius: 14, backgroundColor: '#FFFFFF',
+  search: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12, height: 50, paddingLeft: 16, paddingRight: 6, borderRadius: 14, backgroundColor: '#FFFFFF',
     borderWidth: 1.5, borderColor: '#8C9189' },
   searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.muted },
   scan: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
-  // The order in progress: deep green with the lime signal on the progress bars.
-  order: { marginHorizontal: 16, marginTop: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  order: { marginHorizontal: 16, marginTop: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   orderTitle: { flexShrink: 1, fontSize: 15, fontFamily: fonts.heavy, color: colors.text },
   orderSub: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 2 },
   bars: { flexDirection: 'row', gap: 4, marginTop: 10 },
   bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.well },
   barOn: { backgroundColor: colors.green },
-  quick: { flexDirection: 'row', paddingHorizontal: 12, paddingTop: 22 },
-  quickItem: { flex: 1, alignItems: 'center', gap: 8 },
-  quickSign: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
-  quickText: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.text },
-  hero: { marginHorizontal: 16, height: 196, borderRadius: 24, overflow: 'hidden' },
-  slide: { height: 196 },
-  slideArt: { position: 'absolute', right: 6, bottom: 0, width: 168, height: 180 },
-  slideText: { position: 'absolute', left: 22, top: 22, width: 186 },
-  slideTitle: { fontSize: 25, lineHeight: 28, fontFamily: fonts.display },
-  slideBody: { fontSize: 13.5, lineHeight: 18, fontFamily: fonts.sansMedium, marginTop: 6, opacity: 0.85 },
-  slideCta: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.text, marginTop: 14 },
-  slideCtaText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 2, marginTop: 4 },
-  dotHit: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D0D0CB' },
-  dotOn: { width: 22, backgroundColor: colors.text },
+  // The flyer: the cover as a printed page (square corners, a soft drop), the words beside it.
+  flyer: { flexDirection: 'row', gap: 18, marginHorizontal: 16, marginTop: 18, padding: 16, borderRadius: 4, backgroundColor: colors.well },
+  flyerCover: { width: 118, aspectRatio: 0.71, backgroundColor: '#FFFFFF', borderRadius: 2, overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  eyebrow: { fontSize: 11, letterSpacing: 1.4, fontFamily: fonts.sansBold, color: colors.green },
+  flyerTitle: { fontSize: 28, lineHeight: 31, fontFamily: fonts.serifMedium, color: colors.text, marginTop: 6, letterSpacing: -0.3 },
+  flyerDates: { fontSize: 13.5, fontFamily: fonts.sansMedium, color: colors.muted, marginTop: 6 },
+  flyerCta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, alignSelf: 'flex-start', borderBottomWidth: 1.5, borderColor: colors.text, paddingBottom: 2 },
+  flyerCtaText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
   section: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12, gap: 12 },
-  sectionTitle: { fontSize: 25, lineHeight: 30, fontFamily: fonts.display, color: colors.text },
-  link: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
+  sectionTitle: { fontSize: 30, lineHeight: 34, fontFamily: fonts.serifMedium, color: colors.text, letterSpacing: -0.4 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  link: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
   rail: { paddingHorizontal: 16, gap: 10, paddingBottom: 1 },
   railItem: { width: 162, flexDirection: 'row' },
-  departments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, rowGap: 14 },
-  department: { paddingHorizontal: 4 },
-  departmentName: { marginTop: 6, fontSize: 13, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
+  departments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 16 },
+  department: { paddingHorizontal: 5 },
+  deptPlate: { borderRadius: 4, overflow: 'hidden', backgroundColor: colors.well, padding: 6 },
+  departmentName: { marginTop: 7, fontSize: 13, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
+  club: { flexDirection: 'row', alignItems: 'center', gap: 16, marginHorizontal: 16, marginTop: 30, paddingVertical: 14, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line },
+  clubCard: { width: 92, height: 58, borderRadius: 6, transform: [{ rotate: '-4deg' }] },
+  clubTitle: { fontSize: 22, lineHeight: 26, fontFamily: fonts.serifMedium, color: colors.text },
+  clubText: { fontSize: 13.5, fontFamily: fonts.sansMedium, color: colors.muted, marginTop: 2 },
+  pickup: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginTop: 28 },
+  pickupText: { flex: 1, fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.text },
   footer: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6, paddingHorizontal: 20, paddingTop: 22 },
-  footerLink: { fontSize: 13, color: colors.green, fontFamily: fonts.sansSemiBold, textDecorationLine: 'underline' },
+  footerLink: { fontSize: 13, color: colors.muted, fontFamily: fonts.sansSemiBold, textDecorationLine: 'underline' },
 });
