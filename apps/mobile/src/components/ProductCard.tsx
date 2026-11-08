@@ -53,7 +53,7 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
     style={({ pressed }) => [styles.add, !wide && styles.addRound, { opacity: !canAdd ? 0.35 : pressed ? 0.75 : 1 }]}>
     {quantity ? <Text style={styles.addCount}>{quantity}</Text> : wide
       ? <Icon name="cart" size={17} color="#fff" strokeWidth={1.6} />
-      : <Icon name="plus" size={18} color="#fff" strokeWidth={2.6} />}
+      : <Icon name="plus" size={18} color="#fff" strokeWidth={2.2} />}
   </Pressable>;
   // Phone (design F): "+" turns into a stepper in place, so the quantity changes without leaving the list.
   const phoneCart = quantity > 0 ? <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.stepper}>
@@ -158,15 +158,16 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
 }
 
 const styles = StyleSheet.create({
-  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 10,
+  // Design "Pulito": one radius scale (12 plates, 10 small buttons, 6 badges).
+  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: 8, paddingBottom: 10,
     borderWidth: 1, borderColor: colors.line },
-  media: { backgroundColor: colors.surface, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  media: { backgroundColor: colors.surface, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   heart: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 6, right: 6, zIndex: 2 },
-  discount: { position: 'absolute', left: 0, top: 0, backgroundColor: colors.sale, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  discount: { position: 'absolute', left: 0, top: 0, backgroundColor: colors.sale, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
   discountText: { fontSize: 12, color: '#fff', fontFamily: fonts.heavy, fontWeight: '800' },
-  name: { fontSize: 13.5, lineHeight: 17, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text, height: 34, paddingHorizontal: 4 },
-  meta: { fontSize: 11.5, lineHeight: 15, color: colors.muted, marginTop: 2, fontFamily: fonts.sans, paddingHorizontal: 4 },
+  name: { fontSize: 14, lineHeight: 18, fontFamily: fonts.sans, color: colors.text, height: 36, paddingHorizontal: 4 },
+  meta: { fontSize: 12, lineHeight: 16, color: colors.muted, marginTop: 2, fontFamily: fonts.sans, paddingHorizontal: 4 },
   bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 6, paddingLeft: 4, height: 40 },
   small: { fontSize: 11.5, color: colors.faint, fontFamily: fonts.sansMedium },
   compareSmall: { textDecorationLine: 'line-through' },
@@ -178,9 +179,9 @@ const styles = StyleSheet.create({
   price: { fontSize: 18.5, fontFamily: fonts.serifMedium, color: colors.text },
   compare: { fontSize: 12, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
   add: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.action, alignItems: 'center', justifyContent: 'center' },
-  addRound: { width: 40, height: 40, borderRadius: 20 },
-  stepper: { flexDirection: 'row', alignItems: 'center', height: 40, borderRadius: 20, backgroundColor: colors.action },
-  stepBtn: { width: 34, height: 40, alignItems: 'center', justifyContent: 'center' },
+  addRound: { width: 36, height: 36, borderRadius: 10 },
+  stepper: { flexDirection: 'row', alignItems: 'center', height: 36, borderRadius: 10, backgroundColor: colors.action },
+  stepBtn: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center' },
   stepGlyph: { fontSize: 19, lineHeight: 22, fontFamily: fonts.sansBold, color: '#fff' },
   stepValue: { minWidth: 14, textAlign: 'center', fontSize: 15, fontFamily: fonts.heavy, color: '#fff' },
   addCount: { color: '#fff', fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700' },

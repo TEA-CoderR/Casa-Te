@@ -12,20 +12,20 @@ import { Platform } from 'react-native';
  */
 export const colors = {
   /** Actions, links, active states (white text on it passes AA). */
-  green: '#2F5A27',
+  green: '#2D5A26',
   greenDark: '#143019',
   /** Awning band behind phone headers (stripes alternate `brand` and `stripe`). */
   brand: '#1F4127',
   stripe: '#234A2C',
   /** Filled controls (buttons, add, selected chips): ink on the white pages; the brand greens are small accents. */
-  action: '#18201A',
+  action: '#2D5A26',
   /** Light text on the dark green (tab bar, green buttons, the order-confirmed page). */
   onBrand: '#CFDDC6',
   /** Page headers (since the sign-in redesign): a white band with dark title, muted subtitle and light round buttons. */
   band: '#FFFFFF',
-  bandText: '#18201A',
-  bandMuted: '#5F665C',
-  bandButton: '#F1F0EB',
+  bandText: '#121712',
+  bandMuted: '#5D635C',
+  bandButton: '#F3F4F1',
   /** The logo's own colours: lime lettering on the shop-sign green (the small sign in headers, the Club card). */
   sign: '#3B6B31',
   signInk: '#CDE434',
@@ -38,14 +38,14 @@ export const colors = {
   /** Phone pages: warm ivory ground under white plates. */
   page: '#FFFFFF',
   /** Quiet fills on the ivory ground (segmented controls, steppers). */
-  well: '#F2F2EF',
+  well: '#F3F4F1',
   background: '#FFFFFF',
   surface: '#FFFFFF',
-  text: '#18201A',
-  muted: '#5F665C',
+  text: '#121712',
+  muted: '#5D635C',
   /** Secondary icons and inactive tabs: still ≥4.5:1 on white. */
-  faint: '#6B7167',
-  line: '#E8E8E3',
+  faint: '#6A7068',
+  line: '#E6E8E4',
   /** Desktop print rules (hairlines between catalogue rows and sections). */
   rule: '#E4DCCD',
   /** Warm stone ground (desktop footer, closing tiles, hover fills). */
@@ -53,7 +53,7 @@ export const colors = {
   /** Product photographs always sit on white, like their studio backgrounds (owner's choice). */
   photo: '#FFFFFF',
   /** Thin frame around white photo plates on white pages. */
-  photoLine: '#E8E8E3',
+  photoLine: '#E6E8E4',
   badge: '#C8231F',
   /** Discounts: solid red label and red sale price, meant to stand out. */
   sale: '#C8231F',
@@ -75,15 +75,15 @@ export const fonts = {
   serif: family('EBGaramond_400Regular', serifFallback),
   serifMedium: family('EBGaramond_500Medium', serifFallback),
   serifBold: family('EBGaramond_500Medium', serifFallback),
-  /** Page and section titles: Figtree Bold, as on the sign-in pages (Bodoni Moda until November 2026). */
-  display: family('Figtree_700Bold', sansFallback),
-  sans: family('Figtree_400Regular', sansFallback),
-  sansMedium: family('Figtree_500Medium', sansFallback),
-  sansSemiBold: family('Figtree_600SemiBold', sansFallback),
-  sansBold: family('Figtree_700Bold', sansFallback),
-  heavy: family('Figtree_800ExtraBold', sansFallback),
-  price: family('Figtree_800ExtraBold', sansFallback),
-  priceBold: family('Figtree_700Bold', sansFallback),
+  /** Design "Pulito" (November 2026): Geist for everything, titles in Geist Bold (Figtree before). */
+  display: family('Geist_700Bold', sansFallback),
+  sans: family('Geist_400Regular', sansFallback),
+  sansMedium: family('Geist_500Medium', sansFallback),
+  sansSemiBold: family('Geist_600SemiBold', sansFallback),
+  sansBold: family('Geist_700Bold', sansFallback),
+  heavy: family('Geist_700Bold', sansFallback),
+  price: family('Geist_600SemiBold', sansFallback),
+  priceBold: family('Geist_700Bold', sansFallback),
 };
 
 export const spacing = {
