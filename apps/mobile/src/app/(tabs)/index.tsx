@@ -1,20 +1,20 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { orderStatusLabel, type CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
-import { CategoryPhoto } from '@/components/CategoryNav';
-import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
-import { StoreCard } from '@/components/StoreCard';
-import { Icon, type IconName } from '@/components/Icon';
+import { StoreSheet, storeShortName } from '@/components/StoreSheet';
+import { storeStatus } from '@/components/StoreCard';
+import { BrandLogo } from '@/components/BrandLogo';
+import { useClubMember } from '@/store/club';
+import { Icon } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ProductImage } from '@/components/ProductImage';
 import { RemoteImage } from '@/components/RemoteImage';
 import { colors, fonts } from '@/config/theme';
-import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchFlyers, fetchOffers, fetchOrders, fetchProducts, fetchProfile, imageUrl, type CatalogProduct, type OrderWithItems } from '@/lib/api';
-import { useClubSettings, useDelivery, useLayout, useStores } from '@/lib/hooks';
+import { fetchCategories, fetchCategoryCovers, fetchFlyers, fetchOffers, fetchOrders, fetchProducts, type OrderWithItems } from '@/lib/api';
+import { useClubSettings, useLayout, useStores } from '@/lib/hooks';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
 import { HomeDesktop } from '@/components/site/HomeDesktop';
@@ -27,21 +27,41 @@ export default function HomeScreen() {
 }
 
 const ACTIVE = new Set(['paid', 'picking', 'ready', 'shipped']);
-/** Steps of an order, for the progress bar on the order card (pickup and delivery both have four). */
+/** Steps of an order, for the progress line on the order row (pickup and delivery both have four). */
 const STEP: Record<string, number> = { paid: 1, picking: 2, ready: 3, shipped: 3 };
+const CLUB_CARD = require('../../../assets/club-card.webp');
+const MONTHS = ['GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
+
+/** Small spaced capitals above a title. */
+function Eyebrow({ children, color = colors.muted }: { children: string; color?: string }) {
+  return <Text style={[styles.eyebrow, { color }]}>{children}</Text>;
+}
+
+/** Text link with a thin arrow, underlined by a hairline. */
+function More({ label, onPress, color = colors.text }: { label: string; onPress: () => void; color?: string }) {
+  return <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8} style={({ pressed }) => [styles.more, { borderColor: color }, pressed && { opacity: 0.6 }]}>
+    <Text style={[styles.moreText, { color }]}>{label}</Text><Icon name="arrow" size={14} color={color} strokeWidth={1.6} />
+  </Pressable>;
+}
+
+/**
+ * Phone home, design "Editoriale" (November 2026): the logo small and centred, a typographic cover with the brand line,
+ * a strip of large product pictures, the departments as a numbered index, a gallery of picks, the Club and the store.
+ * One product ground (`well`) for every picture, hairlines instead of cards, Instrument Serif titles over Inter Tight.
+ */
 function HomePhone() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { selected } = useStores();
   const user = useUser();
-  const { width } = useWindowDimensions();
   const [storeSheet, setStoreSheet] = useState(false);
   const storeName = storeShortName(selected).replace(/^(\S+)\s+(?!·)/, '$1 · ');
+  const status = storeStatus(selected?.opening_hours);
   const club = useClubSettings();
-  const profile = useQuery(user ? `profile:${user.id}` : null, () => fetchProfile(user!.id));
+  const member = useClubMember();
   const orders = useQuery<OrderWithItems[]>(user ? `orders:list:${user.id}` : null, fetchOrders);
   useRefetchOnFocus(orders.refetch);
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
-  const counts = useQuery('category-counts', fetchCategoryCounts);
   const covers = useQuery('category-covers', () => fetchCategoryCovers());
   const featured = useQuery(selected ? `featured:${selected.id}` : null,
     // Products starred "In evidenza" in the admin; while none is starred, the start of the catalogue.
@@ -51,7 +71,7 @@ function HomePhone() {
     });
   const offers = useQuery(selected ? `offers:${selected.id}:8` : null, () => fetchOffers(selected?.id ?? null, 8));
   const offerItems = offers.data ?? [];
-  // The Volantino shortcut only while a flyer is published (RLS returns only current ones).
+  // The flyer only while one is published (RLS returns only current ones).
   const flyers = useQuery('flyers', fetchFlyers);
   const refresh = () => { void categories.refetch(); void featured.refetch(); void offers.refetch(); void orders.refetch(); };
   // Up to 8 departments chosen in the admin ("Mostra in home"); the first 6 when none is chosen.
@@ -59,67 +79,39 @@ function HomePhone() {
   const allTop = all.filter((c) => !c.parent_id);
   const chosen = allTop.filter((c) => c.show_on_home);
   const topCategories = (chosen.length ? chosen : allTop).slice(0, chosen.length ? 8 : 6);
-  const countFor = (top: CategoryRow) => {
-    const ids = new Set([top.id, ...all.filter((c) => c.parent_id === top.id).map((c) => c.id)]);
-    return [...ids].reduce((sum, id) => sum + (counts.data?.[id] ?? 0), 0);
-  };
-  const totalProducts = Object.values(counts.data ?? {}).reduce((a, b) => a + b, 0);
   const coverFor = (top: CategoryRow) => covers.data?.[top.id]?.image
     ? covers.data[top.id] : all.filter((c) => c.parent_id === top.id).map((c) => covers.data?.[c.id]).find((c) => c?.image);
   // Lists (a department, the offers, "In evidenza") open as their own screen, so back returns here; search opens on Categorie.
   const openCatalog = (params: Record<string, string>) => params.search
     ? router.push({ pathname: '/catalog', params: { offerte: '', evidenza: '', category: '', ...params } })
     : router.push(productList(params));
-  const firstName = profile.data?.full_name?.trim().split(/\s+/)[0] ?? '';
   const active = (orders.data ?? []).find((o) => ACTIVE.has(o.status));
+  const flyer = flyers.data?.[0];
+  const flyerCover = flyer?.pages[0];
+  const until = flyer?.valid_to ? new Date(`${flyer.valid_to}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : null;
+  // The strip under the cover: the offers when there are some, otherwise the picks.
+  const stripOffers = offerItems.length > 0;
+  const strip = (stripOffers ? offerItems : featured.data?.items ?? []).slice(0, 6);
+  const gallery = (featured.data?.items ?? []).slice(0, 4);
+  const tileW = Math.round((width - 16 * 2) * 0.72);
+  const now = new Date();
 
-  // Hero carousel (design F): offers, free pickup, a department — real data only.
-  const dept = topCategories.find((c) => coverFor(c)?.image) ?? topCategories[0];
-  const deptCount = dept ? countFor(dept) : 0;
-  const slides: Array<{ key: string; title: string; text: string; cta: string; bg: string; ink: string; image?: string | null; product?: CatalogProduct; onPress: () => void }> = [
-    ...(offerItems.length ? [{ key: 'offers', title: 'Le nostre migliori offerte', text: 'Sempre aggiornate, nel tuo negozio', cta: 'Scopri', bg: '#EAF0E4', /* ui-check: allow (home banner, sage) */ ink: colors.green, product: offerItems[0], onPress: () => openCatalog({ offerte: '1' }) }] : []),
-    { key: 'pickup', title: 'Ritiro sempre gratis', text: storeName ? `Ordina ora, ritira a ${storeName}` : 'Ordina ora, ritira nel tuo negozio', cta: 'Come funziona', bg: '#F2F3EE', /* ui-check: allow (home banner, stone) */ ink: colors.green, product: featured.data?.items[0], onPress: () => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } }) },
-    ...(dept ? [{ key: 'dept', title: dept.name, text: 'Scopri il reparto nel tuo negozio', cta: `Vai a ${dept.name}`, bg: '#F4F1EC', /* ui-check: allow (home banner, warm stone) */ ink: colors.text, image: coverFor(dept)?.image, onPress: () => openCatalog({ category: dept.id }) }] : []),
-  ];
-  const slideWidth = width - 32;
-  const [slide, setSlide] = useState(0);
-  const pager = useRef<ScrollView>(null);
-  const touched = useRef(false);
-  useEffect(() => {
-    if (slides.length < 2) return;
-    const t = setInterval(() => {
-      if (touched.current) return;
-      setSlide((i) => { const next = (i + 1) % slides.length; pager.current?.scrollTo({ x: next * slideWidth, animated: true }); return next; });
-    }, 5000);
-    return () => clearInterval(t);
-  }, [slides.length, slideWidth]);
-
-  const quick = (label: string, icon: IconName, onPress: () => void) =>
-    <Pressable key={label} onPress={onPress} accessibilityRole="link" accessibilityLabel={label}
-      style={({ pressed }) => [styles.quickItem, pressed && { opacity: 0.75 }]}>
-      <View style={styles.quickSign}><Icon name={icon} size={24} color={colors.green} strokeWidth={1.8} /></View>
-      <Text style={styles.quickText} numberOfLines={1}>{label}</Text>
-    </Pressable>;
-  const sectionHead = (id: string, title: string, link: string, onPress: () => void) => <View style={styles.section}>
-    <Text style={styles.sectionTitle} accessibilityRole="header" nativeID={id}>{title}</Text>
-    <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8}><Text style={styles.link}>{link}</Text></Pressable>
-  </View>;
-
-  // Home: the one brand moment of the app — the greeting and the search on the white band; the logo lives in the
-  // opening animation (AnimatedSplash), so the page starts straight with the person and the shop.
   const header = <View style={styles.band}>
     <View style={styles.bandRow}>
-      <Text style={[styles.hello, { flex: 1 }]} accessibilityRole="header" numberOfLines={1}>{firstName ? `Ciao, ${firstName}` : 'Ciao!'}</Text>
-      <Pressable onPress={() => router.push('/favorites')} accessibilityRole="button" accessibilityLabel="Preferiti" hitSlop={4}
-        style={({ pressed }) => [styles.bandButton, pressed && { opacity: 0.7 }]}><Icon name="heart" size={21} color={colors.text} strokeWidth={1.9} /></Pressable>
+      <Pressable onPress={() => setStoreSheet(true)} accessibilityRole="button" hitSlop={6}
+        accessibilityLabel={storeName ? `Il tuo negozio: ${storeName}. Cambia negozio` : 'Scegli il tuo negozio'} style={styles.bandSide}>
+        <Icon name="pin" size={21} color={colors.text} strokeWidth={1.5} />
+      </Pressable>
+      <BrandLogo width={58} color={colors.green} />
+      <Pressable onPress={() => router.push('/favorites')} accessibilityRole="button" accessibilityLabel="Preferiti" hitSlop={6}
+        style={[styles.bandSide, { alignItems: 'flex-end' }]}><Icon name="heart" size={21} color={colors.text} strokeWidth={1.5} /></Pressable>
     </View>
-    <Text style={styles.helloSub}>Cosa ti serve per casa oggi?</Text>
     <Pressable onPress={() => openCatalog({ search: '1' })} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
-      style={({ pressed }) => [styles.search, pressed && { opacity: 0.95 }]}>
-      <Icon name="search" size={21} color={colors.text} strokeWidth={2.1} />
-      <Text style={styles.searchText} numberOfLines={1}>Cerca prodotti, marche e reparti</Text>
-      <Pressable onPress={() => openCatalog({ search: '1', code: '1' })} accessibilityRole="button" accessibilityLabel="Cerca per codice a barre" hitSlop={4} style={styles.scan}>
-        <Icon name="scan" size={19} color={colors.text} strokeWidth={2} />
+      style={({ pressed }) => [styles.search, pressed && { opacity: 0.8 }]}>
+      <Icon name="search" size={18} color={colors.text} strokeWidth={1.6} />
+      <Text style={styles.searchText} numberOfLines={1}>Cerca prodotti e marche</Text>
+      <Pressable onPress={() => openCatalog({ search: '1', code: '1' })} accessibilityRole="button" accessibilityLabel="Cerca per codice a barre" hitSlop={8}>
+        <Icon name="scan" size={18} color={colors.text} strokeWidth={1.6} />
       </Pressable>
     </Pressable>
   </View>;
@@ -127,76 +119,98 @@ function HomePhone() {
   return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.band }} />} top={header} ground={colors.page} refreshing={featured.loading && !!featured.data} onRefresh={refresh}
     contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-    <View style={{ marginTop: 14, marginHorizontal: 16 }}><StoreCard onPress={() => setStoreSheet(true)} /></View>
 
-    {active && <Pressable onPress={() => router.push(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.order, pressed && { opacity: 0.9 }]}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <Text style={styles.orderTitle} numberOfLines={1}>{active.status === 'ready' && active.fulfilment === 'store' ? 'Il tuo ordine è pronto al ritiro' : orderStatusLabel(active.status, active.fulfilment)}</Text>
-        <Icon name="chevron" size={20} color={colors.muted} strokeWidth={2.2} />
-      </View>
-      <Text style={styles.orderSub}>{active.order_number}{active.status === 'ready' && active.fulfilment === 'store' ? ' · mostra il codice in cassa' : ' · segui l’ordine'}</Text>
-      <View style={styles.bars}>{[1, 2, 3, 4].map((i) => <View key={i} style={[styles.bar, i <= (STEP[active.status] ?? 1) && styles.barOn]} />)}</View>
-    </Pressable>}
-
-    {/* Quick actions: four round signs in one row, all visible at once (no sideways scroll). */}
-    <View style={styles.quick}>
-      {quick('Offerte', 'percent', () => openCatalog({ offerte: '1' }))}
-      {flyers.data?.length ? quick('Volantino', 'flyer', () => router.push('/volantino')) : quick('Preferiti', 'heart', () => router.push('/favorites'))}
-      {quick('Ordini', 'box', () => router.push('/orders'))}
-      {club.enabled ? quick('Club', 'crown', () => router.push('/club')) : quick('Profilo', 'user', () => router.push('/profile'))}
+    {/* Cover: the brand line set large, like the first page of a catalogue. */}
+    <View style={styles.cover}>
+      <Eyebrow>{`${MONTHS[now.getMonth()]} ${now.getFullYear()}${storeName ? `  ·  ${storeName.toUpperCase()}` : ''}`}</Eyebrow>
+      <Text style={styles.coverTitle} accessibilityRole="header">Per la tua casa{'\n'}<Text style={styles.coverItalic}>e per te.</Text></Text>
     </View>
 
-    {slides.length > 0 && <View style={{ marginTop: 20 }}>
-      <View style={styles.hero}>
-        <ScrollView ref={pager} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScrollBeginDrag={() => { touched.current = true; }}
-          onMomentumScrollEnd={(e) => setSlide(Math.round(e.nativeEvent.contentOffset.x / slideWidth))}>
-          {slides.map((s) => <Pressable key={s.key} onPress={s.onPress} accessibilityRole="link" accessibilityLabel={`${s.title}. ${s.text}. ${s.cta}`}
-            style={[styles.slide, { width: slideWidth, backgroundColor: s.bg }]}>
-            {(s.product || s.image) && <View style={[styles.slideArt, { backgroundColor: s.bg }]}>
-              {s.image ? <RemoteImage uri={s.image} style={{ width: '100%', height: '100%', mixBlendMode: 'multiply' } as object} />
-                : <ProductImage uri={s.product!.image} sku={s.product!.sku} inset={0} aspect={168 / 180} blend backdrop={s.bg} />}
-            </View>}
-            <View style={styles.slideText}>
-              <Text style={[styles.slideTitle, { color: s.ink }]}>{s.title}</Text>
-              <Text style={[styles.slideBody, { color: s.ink }]}>{s.text}</Text>
-              <View style={styles.slideCta}><Text style={styles.slideCtaText}>{s.cta}</Text><Icon name="arrow" size={15} color="#FFFFFF" strokeWidth={2.4} /></View>
-            </View>
-          </Pressable>)}
-        </ScrollView>
+    {active && <Pressable onPress={() => router.push(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.order, pressed && { opacity: 0.7 }]}>
+      <Eyebrow color={colors.green}>{`ORDINE ${active.order_number}`}</Eyebrow>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
+        <Text style={styles.orderTitle} numberOfLines={1}>{active.status === 'ready' && active.fulfilment === 'store' ? 'Pronto al ritiro: mostra il codice in cassa' : orderStatusLabel(active.status, active.fulfilment)}</Text>
+        <Icon name="chevron" size={18} color={colors.text} strokeWidth={1.6} />
       </View>
-      {slides.length > 1 && <View style={styles.dots}>{slides.map((s, i) =>
-        <Pressable key={s.key} accessibilityRole="button" accessibilityLabel={`Mostra ${s.title}`}
-          onPress={() => { touched.current = true; setSlide(i); pager.current?.scrollTo({ x: i * slideWidth, animated: true }); }}
-          style={styles.dotHit}><View style={[styles.dot, i === slide && styles.dotOn]} /></Pressable>)}</View>}
+      <View style={styles.bars}>{[1, 2, 3, 4].map((n) => <View key={n} style={[styles.bar, n <= (STEP[active.status] ?? 0) && styles.barOn]} />)}</View>
+    </Pressable>}
+
+    {/* Large pictures, side by side: the offers (or the picks), each on the same studio ground. */}
+    {strip.length > 0 && <View style={{ marginTop: 26 }}>
+      <View style={styles.headRow}>
+        <Text style={styles.h2}>{stripOffers ? 'Offerte' : 'Selezione'}</Text>
+        <More label="Vedi tutto" onPress={() => stripOffers ? openCatalog({ offerte: '1' }) : router.push(ALL_PRODUCTS)} />
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={tileW + 10} decelerationRate="fast"
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }} style={{ flexGrow: 0 }}>
+        {strip.map((p) => <View key={p.id} style={{ width: tileW }}><ProductCard product={p} variant="feature" /></View>)}
+      </ScrollView>
     </View>}
 
-    {!!topCategories.length && <View style={{ paddingTop: 16, paddingHorizontal: 16 }}>
-      <View style={[styles.section, { paddingHorizontal: 0 }]}>
-        <Text style={styles.sectionTitle} accessibilityRole="header">Reparti</Text>
-        <Pressable onPress={() => router.push(ALL_PRODUCTS)} accessibilityRole="link" hitSlop={8}>
-          <Text style={styles.link}>{allTop.length > topCategories.length ? `Tutti i ${allTop.length} reparti` : 'Tutti i reparti'}</Text></Pressable>
+    {!!flyer && !!flyerCover && <Pressable onPress={() => router.push('/volantino')} accessibilityRole="link"
+      accessibilityLabel={`Volantino ${flyer.title}${until ? `, fino al ${until}` : ''}`} style={({ pressed }) => [styles.flyer, pressed && { opacity: 0.7 }]}>
+      <View style={styles.flyerCover}><RemoteImage uri={flyerCover} style={{ width: '100%', height: '100%' }} /></View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Eyebrow>VOLANTINO</Eyebrow>
+        <Text style={styles.flyerTitle} numberOfLines={2}>{flyer.title}</Text>
+        {!!until && <Text style={styles.small}>Fino al {until}</Text>}
       </View>
-      {/* Departments as product photos on white plates, like the Categorie tab: 4 across for 8, 3 across for 6. */}
-      <View style={styles.departments}>{topCategories.map((category) => {
+      <Icon name="chevron" size={18} color={colors.text} strokeWidth={1.6} />
+    </Pressable>}
+
+    {/* The departments as the index of a catalogue: number, name, a small picture. */}
+    {!!topCategories.length && <View style={{ marginTop: 40, paddingHorizontal: 16 }}>
+      <Eyebrow>INDICE</Eyebrow>
+      <View style={[styles.headRow, { paddingHorizontal: 0, marginTop: 2 }]}>
+        <Text style={styles.h2}>Reparti</Text>
+        <More label={`Tutti i ${allTop.length}`} onPress={() => router.push(ALL_PRODUCTS)} />
+      </View>
+      <View style={styles.index}>{topCategories.map((category, i) => {
         const cover = coverFor(category);
-        const n = countFor(category);
-        const across = topCategories.length % 4 === 0 ? 4 : 3;
-        return <Pressable key={category.id} accessibilityRole="link" accessibilityLabel={`Reparto ${category.name}`}
-          style={({ pressed }) => [styles.department, { width: `${100 / across}%` }, pressed && { opacity: 0.75 }]} onPress={() => openCatalog({ category: category.id })}>
-          <CategoryPhoto image={cover?.image} slug={category.slug} name={category.name} radius={16} />
-          <Text style={styles.departmentName} numberOfLines={1}>{category.name}</Text>
+        return <Pressable key={category.id} accessibilityRole="link" accessibilityLabel={`Reparto ${category.name}`} onPress={() => openCatalog({ category: category.id })}
+          style={({ pressed }) => [styles.indexRow, pressed && { opacity: 0.6 }]}>
+          <Text style={styles.indexNo}>{String(i + 1).padStart(2, '0')}</Text>
+          <Text style={styles.indexName} numberOfLines={1}>{category.name}</Text>
+          <View style={styles.indexThumb}>{cover?.image
+            ? <RemoteImage uri={cover.image} style={{ width: '82%', height: '82%', mixBlendMode: 'multiply' } as object} />
+            : null}</View>
         </Pressable>;
       })}</View>
     </View>}
 
-    <View style={{ paddingTop: 28 }}>
-      {sectionHead('h-evidenza', 'In evidenza', 'Vedi tutti', () => featured.data?.picked ? openCatalog({ evidenza: '1' }) : router.push(ALL_PRODUCTS))}
+    {/* Picks as a gallery: two across, pictures edge to edge. */}
+    <View style={{ marginTop: 40 }}>
+      <View style={styles.headRow}>
+        <Text style={styles.h2}>In evidenza</Text>
+        <More label="Vedi tutto" onPress={() => featured.data?.picked ? openCatalog({ evidenza: '1' }) : router.push(ALL_PRODUCTS)} />
+      </View>
       {featured.error && !featured.data ? <View style={{ paddingHorizontal: 16 }}><Notice tone="error" message="Impossibile caricare i prodotti. Controlla la connessione e riprova." /></View>
-        : !featured.data ? <Loading /> : <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.rail}>
-          {featured.data.items.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}
-        </ScrollView>}
+        : !featured.data ? <Loading /> : <View style={styles.gallery}>
+          {gallery.map((product) => <View key={product.id} style={styles.galleryItem}><ProductCard product={product} /></View>)}
+        </View>}
     </View>
 
+    {club.enabled && <Pressable onPress={() => router.push('/club')} accessibilityRole="link" accessibilityLabel="Casa & Te Club" style={styles.club}>
+      <Eyebrow color={colors.signInk}>CASA & TE CLUB</Eyebrow>
+      <Text style={styles.clubTitle}>Prezzi Soci,{'\n'}<Text style={styles.coverItalic}>ogni giorno.</Text></Text>
+      <Image source={CLUB_CARD} style={styles.clubCard} accessibilityIgnoresInvertColors />
+      <Text style={styles.clubText}>{member ? 'Sei socio: i Prezzi Soci sono già nel tuo carrello.' : 'Iscrizione gratuita, attiva subito sul tuo account.'}</Text>
+      <View style={styles.clubButton}><Text style={styles.clubButtonText}>{member ? 'LA TUA TESSERA' : 'ISCRIVITI GRATIS'}</Text></View>
+    </Pressable>}
+
+    <View style={styles.store}>
+      <Eyebrow>IL TUO NEGOZIO</Eyebrow>
+      <Text style={styles.storeName}>{storeName || 'Scegli il negozio'}</Text>
+      {!!status && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
+        {status.open !== null && <View style={[styles.dot, { backgroundColor: status.open ? colors.green : colors.faint }]} />}
+        <Text style={styles.small}>{status.text}</Text>
+      </View>}
+      <Text style={[styles.small, { marginTop: 2 }]}>Ritiro in negozio sempre gratuito</Text>
+      <View style={{ flexDirection: 'row', gap: 22, marginTop: 16 }}>
+        <More label="Cambia negozio" onPress={() => setStoreSheet(true)} />
+        <More label="Come funziona" onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } })} />
+      </View>
+    </View>
 
     <View style={styles.footer}>
       {([['Privacy', 'privacy'], ['Termini di vendita', 'terms'], ['Spedizioni e ritiro', 'shipping']] as const).map(([label, doc]) =>
@@ -208,48 +222,44 @@ function HomePhone() {
 }
 
 const styles = StyleSheet.create({
-  // Home: white like every page; the brand shows in the logo sign, the greens and the lime, in small doses.
-  band: { backgroundColor: colors.band, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
-  bandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
-  bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
-  hello: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, color: colors.text, letterSpacing: -0.6 },
-  helloSub: { fontSize: 15.5, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
-  // Outlined like the sign-in fields.
-  search: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 16, paddingRight: 6, borderRadius: 14, backgroundColor: '#FFFFFF',
-    borderWidth: 1.5, borderColor: '#8C9189' },
-  searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.muted },
-  scan: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
-  // The order in progress: deep green with the lime signal on the progress bars.
-  order: { marginHorizontal: 16, marginTop: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  orderTitle: { flexShrink: 1, fontSize: 15, fontFamily: fonts.heavy, color: colors.text },
-  orderSub: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 2 },
-  bars: { flexDirection: 'row', gap: 4, marginTop: 10 },
-  bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.well },
+  band: { backgroundColor: colors.band, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12 },
+  bandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 48 },
+  bandSide: { width: 44, height: 44, justifyContent: 'center' },
+  search: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 12, height: 44, paddingHorizontal: 14, borderRadius: 4, backgroundColor: colors.well },
+  searchText: { flex: 1, fontSize: 15, fontFamily: fonts.sans, color: colors.muted },
+  eyebrow: { fontSize: 11, letterSpacing: 1.6, fontFamily: fonts.label },
+  cover: { paddingHorizontal: 16, paddingTop: 22 },
+  coverTitle: { fontSize: 46, lineHeight: 48, fontFamily: fonts.display, color: colors.text, letterSpacing: -0.8, marginTop: 10 },
+  coverItalic: { fontFamily: fonts.displayItalic },
+  more: { flexDirection: 'row', alignItems: 'center', gap: 6, borderBottomWidth: 1, paddingBottom: 2 },
+  moreText: { fontSize: 13.5, fontFamily: fonts.sansMedium },
+  headRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 14, gap: 12 },
+  h2: { fontSize: 32, lineHeight: 36, fontFamily: fonts.display, color: colors.text, letterSpacing: -0.4 },
+  small: { fontSize: 13.5, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted },
+  order: { marginHorizontal: 16, marginTop: 24, paddingVertical: 14, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line },
+  orderTitle: { flexShrink: 1, fontSize: 16, fontFamily: fonts.sansMedium, color: colors.text },
+  bars: { flexDirection: 'row', gap: 3, marginTop: 12 },
+  bar: { flex: 1, height: 2, backgroundColor: colors.line },
   barOn: { backgroundColor: colors.green },
-  quick: { flexDirection: 'row', paddingHorizontal: 12, paddingTop: 22 },
-  quickItem: { flex: 1, alignItems: 'center', gap: 8 },
-  quickSign: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
-  quickText: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.text },
-  hero: { marginHorizontal: 16, height: 196, borderRadius: 24, overflow: 'hidden' },
-  slide: { height: 196 },
-  slideArt: { position: 'absolute', right: 6, bottom: 0, width: 168, height: 180 },
-  slideText: { position: 'absolute', left: 22, top: 22, width: 186 },
-  slideTitle: { fontSize: 25, lineHeight: 28, fontFamily: fonts.display },
-  slideBody: { fontSize: 13.5, lineHeight: 18, fontFamily: fonts.sansMedium, marginTop: 6, opacity: 0.85 },
-  slideCta: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.text, marginTop: 14 },
-  slideCtaText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 2, marginTop: 4 },
-  dotHit: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D0D0CB' },
-  dotOn: { width: 22, backgroundColor: colors.text },
-  section: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12, gap: 12 },
-  sectionTitle: { fontSize: 25, lineHeight: 30, fontFamily: fonts.display, color: colors.text },
-  link: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
-  rail: { paddingHorizontal: 16, gap: 10, paddingBottom: 1 },
-  railItem: { width: 162, flexDirection: 'row' },
-  departments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, rowGap: 14 },
-  department: { paddingHorizontal: 4 },
-  departmentName: { marginTop: 6, fontSize: 13, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
-  footer: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6, paddingHorizontal: 20, paddingTop: 22 },
-  footerLink: { fontSize: 13, color: colors.green, fontFamily: fonts.sansSemiBold, textDecorationLine: 'underline' },
+  flyer: { flexDirection: 'row', alignItems: 'center', gap: 16, marginHorizontal: 16, marginTop: 30, paddingVertical: 14, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line },
+  flyerCover: { width: 58, aspectRatio: 0.71, backgroundColor: colors.well, overflow: 'hidden' },
+  flyerTitle: { fontSize: 24, lineHeight: 27, fontFamily: fonts.display, color: colors.text, marginTop: 3 },
+  index: { borderTopWidth: 1, borderColor: colors.text },
+  indexRow: { flexDirection: 'row', alignItems: 'center', gap: 14, height: 68, borderBottomWidth: 1, borderColor: colors.line },
+  indexNo: { width: 22, fontSize: 12, fontFamily: fonts.label, color: colors.muted, letterSpacing: 0.5 },
+  indexName: { flex: 1, fontSize: 26, lineHeight: 30, fontFamily: fonts.display, color: colors.text },
+  indexThumb: { width: 50, height: 50, backgroundColor: colors.well, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  gallery: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, columnGap: 10, rowGap: 22 },
+  galleryItem: { width: '48.4%' },
+  club: { marginTop: 44, backgroundColor: colors.green, paddingHorizontal: 20, paddingTop: 30, paddingBottom: 30, overflow: 'hidden' },
+  clubTitle: { fontSize: 42, lineHeight: 44, fontFamily: fonts.display, color: '#FFFFFF', marginTop: 10, letterSpacing: -0.6 },
+  clubCard: { position: 'absolute', right: -34, top: 34, width: 168, height: 106, borderRadius: 8, transform: [{ rotate: '-10deg' }] },
+  clubText: { fontSize: 14.5, lineHeight: 20, fontFamily: fonts.sans, color: 'rgba(255,255,255,0.82)', marginTop: 14, maxWidth: 260 },
+  clubButton: { alignSelf: 'flex-start', marginTop: 20, height: 44, paddingHorizontal: 20, borderWidth: 1, borderColor: '#FFFFFF', justifyContent: 'center' },
+  clubButtonText: { fontSize: 12.5, letterSpacing: 1.4, fontFamily: fonts.sansSemiBold, color: '#FFFFFF' },
+  store: { marginHorizontal: 16, marginTop: 36, paddingBottom: 26, borderBottomWidth: 1, borderColor: colors.line },
+  storeName: { fontSize: 32, lineHeight: 36, fontFamily: fonts.display, color: colors.text, marginTop: 6 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  footer: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 18, rowGap: 6, paddingHorizontal: 16, paddingTop: 20 },
+  footerLink: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans },
 });

@@ -128,36 +128,66 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
     </View>;
   }
 
-  // Phone (design F): white plate, photo area, name, unit price, then the price tag and "+" (a stepper once in the cart).
-  // The card is a real link (open in new tab, middle click, screen readers); heart and cart sit outside it.
+  // Phone, design "Editoriale": no card. The picture on the studio ground, the brand in small capitals, the name, then
+  // the price in plain figures and a thin square "+" (a stepper once in the cart). The card is a real link; heart and cart
+  // sit outside it. Offers: the price in red with the regular one struck after it, the rate on the picture.
   const unitShort = unit?.replace(/€\s/, '€').replace(/\s\/\s/, '/');
-  // Discounted: the regular price struck through, then "Soci" (member price) or the unit price.
-  const subline = !stock.available ? stock.text : discount
-    ? <><Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number).replace(/€\s/, '€')}</Text>
-        {soci ? <Text style={styles.soci}> · Prezzo Soci</Text> : unitShort ? ` · ${unitShort}` : ''}</>
-    : sociOffer ? <><Text style={styles.compareSmall}>{formatEuro(product.price_cents).replace(/€\s/, '€')}</Text><Text style={styles.soci}> · Prezzo Soci</Text></>
-    : unitShort ?? note;
-  // Phone: offers read as the struck regular price and the offer price, with the discount rate on the photo
-  // ("−25%"); a members-only offer is marked "Prezzo Soci" next to the struck price.
   const phoneBadge = discount ? discount.replace('-', '−') : sociOffer && sociPct ? sociPct.replace('-', '−') : '';
-  return <View style={[styles.card, rail && { paddingBottom: 12 }]}>
-    <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
-      <View style={[styles.media, { height: rail ? 136 : 132 }]}>
-        <View style={{ width: rail ? 120 : 118, height: rail ? 120 : 118 }}>
-          <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />
-        </View>
-        {!!phoneBadge && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
-          <Text style={styles.discountText} accessibilityLabel={phoneBadge.startsWith('Soci') ? `Prezzo Soci, ${phoneBadge.slice(5)}` : `Sconto ${phoneBadge}`}>{phoneBadge}</Text></View>}
+  const shown = sociOffer ? sociCents : product.price_cents;
+  const struck = discount ? product.compare_at_price_cents as number : sociOffer ? product.price_cents : null;
+  const line = !stock.available ? stock.text : soci || sociOffer ? 'Prezzo Soci' : unitShort ?? note;
+  const feature = variant === 'feature';
+  const tileCart = quantity > 0 ? <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.tileStepper}>
+    <Pressable onPress={() => setQuantity(product.id, quantity - 1)} accessibilityRole="button" hitSlop={4}
+      accessibilityLabel={`Togli un ${product.name}`} style={styles.tileStep}><Text style={styles.tileGlyph}>−</Text></Pressable>
+    <Text style={styles.tileCount} accessibilityLabel={`${quantity} nel carrello`}>{quantity}</Text>
+    <Pressable onPress={() => add(product.id)} disabled={!canAdd} accessibilityRole="button" hitSlop={4}
+      accessibilityLabel={`Aggiungi un altro ${product.name}`} style={[styles.tileStep, !canAdd && { opacity: 0.35 }]}><Text style={styles.tileGlyph}>+</Text></Pressable>
+  </Animated.View> : <Pressable accessibilityRole="button" disabled={!canAdd} onPress={() => add(product.id)} hitSlop={6}
+    accessibilityLabel={`Aggiungi ${product.name} al carrello`}
+    style={({ pressed }) => [styles.tileAdd, { opacity: !canAdd ? 0.35 : pressed ? 0.6 : 1 }]}>
+    <Icon name="plus" size={16} color={colors.text} strokeWidth={1.6} />
+  </Pressable>;
+  return <View style={styles.tile}>
+    <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(shown)}`} style={({ pressed }) => pressed && { opacity: 0.85 }}>
+      <View style={styles.tileMedia}>
+        <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={feature ? 0.14 : 0.12} aspect={feature ? 0.86 : 1} blend backdrop={colors.well} />
+        {!!phoneBadge && <Text style={styles.tileBadge} accessibilityLabel={`Sconto ${phoneBadge}`}>{phoneBadge}</Text>}
       </View>
-      <Text style={[styles.name, { marginTop: rail ? 6 : 4 }]} numberOfLines={2}>{product.name}</Text>
-      <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>
+      <Text style={styles.tileBrand} numberOfLines={1}>{(product.brand ?? '').toUpperCase() || ' '}</Text>
+      <Text style={[styles.tileName, feature && styles.tileNameBig]} numberOfLines={2}>{product.name}</Text>
     </Pressable></Link>
-    {!rail && <FavoriteButton productId={product.id} name={product.name} size={19} strokeWidth={2} style={styles.heartCorner} />}
-    <View style={styles.bottom}><PriceTag cents={sociOffer ? sociCents : product.price_cents} size={22} sale={!!discount || sociOffer} />{phoneCart}</View>
+    {!rail && <FavoriteButton productId={product.id} name={product.name} size={18} strokeWidth={1.5} style={styles.tileHeart} />}
+    <View style={styles.tileBottom}>
+      <View style={{ flexShrink: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+          <Text style={[styles.tilePrice, feature && { fontSize: 17 }, struck !== null && { color: colors.sale }]}>{formatEuro(shown)}</Text>
+          {struck !== null && <Text style={styles.tileStruck}>{formatEuro(struck)}</Text>}
+        </View>
+        <Text style={[styles.tileLine, !stock.available && { color: colors.danger }, (soci || sociOffer) && { color: colors.sale }]} numberOfLines={1}>{line || ' '}</Text>
+      </View>
+      {tileCart}
+    </View>
   </View>;
 }
 
 const styles = StyleSheet.create({
+  tile: { flex: 1 },
+  tileMedia: { backgroundColor: colors.well, borderRadius: 2, overflow: 'hidden' },
+  tileBadge: { position: 'absolute', left: 10, top: 10, fontSize: 12, fontFamily: fonts.sansSemiBold, color: colors.sale, letterSpacing: 0.3 },
+  tileHeart: { position: 'absolute', top: 2, right: 2, zIndex: 2 },
+  tileBrand: { fontSize: 10.5, letterSpacing: 1.2, fontFamily: fonts.label, color: colors.muted, marginTop: 10 },
+  tileName: { fontSize: 13.5, lineHeight: 18, height: 36, fontFamily: fonts.sans, color: colors.text, marginTop: 3 },
+  tileNameBig: { fontSize: 15, lineHeight: 20, height: 40 },
+  tileBottom: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 6, marginTop: 6 },
+  tilePrice: { fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.text, letterSpacing: -0.1 },
+  tileStruck: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted, textDecorationLine: 'line-through' },
+  tileLine: { fontSize: 11.5, lineHeight: 15, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
+  tileAdd: { width: 34, height: 34, borderWidth: 1, borderColor: colors.text, alignItems: 'center', justifyContent: 'center' },
+  tileStepper: { flexDirection: 'row', alignItems: 'center', height: 34, borderWidth: 1, borderColor: colors.text },
+  tileStep: { width: 30, height: 34, alignItems: 'center', justifyContent: 'center' },
+  tileGlyph: { fontSize: 17, lineHeight: 20, fontFamily: fonts.sans, color: colors.text },
+  tileCount: { minWidth: 14, textAlign: 'center', fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.text },
   card: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 10,
     borderWidth: 1, borderColor: colors.line },
   media: { backgroundColor: colors.surface, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },

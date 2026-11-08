@@ -129,8 +129,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
           accessibilityLabel={badge ? `${tab.title}, ${count} ${count === 1 ? 'articolo' : 'articoli'}${total ? `, ${total}` : ''}` : tab.title}
           style={[styles.tab, on && styles.tabOn]}>
           <View>
-            <Icon name={tab.icon} size={21} color={colors.text} strokeWidth={on ? 1.9 : 1.8}
-              fill={on && tab.icon !== 'cart' ? colors.text : undefined} />
+            <Icon name={tab.icon} size={20} color={on ? '#FFFFFF' : colors.text} strokeWidth={1.5} />
             {!!badge && !on && <Animated.View key={badge} entering={ZoomIn.springify()} style={styles.badge}>
               <Text style={styles.badgeText}>{badge}</Text></Animated.View>}
           </View>
@@ -174,15 +173,16 @@ const styles = StyleSheet.create({
   miniCtaText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   // userSelect: a swipe on the web must not select the labels.
   // White floating bar with a hairline and a soft shadow; the active tab is the lime pill (the one brand signal).
-  pill: { flexDirection: 'row', alignItems: 'center', height: 66, borderRadius: 33, paddingHorizontal: 7, backgroundColor: '#FFFFFF', userSelect: 'none',
+  // Design "Editoriale": a white floating bar, hairline and a soft long shadow; the chosen tab is an ink capsule.
+  pill: { flexDirection: 'row', alignItems: 'center', height: 62, borderRadius: 31, paddingHorizontal: 6, backgroundColor: '#FFFFFF', userSelect: 'none',
     borderWidth: 1, borderColor: colors.line,
-    shadowColor: '#18201A', shadowOpacity: 0.12, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
-  tab: { flex: 1, height: 54, borderRadius: 22, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  tabOn: { backgroundColor: colors.yellow },
-  tabLabel: { fontSize: 11.5, fontFamily: fonts.sansBold, color: colors.muted },
-  tabTotal: { fontFamily: fonts.heavy, color: colors.text },
-  tabLabelOn: { fontFamily: fonts.heavy, color: colors.text },
+    shadowColor: '#141414', shadowOpacity: 0.1, shadowRadius: 30, shadowOffset: { width: 0, height: 10 }, elevation: 8 },
+  tab: { flex: 1, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  tabOn: { backgroundColor: colors.action },
+  tabLabel: { fontSize: 11, letterSpacing: 0.2, fontFamily: fonts.sansMedium, color: colors.muted },
+  tabTotal: { fontFamily: fonts.sansSemiBold, color: colors.text },
+  tabLabelOn: { fontFamily: fonts.sansMedium, color: '#FFFFFF' },
   badge: { position: 'absolute', top: -7, right: -12, minWidth: 19, height: 19, paddingHorizontal: 4, borderRadius: 10,
     backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 11.5, fontFamily: fonts.heavy, color: colors.text },
+  badgeText: { fontSize: 11, fontFamily: fonts.sansSemiBold, color: colors.text },
 });

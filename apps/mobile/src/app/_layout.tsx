@@ -6,6 +6,12 @@ import { Figtree_500Medium } from '@expo-google-fonts/figtree/500Medium';
 import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
 import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 import { Figtree_800ExtraBold } from '@expo-google-fonts/figtree/800ExtraBold';
+import { InstrumentSerif_400Regular } from '@expo-google-fonts/instrument-serif/400Regular';
+import { InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif/400Regular_Italic';
+import { InterTight_400Regular } from '@expo-google-fonts/inter-tight/400Regular';
+import { InterTight_500Medium } from '@expo-google-fonts/inter-tight/500Medium';
+import { InterTight_600SemiBold } from '@expo-google-fonts/inter-tight/600SemiBold';
+import { InterTight_700Bold } from '@expo-google-fonts/inter-tight/700Bold';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors, fonts } from '@/config/theme';
@@ -15,6 +21,13 @@ import { useLayout } from '@/lib/hooks';
 import { isConfigured } from '@/lib/supabase';
 import { startSessionListener } from '@/store/session';
 import { startClubListener } from '@/store/club';
+
+// Web: every weight is its own font file, so the browser must never fake a bolder one on top of it.
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = '* { font-synthesis: none; -webkit-font-smoothing: antialiased; }';
+  document.head.appendChild(style);
+}
 
 export const unstable_settings = { initialRouteName: '(tabs)' };
 
@@ -34,6 +47,8 @@ export default function RootLayout() {
     EBGaramond_500Medium: require('../../assets/fonts/EBGaramond_500Medium.ttf'),
     BodoniModa_600SemiBold: require('../../assets/fonts/BodoniModa_600SemiBold.ttf'),
     Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold, Figtree_800ExtraBold,
+    InstrumentSerif_400Regular, InstrumentSerif_400Regular_Italic,
+    InterTight_400Regular, InterTight_500Medium, InterTight_600SemiBold, InterTight_700Bold,
   });
   const { wide } = useLayout();
   useEffect(() => { if (isConfigured) { startSessionListener(); startClubListener(); } }, []);

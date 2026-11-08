@@ -1,7 +1,10 @@
 import { Platform } from 'react-native';
 
 /**
- * November 2026: white pages and header band, cool neutral hairlines and fills, the logo's lime as the signal,
+ * Design "Editoriale" (November 2026, second half): white pages, near-black ink, one product ground (`well`) for every
+ * photo, Instrument Serif titles over Inter Tight, hairlines instead of cards, square-ish corners; the deep bottle
+ * green for the brand, the logo lime only as a tiny signal; red only for discounts and errors.
+ * Earlier in November 2026: white pages and header band, cool neutral hairlines and fills, the logo's lime as the signal,
  * the shop-sign green for the logo and the Club, deep green for actions and the tab bar. Before that:
  * Brand look (design F "La Tenda"): the awning of a Tuscan shop front. Deep awning green with tone-on-tone
  * stripes and a scalloped edge frames every phone page; products sit on white plates on a warm ivory ground;
@@ -12,20 +15,20 @@ import { Platform } from 'react-native';
  */
 export const colors = {
   /** Actions, links, active states (white text on it passes AA). */
-  green: '#2F5A27',
+  green: '#1E3B24',
   greenDark: '#143019',
   /** Awning band behind phone headers (stripes alternate `brand` and `stripe`). */
   brand: '#1F4127',
   stripe: '#234A2C',
   /** Filled controls (buttons, add, selected chips): ink on the white pages; the brand greens are small accents. */
-  action: '#18201A',
+  action: '#141414',
   /** Light text on the dark green (tab bar, green buttons, the order-confirmed page). */
   onBrand: '#CFDDC6',
   /** Page headers (since the sign-in redesign): a white band with dark title, muted subtitle and light round buttons. */
   band: '#FFFFFF',
-  bandText: '#18201A',
-  bandMuted: '#5F665C',
-  bandButton: '#F1F0EB',
+  bandText: '#141414',
+  bandMuted: '#6E6E6A',
+  bandButton: '#FFFFFF',
   /** The logo's own colours: lime lettering on the shop-sign green (the small sign in headers, the Club card). */
   sign: '#3B6B31',
   signInk: '#CDE434',
@@ -38,14 +41,14 @@ export const colors = {
   /** Phone pages: warm ivory ground under white plates. */
   page: '#FFFFFF',
   /** Quiet fills on the ivory ground (segmented controls, steppers). */
-  well: '#F2F2EF',
+  well: '#F3F2EF',
   background: '#FFFFFF',
   surface: '#FFFFFF',
-  text: '#18201A',
-  muted: '#5F665C',
+  text: '#141414',
+  muted: '#6E6E6A',
   /** Secondary icons and inactive tabs: still ≥4.5:1 on white. */
-  faint: '#6B7167',
-  line: '#E8E8E3',
+  faint: '#75756F',
+  line: '#E6E5E1',
   /** Desktop print rules (hairlines between catalogue rows and sections). */
   rule: '#E4DCCD',
   /** Warm stone ground (desktop footer, closing tiles, hover fills). */
@@ -53,7 +56,7 @@ export const colors = {
   /** Product photographs always sit on white, like their studio backgrounds (owner's choice). */
   photo: '#FFFFFF',
   /** Thin frame around white photo plates on white pages. */
-  photoLine: '#E8E8E3',
+  photoLine: '#E6E5E1',
   badge: '#C8231F',
   /** Discounts: solid red label and red sale price, meant to stand out. */
   sale: '#C8231F',
@@ -75,15 +78,19 @@ export const fonts = {
   serif: family('EBGaramond_400Regular', serifFallback),
   serifMedium: family('EBGaramond_500Medium', serifFallback),
   serifBold: family('EBGaramond_500Medium', serifFallback),
-  /** Page and section titles: Figtree Bold, as on the sign-in pages (Bodoni Moda until November 2026). */
-  display: family('Figtree_700Bold', sansFallback),
-  sans: family('Figtree_400Regular', sansFallback),
-  sansMedium: family('Figtree_500Medium', sansFallback),
-  sansSemiBold: family('Figtree_600SemiBold', sansFallback),
-  sansBold: family('Figtree_700Bold', sansFallback),
-  heavy: family('Figtree_800ExtraBold', sansFallback),
-  price: family('Figtree_800ExtraBold', sansFallback),
-  priceBold: family('Figtree_700Bold', sansFallback),
+  /** Page and section titles: Instrument Serif (design "Editoriale", November 2026; Figtree Bold before). */
+  display: family('InstrumentSerif_400Regular', serifFallback),
+  displayItalic: family('InstrumentSerif_400Regular_Italic', serifFallback),
+  /** Everything else: Inter Tight. Restrained weights: bold is SemiBold, heavy is Bold. */
+  sans: family('InterTight_400Regular', sansFallback),
+  sansMedium: family('InterTight_500Medium', sansFallback),
+  sansSemiBold: family('InterTight_600SemiBold', sansFallback),
+  sansBold: family('InterTight_600SemiBold', sansFallback),
+  heavy: family('InterTight_700Bold', sansFallback),
+  price: family('InterTight_500Medium', sansFallback),
+  priceBold: family('InterTight_600SemiBold', sansFallback),
+  /** Small capitals labels (eyebrows): Inter Tight Medium, spaced. */
+  label: family('InterTight_500Medium', sansFallback),
 };
 
 export const spacing = {
