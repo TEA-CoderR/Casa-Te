@@ -160,6 +160,13 @@ export type FlyerRow = {
   page_titles: string[];
 };
 
+/** Square campaign picture at the top of the app home (design "Pulito"); opens offers, a department, a product or the flyer. */
+export type HomeBannerRow = {
+  id: Uuid; title: string; image_path: string; link_kind: 'none' | 'offers' | 'category' | 'product' | 'flyer';
+  link_id: Uuid | null; starts_on: string | null; ends_on: string | null; sort: number; active: boolean;
+  created_at: Timestamp; updated_at: Timestamp;
+};
+
 /** Back-office audit trail, written by triggers. */
 export type ActivityLogRow = {
   id: number; created_at: Timestamp; actor_id: Uuid | null; actor_name: string | null;
@@ -310,6 +317,17 @@ export function flyerFileUrl(supabaseUrl: string, path: string | null | undefine
   if (!path) return null;
   if (/^https?:\/\//.test(path)) return path;
   return `${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/flyers/${path.replace(/^\//, '')}`;
+}
+
+/**
+ * Banner picture: an https URL as is; a path starting with "/" is a file of the web shop (served by the site the
+ * page comes from, or the live shop in the app); anything else is a file in the public "banners" bucket.
+ */
+export function bannerImageUrl(supabaseUrl: string, path: string | null | undefined, siteOrigin: string): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  if (path.startsWith('/')) return `${siteOrigin.replace(/\/$/, '')}${path}`;
+  return `${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/banners/${path}`;
 }
 
 export function productImageUrl(supabaseUrl: string, path: string | null | undefined): string | null {

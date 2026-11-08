@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { orderStatusLabel, type CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
@@ -11,8 +11,9 @@ import { Icon } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RemoteImage } from '@/components/RemoteImage';
+import { HomeBanners } from '@/components/HomeBanners';
 import { colors, fonts } from '@/config/theme';
-import { fetchCategories, fetchCategoryCovers, fetchFlyers, fetchOffers, fetchOrders, fetchProducts, type OrderWithItems } from '@/lib/api';
+import { fetchCategories, fetchCategoryCovers, fetchFlyers, fetchHomeBanners, fetchOffers, fetchOrders, fetchProducts, type OrderWithItems } from '@/lib/api';
 import { useClubSettings, useLayout, useStores } from '@/lib/hooks';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
@@ -59,7 +60,8 @@ function HomePhone() {
   const offerItems = offers.data ?? [];
   // The flyer only while one is published (RLS returns only current ones).
   const flyers = useQuery('flyers', fetchFlyers);
-  const refresh = () => { void categories.refetch(); void featured.refetch(); void offers.refetch(); void orders.refetch(); };
+  const banners = useQuery('home-banners', fetchHomeBanners);
+  const refresh = () => { void banners.refetch(); void categories.refetch(); void featured.refetch(); void offers.refetch(); void orders.refetch(); };
   // Up to 8 departments chosen in the admin ("Mostra in home"); the first 8 when none is chosen.
   const all = categories.data ?? [];
   const allTop = all.filter((c) => !c.parent_id);
@@ -119,11 +121,12 @@ function HomePhone() {
       <View style={styles.bars}>{[1, 2, 3, 4].map((n) => <View key={n} style={[styles.bar, n <= (STEP[active.status] ?? 0) && styles.barOn]} />)}</View>
     </Pressable>}
 
-    {offerItems.length > 0 && <View style={styles.section}>
-      {head('Offerte della settimana', 'Vedi tutte', () => openCatalog({ offerte: '1' }))}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.rail}>
-        {offerItems.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}
-      </ScrollView>
+    {/* Campaign banners made for the shop; nothing when none is published. */}
+    {!!banners.data?.length && <View style={{ marginTop: 14 }}>
+      <HomeBanners banners={banners.data} onOpen={(b) => b.link_kind === 'offers' ? openCatalog({ offerte: '1' })
+        : b.link_kind === 'category' && b.link_id ? openCatalog({ category: b.link_id })
+        : b.link_kind === 'product' && b.link_id ? router.push(`/product/${b.link_id}`)
+        : b.link_kind === 'flyer' ? router.push('/volantino') : undefined} />
     </View>}
 
     {!!topCategories.length && <View style={[styles.section, { paddingHorizontal: 16 }]}>
@@ -139,6 +142,13 @@ function HomePhone() {
           <Text style={styles.departmentName} numberOfLines={1}>{category.name}</Text>
         </Pressable>;
       })}</View>
+    </View>}
+
+    {offerItems.length > 0 && <View style={styles.section}>
+      {head('Offerte', 'Vedi tutte', () => openCatalog({ offerte: '1' }))}
+      <View style={styles.grid}>
+        {offerItems.slice(0, 4).map((product) => <View key={product.id} style={styles.gridItem}><ProductCard product={product} /></View>)}
+      </View>
     </View>}
 
     {!!flyer && !!flyerCover && <Pressable onPress={() => router.push('/volantino')} accessibilityRole="link"
@@ -199,8 +209,6 @@ const styles = StyleSheet.create({
   bars: { flexDirection: 'row', gap: 4, marginTop: 12 },
   bar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.well },
   barOn: { backgroundColor: colors.green },
-  rail: { paddingHorizontal: 16, gap: 10, paddingBottom: 1 },
-  railItem: { width: 164, flexDirection: 'row' },
   departments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 14 },
   department: { width: '25%', paddingHorizontal: 5 },
   departmentName: { marginTop: 6, fontSize: 12.5, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },

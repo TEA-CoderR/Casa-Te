@@ -1,7 +1,7 @@
 // Data access for the customer app. All prices/stock/shipping come from the database; the app
 // never computes an amount that is charged.
 import {
-  flyerFileUrl, productImageUrl, searchKey, type AppSettingsRow, type FlyerRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
+  bannerImageUrl, flyerFileUrl, productImageUrl, type HomeBannerRow, searchKey, type AppSettingsRow, type FlyerRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
   type CreateOrderInput, type OrderEventRow, type OrderItemRow, type OrderRow, type PickupPointRow,
   type ClubOffer, type ProductReviewRow, type ProductRow, type ProfileRow, type Quote, type QuoteInput,
   type ReviewEligibility, type StoreRow, type CompanyRow,
@@ -267,6 +267,13 @@ export async function fetchFlyers(): Promise<Array<FlyerRow & { pdf: string | nu
     .order('valid_from', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })) as FlyerRow[];
   return rows.map((f) => ({ ...f, pdf: flyerFileUrl(SUPABASE_URL, f.pdf_path),
     pages: f.page_paths.map((p) => flyerFileUrl(SUPABASE_URL, p)).filter((u): u is string => !!u) }));
+}
+
+/** Current home banners, in order (RLS returns only published ones inside their dates). */
+export async function fetchHomeBanners(): Promise<Array<HomeBannerRow & { image: string | null }>> {
+  const rows = unwrap(await supabase.from('home_banners').select('*').order('sort').order('created_at')) as HomeBannerRow[];
+  const site = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : 'https://www.casaete.top';
+  return rows.map((b) => ({ ...b, image: bannerImageUrl(SUPABASE_URL, b.image_path, site) }));
 }
 
 export async function fetchPickupPoints(): Promise<PickupPointRow[]> {
