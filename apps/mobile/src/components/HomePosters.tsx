@@ -79,7 +79,9 @@ function ClubPoster({ member }: { member: boolean }) {
 function PickupPoster({ store, width }: { store: string; width: number }) {
   return <View style={[styles.fill, { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line }]}>
     <Awning width={width} />
-    <View style={[styles.copy, { top: 52 }]}>
+    {/* The price of pickup, on the lime price chip of the shop. */}
+    <View style={styles.zeroTag}><Text style={styles.zeroSmall}>€</Text><Text style={styles.zeroBig}>0</Text><Text style={styles.zeroSmall}>,00</Text></View>
+    <View style={[styles.copy, { top: 52, width: '58%' }]}>
       <Text style={[styles.eyebrow, { color: GREEN }]}>RITIRO IN NEGOZIO</Text>
       <Text style={[styles.title, { color: GREEN, fontSize: 40, lineHeight: 42 }]}>Sempre{'\n'}gratis</Text>
       <Text style={[styles.body, { color: colors.text }]} numberOfLines={2}>{store ? `Ordina ora, ritira a ${store}` : 'Ordina ora, ritira nel tuo negozio'}</Text>
@@ -144,6 +146,10 @@ const styles = StyleSheet.create({
   flyerCover: { position: 'absolute', right: -14, top: 34, width: 150, aspectRatio: 0.71, backgroundColor: '#FFFFFF', transform: [{ rotate: '7deg' }],
     shadowColor: '#1C2A18', shadowOpacity: 0.28, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   clubCard: { position: 'absolute', right: -40, bottom: 26, width: 210, height: 132, borderRadius: 12, transform: [{ rotate: '-12deg' }] },
+  zeroTag: { position: 'absolute', right: 18, bottom: 34, flexDirection: 'row', alignItems: 'flex-start', backgroundColor: LIME, borderRadius: 22,
+    paddingHorizontal: 16, paddingVertical: 4, transform: [{ rotate: '-8deg' }] },
+  zeroBig: { fontSize: 70, lineHeight: 78, fontFamily: fonts.heavy, color: GREEN, letterSpacing: -2 },
+  zeroSmall: { fontSize: 28, lineHeight: 34, fontFamily: fonts.heavy, color: GREEN, marginTop: 8 },
   awning: { flexDirection: 'row', height: 30, borderBottomWidth: 3, borderColor: GREEN },
   stripe: { width: 22 },
   cta: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', height: 40, paddingHorizontal: 16, borderRadius: 20, marginTop: 16 },
