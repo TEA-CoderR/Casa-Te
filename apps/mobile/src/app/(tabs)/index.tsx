@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { orderStatusLabel, type CategoryRow } from '@casa-te/shared';
@@ -28,6 +28,7 @@ export default function HomeScreen() {
   return wide ? <HomeDesktop /> : <HomePhone />;
 }
 
+const CLUB_CARD = require('../../../assets/club-card.webp');
 const ACTIVE = new Set(['paid', 'picking', 'ready', 'shipped']);
 /** Steps of an order, for the progress bar on the order card (pickup and delivery both have four). */
 const STEP: Record<string, number> = { paid: 1, picking: 2, ready: 3, shipped: 3 };
@@ -57,6 +58,8 @@ function HomePhone() {
   const offerItems = offers.data ?? [];
   // The Volantino shortcut only while a flyer is published (RLS returns only current ones).
   const flyers = useQuery('flyers', fetchFlyers);
+  const flyer = flyers.data?.[0];
+  const flyerUntil = flyer?.valid_to ? new Date(`${flyer.valid_to}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : null;
   const refresh = () => { void categories.refetch(); void featured.refetch(); void offers.refetch(); void orders.refetch(); };
   // Up to 8 departments chosen in the admin ("Mostra in home"); the first 6 when none is chosen.
   const all = categories.data ?? [];
@@ -184,6 +187,25 @@ function HomePhone() {
       })}</View>
     </View>}
 
+    {/* Offers: the same cards as "In evidenza", side by side. */}
+    {offerItems.length > 0 && <View style={{ paddingTop: 28 }}>
+      {sectionHead('h-offerte', 'Offerte', 'Vedi tutte', () => openCatalog({ offerte: '1' }))}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.rail}>
+        {offerItems.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}
+      </ScrollView>
+    </View>}
+
+    {/* The flyer while one is published: its cover, the title and the dates. */}
+    {!!flyer && !!flyer.pages[0] && <Pressable onPress={() => router.push('/volantino')} accessibilityRole="link"
+      accessibilityLabel={`Volantino ${flyer.title}${flyerUntil ? `, fino al ${flyerUntil}` : ''}`} style={({ pressed }) => [styles.plateRow, pressed && { opacity: 0.85 }]}>
+      <View style={styles.flyerCover}><RemoteImage uri={flyer.pages[0]} style={{ width: '100%', height: '100%' }} /></View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.plateTitle}>Volantino</Text>
+        <Text style={styles.plateText} numberOfLines={2}>{flyer.title}{flyerUntil ? `, fino al ${flyerUntil}` : ''}</Text>
+      </View>
+      <Icon name="chevron" size={18} color={colors.muted} />
+    </Pressable>}
+
     <View style={{ paddingTop: 28 }}>
       {sectionHead('h-evidenza', 'In evidenza', 'Vedi tutti', () => featured.data?.picked ? openCatalog({ evidenza: '1' }) : router.push(ALL_PRODUCTS))}
       {featured.error && !featured.data ? <View style={{ paddingHorizontal: 16 }}><Notice tone="error" message="Impossibile caricare i prodotti. Controlla la connessione e riprova." /></View>
@@ -192,6 +214,16 @@ function HomePhone() {
         </ScrollView>}
     </View>
 
+
+    {club.enabled && <Pressable onPress={() => router.push('/club')} accessibilityRole="link" accessibilityLabel="Casa & Te Club"
+      style={({ pressed }) => [styles.plateRow, pressed && { opacity: 0.85 }]}>
+      <Image source={CLUB_CARD} style={styles.clubCard} accessibilityIgnoresInvertColors />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.plateTitle}>Casa & Te Club</Text>
+        <Text style={styles.plateText} numberOfLines={2}>Prezzi Soci e codici sconto, iscrizione gratuita</Text>
+      </View>
+      <Icon name="chevron" size={18} color={colors.muted} />
+    </Pressable>}
 
     <View style={styles.footer}>
       {([['Privacy', 'privacy'], ['Termini di vendita', 'terms'], ['Spedizioni e ritiro', 'shipping']] as const).map(([label, doc]) =>
@@ -240,6 +272,13 @@ const styles = StyleSheet.create({
   link: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
   rail: { paddingHorizontal: 16, gap: 10, paddingBottom: 1 },
   railItem: { width: 162, flexDirection: 'row' },
+  // Flyer and Club: one white plate each, picture on the left.
+  plateRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: 16, marginTop: 24, padding: 14, borderRadius: 20,
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  plateTitle: { fontSize: 16, lineHeight: 21, fontFamily: fonts.sansBold, color: colors.text },
+  plateText: { fontSize: 13.5, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
+  flyerCover: { width: 46, aspectRatio: 0.71, borderRadius: 4, overflow: 'hidden', backgroundColor: colors.well },
+  clubCard: { width: 64, height: 40, borderRadius: 4 },
   departments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, rowGap: 14 },
   department: { paddingHorizontal: 4 },
   departmentName: { marginTop: 6, fontSize: 13, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
