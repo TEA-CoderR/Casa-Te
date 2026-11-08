@@ -37,12 +37,14 @@ export function liveChildren(all: CategoryRow[], counts: Counts, id: string) {
 }
 
 /** A product photo on a white plate, like every product photo in the shop; the department sign while there is none. */
-export function CategoryPhoto({ image, slug, name, size, radius, bare }: {
+export function CategoryPhoto({ image, slug, name, size, radius, bare, ground }: {
   image: string | null | undefined; slug: string; name: string; size?: number; radius?: number;
+  /** Ground behind the photo (the photo is multiplied onto it), when not the usual white plate. */
+  ground?: string;
   /** Inside a plate that already has its own edge. */
   bare?: boolean;
 }) {
-  return <View style={[styles.photo, bare && { borderWidth: 0 }, size ? { width: size, height: size, borderRadius: radius ?? size * 0.24 } : { width: '100%', aspectRatio: 1, borderRadius: radius ?? 14 }]}>
+  return <View style={[styles.photo, bare && { borderWidth: 0 }, !!ground && { backgroundColor: ground }, size ? { width: size, height: size, borderRadius: radius ?? size * 0.24 } : { width: '100%', aspectRatio: 1, borderRadius: radius ?? 14 }]}>
     {image
       ? <RemoteImage uri={image} style={[styles.photoImage, { mixBlendMode: 'multiply' } as object]} />
       : <CategoryIcon slug={slug} name={name} size={size ? size * 0.5 : 30} strokeWidth={1.4} />}

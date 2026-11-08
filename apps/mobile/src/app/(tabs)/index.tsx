@@ -152,7 +152,7 @@ function HomePhone() {
         const across = topCategories.length % 4 === 0 ? 4 : 3;
         return <Pressable key={category.id} accessibilityRole="link" accessibilityLabel={`Reparto ${category.name}`}
           style={({ pressed }) => [styles.department, { width: `${100 / across}%` }, pressed && { opacity: 0.75 }]} onPress={() => openCatalog({ category: category.id })}>
-          <View style={styles.deptPlate}><CategoryPhoto image={cover?.image} slug={category.slug} name={category.name} radius={0} bare /></View>
+          <CategoryPhoto image={cover?.image} slug={category.slug} name={category.name} radius={4} bare ground={colors.well} />
           <Text style={styles.departmentName} numberOfLines={1}>{category.name}</Text>
         </Pressable>;
       })}</View>
@@ -228,7 +228,6 @@ const styles = StyleSheet.create({
   railItem: { width: 162, flexDirection: 'row' },
   departments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 16 },
   department: { paddingHorizontal: 5 },
-  deptPlate: { borderRadius: 4, overflow: 'hidden', backgroundColor: colors.well, padding: 6 },
   departmentName: { marginTop: 7, fontSize: 13, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
   club: { flexDirection: 'row', alignItems: 'center', gap: 16, marginHorizontal: 16, marginTop: 30, paddingVertical: 14, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line },
   clubCard: { width: 92, height: 58, borderRadius: 6, transform: [{ rotate: '-4deg' }] },

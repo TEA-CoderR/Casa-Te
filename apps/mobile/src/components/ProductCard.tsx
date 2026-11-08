@@ -140,11 +140,13 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
   // Phone: offers read as the struck regular price and the offer price, with the discount rate on the photo
   // ("−25%"); a members-only offer is marked "Prezzo Soci" next to the struck price.
   const phoneBadge = discount ? discount.replace('-', '−') : sociOffer && sociPct ? sociPct.replace('-', '−') : '';
-  return <View style={[styles.card, rail && { paddingBottom: 12 }]}>
+  // Home rails: no frame, the product on a quiet ground (like the departments), the words under it.
+  return <View style={[styles.card, rail && styles.railCard]}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
-      <View style={[styles.media, { height: rail ? 136 : 132 }]}>
-        <View style={{ width: rail ? 120 : 118, height: rail ? 120 : 118 }}>
-          <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />
+      <View style={[styles.media, rail ? styles.railMedia : { height: 132 }]}>
+        <View style={{ width: rail ? 124 : 118, height: rail ? 124 : 118 }}>
+          {rail ? <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} blend backdrop={colors.well} />
+            : <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />}
         </View>
         {!!phoneBadge && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
           <Text style={styles.discountText} accessibilityLabel={phoneBadge.startsWith('Soci') ? `Prezzo Soci, ${phoneBadge.slice(5)}` : `Sconto ${phoneBadge}`}>{phoneBadge}</Text></View>}
@@ -161,6 +163,8 @@ const styles = StyleSheet.create({
   card: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 10,
     borderWidth: 1, borderColor: colors.line },
   media: { backgroundColor: colors.surface, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  railCard: { padding: 0, paddingBottom: 0, borderWidth: 0, borderRadius: 0, backgroundColor: 'transparent' },
+  railMedia: { height: 162, borderRadius: 4, backgroundColor: colors.well },
   heart: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 6, right: 6, zIndex: 2 },
   discount: { position: 'absolute', left: 0, top: 0, backgroundColor: colors.sale, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },

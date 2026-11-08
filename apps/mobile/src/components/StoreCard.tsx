@@ -15,7 +15,7 @@ export function AwningMark({ size = 46 }: { size?: number }) {
     <View style={[StyleSheet.absoluteFill, { flexDirection: 'row' }]}>
       {Array.from({ length: count }, (_, i) => <View key={i} style={{ width: stripe, backgroundColor: i % 2 ? colors.page : colors.green }} />)}
     </View>
-    <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: Math.round(size * 0.48), backgroundColor: '#FFFFFF', borderTopWidth: 2, borderColor: colors.green }} />
+    <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: Math.round(size * 0.48), backgroundColor: colors.well, borderTopWidth: 2, borderColor: colors.green }} />
   </View>;
 }
 
