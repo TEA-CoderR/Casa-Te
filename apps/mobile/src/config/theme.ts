@@ -24,6 +24,8 @@ export const colors = {
   bandText: '#1F4127',
   bandMuted: '#3C5A2E',
   bandButton: 'rgba(255,255,255,0.55)',
+  /** The logo on the band. */
+  bandLogo: '#1F4127',
   /** The logo's own colours: lime lettering on the shop-sign green (the small sign in headers, the Club card). */
   sign: '#3B6B31',
   signInk: '#CDE434',
@@ -83,6 +85,19 @@ export const fonts = {
   price: family('Figtree_800ExtraBold', sansFallback),
   priceBold: family('Figtree_700Bold', sansFallback),
 };
+
+// Design trial (web preview only, ?band=white|sage|green|lime): the header colour on the real pages, to choose one.
+// Remove once the colour is chosen.
+const BAND_TRIALS: Record<string, Record<string, string>> = {
+  white: { band: '#FFFFFF', bandText: '#18201A', bandMuted: '#5F665C', bandButton: '#F1F0EB', bandLogo: '#1F4127' },
+  sage: { band: '#EDF2E6', bandText: '#1F4127', bandMuted: '#4E6247', bandButton: '#FFFFFF', bandLogo: '#1F4127' },
+  green: { band: '#1F4127', bandText: '#FFFFFF', bandMuted: '#CFDDC6', bandButton: 'rgba(255,255,255,0.14)', bandLogo: '#CDE434' },
+  lime: {},
+};
+if (typeof window !== 'undefined' && typeof window.location?.search === 'string') {
+  const pick = new URLSearchParams(window.location.search).get('band');
+  if (pick && BAND_TRIALS[pick]) Object.assign(colors as unknown as Record<string, string>, BAND_TRIALS[pick]);
+}
 
 export const spacing = {
   xs: 6,

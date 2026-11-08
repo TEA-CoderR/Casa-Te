@@ -115,7 +115,7 @@ function HomePhone() {
   // Home: the lime band with the logo and the search, the store card hanging from its edge (the Esselunga pattern).
   const header = <View style={styles.band}>
     <View style={styles.bandRow}>
-      <BrandLogo width={96} color={colors.bandText} />
+      <BrandLogo width={96} color={colors.bandLogo} />
       <View style={{ flex: 1 }} />
       <Pressable onPress={() => router.push('/favorites')} accessibilityRole="button" accessibilityLabel="Preferiti" hitSlop={4}
         style={({ pressed }) => [styles.bandButton, pressed && { opacity: 0.7 }]}><Icon name="heart" size={21} color={colors.bandText} strokeWidth={1.9} /></Pressable>
