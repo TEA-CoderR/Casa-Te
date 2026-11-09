@@ -17,6 +17,7 @@ const CARD = require('../../assets/club-card.webp');
 import { useUser } from '@/store/session';
 import { useClubStore } from '@/store/club';
 import { MemberCardLink, MemberCardView } from '@/components/MemberCard';
+import { ClubPass } from '@/components/ClubPass';
 
 /** What the Club gives, one line each (the card section below covers linking an existing card). */
 const PERKS = ['Prezzi Soci', 'Codici sconto', 'Gratis'];
@@ -45,26 +46,28 @@ export default function ClubScreen() {
   const card = profile.data?.member_card_number ?? null;
   const cardSection = !user || !profile.data ? null : <>
     <Text style={styles.section} accessibilityRole="header">{card ? 'La tua tessera' : 'Hai già la tessera Casa & Te?'}</Text>
-    {card ? <MemberCardView card={card} onUnlinked={() => void profile.refetch()} />
+    {card ? <MemberCardView card={card} hideCard={!wide} onUnlinked={() => void profile.refetch()} />
       : <MemberCardLink onLinked={() => void profile.refetch()} />}
   </>;
 
   const since = member ? new Date(profile.data!.club_member_since!).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   const back = () => router.canGoBack() ? router.back() : router.replace('/');
   // Phone: the shop's real Club card hangs from the band, like the store card on the home page.
-  const band = wide ? undefined : <BrandHeader inScroll title="Casa & Te Club" titleSize={30} pad={[14, 16, 96]} left={<HeaderBack onPress={back} />} />;
+  const band = wide ? undefined : <BrandHeader inScroll title="Casa & Te Club" titleSize={30} pad={[14, 16, 122]} left={<HeaderBack onPress={back} />} />;
 
   return <Screen stack header={wide ? undefined : <StatusBand />} top={band} ground={colors.page}
     contentContainerStyle={wide ? undefined : { padding: 0, paddingBottom: 32 }} bodyStyle={wide ? undefined : { paddingHorizontal: 16 }}>
     <Stack.Screen options={{ title: 'Casa & Te Club', headerShown: wide }} />
-    <View style={[styles.cardWrap, !wide && { marginTop: -80 }]}>
+    {/* Phone: the member's card (barcode when linked) hangs from the band, as on Profilo; desktop keeps the photo. */}
+    {wide ? <View style={styles.cardWrap}>
       <Image source={CARD} accessibilityLabel="La tessera Casa & Te" resizeMode="cover" style={styles.cardImage} />
-    </View>
-    <Text style={styles.title} accessibilityRole="header">Sei uno di famiglia</Text>
-    {member && <Text style={styles.lead}>Sei nel Club dal {since}.</Text>}
+    </View> : <ClubPass style={{ marginTop: -96 }} kicker={card ? 'TESSERA SOCI' : 'CASA & TE CLUB'} name={member ? profile.data?.full_name ?? undefined : undefined}
+      card={card} title={member ? 'Sei uno di\nfamiglia.' : 'Prezzi Soci su tutto\nil catalogo.'} />}
+    {wide && <Text style={styles.title} accessibilityRole="header">Sei uno di famiglia</Text>}
+    {member && <Text style={[styles.lead, !wide && styles.leadPhone]}>{card ? 'Mostra la tessera alla cassa: tocca per ingrandire. ' : ''}Sei nel Club dal {since}.</Text>}
 
     {/* The perks as three words on one line: the card says the rest; details come in the sign-up step. */}
-    {(member || step === 'intro') && <Text style={styles.perks}>{PERKS.join('  ·  ')}</Text>}
+    {(member || step === 'intro') && <Text style={[styles.perks, !wide && { textAlign: 'left', marginTop: member ? 8 : 18 }]}>{PERKS.join('  ·  ')}</Text>}
 
     {!!error && <Notice tone="error" message={error} />}
     {!user ? <View style={{ marginTop: 20 }}><PrimaryButton title="Accedi per iscriverti o collegare la tessera" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/club' } })} /></View>
@@ -173,6 +176,7 @@ const styles = StyleSheet.create({
     shadowColor: '#0A180C', shadowOpacity: 0.28, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
   cardImage: { width: '100%', height: '100%', borderRadius: 18 },
   title: { fontSize: 30, lineHeight: 35, fontFamily: fonts.display, color: colors.text, textAlign: 'center', marginTop: 24 },
+  leadPhone: { textAlign: 'left', fontSize: 14, marginTop: 14 },
   lead: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans, marginTop: 4 },
   perks: { marginTop: 14, fontSize: 16, lineHeight: 22, fontFamily: fonts.sansBold, color: colors.sign, textAlign: 'center' },
   section: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text, marginTop: 28, marginBottom: 10 },

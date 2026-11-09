@@ -53,16 +53,15 @@ export function StoreCard({ onPress, label = 'Ritiro gratuito nel tuo negozio', 
   return <Pressable onPress={onPress} accessibilityRole="button"
     accessibilityLabel={name ? `${label}: ${name}. ${action} negozio` : 'Scegli il tuo negozio'}
     style={({ pressed }) => [styles.card, compact && styles.compact, style, pressed && { opacity: 0.92 }]}>
-    <AwningMark size={compact ? 40 : 46} />
     <View style={{ flex: 1, minWidth: 0 }}>
-      <Text style={styles.label} numberOfLines={1}>{name ? label : 'Prezzi e disponibilità del negozio'}</Text>
+      <Text style={styles.label} numberOfLines={1}>{(name ? label : 'Prezzi e disponibilità del negozio').toUpperCase()}</Text>
       <Text style={[styles.name, compact && { fontSize: 18 }]} numberOfLines={1}>{name || 'Scegli il tuo negozio'}</Text>
       {!!status && <View style={styles.hours}>
         {status.open !== null && <View style={[styles.dot, !status.open && { backgroundColor: colors.faint }]} />}
         <Text style={[styles.hoursText, status.open === false && { color: colors.muted }]} numberOfLines={1}>{status.text}</Text>
       </View>}
     </View>
-    <Text style={styles.action}>{name ? action : 'Scegli'}</Text>
+    <View style={styles.actionPill}><Text style={styles.action}>{name ? action : 'Scegli'}</Text></View>
   </Pressable>;
 }
 
@@ -70,10 +69,11 @@ const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF',
     shadowColor: '#18201A', shadowOpacity: 0.12, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6, borderWidth: 1, borderColor: colors.line },
   compact: { gap: 12, paddingVertical: 12 },
-  label: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
-  name: { fontSize: 19, lineHeight: 23, fontFamily: fonts.display, color: colors.text, marginTop: 1 },
+  label: { fontSize: 11, letterSpacing: 1.6, fontFamily: fonts.sansBold, color: colors.muted },
+  name: { fontSize: 21, lineHeight: 26, letterSpacing: -0.4, fontFamily: fonts.display, color: colors.text, marginTop: 3 },
   hours: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#2E9B3A' },
-  hoursText: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: '#2E6B34', flexShrink: 1 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#9DB521' }, // ui-check: allow (open dot, the logo lime darkened for white)
+  hoursText: { fontSize: 13, fontFamily: fonts.sansMedium, color: colors.muted, flexShrink: 1 },
+  actionPill: { height: 34, paddingHorizontal: 14, borderRadius: 17, borderWidth: 1, borderColor: colors.line, justifyContent: 'center' },
   action: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green },
 });

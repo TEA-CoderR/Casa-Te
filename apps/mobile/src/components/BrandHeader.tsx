@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '@/config/theme';
 import { BrandLogo } from './BrandLogo';
 import { Icon, type IconName } from './Icon';
+import { Monogram } from './ClubPass';
 
 const STRIPE = 22;
 /** Enough stripes for the widest phone/tablet band; the band clips the rest. */
@@ -47,6 +48,8 @@ export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, righ
   // No zIndex: a card that hangs from the band (a later sibling in the scroll content) must paint over it.
   return <View>
     <View style={[styles.band, { paddingTop: (inScroll ? 0 : insets.top) + pad[0], paddingHorizontal: pad[1], paddingBottom: pad[2] + overlap }]}>
+      {/* The logo's monogram as a quiet texture on every band (as on Home and Profilo). */}
+      <Monogram width={340} color={colors.bandLogo} opacity={0.07} style={{ position: 'absolute', right: -130, top: -60 }} />
       {(left || right || logo || (!stacked && !!title)) && <View style={styles.row}>
         {left}
         {logo && <BrandLogo width={logoHeight * 1.9} color={colors.bandLogo} />}

@@ -8,7 +8,7 @@ import { Barcode } from './Barcode';
 import { Notice, PrimaryButton, SecondaryButton, TextField } from './UI';
 
 /** Linked card: shown as a barcode to scan at the till (points stay in the store system). */
-export function MemberCardView({ card, onUnlinked }: { card: string; onUnlinked: () => void }) {
+export function MemberCardView({ card, onUnlinked, hideCard }: { card: string; onUnlinked: () => void; hideCard?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const unlink = async () => {
@@ -16,11 +16,11 @@ export function MemberCardView({ card, onUnlinked }: { card: string; onUnlinked:
     try { await unlinkMemberCard(); onUnlinked(); } catch (e) { setError(friendlyError(e)); } finally { setBusy(false); }
   };
   return <View>
-    <View style={styles.card}>
+    {!hideCard && <View style={styles.card}>
       <Text style={styles.cardBrand}>Casa & Te · Tessera Soci</Text>
       <View style={styles.barcode}><Barcode value={card} height={70} /></View>
       <Text selectable style={styles.cardNumber}>{card.replace(/(.{4})(?=.)/g, '$1 ')}</Text>
-    </View>
+    </View>}
     <Text style={styles.note}>Mostrala alla cassa come la tessera: i punti si accumulano e si usano in negozio.</Text>
     {!!error && <Notice tone="error" message={error} />}
     <View style={{ marginTop: 14 }}><SecondaryButton title="Scollega la tessera" onPress={unlink} disabled={busy} /></View>
