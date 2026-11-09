@@ -42,6 +42,11 @@ Dashboard settings:
   code, so the template must contain the token, e.g.
   `<h2>Il tuo codice CASA & TE</h2><p style="font-size:28px;letter-spacing:4px">{{ .Token }}</p><p>Valido 15 minuti.</p>`.
   Translate the other templates (Invite, Reset password) to Italian.
+* **Authentication → Email Templates → Reauthentication**: used by Profilo → Password when the customer forgot
+  the password (or never set one) — the app asks for this code, so the template must contain `{{ .Token }}`, e.g.
+  `<h2>Conferma il cambio password</h2><p style="font-size:28px;letter-spacing:4px">{{ .Token }}</p><p>Se non sei stato tu, ignora questa email.</p>`.
+* **Authentication → Sign In / Providers → Email → Secure password change**: on, so the server itself refuses a
+  password change without a recent sign-in or the emailed code (the app also asks for the current password).
 * **Authentication → Sign In / Providers → Email → Email OTP Length**: set **6** (new projects default to 8;
   the app accepts 6–10 digits).
 * **Authentication → SMTP**: configure Resend SMTP (Supabase's built-in mailer is rate limited
