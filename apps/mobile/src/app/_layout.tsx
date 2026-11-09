@@ -6,10 +6,12 @@ import { Figtree_500Medium } from '@expo-google-fonts/figtree/500Medium';
 import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
 import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 import { Figtree_800ExtraBold } from '@expo-google-fonts/figtree/800ExtraBold';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors, fonts } from '@/config/theme';
 import { PersistenceGate } from '@/components/PersistenceGate';
+import { HeaderBack } from '@/components/BrandHeader';
+import { Monogram } from '@/components/ClubPass';
 import { useLayout } from '@/lib/hooks';
 import { isConfigured } from '@/lib/supabase';
 import { startSessionListener } from '@/store/session';
@@ -45,14 +47,21 @@ export default function RootLayout() {
       <StatusBar style={wide ? 'dark' : 'light'} />
       <Stack
         screenOptions={{
-          headerTintColor: colors.text,
+          headerTintColor: wide ? colors.text : colors.bandText,
           headerTitleStyle: wide ? { fontFamily: fonts.serif, fontSize: 21, color: colors.text }
-            : { fontFamily: fonts.display, fontSize: 21, color: colors.bandText },
+            : { fontFamily: fonts.display, fontSize: 22, color: colors.bandText },
           headerShadowVisible: false,
           headerTitleAlign: wide ? 'center' : 'left',
           headerStyle: { backgroundColor: wide ? colors.background : colors.band },
           // Phones: stack pages (checkout, order, account…) share the white band of the tab pages.
-          headerBackground: wide ? undefined : () => <View style={{ flex: 1, backgroundColor: colors.band, borderBottomWidth: 1, borderColor: colors.line }} />,
+          // Phones: stack pages (checkout, addresses, account…) get the same band as the others: green with the monogram
+          // texture and the round white-on-green back button.
+          headerBackground: wide ? undefined : () => <View style={{ flex: 1, backgroundColor: colors.band, overflow: 'hidden' }}>
+            <Monogram width={300} color={colors.bandLogo} opacity={0.07} style={{ position: 'absolute', right: -110, top: -50 }} /></View>,
+          ...(wide ? {} : {
+            headerLeft: () => <View style={{ marginLeft: Platform.OS === 'web' ? 16 : 0, marginRight: 4 }}>
+              <HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/')} /></View>,
+          }),
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: wide ? colors.background : colors.page },
         }}
@@ -60,7 +69,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'CASA & TE' }} />
         <Stack.Screen name="product/[id]" options={{ title: '' }} />
         <Stack.Screen name="checkout/index" options={{ title: 'Consegna e pagamento' }} />
-        <Stack.Screen name="checkout/return" options={{ title: 'Pagamento', headerBackVisible: false, gestureEnabled: false }} />
+        <Stack.Screen name="checkout/return" options={{ title: 'Pagamento', headerBackVisible: false, headerLeft: () => null, gestureEnabled: false }} />
         <Stack.Screen name="order/[id]" options={{ title: 'Ordine' }} />
         <Stack.Screen name="reso/[orderId]" options={{ title: 'Reso e assistenza' }} />
         <Stack.Screen name="auth/sign-in" options={{ title: 'Accedi', presentation: 'modal' }} />
