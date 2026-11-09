@@ -42,7 +42,7 @@ export default function RootLayout() {
   return (
     <PersistenceGate>
       {/* Phones: every page starts with the green awning band (design F), so light status bar icons. */}
-      <StatusBar style="dark" />
+      <StatusBar style={wide ? 'dark' : 'light'} />
       <Stack
         screenOptions={{
           headerTintColor: colors.text,

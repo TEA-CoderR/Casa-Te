@@ -201,37 +201,50 @@ export default function ProfileScreen() {
         <Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
       </Pressable>;
     return <Screen header={<StatusBand />} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 28 }}
-      top={<View>
-        <View style={styles.fHero}>
-          {user ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <View style={styles.fAvatar}><Text style={styles.fAvatarText}>{initials(name || user.email || '')}</Text></View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.fHello} numberOfLines={1} accessibilityRole="header">{name ? `Ciao, ${name.split(' ')[0]}` : 'Ciao!'}</Text>
-              <Text style={styles.fEmail} numberOfLines={1}>{user.email}</Text>
-            </View>
-            <Pressable onPress={() => go('/account/edit')} accessibilityRole="button" accessibilityLabel="Modifica dati personali" style={styles.fEdit}>
-              <Text style={styles.fEditText}>Modifica</Text></Pressable>
-          </View> : <>
-            <Text style={styles.fHello} accessibilityRole="header">Benvenuto in Casa & Te</Text>
-            <Text style={[styles.fEmail, { marginTop: 6, lineHeight: 20 }]}>Accedi per seguire i tuoi ordini, salvare gli indirizzi e iscriverti al Club.</Text>
-            <Pressable onPress={() => go('/auth/sign-in')} accessibilityRole="button" style={styles.fSignIn}><Text style={styles.fSignInText}>Accedi o registrati</Text></Pressable>
-          </>}
-        </View>
+      top={<View style={styles.fHero}>
+        {user ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View style={styles.fAvatar}><Text style={styles.fAvatarText}>{initials(name || user.email || '')}</Text></View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.fHello} numberOfLines={1} accessibilityRole="header">{name ? `Ciao, ${name.split(' ')[0]}` : 'Ciao!'}</Text>
+            <Text style={styles.fEmail} numberOfLines={1}>{user.email}</Text>
+          </View>
+        </View> : <>
+          <Text style={styles.fHello} accessibilityRole="header">Ciao!</Text>
+          <Text style={styles.fEmail}>Accedi per seguire ordini e ritiri e per iscriverti al Club.</Text>
+        </>}
       </View>}>
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
       <View style={{ paddingHorizontal: 16 }}>
-        {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={({ pressed }) => [styles.fClub, { marginTop: 4 }, pressed && { opacity: 0.88 }]}>
-          <Icon name="crown" size={26} color={colors.signInk} strokeWidth={1.7} />
-          <View style={{ flex: 1 }}><Text style={styles.fClubTitle}>Casa & Te Club</Text>
-            <Text style={styles.fClubText}>{member ? 'Sei membro: guarda le offerte a te riservate.' : club.tagline}</Text></View>
-          <Icon name="chevron" size={18} color={colors.signInk} strokeWidth={2.2} />
+        {/* The card hanging from the green band, as on Home: sign in, or the person's three numbers. */}
+        {user ? <View style={[styles.fCard, styles.fStats]}>
+          <Pressable onPress={() => go('/orders')} accessibilityRole="link" style={({ pressed }) => [styles.fStat, pressed && { opacity: 0.6 }]}>
+            <Text style={styles.fStatValue}>{orderCount}</Text><Text style={styles.fStatLabel}>{orderCount === 1 ? 'Ordine' : 'Ordini'}</Text></Pressable>
+          <View style={styles.fStatRule} />
+          <Pressable onPress={() => go('/favorites')} accessibilityRole="link" style={({ pressed }) => [styles.fStat, pressed && { opacity: 0.6 }]}>
+            <Text style={styles.fStatValue}>{favourites}</Text><Text style={styles.fStatLabel}>Preferiti</Text></Pressable>
+          <View style={styles.fStatRule} />
+          <Pressable onPress={() => go('/account/edit')} accessibilityRole="link" style={({ pressed }) => [styles.fStat, pressed && { opacity: 0.6 }]}>
+            <Icon name="user" size={22} color={colors.text} /><Text style={styles.fStatLabel}>Dati personali</Text></Pressable>
+        </View> : <View style={styles.fCard}>
+          <Text style={styles.fCardTitle}>Il tuo account Casa & Te</Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+            <Pressable onPress={() => go('/auth/sign-in')} accessibilityRole="button" style={({ pressed }) => [styles.fBtn, styles.fBtnPrimary, pressed && { opacity: 0.85 }]}>
+              <Text style={[styles.fBtnText, { color: '#FFFFFF' }]}>Accedi</Text></Pressable>
+            <Pressable onPress={() => go('/auth/sign-in')} accessibilityRole="button" style={({ pressed }) => [styles.fBtn, pressed && { opacity: 0.7 }]}>
+              <Text style={styles.fBtnText}>Registrati</Text></Pressable>
+          </View>
+        </View>}
+        {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={({ pressed }) => [styles.fClub, pressed && { opacity: 0.85 }]}>
+          <Image source={CLUB_CARD} style={styles.fClubCard} accessibilityIgnoresInvertColors />
+          <View style={{ flex: 1, minWidth: 0 }}><Text style={styles.fClubTitle}>Casa & Te Club</Text>
+            <Text style={styles.fClubText} numberOfLines={2}>{member ? 'Sei socio: la tua tessera e i Prezzi Soci' : 'Prezzi Soci e codici sconto, iscrizione gratuita'}</Text></View>
+          <Icon name="chevron" size={18} color={colors.muted} />
         </Pressable>}
         {/* One plain grouped list (the order in progress and the store card are on Home). */}
         <Text style={styles.fGroup} accessibilityRole="header">I TUOI ACQUISTI</Text>
         <View style={styles.fList}>
-          {user && prow('Ordini', () => go('/orders'), orderCount ? `${orderCount} ${orderCount === 1 ? 'ordine' : 'ordini'}` : 'Segui ordini e ritiri', true)}
-          {prow('Preferiti', () => go('/favorites'), favourites ? `${favourites} ${favourites === 1 ? 'prodotto' : 'prodotti'}` : 'I prodotti salvati con il cuore', !user)}
-          {prow('Il tuo negozio', () => setStoreSheet(true), selected ? `CASA & TE ${storeName}` : 'Scegli il negozio')}
+          {!user && prow('Preferiti', () => go('/favorites'), favourites ? `${favourites} ${favourites === 1 ? 'prodotto' : 'prodotti'}` : 'I prodotti salvati con il cuore', true)}
+          {prow('Il tuo negozio', () => setStoreSheet(true), selected ? `CASA & TE ${storeName}` : 'Scegli il negozio', !!user)}
           {user && prow('Indirizzi', () => go('/account/addresses'), 'Per la consegna a domicilio')}
         </View>
         {user && <><Text style={styles.fGroup} accessibilityRole="header">ACCOUNT</Text>
@@ -265,20 +278,32 @@ export default function ProfileScreen() {
   </Screen>;
 }
 
+const CLUB_CARD = require('../../../assets/club-card.webp');
+
 const styles = StyleSheet.create({
-  fHero: { backgroundColor: colors.band, paddingTop: 18, paddingHorizontal: 20, paddingBottom: 22, overflow: 'hidden' },
-  fAvatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
-  fAvatarText: { fontSize: 21, fontFamily: fonts.heavy, color: colors.text },
+  // Green band at the top (as on every page), a white card hanging from its edge (as the store card on Home).
+  fHero: { backgroundColor: colors.band, paddingTop: 14, paddingHorizontal: 20, paddingBottom: 58 },
+  fAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.signInk, alignItems: 'center', justifyContent: 'center' },
+  fAvatarText: { fontSize: 20, fontFamily: fonts.heavy, color: colors.band },
   fHello: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.bandText, letterSpacing: -0.5 },
-  fEmail: { fontSize: 14, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 2 },
-  fEdit: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: colors.bandButton, justifyContent: 'center' },
-  fEditText: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.bandText },
-  fSignIn: { alignSelf: 'flex-start', height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.green, justifyContent: 'center', marginTop: 14 },
-  fSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
-  // The Club in the colours of its card: lime on the shop-sign green.
-  fClub: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10, padding: 16, borderRadius: 18, backgroundColor: colors.sign },
-  fClubTitle: { fontSize: 18, lineHeight: 22, fontFamily: fonts.display, color: colors.signInk },
-  fClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: '#E6EEDC', marginTop: 2 },
+  fEmail: { fontSize: 14, lineHeight: 19, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 3 },
+  fCard: { marginTop: -40, padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line,
+    shadowColor: '#143019', shadowOpacity: 0.1, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  fCardTitle: { fontSize: 16, fontFamily: fonts.sansBold, color: colors.text },
+  fBtn: { flex: 1, height: 46, borderRadius: 23, borderWidth: 1.5, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
+  fBtnPrimary: { backgroundColor: colors.green, borderColor: colors.green },
+  fBtnText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
+  fStats: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 6 },
+  fStat: { flex: 1, alignItems: 'center', gap: 2, minHeight: 50, justifyContent: 'center' },
+  fStatValue: { fontSize: 22, lineHeight: 26, fontFamily: fonts.heavy, color: colors.text },
+  fStatLabel: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  fStatRule: { width: 1, height: 34, backgroundColor: colors.line },
+  // The Club with its real card, a white plate like the rest.
+  fClub: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 12, padding: 14, borderRadius: 20, backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: colors.line },
+  fClubCard: { width: 64, height: 40, borderRadius: 4 },
+  fClubTitle: { fontSize: 16, lineHeight: 21, fontFamily: fonts.sansBold, color: colors.text },
+  fClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
   fGroup: { fontSize: 13, letterSpacing: 0.6, fontFamily: fonts.heavy, color: colors.muted, marginTop: 20, marginBottom: 8, marginLeft: 4 },
   fList: { borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   fRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 58, paddingVertical: 8, paddingHorizontal: 16 },
