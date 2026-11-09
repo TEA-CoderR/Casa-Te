@@ -7,7 +7,8 @@ import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryPhoto } from '@/components/CategoryNav';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
-import { StoreCard } from '@/components/StoreCard';
+import { storeStatus } from '@/components/StoreCard';
+import { BandWatermark, ClubPass } from '@/components/ClubPass';
 import { Icon, type IconName } from '@/components/Icon';
 import { Loading, Notice } from '@/components/UI';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -107,19 +108,36 @@ function HomePhone() {
       <View style={styles.quickSign}><Icon name={icon} size={24} color="#FFFFFF" strokeWidth={1.9} /></View>
       <Text style={styles.quickText} numberOfLines={1}>{label}</Text>
     </Pressable>;
-  const sectionHead = (id: string, title: string, link: string, onPress: () => void) => <View style={styles.section}>
-    <Text style={styles.sectionTitle} accessibilityRole="header" nativeID={id}>{title}</Text>
+  const sectionHead = (id: string, title: string, link: string, onPress: () => void, kicker?: string) => <View style={styles.section}>
+    <View style={{ flexShrink: 1 }}>{!!kicker && <Text style={styles.kicker}>{kicker}</Text>}<Text style={styles.sectionTitle} accessibilityRole="header" nativeID={id}>{title}</Text></View>
     <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8}><Text style={styles.link}>{link}</Text></Pressable>
   </View>;
 
-  // Home: the lime band with the logo and the search, the store card hanging from its edge (the Esselunga pattern).
-  const header = <View style={styles.band}>
+  // Home (November 2026): the green zone names the store in large type over the monogram texture, the search below;
+  // the order in progress (or the carousel) hangs from its edge, as the member's card does on Profilo.
+  const short = storeShortName(selected);
+  const [, city = '', place = short] = short.match(/^(\S+)\s+(.+)$/) ?? [];
+  const status = storeStatus(selected?.opening_hours);
+  const header = <View style={[styles.band, { paddingBottom: 66 }]}>
+    <BandWatermark top={-6} />
     <View style={styles.bandRow}>
       <BrandLogo width={96} color={colors.bandLogo} />
       <View style={{ flex: 1 }} />
       <Pressable onPress={() => router.push('/favorites')} accessibilityRole="button" accessibilityLabel="Preferiti" hitSlop={4}
         style={({ pressed }) => [styles.bandButton, pressed && { opacity: 0.7 }]}><Icon name="heart" size={21} color={colors.bandText} strokeWidth={1.9} /></Pressable>
     </View>
+    <Pressable onPress={() => setStoreSheet(true)} accessibilityRole="button"
+      accessibilityLabel={selected ? `Il tuo negozio: ${short}. Cambia negozio` : 'Scegli il tuo negozio'} style={({ pressed }) => [styles.storeHero, pressed && { opacity: 0.85 }]}>
+      <View style={styles.storeTop}>
+        <Text style={styles.storeKicker} numberOfLines={1}>{selected ? `RITIRO GRATIS${city ? ` · ${city.toUpperCase()}` : ''}` : 'IL TUO NEGOZIO'}</Text>
+        <View style={styles.storeChange}><Text style={styles.storeChangeText}>{selected ? 'Cambia' : 'Scegli'}</Text></View>
+      </View>
+      <Text style={styles.storePlace} numberOfLines={1} adjustsFontSizeToFit>{selected ? place : 'Scegli il negozio'}</Text>
+      {!!status && <View style={styles.storeStatus}>
+        {status.open !== null && <View style={[styles.storeDot, !status.open && { backgroundColor: colors.bandMuted }]} />}
+        <Text style={styles.storeStatusText} numberOfLines={1}>{status.text}</Text>
+      </View>}
+    </Pressable>
     <Pressable onPress={() => openCatalog({ search: '1' })} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
       style={({ pressed }) => [styles.search, pressed && { opacity: 0.95 }]}>
       <Icon name="search" size={21} color={colors.text} strokeWidth={2.1} />
@@ -133,19 +151,19 @@ function HomePhone() {
   return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.band }} />} top={header} ground={colors.page} refreshing={featured.loading && !!featured.data} onRefresh={refresh}
     contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-    <View style={{ marginTop: -30, marginHorizontal: 16 }}><StoreCard onPress={() => setStoreSheet(true)} /></View>
-
-    {active && <Pressable onPress={() => router.push(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.order, pressed && { opacity: 0.9 }]}>
+    {/* The order in progress: a lime ticket hanging from the band (the logo's colours reversed, like the member's card). */}
+    {active && <Pressable onPress={() => router.push(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.ticket, pressed && { transform: [{ scale: 0.985 }] }]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <Text style={styles.orderTitle} numberOfLines={1}>{active.status === 'ready' && active.fulfilment === 'store' ? 'Il tuo ordine è pronto al ritiro' : orderStatusLabel(active.status, active.fulfilment)}</Text>
-        <Icon name="chevron" size={20} color="#FFFFFF" strokeWidth={2.2} />
+        <Text style={styles.ticketKicker} numberOfLines={1}>ORDINE {active.order_number}</Text>
+        <Icon name="chevron" size={18} color={colors.band} strokeWidth={2.4} />
       </View>
-      <Text style={styles.orderSub}>{active.order_number}{active.status === 'ready' && active.fulfilment === 'store' ? ' · mostra il codice in cassa' : ' · segui l’ordine'}</Text>
+      <Text style={styles.ticketTitle} numberOfLines={1}>{active.status === 'ready' && active.fulfilment === 'store' ? 'Pronto al ritiro' : orderStatusLabel(active.status, active.fulfilment)}</Text>
+      <Text style={styles.ticketSub} numberOfLines={1}>{active.status === 'ready' && active.fulfilment === 'store' ? 'Mostra il codice in cassa' : 'Segui l’ordine'}</Text>
       <View style={styles.bars}>{[1, 2, 3, 4].map((i) => <View key={i} style={[styles.bar, i <= (STEP[active.status] ?? 1) && styles.barOn]} />)}</View>
     </Pressable>}
 
-    {slides.length > 0 && <View style={{ marginTop: 20 }}>
-      <View style={styles.hero}>
+    {slides.length > 0 && <View style={{ marginTop: active ? 20 : -50 }}>
+      <View style={[styles.hero, !active && styles.heroHung]}>
         <ScrollView ref={pager} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScrollBeginDrag={() => { touched.current = true; }}
           onMomentumScrollEnd={(e) => setSlide(Math.round(e.nativeEvent.contentOffset.x / slideWidth))}>
           {slides.map((s) => <Pressable key={s.key} onPress={s.onPress} accessibilityRole="link" accessibilityLabel={`${s.title}. ${s.text}. ${s.cta}`}
@@ -168,9 +186,9 @@ function HomePhone() {
           style={styles.dotHit}><View style={[styles.dot, i === slide && styles.dotOn]} /></Pressable>)}</View>}
     </View>}
 
-    {!!topCategories.length && <View style={{ paddingTop: 16, paddingHorizontal: 16 }}>
+    {!!topCategories.length && <View style={{ paddingTop: 22, paddingHorizontal: 16 }}>
       <View style={[styles.section, { paddingHorizontal: 0 }]}>
-        <Text style={styles.sectionTitle} accessibilityRole="header">Reparti</Text>
+        <View><Text style={styles.kicker}>NEL TUO NEGOZIO</Text><Text style={styles.sectionTitle} accessibilityRole="header">Reparti</Text></View>
         <Pressable onPress={() => router.push(ALL_PRODUCTS)} accessibilityRole="link" hitSlop={8}>
           <Text style={styles.link}>{allTop.length > topCategories.length ? `Tutti i ${allTop.length} reparti` : 'Tutti i reparti'}</Text></Pressable>
       </View>
@@ -189,7 +207,7 @@ function HomePhone() {
 
     {/* Offers: the same cards as "In evidenza", side by side. */}
     {offerItems.length > 0 && <View style={{ paddingTop: 28 }}>
-      {sectionHead('h-offerte', 'Offerte', 'Vedi tutte', () => openCatalog({ offerte: '1' }))}
+      {sectionHead('h-offerte', 'Offerte', 'Vedi tutte', () => openCatalog({ offerte: '1' }), 'QUESTA SETTIMANA')}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.rail}>
         {offerItems.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}
       </ScrollView>
@@ -207,7 +225,7 @@ function HomePhone() {
     </Pressable>}
 
     <View style={{ paddingTop: 28 }}>
-      {sectionHead('h-evidenza', 'In evidenza', 'Vedi tutti', () => featured.data?.picked ? openCatalog({ evidenza: '1' }) : router.push(ALL_PRODUCTS))}
+      {sectionHead('h-evidenza', 'In evidenza', 'Vedi tutti', () => featured.data?.picked ? openCatalog({ evidenza: '1' }) : router.push(ALL_PRODUCTS), 'SCELTI PER TE')}
       {featured.error && !featured.data ? <View style={{ paddingHorizontal: 16 }}><Notice tone="error" message="Impossibile caricare i prodotti. Controlla la connessione e riprova." /></View>
         : !featured.data ? <Loading /> : <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.rail}>
           {featured.data.items.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}
@@ -215,15 +233,8 @@ function HomePhone() {
     </View>
 
 
-    {club.enabled && <Pressable onPress={() => router.push('/club')} accessibilityRole="link" accessibilityLabel="Casa & Te Club"
-      style={({ pressed }) => [styles.plateRow, pressed && { opacity: 0.85 }]}>
-      <Image source={CLUB_CARD} style={styles.clubCard} accessibilityIgnoresInvertColors />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.plateTitle}>Casa & Te Club</Text>
-        <Text style={styles.plateText} numberOfLines={2}>Prezzi Soci e codici sconto, iscrizione gratuita</Text>
-      </View>
-      <Icon name="chevron" size={18} color={colors.muted} />
-    </Pressable>}
+    {club.enabled && <ClubPass kicker="CASA & TE CLUB" title={'Prezzi Soci su tutto\nil catalogo.'} action="Scopri il Club"
+      onPress={() => router.push('/club')} style={{ marginHorizontal: 16, marginTop: 30, height: 200 }} />}
 
     <View style={styles.footer}>
       {([['Privacy', 'privacy'], ['Termini di vendita', 'terms'], ['Spedizioni e ritiro', 'shipping']] as const).map(([label, doc]) =>
@@ -235,22 +246,38 @@ function HomePhone() {
 }
 
 const styles = StyleSheet.create({
-  band: { backgroundColor: colors.band, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 54 },
+  band: { backgroundColor: colors.band, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 54, overflow: 'hidden' },
+  storeHero: { marginTop: 18, paddingHorizontal: 4 },
+  storeTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  storeKicker: { flexShrink: 1, fontSize: 12.5, letterSpacing: 1.8, fontFamily: fonts.sansSemiBold, color: colors.bandMuted },
+  storeChange: { height: 30, paddingHorizontal: 12, borderRadius: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', justifyContent: 'center' },
+  storeChangeText: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.bandText },
+  storePlace: { fontSize: 42, lineHeight: 48, letterSpacing: -1.4, fontFamily: fonts.display, color: colors.bandText, marginTop: 6 },
+  storeStatus: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 },
+  storeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.bandLogo },
+  storeStatusText: { fontSize: 14.5, fontFamily: fonts.sansMedium, color: colors.bandMuted },
+  ticket: { marginHorizontal: 16, marginTop: -50, paddingTop: 16, paddingBottom: 18, paddingHorizontal: 18, borderRadius: 22, backgroundColor: colors.bandLogo,
+    shadowColor: '#143019', shadowOpacity: 0.3, shadowRadius: 22, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
+  ticketKicker: { flexShrink: 1, fontSize: 11.5, letterSpacing: 2, fontFamily: fonts.sansBold, color: colors.band },
+  ticketTitle: { fontSize: 24, lineHeight: 29, letterSpacing: -0.6, fontFamily: fonts.display, color: colors.band, marginTop: 6 },
+  ticketSub: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.band, opacity: 0.8, marginTop: 1 },
+  heroHung: { shadowColor: '#143019', shadowOpacity: 0.22, shadowRadius: 22, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
+  kicker: { fontSize: 11.5, letterSpacing: 1.8, fontFamily: fonts.sansBold, color: colors.muted, marginBottom: 2 },
   bandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
   bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
   hello: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, color: '#FFFFFF', letterSpacing: -0.6, marginTop: 18 },
   helloSub: { fontSize: 15.5, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
   // Outlined like the sign-in fields.
-  search: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 16, paddingRight: 6, borderRadius: 14, backgroundColor: '#FFFFFF' },
+  search: { marginTop: 20, flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 18, paddingRight: 6, borderRadius: 26, backgroundColor: '#FFFFFF' },
   searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.muted },
   scan: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
   // The order in progress: deep green with the lime signal on the progress bars.
   order: { marginHorizontal: 16, marginTop: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.green },
   orderTitle: { flexShrink: 1, fontSize: 15, fontFamily: fonts.heavy, color: '#FFFFFF' },
   orderSub: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.onBrand, marginTop: 2 },
-  bars: { flexDirection: 'row', gap: 4, marginTop: 10 },
-  bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
-  barOn: { backgroundColor: colors.yellow },
+  bars: { flexDirection: 'row', gap: 4, marginTop: 14 },
+  bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(31,65,39,0.16)' },
+  barOn: { backgroundColor: colors.band },
   quick: { flexDirection: 'row', paddingHorizontal: 12, paddingTop: 22 },
   quickItem: { flex: 1, alignItems: 'center', gap: 8 },
   quickSign: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },

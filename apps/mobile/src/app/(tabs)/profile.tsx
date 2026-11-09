@@ -11,6 +11,7 @@ import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { PrimaryButton } from '@/components/UI';
 import { StatusBand } from '@/components/BrandHeader';
 import { StoreCard } from '@/components/StoreCard';
+import { BandWatermark, ClubPass } from '@/components/ClubPass';
 import { colors, fonts } from '@/config/theme';
 import { fetchOrders, fetchProfile, updateProfile, type OrderWithItems } from '@/lib/api';
 import { useClubSettings, useLayout, useStores } from '@/lib/hooks';
@@ -200,52 +201,52 @@ export default function ProfileScreen() {
         <View style={{ flex: 1, minWidth: 0 }}><Text style={styles.fTitle}>{title}</Text>{!!subtitle && <Text style={styles.fSub} numberOfLines={1}>{subtitle}</Text>}</View>
         <Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
       </Pressable>;
+    const card = profile.data?.member_card_number ?? null;
+    const first = name.split(' ')[0];
+    const since = member ? new Date(profile.data!.club_member_since!).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    // The hanging card: the member's own card, or the next step towards it.
+    const pass = !user ? { title: 'La tua tessera,\nsempre in tasca.', action: 'Accedi o registrati', onPress: () => go('/auth/sign-in') }
+      : card ? { name: name || undefined, card }
+      : member ? { name: name || undefined, title: 'Collega la tessera\ndel negozio.', action: 'Collega la tessera', onPress: () => go('/club') }
+      : club.enabled ? { name: name || undefined, title: 'Prezzi Soci su tutto\nil catalogo.', action: 'Iscriviti gratis', onPress: () => go('/club') }
+      : null;
+    const hint = !user ? 'Hai già la tessera del negozio? La colleghi dopo l’accesso.' : card ? 'Mostrala alla cassa: tocca per ingrandire.' : '';
+    // Main destinations as large words on hairlines (no icons, no boxes).
+    const big = (title: string, onPress: () => void, detail?: string) =>
+      <Pressable key={title} onPress={onPress} accessibilityRole="link" accessibilityLabel={detail ? `${title}, ${detail}` : title}
+        style={({ pressed }) => [styles.gRow, pressed && { opacity: 0.6 }]}>
+        <Text style={styles.gRowTitle}>{title}</Text>
+        {!!detail && <Text style={styles.gRowDetail} numberOfLines={1}>{detail}</Text>}
+        <Icon name="chevron" size={16} color="#9A9F94" strokeWidth={2.2} />
+      </Pressable>;
     return <Screen header={<StatusBand />} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 28 }}
-      top={<View style={styles.fHero}>
-        {user ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <View style={styles.fAvatar}><Text style={styles.fAvatarText}>{initials(name || user.email || '')}</Text></View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.fHello} numberOfLines={1} accessibilityRole="header">{name ? `Ciao, ${name.split(' ')[0]}` : 'Ciao!'}</Text>
-            <Text style={styles.fEmail} numberOfLines={1}>{user.email}</Text>
-          </View>
-        </View> : <>
-          <Text style={styles.fHello} accessibilityRole="header">Ciao!</Text>
-          <Text style={styles.fEmail}>Accedi per seguire ordini e ritiri e per iscriverti al Club.</Text>
-        </>}
+      top={<View style={[styles.gZone, !pass && { paddingBottom: 30 }]}>
+        <BandWatermark top={0} />
+        <View style={styles.gTop}>
+          <Text style={styles.gKicker}>PROFILO</Text>
+          {user && <Pressable onPress={() => go('/account/edit')} accessibilityRole="button" accessibilityLabel="Modifica dati personali" hitSlop={6}
+            style={({ pressed }) => [styles.gEdit, pressed && { opacity: 0.7 }]}><Text style={styles.gEditText}>Modifica</Text></Pressable>}
+        </View>
+        <Text style={styles.gName} numberOfLines={1} adjustsFontSizeToFit accessibilityRole="header">{user ? first || 'Ciao!' : 'Benvenuto'}</Text>
+        <Text style={styles.gSub} numberOfLines={1}>{!user ? 'Accedi con la tua email, niente password.' : member ? `Socio Casa & Te dal ${since}` : user.email}</Text>
       </View>}>
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-      <View style={{ paddingHorizontal: 16 }}>
-        {/* The card hanging from the green band, as on Home: sign in, or the person's three numbers. */}
-        {user ? <View style={[styles.fCard, styles.fStats]}>
-          <Pressable onPress={() => go('/orders')} accessibilityRole="link" style={({ pressed }) => [styles.fStat, pressed && { opacity: 0.6 }]}>
-            <Text style={styles.fStatValue}>{orderCount}</Text><Text style={styles.fStatLabel}>{orderCount === 1 ? 'Ordine' : 'Ordini'}</Text></Pressable>
-          <View style={styles.fStatRule} />
-          <Pressable onPress={() => go('/favorites')} accessibilityRole="link" style={({ pressed }) => [styles.fStat, pressed && { opacity: 0.6 }]}>
-            <Text style={styles.fStatValue}>{favourites}</Text><Text style={styles.fStatLabel}>Preferiti</Text></Pressable>
-          <View style={styles.fStatRule} />
-          <Pressable onPress={() => go('/account/edit')} accessibilityRole="link" style={({ pressed }) => [styles.fStat, pressed && { opacity: 0.6 }]}>
-            <Icon name="user" size={22} color={colors.text} /><Text style={styles.fStatLabel}>Dati personali</Text></Pressable>
-        </View> : <View style={styles.fCard}>
-          <Text style={styles.fCardTitle}>Il tuo account Casa & Te</Text>
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
-            <Pressable onPress={() => go('/auth/sign-in')} accessibilityRole="button" style={({ pressed }) => [styles.fBtn, styles.fBtnPrimary, pressed && { opacity: 0.85 }]}>
-              <Text style={[styles.fBtnText, { color: '#FFFFFF' }]}>Accedi</Text></Pressable>
-            <Pressable onPress={() => go('/auth/sign-in')} accessibilityRole="button" style={({ pressed }) => [styles.fBtn, pressed && { opacity: 0.7 }]}>
-              <Text style={styles.fBtnText}>Registrati</Text></Pressable>
+      <View style={{ paddingHorizontal: 22 }}>
+        {pass && <ClubPass {...pass} style={{ marginTop: -96 }} />}
+        {!!hint && <Text style={styles.gHint}>{hint}</Text>}
+        {active && <Pressable onPress={() => go(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.gLive, pressed && { opacity: 0.8 }]}>
+          <View style={styles.gDot} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.fTitle} numberOfLines={1}>{orderStatusLabel(active.status, active.fulfilment)}</Text>
+            <Text style={styles.fSub} numberOfLines={1}>{active.order_number}{selected && active.fulfilment === 'store' ? ` · ${storeName}` : ''}</Text>
           </View>
-        </View>}
-        {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={({ pressed }) => [styles.fClub, pressed && { opacity: 0.85 }]}>
-          <Image source={CLUB_CARD} style={styles.fClubCard} accessibilityIgnoresInvertColors />
-          <View style={{ flex: 1, minWidth: 0 }}><Text style={styles.fClubTitle}>Casa & Te Club</Text>
-            <Text style={styles.fClubText} numberOfLines={2}>{member ? 'Sei socio: la tua tessera e i Prezzi Soci' : 'Prezzi Soci e codici sconto, iscrizione gratuita'}</Text></View>
-          <Icon name="chevron" size={18} color={colors.muted} />
+          <Icon name="chevron" size={16} color="#9A9F94" strokeWidth={2.2} />
         </Pressable>}
-        {/* One plain grouped list (the order in progress and the store card are on Home). */}
-        <Text style={styles.fGroup} accessibilityRole="header">I TUOI ACQUISTI</Text>
-        <View style={styles.fList}>
-          {!user && prow('Preferiti', () => go('/favorites'), favourites ? `${favourites} ${favourites === 1 ? 'prodotto' : 'prodotti'}` : 'I prodotti salvati con il cuore', true)}
-          {prow('Il tuo negozio', () => setStoreSheet(true), selected ? `CASA & TE ${storeName}` : 'Scegli il negozio', !!user)}
-          {user && prow('Indirizzi', () => go('/account/addresses'), 'Per la consegna a domicilio')}
+        <View style={{ marginTop: 12 }}>
+          {user && big('Ordini', () => go('/orders'), orderCount ? String(orderCount) : undefined)}
+          {big('Preferiti', () => go('/favorites'), favourites ? String(favourites) : undefined)}
+          {user && big('Indirizzi', () => go('/account/addresses'))}
+          {big('Il tuo negozio', () => setStoreSheet(true), selected ? storeName : 'Scegli')}
         </View>
         {user && <><Text style={styles.fGroup} accessibilityRole="header">ACCOUNT</Text>
           <View style={styles.fList}>
@@ -281,6 +282,21 @@ export default function ProfileScreen() {
 const CLUB_CARD = require('../../../assets/club-card.webp');
 
 const styles = StyleSheet.create({
+  // Profilo (November 2026): the green zone with the monogram texture, the first name in large type, the member's card hanging.
+  gZone: { backgroundColor: colors.band, paddingTop: 10, paddingHorizontal: 22, paddingBottom: 122, overflow: 'hidden' },
+  gTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 36 },
+  gKicker: { fontSize: 13, letterSpacing: 1.8, fontFamily: fonts.sansSemiBold, color: colors.bandMuted },
+  gEdit: { height: 34, paddingHorizontal: 14, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', justifyContent: 'center' },
+  gEditText: { fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.bandText },
+  gName: { fontSize: 46, lineHeight: 52, letterSpacing: -1.6, fontFamily: fonts.display, color: colors.bandText, marginTop: 18 },
+  gSub: { fontSize: 15, lineHeight: 20, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 6 },
+  gHint: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center', marginTop: 12 },
+  gLive: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 18, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 16,
+    borderWidth: 1, borderColor: colors.line },
+  gDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#B9CC2E', borderWidth: 3, borderColor: '#EEF5B8' }, // ui-check: allow (live dot halo)
+  gRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 58, borderBottomWidth: 1, borderColor: '#ECECE7' },
+  gRowTitle: { flex: 1, fontSize: 19, letterSpacing: -0.3, fontFamily: fonts.sansSemiBold, color: colors.text },
+  gRowDetail: { maxWidth: 170, fontSize: 15, fontFamily: fonts.sans, color: colors.muted },
   // Green band at the top (as on every page), a white card hanging from its edge (as the store card on Home).
   fHero: { backgroundColor: colors.band, paddingTop: 14, paddingHorizontal: 20, paddingBottom: 58 },
   fAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.signInk, alignItems: 'center', justifyContent: 'center' },
