@@ -33,45 +33,55 @@ export default function OrdersScreen() {
       <PrimaryButton title="Accedi o registrati" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/orders' } })} />
     </EmptyState></Screen>;
 
-  // Phone (design F, F-Ordini): "In corso" / "Completati" switch and one white card per order.
+  // Phone (November 2026): orders in progress as lime tickets (as on Home), the finished ones as a plain list on hairlines.
   if (phone && orders?.length) {
     const DONE = new Set(['completed', 'cancelled']);
-    const list = orders.filter((o) => tab === 'done' ? DONE.has(o.status) : !DONE.has(o.status));
+    const live = orders.filter((o) => !DONE.has(o.status));
+    const past = orders.filter((o) => DONE.has(o.status));
     const euro = (c: number) => formatEuro(c).replace(/€\s/, '€');
-    return <Screen header={band} ground={palette.page} onRefresh={refetch} refreshing={loading && !!orders} contentContainerStyle={{ padding: 16, paddingTop: 10 }}>
-      <View style={styles.seg} accessibilityRole="tablist">
-        {([['active', 'In corso'], ['done', 'Completati']] as const).map(([k, label]) => <Pressable key={k} onPress={() => setTab(k)} accessibilityRole="tab"
-          accessibilityState={{ selected: tab === k }} style={[styles.segItem, tab === k && styles.segOn]}><Text style={styles.segText}>{label}</Text></Pressable>)}
-      </View>
-      {!list.length && <Text style={styles.none}>{tab === 'done' ? 'Nessun ordine completato.' : 'Nessun ordine in corso.'}</Text>}
-      <View style={{ gap: 10, marginTop: 12 }}>{list.map((order) => {
-        const n = order.order_items.reduce((s, i) => s + i.quantity, 0);
+    const count = (o: OrderWithItems) => o.order_items.reduce((s, i) => s + i.quantity, 0);
+    const date = (o: OrderWithItems, year = true) => new Date(o.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', ...(year ? { year: 'numeric' } : {}) });
+    const place = (o: OrderWithItems) => o.fulfilment === 'store'
+      ? `Ritiro a ${stores.find((x) => x.id === o.store_id)?.name.replace(/^CASA & TE\s*/, '') ?? 'negozio'}` : FULFILMENT_LABELS[o.fulfilment];
+    return <Screen header={band} ground={palette.page} onRefresh={refetch} refreshing={loading && !!orders} contentContainerStyle={{ padding: 16, paddingTop: 18 }}>
+      <Text style={styles.kicker} accessibilityRole="header">IN CORSO</Text>
+      {!live.length && <Text style={styles.none}>Nessun ordine in corso.</Text>}
+      <View style={{ gap: 12 }}>{live.map((order) => {
         const steps = orderTimeline(order.fulfilment);
         const at = steps.indexOf(order.status);
-        const ready = order.status === 'ready';
-        const done = DONE.has(order.status);
-        const storeName = stores.find((x) => x.id === order.store_id)?.name.replace(/^CASA & TE\s*/, '').replace(/^(\S+)\s+(?!·)/, '$1 · ');
-        return <Pressable key={order.id} onPress={() => router.push(`/order/${order.id}`)} accessibilityRole="link" style={styles.pOrder}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-            <View style={{ flexShrink: 1 }}>
-              <Text style={styles.pDate}>{new Date(order.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
-              <Text style={styles.pNum}>{order.order_number} · {n} {n === 1 ? 'articolo' : 'articoli'}</Text>
-            </View>
-            <StatusMark label={orderStatusLabel(order.status, order.fulfilment)} tone={orderStatusTone(order.status)} />
+        const n = count(order);
+        return <Pressable key={order.id} onPress={() => router.push(`/order/${order.id}`)} accessibilityRole="link"
+          style={({ pressed }) => [styles.ticket, pressed && { transform: [{ scale: 0.985 }] }]}>
+          <View style={styles.ticketTop}>
+            <Text style={styles.ticketKicker} numberOfLines={1}>ORDINE {order.order_number}</Text>
+            <Text style={styles.ticketDate}>{date(order, false)}</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>{order.order_items.slice(0, 5).map((line) =>
-            <View key={line.id} style={styles.pThumb}><View style={{ width: 46, height: 46 }}><ProductImage uri={imageUrl(line.image_path)} sku={line.sku} inset={0} /></View></View>)}</View>
-          {order.status !== 'cancelled' && order.status !== 'pending_payment' && <View style={styles.pBars}>{[0, 1, 2, 3].map((i) =>
-            <View key={i} style={[styles.pBar, (done || at >= Math.round(i * (steps.length - 1) / 3)) && { backgroundColor: colors.green }]} />)}</View>}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, gap: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
-              <Icon name={order.fulfilment === 'store' ? 'store' : 'truck'} size={17} color={colors.green} strokeWidth={2} />
-              <Text style={styles.pWhere} numberOfLines={1}>{order.fulfilment === 'store' ? `Ritiro a ${storeName ?? 'negozio'}` : FULFILMENT_LABELS[order.fulfilment]}</Text>
-            </View>
-            <Text style={styles.pTotal}>{euro(order.total_cents)}</Text>
-          </View>
+          <Text style={styles.ticketTitle} numberOfLines={1}>{order.status === 'ready' && order.fulfilment === 'store' ? 'Pronto al ritiro' : orderStatusLabel(order.status, order.fulfilment)}</Text>
+          <Text style={styles.ticketSub} numberOfLines={1}>{place(order)} · {n} {n === 1 ? 'articolo' : 'articoli'} · {euro(order.total_cents)}</Text>
+          <View style={styles.ticketThumbs}>{order.order_items.slice(0, 5).map((line) =>
+            <View key={line.id} style={styles.ticketThumb}><View style={{ width: 38, height: 38 }}><ProductImage uri={imageUrl(line.image_path)} sku={line.sku} inset={0} /></View></View>)}
+            {order.order_items.length > 5 && <Text style={styles.ticketMore}>+{order.order_items.length - 5}</Text>}</View>
+          {order.status !== 'pending_payment' && <View style={styles.bars}>{[0, 1, 2, 3].map((i) =>
+            <View key={i} style={[styles.bar, at >= Math.round(i * (steps.length - 1) / 3) && styles.barOn]} />)}</View>}
         </Pressable>;
       })}</View>
+
+      {past.length > 0 && <>
+        <Text style={[styles.kicker, { marginTop: 30 }]} accessibilityRole="header">COMPLETATI</Text>
+        <View>{past.map((order) => {
+          const n = count(order);
+          const cancelled = order.status === 'cancelled';
+          return <Pressable key={order.id} onPress={() => router.push(`/order/${order.id}`)} accessibilityRole="link"
+            style={({ pressed }) => [styles.pastRow, pressed && { opacity: 0.6 }]}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={[styles.pastDate, cancelled && { color: colors.muted }]}>{date(order)}</Text>
+              <Text style={styles.pastMeta} numberOfLines={1}>{order.order_number} · {n} {n === 1 ? 'articolo' : 'articoli'}{cancelled ? ' · Annullato' : ''}</Text>
+            </View>
+            <Text style={[styles.pastTotal, cancelled && { color: colors.muted, textDecorationLine: 'line-through' }]}>{euro(order.total_cents)}</Text>
+            <Icon name="chevron" size={16} color="#9A9F94" strokeWidth={2.2} />
+          </Pressable>;
+        })}</View>
+      </>}
     </Screen>;
   }
 
@@ -103,22 +113,28 @@ export default function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  seg: { flexDirection: 'row', padding: 4, borderRadius: 16, backgroundColor: colors.well },
-  segItem: { flex: 1, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  segOn: { backgroundColor: '#FFFFFF', shadowColor: '#18201A', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  segText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
-  none: { fontSize: 14.5, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center', marginTop: 32 },
-  pOrder: { padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  pDate: { fontSize: 16, fontFamily: fonts.heavy, color: colors.text },
-  pNum: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
-  pThumb: { width: 56, height: 56, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EDEDE9', alignItems: 'center', justifyContent: 'center' },
-  pBars: { flexDirection: 'row', gap: 4, marginTop: 14 },
-  pBar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.line },
-  pWhere: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green, flexShrink: 1 },
-  pTotal: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text },
+  kicker: { fontSize: 12, letterSpacing: 1.8, fontFamily: fonts.sansBold, color: colors.muted, marginBottom: 10, marginLeft: 2 },
+  none: { fontSize: 15, fontFamily: fonts.sans, color: colors.muted, marginLeft: 2, marginBottom: 4 },
+  // In progress: the lime ticket (the logo's colours reversed), as on Home.
+  ticket: { padding: 18, paddingBottom: 20, borderRadius: 22, backgroundColor: colors.bandLogo,
+    shadowColor: '#143019', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 4 },
+  ticketTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
+  ticketKicker: { flexShrink: 1, fontSize: 11.5, letterSpacing: 2, fontFamily: fonts.sansBold, color: colors.band },
+  ticketDate: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.band, opacity: 0.75 },
+  ticketTitle: { fontSize: 26, lineHeight: 31, letterSpacing: -0.7, fontFamily: fonts.display, color: colors.band, marginTop: 8 },
+  ticketSub: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.band, opacity: 0.8, marginTop: 2 },
+  ticketThumbs: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
+  ticketThumb: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  ticketMore: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.band, marginLeft: 4 },
+  barOn: { backgroundColor: colors.band },
+  // Finished: one line each on hairlines.
+  pastRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 66, borderBottomWidth: 1, borderColor: '#ECECE7' },
+  pastDate: { fontSize: 17, letterSpacing: -0.2, fontFamily: fonts.sansSemiBold, color: colors.text },
+  pastMeta: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
+  pastTotal: { fontSize: 16, fontFamily: fonts.sansBold, color: colors.text },
   order: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.line },
   bars: { flexDirection: 'row', gap: 4, marginTop: 14 },
-  bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.line },
+  bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(31,65,39,0.16)' },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   date: { fontSize: 16, fontFamily: fonts.heavy, color: colors.text }, orderId: { fontSize: 13, color: colors.muted, marginTop: 3, fontFamily: fonts.sansMedium },
   products: { flexDirection: 'row', gap: 8, marginTop: 14, alignItems: 'center' },

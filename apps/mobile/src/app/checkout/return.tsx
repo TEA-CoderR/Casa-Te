@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { friendlyError } from '@casa-te/shared';
 import { formatEuro } from '@/lib/price';
@@ -10,12 +10,29 @@ import { Icon } from '@/components/Icon';
 import { StepTag } from '@/components/ShopMarks';
 import { EmptyState, Loading, PrimaryButton, SecondaryButton } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
-import { useLayout } from '@/lib/hooks';
+import { useLayout, useStores } from '@/lib/hooks';
+import { Monogram } from '@/components/ClubPass';
+import { Barcode } from '@/components/Barcode';
 import { cancelPendingOrder, fetchOrder, resumeCheckout, type OrderDetail } from '@/lib/api';
 import { openCheckout } from '@/lib/payments';
 import { invalidate } from '@/lib/useQuery';
 import { useCartStore } from '@/store/cart';
 import { useSession } from '@/store/session';
+
+/** The ticket slides out of the slot above it, like a receipt from the till (clipped by its frame). */
+function PrintedTicket({ children }: { children: React.ReactNode }) {
+  const [h, setH] = useState(0);
+  const y = useSharedValue(-1);
+  useEffect(() => { if (h) y.value = withDelay(350, withTiming(0, { duration: 1100, easing: Easing.out(Easing.cubic) })); }, [h, y]);
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: y.value * h }] }));
+  return <View style={styles.tClip} onLayout={(e) => { if (!h) setH(e.nativeEvent.layout.height); }}>
+    <Animated.View style={[styles.ticket, style, !h && { opacity: 0 }]}>
+      {children}
+      {/* Torn edge: half-discs of the page green along the bottom. */}
+      <View style={styles.tTear} pointerEvents="none">{Array.from({ length: 24 }, (_, i) => <View key={i} style={styles.tTooth} />)}</View>
+    </Animated.View>
+  </View>;
+}
 
 /** Landing page after Stripe Checkout (deep link on native, redirect on web). */
 export default function CheckoutReturnScreen() {
@@ -29,6 +46,7 @@ export default function CheckoutReturnScreen() {
   const cleared = useRef(false);
   const { wide } = useLayout();
   const insets = useSafeAreaInsets();
+  const { stores } = useStores();
 
   useEffect(() => {
     if (!orderId || !ready) return;
@@ -72,18 +90,40 @@ export default function CheckoutReturnScreen() {
       home: ['Il negozio prepara il tuo ordine.', 'Lo affidiamo al corriere: in «Ordini» trovi il tracciamento.', 'Consegna in 2–4 giorni lavorativi.'],
       pickup: ['Il negozio prepara il tuo ordine.', 'Lo spediamo al punto di ritiro che hai scelto.', 'In «Ordini» vedi quando è arrivato.'],
     };
-    // Phone (design F): a full green thank-you page with the yellow tick, then "Segui l'ordine".
-    if (!wide) return <Animated.View entering={FadeIn.duration(260)} style={[styles.green, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <Stack.Screen options={{ headerShown: false }} />
-      <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.tick}><Icon name="check" size={46} color={colors.text} strokeWidth={2.6} /></Animated.View>
-      <Animated.Text entering={FadeInDown.delay(80).duration(420)} style={styles.gTitle} accessibilityRole="header">Grazie, ordine ricevuto</Animated.Text>
-      <Animated.Text entering={FadeInDown.delay(140).duration(420)} style={styles.gText}>{order.fulfilment === 'store'
-        ? `Ti scriviamo appena è pronto al ritiro${order.order_number ? `. Ordine ${order.order_number}` : ''}.` : `Ti scriviamo quando parte. Ordine ${order.order_number}.`}</Animated.Text>
-      <Animated.View entering={FadeInDown.delay(200).duration(420)} style={{ alignItems: 'center', gap: 12 }}>
-        <Pressable onPress={() => router.replace(`/order/${order.id}`)} accessibilityRole="button" style={styles.gButton}><Text style={styles.gButtonText}>Segui l’ordine</Text></Pressable>
-        <Pressable onPress={() => router.replace('/')} accessibilityRole="button" hitSlop={8}><Text style={styles.gLink}>Continua lo shopping</Text></Pressable>
-      </Animated.View>
-    </Animated.View>;
+    // Phone (November 2026): the green page with the monogram, "Grazie, Nome." in large type and the lime pickup
+    // ticket printing out of a slot, with the order's barcode to show at the till.
+    if (!wide) {
+      const first = order.customer_name?.trim().split(/\s+/)[0];
+      const store = stores.find((x) => x.id === order.store_id)?.name.replace(/^CASA & TE\s*/, '');
+      const n = order.order_items.reduce((sum, i) => sum + i.quantity, 0);
+      return <Animated.View entering={FadeIn.duration(260)} style={[styles.green, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 20 }]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Monogram width={520} color={colors.bandLogo} opacity={0.07} style={{ position: 'absolute', right: -200, top: insets.top - 30 }} />
+        <Animated.Text entering={FadeInDown.duration(420)} style={styles.gKicker}>ORDINE CONFERMATO</Animated.Text>
+        <Animated.Text entering={FadeInDown.delay(60).duration(420)} style={styles.gTitle} accessibilityRole="header" numberOfLines={2}>
+          {first ? `Grazie,\n${first}.` : 'Grazie!'}</Animated.Text>
+        <Animated.Text entering={FadeInDown.delay(120).duration(420)} style={styles.gText}>{order.fulfilment === 'store'
+          ? 'Lo prepariamo noi: ti scriviamo appena è pronto al ritiro.' : 'Lo prepariamo noi: ti scriviamo quando parte.'}</Animated.Text>
+        <View style={styles.slot} />
+        <PrintedTicket>
+          <View style={styles.tTop}>
+            <Text style={styles.tKicker} numberOfLines={1}>ORDINE {order.order_number}</Text>
+            <Monogram width={46} color={colors.band} />
+          </View>
+          <Text style={styles.tTitle} numberOfLines={1}>{order.fulfilment === 'store' ? `Ritiro a ${store ?? 'negozio'}` : 'Consegna in arrivo'}</Text>
+          <Text style={styles.tSub}>{n} {n === 1 ? 'articolo' : 'articoli'} · {formatEuro(order.total_cents)} pagati</Text>
+          {order.fulfilment === 'store' && <View style={styles.tCode}>
+            <Barcode value={order.order_number} height={46} color={colors.text} label={`Codice dell'ordine ${order.order_number}`} />
+            <Text style={styles.tCodeText}>Mostralo in cassa quando ritiri</Text>
+          </View>}
+        </PrintedTicket>
+        <Animated.View entering={FadeInDown.delay(900).duration(420)} style={{ marginTop: 'auto', gap: 14, alignItems: 'center' }}>
+          <Pressable onPress={() => router.replace(`/order/${order.id}`)} accessibilityRole="button" style={({ pressed }) => [styles.gButton, pressed && { opacity: 0.9 }]}>
+            <Text style={styles.gButtonText}>Segui l’ordine</Text></Pressable>
+          <Pressable onPress={() => router.replace('/')} accessibilityRole="button" hitSlop={8}><Text style={styles.gLink}>Continua lo shopping</Text></Pressable>
+        </Animated.View>
+      </Animated.View>;
+    }
     return <Screen stack maxWidth={560}>
       <View style={styles.done}>
         <View style={styles.badge}><Icon name="check" size={30} color="#fff" /></View>
@@ -127,11 +167,24 @@ export default function CheckoutReturnScreen() {
 }
 
 const styles = StyleSheet.create({
-  green: { flex: 1, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  tick: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
-  gTitle: { fontSize: 32, lineHeight: 36, fontFamily: fonts.display, color: '#FFFFFF', textAlign: 'center', marginTop: 22, marginBottom: 8 },
-  gText: { fontSize: 16, lineHeight: 23, fontFamily: fonts.sans, color: colors.onBrand, textAlign: 'center', marginBottom: 28 },
-  gButton: { height: 54, paddingHorizontal: 26, borderRadius: 27, backgroundColor: '#FFFFFF', justifyContent: 'center' },
+  green: { flex: 1, backgroundColor: colors.band, paddingHorizontal: 22, overflow: 'hidden' },
+  gKicker: { fontSize: 12.5, letterSpacing: 1.8, fontFamily: fonts.sansSemiBold, color: colors.bandMuted },
+  gTitle: { fontSize: 48, lineHeight: 52, letterSpacing: -1.6, fontFamily: fonts.display, color: '#FFFFFF', marginTop: 12 },
+  gText: { fontSize: 16, lineHeight: 22, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 10 },
+  // The till's slot the ticket comes out of.
+  slot: { height: 10, borderRadius: 5, backgroundColor: '#132A18', marginTop: 28, marginHorizontal: -4, zIndex: 2 }, // ui-check: allow (slot, darker band)
+  tClip: { overflow: 'hidden', marginTop: -5, paddingBottom: 16 },
+  ticket: { marginHorizontal: 8, paddingTop: 22, paddingHorizontal: 18, paddingBottom: 26, backgroundColor: colors.bandLogo,
+    borderBottomLeftRadius: 4, borderBottomRightRadius: 4 },
+  tTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
+  tKicker: { flexShrink: 1, fontSize: 11.5, letterSpacing: 2, fontFamily: fonts.sansBold, color: colors.band, marginTop: 4 },
+  tTitle: { fontSize: 25, lineHeight: 30, letterSpacing: -0.6, fontFamily: fonts.display, color: colors.band, marginTop: 4 },
+  tSub: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.band, opacity: 0.8, marginTop: 2 },
+  tCode: { marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 12, paddingTop: 10, paddingHorizontal: 14, paddingBottom: 8 },
+  tCodeText: { textAlign: 'center', fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.text, marginTop: 6 },
+  tTear: { position: 'absolute', left: 0, right: 0, bottom: -7, height: 14, flexDirection: 'row', justifyContent: 'space-between', overflow: 'hidden' },
+  tTooth: { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.band },
+  gButton: { alignSelf: 'stretch', height: 54, paddingHorizontal: 26, borderRadius: 27, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', minWidth: 300 },
   gButtonText: { fontSize: 16, fontFamily: fonts.sansBold, color: colors.text },
   gLink: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.onBrand, textDecorationLine: 'underline' },
   done: { alignItems: 'center', paddingTop: 24, gap: 8 },
