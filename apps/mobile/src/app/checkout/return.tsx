@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated as RNAnimated, Easing as RNEasing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { Easing, FadeIn, FadeInDown, Keyframe } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { friendlyError } from '@casa-te/shared';
 import { formatEuro } from '@/lib/price';
@@ -20,17 +20,17 @@ import { useCartStore } from '@/store/cart';
 import { useSession } from '@/store/session';
 
 /** The ticket slides out of the slot above it, like a receipt from the till (clipped by its frame). */
-const PRINT = new Keyframe({
-  0: { transform: [{ translateY: -340 }] },
-  100: { transform: [{ translateY: 0 }], easing: Easing.out(Easing.cubic) },
-}).duration(1200).delay(350);
 function PrintedTicket({ children }: { children: React.ReactNode }) {
+  const y = useRef(new RNAnimated.Value(-340)).current;
+  useEffect(() => {
+    RNAnimated.timing(y, { toValue: 0, duration: 1200, delay: 350, easing: RNEasing.out(RNEasing.cubic), useNativeDriver: Platform.OS !== 'web' }).start();
+  }, [y]);
   return <View style={styles.tClip}>
-    <Animated.View entering={PRINT} style={styles.ticket}>
+    <RNAnimated.View style={[styles.ticket, { transform: [{ translateY: y }] }]}>
       {children}
       {/* Torn edge: half-discs of the page green along the bottom. */}
       <View style={styles.tTear} pointerEvents="none">{Array.from({ length: 24 }, (_, i) => <View key={i} style={styles.tTooth} />)}</View>
-    </Animated.View>
+    </RNAnimated.View>
   </View>;
 }
 
