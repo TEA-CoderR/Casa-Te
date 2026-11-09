@@ -233,8 +233,12 @@ function HomePhone() {
     </View>
 
 
-    {club.enabled && <ClubPass kicker="CASA & TE CLUB" title={'Prezzi Soci su tutto\nil catalogo.'} action="Scopri il Club"
-      onPress={() => router.push('/club')} style={{ marginHorizontal: 16, marginTop: 30, height: 200 }} />}
+    {/* The Club as the lime card: members are sent to their card on Profilo, the others to the Club. */}
+    {(club.enabled || !!profile.data?.club_member_since) && (profile.data?.club_member_since
+      ? <ClubPass kicker="CASA & TE CLUB" title={'La tua tessera\nè nel Profilo.'} action="Apri la tessera"
+        onPress={() => router.push('/profile')} style={{ marginHorizontal: 16, marginTop: 30, height: 200 }} />
+      : <ClubPass kicker="CASA & TE CLUB" title={'Prezzi Soci su tutto\nil catalogo.'} action="Scopri il Club"
+        onPress={() => router.push('/club')} style={{ marginHorizontal: 16, marginTop: 30, height: 200 }} />)}
 
     <View style={styles.footer}>
       {([['Privacy', 'privacy'], ['Termini di vendita', 'terms'], ['Spedizioni e ritiro', 'shipping']] as const).map(([label, doc]) =>
