@@ -52,8 +52,7 @@ export default function OrdersScreen() {
       </View>
       {tab === 'active' && !live.length && <Text style={styles.none}>Nessun ordine in corso.</Text>}
       {tab === 'done' && !past.length && <Text style={styles.none}>Nessun ordine completato.</Text>}
-      {/* The same ticket on both tabs: lime while in progress; once finished a white receipt with a hairline,
-          stamped "Ritirato"/"Consegnato" (or "Annullato", greyed). */}
+      {/* The same ticket on both tabs: lime while in progress, a quiet neutral once finished (greyed text if cancelled). */}
       <View style={{ gap: 12, marginTop: 16 }}>{(tab === 'active' ? live : past).map((order) => {
         const steps = orderTimeline(order.fulfilment);
         const at = steps.indexOf(order.status);
@@ -62,26 +61,21 @@ export default function OrdersScreen() {
         const cancelled = order.status === 'cancelled';
         const ink = cancelled ? colors.muted : colors.band;
         return <Pressable key={order.id} onPress={() => router.push(`/order/${order.id}`)} accessibilityRole="link"
-          style={({ pressed }) => [styles.ticket, finished && styles.receipt, pressed && { transform: [{ scale: 0.985 }] }]}>
+          style={({ pressed }) => [styles.ticket, finished && styles.ticketDone, pressed && { transform: [{ scale: 0.985 }] }]}>
           <View style={styles.ticketTop}>
             <Text style={[styles.ticketKicker, { color: ink }]} numberOfLines={1}>ORDINE {order.order_number}</Text>
-            <Text style={[styles.ticketDate, { color: ink }]}>{date(order, finished)}</Text>
+            <Text style={[styles.ticketDate, { color: ink }]}>{date(order, false)}</Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
-            {finished && !cancelled && <Icon name="check" size={22} color={colors.band} strokeWidth={2.6} />}
-            <Text style={[styles.ticketTitle, { color: ink, marginTop: 0, flexShrink: 1 }]} numberOfLines={1}>
-              {order.status === 'ready' && order.fulfilment === 'store' ? 'Pronto al ritiro' : orderStatusLabel(order.status, order.fulfilment)}</Text>
-          </View>
+          <Text style={[styles.ticketTitle, { color: ink }]} numberOfLines={1}>
+            {order.status === 'ready' && order.fulfilment === 'store' ? 'Pronto al ritiro' : orderStatusLabel(order.status, order.fulfilment)}</Text>
           <Text style={[styles.ticketSub, { color: ink }]} numberOfLines={1}>{place(order)} · {n} {n === 1 ? 'articolo' : 'articoli'} · <Text
             style={cancelled ? { textDecorationLine: 'line-through' } : undefined}>{euro(order.total_cents)}</Text></Text>
           <View style={[styles.ticketThumbs, cancelled && { opacity: 0.5 }]}>{order.order_items.slice(0, 5).map((line) =>
-            <View key={line.id} style={[styles.ticketThumb, finished && styles.receiptThumb]}><View style={{ width: 38, height: 38 }}>
+            <View key={line.id} style={styles.ticketThumb}><View style={{ width: 38, height: 38 }}>
               <ProductImage uri={imageUrl(line.image_path)} sku={line.sku} inset={0} /></View></View>)}
             {order.order_items.length > 5 && <Text style={[styles.ticketMore, { color: ink }]}>+{order.order_items.length - 5}</Text>}</View>
-          {!finished && order.status !== 'pending_payment' && <View style={styles.bars}>{[0, 1, 2, 3].map((i) =>
-            <View key={i} style={[styles.bar, at >= Math.round(i * (steps.length - 1) / 3) && styles.barOn]} />)}</View>}
-          {finished && <View style={[styles.stamp, cancelled && { borderColor: colors.muted }]} pointerEvents="none">
-            <Text style={[styles.stampText, cancelled && { color: colors.muted }]}>{cancelled ? 'ANNULLATO' : 'CONCLUSO'}</Text></View>}
+          {!cancelled && order.status !== 'pending_payment' && <View style={styles.bars}>{[0, 1, 2, 3].map((i) =>
+            <View key={i} style={[styles.bar, (finished || at >= Math.round(i * (steps.length - 1) / 3)) && styles.barOn]} />)}</View>}
         </Pressable>;
       })}</View>
     </Screen>;
@@ -132,12 +126,8 @@ const styles = StyleSheet.create({
   ticketThumb: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   ticketMore: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.band, marginLeft: 4 },
   barOn: { backgroundColor: colors.band },
-  // Finished: the same ticket as a white receipt, with a rubber stamp.
-  receipt: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, shadowOpacity: 0.06, shadowRadius: 12, elevation: 1 },
-  receiptThumb: { backgroundColor: colors.well },
-  stamp: { position: 'absolute', right: 16, bottom: 18, borderWidth: 2, borderColor: colors.band, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4,
-    transform: [{ rotate: '-8deg' }], opacity: 0.85 },
-  stampText: { fontSize: 12, letterSpacing: 1.6, fontFamily: fonts.sansBold, color: colors.band },
+  // Finished: the same ticket in a quiet sage instead of the lime.
+  ticketDone: { backgroundColor: '#E4EADF', shadowOpacity: 0.08 }, // ui-check: allow (finished orders: the ticket's quiet colour)
   pastRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 66, borderBottomWidth: 1, borderColor: '#ECECE7' },
   pastDate: { fontSize: 17, letterSpacing: -0.2, fontFamily: fonts.sansSemiBold, color: colors.text },
   pastMeta: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
