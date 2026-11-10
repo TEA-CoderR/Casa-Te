@@ -33,7 +33,8 @@ export default function OrdersScreen() {
       <PrimaryButton title="Accedi o registrati" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/orders' } })} />
     </EmptyState></Screen>;
 
-  // Phone (November 2026): orders in progress as lime tickets (as on Home), the finished ones as a plain list on hairlines.
+  // Phone (November 2026): the "In corso" / "Completati" switch; orders in progress as lime tickets (as on Home),
+  // the finished ones as a plain list on hairlines.
   if (phone && orders?.length) {
     const DONE = new Set(['completed', 'cancelled']);
     const live = orders.filter((o) => !DONE.has(o.status));
@@ -44,9 +45,14 @@ export default function OrdersScreen() {
     const place = (o: OrderWithItems) => o.fulfilment === 'store'
       ? `Ritiro a ${stores.find((x) => x.id === o.store_id)?.name.replace(/^CASA & TE\s*/, '') ?? 'negozio'}` : FULFILMENT_LABELS[o.fulfilment];
     return <Screen header={band} ground={palette.page} onRefresh={refetch} refreshing={loading && !!orders} contentContainerStyle={{ padding: 16, paddingTop: 18 }}>
-      <Text style={styles.kicker} accessibilityRole="header">IN CORSO</Text>
-      {!live.length && <Text style={styles.none}>Nessun ordine in corso.</Text>}
-      <View style={{ gap: 12 }}>{live.map((order) => {
+      <View style={styles.seg} accessibilityRole="tablist">
+        {([['active', 'In corso', live.length], ['done', 'Completati', past.length]] as const).map(([k, label, n]) => <Pressable key={k} onPress={() => setTab(k)}
+          accessibilityRole="tab" accessibilityState={{ selected: tab === k }} style={[styles.segItem, tab === k && styles.segOn]}>
+          <Text style={styles.segText}>{label}{n ? ` · ${n}` : ''}</Text></Pressable>)}
+      </View>
+      {tab === 'active' && !live.length && <Text style={styles.none}>Nessun ordine in corso.</Text>}
+      {tab === 'done' && !past.length && <Text style={styles.none}>Nessun ordine completato.</Text>}
+      {tab === 'active' && <View style={{ gap: 12, marginTop: 16 }}>{live.map((order) => {
         const steps = orderTimeline(order.fulfilment);
         const at = steps.indexOf(order.status);
         const n = count(order);
@@ -64,11 +70,10 @@ export default function OrdersScreen() {
           {order.status !== 'pending_payment' && <View style={styles.bars}>{[0, 1, 2, 3].map((i) =>
             <View key={i} style={[styles.bar, at >= Math.round(i * (steps.length - 1) / 3) && styles.barOn]} />)}</View>}
         </Pressable>;
-      })}</View>
+      })}</View>}
 
-      {past.length > 0 && <>
-        <Text style={[styles.kicker, { marginTop: 30 }]} accessibilityRole="header">COMPLETATI</Text>
-        <View>{past.map((order) => {
+      {tab === 'done' && past.length > 0 && <>
+        <View style={{ marginTop: 6 }}>{past.map((order) => {
           const n = count(order);
           const cancelled = order.status === 'cancelled';
           return <Pressable key={order.id} onPress={() => router.push(`/order/${order.id}`)} accessibilityRole="link"
@@ -113,8 +118,11 @@ export default function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  kicker: { fontSize: 12, letterSpacing: 1.8, fontFamily: fonts.sansBold, color: colors.muted, marginBottom: 10, marginLeft: 2 },
-  none: { fontSize: 15, fontFamily: fonts.sans, color: colors.muted, marginLeft: 2, marginBottom: 4 },
+  seg: { flexDirection: 'row', padding: 4, borderRadius: 16, backgroundColor: colors.well },
+  segItem: { flex: 1, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  segOn: { backgroundColor: '#FFFFFF', shadowColor: '#18201A', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  segText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
+  none: { fontSize: 15, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center', marginTop: 32 },
   // In progress: the lime ticket (the logo's colours reversed), as on Home.
   ticket: { padding: 18, paddingBottom: 20, borderRadius: 22, backgroundColor: colors.bandLogo,
     shadowColor: '#143019', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 4 },
