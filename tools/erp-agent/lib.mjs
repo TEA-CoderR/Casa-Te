@@ -121,12 +121,15 @@ export function buildBatch(rows, { storeNumber, today, imageUrlTemplate: templat
     const price = storePrice.get(code) ?? list;
     const member = chooseMemberPrice(toCents(p.PrezzoVedi3), memberDated.get(code) ?? [], today);
     const memberOk = member && member.price_cents < price;
+    // A promotion at exactly the member price is the cardholders' offer (the flyer: "per chi ha la Fidelity Card"):
+    // online it is sent only as the member price, so everyone else pays the store price (owner's choice, 13/11/2026).
+    const promoOk = promo && promo.price_cents < price && !(memberOk && promo.price_cents === member.price_cents);
     storeItems.push({
       erp_code: code,
       price_cents: price,
-      promo_price_cents: promo && promo.price_cents < price ? promo.price_cents : null,
-      promo_starts_on: promo && promo.price_cents < price ? promo.starts_on : null,
-      promo_ends_on: promo && promo.price_cents < price ? promo.ends_on : null,
+      promo_price_cents: promoOk ? promo.price_cents : null,
+      promo_starts_on: promoOk ? promo.starts_on : null,
+      promo_ends_on: promoOk ? promo.ends_on : null,
       member_price_cents: memberOk ? member.price_cents : null,
       member_price_ends_on: memberOk ? member.ends_on : null,
       quantity: stock.get(code) ?? 0,
