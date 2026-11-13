@@ -71,7 +71,7 @@ export default function Welcome() {
             <RadioMark on={on} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.optionName}>{storeShortName(s).replace(/^(\S+)\s+(?!·)/, '$1 · ')}</Text>
-              {!!place && <Text style={styles.optionMeta}>{place}</Text>}
+              {!!s.address && <Text style={styles.optionMeta}>{place}</Text>}
               <Text style={styles.optionMeta}>{[s.pickup_enabled ? 'Ritiro gratuito' : 'Solo spedizione', s.opening_hours].filter(Boolean).join(' · ')}</Text>
             </View>
           </Pressable>;
