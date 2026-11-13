@@ -12,7 +12,8 @@ import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import {
   Checkbox, EmptyState, Loading, Notice, OptionCard, PrimaryButton, RadioMark, SecondaryButton, SectionTitle, SummaryRow, TextField,
 } from '@/components/UI';
-import { colors, fonts } from '@/config/theme';
+import { colors, floatShadow, fonts } from '@/config/theme';
+import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
 import { fetchAddresses, fetchPickupPoints, fetchProfile, imageUrl, saveAddress, startCheckout, updateProfile } from '@/lib/api';
 import { ProductImage } from '@/components/ProductImage';
 import { useCartQuote, useCompanies, useDelivery, useLayout } from '@/lib/hooks';
@@ -186,13 +187,16 @@ export default function CheckoutScreen() {
         {!!err(key) && <Text style={styles.fError} accessibilityLiveRegion="polite">{err(key)}</Text>}
       </View>;
     const radio = (on: boolean) => <RadioMark on={on} />;
-    const head = <View style={[styles.head, { paddingTop: insets.top + 14 }]}>
-      <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Torna al carrello" style={styles.headBack}>
-        <Icon name="back" size={22} color={colors.text} strokeWidth={2.2} /></Pressable>
-      <Text style={styles.headTitle} accessibilityRole="header">Conferma l’ordine</Text>
-    </View>;
+    // November 2026: the green band like every page, and the order as a white receipt hanging from it — what you get,
+    // where, and the total, kept up to date while the choices below change.
+    const head = <BrandHeader inScroll title="Conferma l’ordine" pad={[12, 16, 70]} left={<HeaderBack onPress={() => router.back()} />} />;
+    const where = method === 'store' ? `Ritiro gratuito a ${storeShortName(store).replace(/^\S+\s+/, '') || 'negozio'}`
+      : method === 'home' ? `Consegna a domicilio${methodQuote ? ` · ${formatShipping(methodQuote.price_cents).replace(/€\s/, '€')}` : ''}`
+      : `${FULFILMENT_LABELS[method]}${methodQuote ? ` · ${formatShipping(methodQuote.price_cents).replace(/€\s/, '€')}` : ''}`;
+    const step = (n: string, title: string, first = false) => <View style={[styles.stepRow, first && { marginTop: 22 }]}>
+      <Text style={styles.stepNum}>{n}</Text><Text style={styles.stepTitle} accessibilityRole="header">{title}</Text></View>;
     const ready = accepted && !busy && !quoting && total !== null && quote.issue_count === 0;
-    return <Screen header={head} ground={colors.page} contentContainerStyle={{ padding: 16, paddingTop: 6, paddingBottom: 24 }}
+    return <Screen header={<StatusBand />} top={head} ground={colors.page} contentContainerStyle={{ padding: 16, paddingTop: 0, paddingBottom: 24 }}
       footer={<View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <Text style={styles.payLabel}>{method === 'store' ? 'Totale · ritiro gratuito' : `Totale · ${FULFILMENT_LABELS[method].toLowerCase()}`}</Text>
@@ -222,7 +226,20 @@ export default function CheckoutScreen() {
         <Pressable onPress={() => router.back()}><Text style={{ color: colors.green, fontFamily: fonts.sansBold }}>Torna al carrello</Text></Pressable>
       </Notice>}
 
-      <Text style={[styles.h2, { marginTop: 12 }]}>Come lo ricevi</Text>
+      <View style={styles.receipt}>
+        <Text style={styles.receiptKicker}>IL TUO ORDINE</Text>
+        <View style={styles.receiptRow}>
+          <View style={{ flexDirection: 'row' }}>{quote.lines.slice(0, 3).map((l, i) =>
+            <View key={l.product_id} style={[styles.sumThumb, i > 0 && { marginLeft: -10 }]}><ProductImage uri={imageUrl(l.image_path)} sku={l.sku} inset={0.04} /></View>)}</View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.receiptItems}>{quote.item_count === 1 ? '1 articolo' : `${quote.item_count} articoli`}</Text>
+            <Text style={styles.receiptWhere} numberOfLines={1}>{where}</Text>
+          </View>
+          <Text style={styles.receiptTotal}>{total !== null ? euro(total) : '—'}</Text>
+        </View>
+      </View>
+
+      {step('01', 'Come lo ricevi', true)}
       <View style={{ gap: 8 }}>{methods.map((m) => {
         const on = m === method;
         const q = quote.shipping[m];
@@ -239,7 +256,7 @@ export default function CheckoutScreen() {
       {!methodQuote && <Text style={styles.fError}>Metodo non disponibile per questo ordine: scegline un altro.</Text>}
 
       {method === 'home' && <>
-        <Text style={styles.h2}>Indirizzo di consegna</Text>
+        <Text style={styles.h3}>Indirizzo di consegna</Text>
         {(addresses.data ?? []).length > 0 && <View style={{ gap: 8, marginBottom: 8 }}>
           {[...(addresses.data ?? []).map((a) => ({ id: a.id, title: a.label || a.full_name, sub: `${a.line1}${a.line2 ? `, ${a.line2}` : ''} · ${a.postal_code} ${a.city} (${a.province})`, row: a })),
             { id: 'new', title: 'Nuovo indirizzo', sub: '', row: null }].map((o) => {
@@ -266,7 +283,7 @@ export default function CheckoutScreen() {
       </>}
 
       {method === 'pickup' && <>
-        <Text style={styles.h2}>Punto di ritiro</Text>
+        <Text style={styles.h3}>Punto di ritiro</Text>
         {fieldError('pickup')}
         <View style={{ gap: 8 }}>{(pickupPoints.data ?? []).map((pt) => {
           const on = pickupPointId === pt.id;
@@ -278,7 +295,7 @@ export default function CheckoutScreen() {
         })}</View>
       </>}
 
-      <Text style={styles.h2}>I tuoi dati</Text>
+      {step('02', 'I tuoi dati')}
       <View style={styles.group}>
         {method !== 'home' && field('fullName', 'Nome e cognome', fullName, setFullName, { autoComplete: 'name' })}
         <View style={[styles.fRow, method !== 'home' && styles.fRule]}>
@@ -288,7 +305,8 @@ export default function CheckoutScreen() {
         {method !== 'home' && field('phone', 'Telefono', phone, setPhone, { keyboardType: 'phone-pad', autoComplete: 'tel', placeholder: 'Per contattarti se serve' }, true)}
       </View>
 
-      <RevealOnOpen open={summaryOpen} style={[styles.group, { marginTop: 22 }]}>
+      {step('03', 'Riepilogo e opzioni')}
+      <RevealOnOpen open={summaryOpen} style={styles.group}>
         <Pressable onPress={() => setSummaryOpen(!summaryOpen)} accessibilityRole="button" accessibilityState={{ expanded: summaryOpen }} style={styles.sumHead}>
           <View style={{ flexDirection: 'row' }}>{quote.lines.slice(0, 3).map((l, i) =>
             <View key={l.product_id} style={[styles.sumThumb, i > 0 && { marginLeft: -10 }]}><ProductImage uri={imageUrl(l.image_path)} sku={l.sku} inset={0.04} /></View>)}</View>
@@ -492,6 +510,16 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 6, backgroundColor: colors.page },
   headBack: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   headTitle: { flex: 1, fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.text },
+  receipt: { marginTop: -58, padding: 16, paddingTop: 14, borderRadius: 20, backgroundColor: '#FFFFFF', ...floatShadow },
+  receiptKicker: { fontSize: 11.5, letterSpacing: 1.8, fontFamily: fonts.sansBold, color: colors.muted },
+  receiptRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
+  receiptItems: { fontSize: 16, fontFamily: fonts.sansBold, color: colors.text },
+  receiptWhere: { fontSize: 13.5, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
+  receiptTotal: { fontSize: 28, letterSpacing: -0.8, fontFamily: fonts.price, color: colors.text },
+  stepRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, marginTop: 30, marginBottom: 10, marginLeft: 2 },
+  stepNum: { fontSize: 13, letterSpacing: 1, fontFamily: fonts.heavy, color: colors.green },
+  stepTitle: { fontSize: 22, letterSpacing: -0.5, fontFamily: fonts.display, color: colors.text },
+  h3: { fontSize: 13, letterSpacing: 1.2, textTransform: 'uppercase', fontFamily: fonts.sansBold, color: colors.muted, marginTop: 18, marginBottom: 8, marginLeft: 4 },
   h2: { fontSize: 15.5, fontFamily: fonts.heavy, color: colors.text, marginTop: 22, marginBottom: 8, marginLeft: 4 },
   option: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   optionOn: { borderWidth: 2, borderColor: colors.green, paddingVertical: 13, paddingHorizontal: 15 },
