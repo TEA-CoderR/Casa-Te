@@ -1,21 +1,22 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
-import { orderStatusLabel, type CategoryRow } from '@casa-te/shared';
+import type { CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryPhoto } from '@/components/CategoryNav';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { storeStatus } from '@/components/StoreCard';
-import { BandWatermark, ClubPass } from '@/components/ClubPass';
-import { Icon, type IconName } from '@/components/Icon';
-import { Loading, Notice, SearchField } from '@/components/UI';
+import { BandWatermark, ClubPass, ClubRow } from '@/components/ClubPass';
+import { OrderTicket } from '@/components/OrderTicket';
+import { Icon } from '@/components/Icon';
+import { Loading, Notice, PillButton, SearchField } from '@/components/UI';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '@/components/ProductImage';
 import { RemoteImage } from '@/components/RemoteImage';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, radius, type } from '@/config/theme';
 import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchFlyers, fetchOffers, fetchOrders, fetchProducts, fetchProfile, imageUrl, type CatalogProduct, type OrderWithItems } from '@/lib/api';
 import { useClubSettings, useDelivery, useLayout, useStores } from '@/lib/hooks';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
@@ -29,10 +30,7 @@ export default function HomeScreen() {
   return wide ? <HomeDesktop /> : <HomePhone />;
 }
 
-const CLUB_CARD = require('../../../assets/club-card.webp');
 const ACTIVE = new Set(['paid', 'picking', 'ready', 'shipped']);
-/** Steps of an order, for the progress bar on the order card (pickup and delivery both have four). */
-const STEP: Record<string, number> = { paid: 1, picking: 2, ready: 3, shipped: 3 };
 function HomePhone() {
   const insets = useSafeAreaInsets();
   // Light status bar over the green band while Home is on screen.
@@ -81,12 +79,11 @@ function HomePhone() {
   const firstName = profile.data?.full_name?.trim().split(/\s+/)[0] ?? '';
   const active = (orders.data ?? []).find((o) => ACTIVE.has(o.status));
 
-  // Hero carousel (design F): offers, free pickup, a department — real data only.
+  // Carousel: the offers and a department — real data only (free pickup is already said in the band).
   const dept = topCategories.find((c) => coverFor(c)?.image) ?? topCategories[0];
   const deptCount = dept ? countFor(dept) : 0;
   const slides: Array<{ key: string; title: string; text: string; cta: string; bg: string; ink: string; image?: string | null; product?: CatalogProduct; onPress: () => void }> = [
     ...(offerItems.length ? [{ key: 'offers', title: 'Le nostre migliori offerte', text: 'Sempre aggiornate, nel tuo negozio', cta: 'Scopri', bg: '#EAF0E4', /* ui-check: allow (home banner, sage) */ ink: colors.green, product: offerItems[0], onPress: () => openCatalog({ offerte: '1' }) }] : []),
-    { key: 'pickup', title: 'Ritiro sempre gratis', text: storeName ? `Ordina ora, ritira a ${storeName}` : 'Ordina ora, ritira nel tuo negozio', cta: 'Come funziona', bg: '#F2F3EE', /* ui-check: allow (home banner, stone) */ ink: colors.green, product: featured.data?.items[0], onPress: () => router.push({ pathname: '/legal/[doc]', params: { doc: 'shipping' } }) },
     ...(dept ? [{ key: 'dept', title: dept.name, text: 'Scopri il reparto nel tuo negozio', cta: `Vai a ${dept.name}`, bg: '#F4F1EC', /* ui-check: allow (home banner, warm stone) */ ink: colors.text, image: coverFor(dept)?.image, onPress: () => openCatalog({ category: dept.id }) }] : []),
   ];
   const slideWidth = width - 32;
@@ -102,14 +99,8 @@ function HomePhone() {
     return () => clearInterval(t);
   }, [slides.length, slideWidth]);
 
-  const quick = (label: string, icon: IconName, onPress: () => void) =>
-    <Pressable key={label} onPress={onPress} accessibilityRole="link" accessibilityLabel={label}
-      style={({ pressed }) => [styles.quickItem, pressed && { opacity: 0.75 }]}>
-      <View style={styles.quickSign}><Icon name={icon} size={24} color="#FFFFFF" strokeWidth={1.9} /></View>
-      <Text style={styles.quickText} numberOfLines={1}>{label}</Text>
-    </Pressable>;
-  const sectionHead = (id: string, title: string, link: string, onPress: () => void, kicker?: string) => <View style={styles.section}>
-    <View style={{ flexShrink: 1 }}>{!!kicker && <Text style={styles.kicker}>{kicker}</Text>}<Text style={styles.sectionTitle} accessibilityRole="header" nativeID={id}>{title}</Text></View>
+  const sectionHead = (id: string, title: string, link: string, onPress: () => void) => <View style={styles.section}>
+    <Text style={[styles.sectionTitle, { flexShrink: 1 }]} accessibilityRole="header" nativeID={id}>{title}</Text>
     <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8}><Text style={styles.link}>{link}</Text></Pressable>
   </View>;
 
@@ -118,7 +109,7 @@ function HomePhone() {
   const short = storeShortName(selected);
   const [, city = '', place = short] = short.match(/^(\S+)\s+(.+)$/) ?? [];
   const status = storeStatus(selected?.opening_hours);
-  const header = <View style={[styles.band, { paddingBottom: 66 }]}>
+  const header = <View style={[styles.band, { paddingBottom: active ? 66 : 20 }]}>
     <BandWatermark top={-6} />
     <View style={styles.bandRow}>
       <BrandLogo width={96} color={colors.bandLogo} />
@@ -130,7 +121,7 @@ function HomePhone() {
       accessibilityLabel={selected ? `Il tuo negozio: ${short}${canChoose ? '. Cambia negozio' : ''}` : 'Scegli il tuo negozio'} style={({ pressed }) => [styles.storeHero, pressed && { opacity: 0.85 }]}>
       <View style={styles.storeTop}>
         <Text style={styles.storeKicker} numberOfLines={1}>{selected ? `RITIRO GRATIS${city ? ` · ${city.toUpperCase()}` : ''}` : 'IL TUO NEGOZIO'}</Text>
-        {(canChoose || !selected) && <View style={styles.storeChange}><Text style={styles.storeChangeText}>{selected ? 'Cambia' : 'Scegli'}</Text></View>}
+        {(canChoose || !selected) && <PillButton onDark title={selected ? 'Cambia' : 'Scegli'} />}
       </View>
       <Text style={styles.storePlace} numberOfLines={1} adjustsFontSizeToFit>{selected ? place : 'Scegli il negozio'}</Text>
       {!!status && <View style={styles.storeStatus}>
@@ -147,44 +138,12 @@ function HomePhone() {
   return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.band }} />} top={header} ground={colors.page} refreshing={featured.loading && !!featured.data} onRefresh={refresh}
     contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-    {/* The order in progress: a lime ticket hanging from the band (the logo's colours reversed, like the member's card). */}
-    {active && <Pressable onPress={() => router.push(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.ticket, pressed && { transform: [{ scale: 0.985 }] }]}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <Text style={styles.ticketKicker} numberOfLines={1}>ORDINE {active.order_number}</Text>
-        <Icon name="chevron" size={18} color={colors.band} strokeWidth={2.4} />
-      </View>
-      <Text style={styles.ticketTitle} numberOfLines={1}>{active.status === 'ready' && active.fulfilment === 'store' ? 'Pronto al ritiro' : orderStatusLabel(active.status, active.fulfilment)}</Text>
-      <Text style={styles.ticketSub} numberOfLines={1}>{active.status === 'ready' && active.fulfilment === 'store' ? 'Mostra il codice in cassa' : 'Segui l’ordine'}</Text>
-      <View style={styles.bars}>{[1, 2, 3, 4].map((i) => <View key={i} style={[styles.bar, i <= (STEP[active.status] ?? 1) && styles.barOn]} />)}</View>
-    </Pressable>}
+    {/* The order in progress: the lime ticket hanging from the band (as on the order list and the order page). */}
+    {active && <OrderTicket order={active} storeName={place} onPress={() => router.push(`/order/${active.id}`)} style={{ marginHorizontal: 16, marginTop: -50 }} />}
 
-    {slides.length > 0 && <View style={{ marginTop: active ? 20 : -50 }}>
-      <View style={[styles.hero, !active && styles.heroHung]}>
-        <ScrollView ref={pager} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScrollBeginDrag={() => { touched.current = true; }}
-          onMomentumScrollEnd={(e) => setSlide(Math.round(e.nativeEvent.contentOffset.x / slideWidth))}>
-          {slides.map((s) => <Pressable key={s.key} onPress={s.onPress} accessibilityRole="link" accessibilityLabel={`${s.title}. ${s.text}. ${s.cta}`}
-            style={[styles.slide, { width: slideWidth, backgroundColor: s.bg }]}>
-            {(s.product || s.image) && <View style={[styles.slideArt, { backgroundColor: s.bg }]}>
-              {s.image ? <RemoteImage uri={s.image} style={{ width: '100%', height: '100%', mixBlendMode: 'multiply' } as object} />
-                : <ProductImage uri={s.product!.image} sku={s.product!.sku} inset={0} aspect={168 / 180} blend backdrop={s.bg} />}
-            </View>}
-            <View style={styles.slideText}>
-              <Text style={[styles.slideTitle, { color: s.ink }]}>{s.title}</Text>
-              <Text style={[styles.slideBody, { color: s.ink }]}>{s.text}</Text>
-              <View style={styles.slideCta}><Text style={styles.slideCtaText}>{s.cta}</Text><Icon name="arrow" size={15} color="#FFFFFF" strokeWidth={2.4} /></View>
-            </View>
-          </Pressable>)}
-        </ScrollView>
-      </View>
-      {slides.length > 1 && <View style={styles.dots}>{slides.map((s, i) =>
-        <Pressable key={s.key} accessibilityRole="button" accessibilityLabel={`Mostra ${s.title}`}
-          onPress={() => { touched.current = true; setSlide(i); pager.current?.scrollTo({ x: i * slideWidth, animated: true }); }}
-          style={styles.dotHit}><View style={[styles.dot, i === slide && styles.dotOn]} /></Pressable>)}</View>}
-    </View>}
-
-    {!!topCategories.length && <View style={{ paddingTop: 22, paddingHorizontal: 16 }}>
+    {!!topCategories.length && <View style={{ paddingTop: active ? 28 : 24, paddingHorizontal: 16 }}>
       <View style={[styles.section, { paddingHorizontal: 0 }]}>
-        <View><Text style={styles.kicker}>NEL TUO NEGOZIO</Text><Text style={styles.sectionTitle} accessibilityRole="header">Reparti</Text></View>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Reparti</Text>
         <Pressable onPress={() => router.push(ALL_PRODUCTS)} accessibilityRole="link" hitSlop={8}>
           <Text style={styles.link}>{allTop.length > topCategories.length ? `Tutti i ${allTop.length} reparti` : 'Tutti i reparti'}</Text></Pressable>
       </View>
@@ -201,9 +160,34 @@ function HomePhone() {
       })}</View>
     </View>}
 
+    {slides.length > 0 && <View style={{ marginTop: 32 }}>
+      <View style={styles.hero}>
+        <ScrollView ref={pager} horizontal pagingEnabled scrollEnabled={slides.length > 1} showsHorizontalScrollIndicator={false} onScrollBeginDrag={() => { touched.current = true; }}
+          onMomentumScrollEnd={(e) => setSlide(Math.round(e.nativeEvent.contentOffset.x / slideWidth))}>
+          {slides.map((s) => <Pressable key={s.key} onPress={s.onPress} accessibilityRole="link" accessibilityLabel={`${s.title}. ${s.text}. ${s.cta}`}
+            style={[styles.slide, { width: slideWidth, backgroundColor: s.bg }]}>
+            {(s.product || s.image) && <View style={[styles.slideArt, { backgroundColor: s.bg }]}>
+              {s.image ? <RemoteImage uri={s.image} style={{ width: '100%', height: '100%', mixBlendMode: 'multiply' } as object} />
+                : <ProductImage uri={s.product!.image} sku={s.product!.sku} inset={0} aspect={168 / 180} blend backdrop={s.bg} />}
+            </View>}
+            <View style={styles.slideText}>
+              <Text style={[styles.slideTitle, { color: s.ink }]}>{s.title}</Text>
+              <Text style={[styles.slideBody, { color: s.ink }]}>{s.text}</Text>
+              <View style={styles.slideCta}><Text style={styles.slideCtaText}>{s.cta}</Text></View>
+            </View>
+          </Pressable>)}
+        </ScrollView>
+      </View>
+      {slides.length > 1 && <View style={styles.dots}>{slides.map((s, i) =>
+        <Pressable key={s.key} accessibilityRole="button" accessibilityLabel={`Mostra ${s.title}`}
+          onPress={() => { touched.current = true; setSlide(i); pager.current?.scrollTo({ x: i * slideWidth, animated: true }); }}
+          style={styles.dotHit}><View style={[styles.dot, i === slide && styles.dotOn]} /></Pressable>)}</View>}
+    </View>}
+
+
     {/* Offers: the same cards as "In evidenza", side by side; one or two alone look broken, the banner still links them. */}
-    {offerItems.length >= 3 && <View style={{ paddingTop: 28 }}>
-      {sectionHead('h-offerte', 'Offerte', 'Vedi tutte', () => openCatalog({ offerte: '1' }), 'QUESTA SETTIMANA')}
+    {offerItems.length >= 3 && <View style={{ paddingTop: 32 }}>
+      {sectionHead('h-offerte', 'Offerte', 'Vedi tutti', () => openCatalog({ offerte: '1' }))}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.rail}>
         {offerItems.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}
       </ScrollView>
@@ -220,8 +204,8 @@ function HomePhone() {
       <Icon name="chevron" size={18} color={colors.muted} />
     </Pressable>}
 
-    <View style={{ paddingTop: 28 }}>
-      {sectionHead('h-evidenza', 'In evidenza', 'Vedi tutti', () => featured.data?.picked ? openCatalog({ evidenza: '1' }) : router.push(ALL_PRODUCTS), 'SCELTI PER TE')}
+    <View style={{ paddingTop: 32 }}>
+      {sectionHead('h-evidenza', 'In evidenza', 'Vedi tutti', () => featured.data?.picked ? openCatalog({ evidenza: '1' }) : router.push(ALL_PRODUCTS))}
       {featured.error && !featured.data ? <View style={{ paddingHorizontal: 16 }}><Notice tone="error" message="Impossibile caricare i prodotti. Controlla la connessione e riprova." /></View>
         : !featured.data ? <Loading /> : <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.rail}>
           {featured.data.items.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}
@@ -229,12 +213,13 @@ function HomePhone() {
     </View>
 
 
-    {/* The Club as the lime card: members are sent to their card on Profilo, the others to the Club. */}
+    {/* The Club: members get their card in one row (the barcode opens on tap), the others the lime card. */}
     {(club.enabled || !!profile.data?.club_member_since) && (profile.data?.club_member_since
-      ? <ClubPass kicker="CASA & TE CLUB" title={'La tua tessera\nè nel Profilo.'} action="Apri la tessera"
-        onPress={() => router.push('/profile')} style={{ marginHorizontal: 16, marginTop: 30, height: 200 }} />
+      ? (profile.data.member_card_number
+        ? <ClubRow card={profile.data.member_card_number} title="Tessera Soci" text="Mostrala in cassa" style={{ marginHorizontal: 16, marginTop: 32 }} />
+        : <ClubRow title="Tessera Soci" text="Collega la tessera del negozio" onPress={() => router.push('/club')} style={{ marginHorizontal: 16, marginTop: 32 }} />)
       : <ClubPass kicker="CASA & TE CLUB" title={'Prezzi Soci su tutto\nil catalogo.'} action="Scopri il Club"
-        onPress={() => router.push('/club')} style={{ marginHorizontal: 16, marginTop: 30, height: 200 }} />)}
+        onPress={() => router.push('/club')} style={{ marginHorizontal: 16, marginTop: 32, height: 200 }} />)}
 
     <View style={styles.footer}>
       {([['Privacy', 'privacy'], ['Termini di vendita', 'terms'], ['Spedizioni e ritiro', 'shipping']] as const).map(([label, doc]) =>
@@ -249,63 +234,40 @@ const styles = StyleSheet.create({
   band: { backgroundColor: colors.band, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 54, overflow: 'hidden' },
   storeHero: { marginTop: 18, paddingHorizontal: 4 },
   storeTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  storeKicker: { flexShrink: 1, fontSize: 12.5, letterSpacing: 1.8, fontFamily: fonts.sansSemiBold, color: colors.bandMuted },
-  storeChange: { height: 30, paddingHorizontal: 12, borderRadius: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', justifyContent: 'center' },
-  storeChangeText: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.bandText },
-  storePlace: { fontSize: 42, lineHeight: 48, letterSpacing: -1.4, fontFamily: fonts.display, color: colors.bandText, marginTop: 6 },
+  storeKicker: { flexShrink: 1, ...type.kicker, color: colors.bandMuted },
+  storePlace: { ...type.display, color: colors.bandText, marginTop: 4 },
   storeStatus: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 },
   storeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.bandLogo },
-  storeStatusText: { fontSize: 14.5, fontFamily: fonts.sansMedium, color: colors.bandMuted },
-  ticket: { marginHorizontal: 16, marginTop: -50, paddingTop: 16, paddingBottom: 18, paddingHorizontal: 18, borderRadius: 22, backgroundColor: colors.bandLogo,
-    shadowColor: '#143019', shadowOpacity: 0.3, shadowRadius: 22, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
-  ticketKicker: { flexShrink: 1, fontSize: 11.5, letterSpacing: 2, fontFamily: fonts.sansBold, color: colors.band },
-  ticketTitle: { fontSize: 24, lineHeight: 29, letterSpacing: -0.6, fontFamily: fonts.display, color: colors.band, marginTop: 6 },
-  ticketSub: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.band, opacity: 0.8, marginTop: 1 },
-  heroHung: { shadowColor: '#143019', shadowOpacity: 0.22, shadowRadius: 22, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
-  kicker: { fontSize: 11.5, letterSpacing: 1.8, fontFamily: fonts.sansBold, color: colors.muted, marginBottom: 2 },
+  storeStatusText: { ...type.small, fontFamily: fonts.sansMedium, color: colors.bandMuted },
   bandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
   bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
-  hello: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, color: '#FFFFFF', letterSpacing: -0.6, marginTop: 18 },
-  helloSub: { fontSize: 15.5, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
   scan: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
-  // The order in progress: deep green with the lime signal on the progress bars.
-  order: { marginHorizontal: 16, marginTop: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.green },
-  orderTitle: { flexShrink: 1, fontSize: 15, fontFamily: fonts.heavy, color: '#FFFFFF' },
-  orderSub: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.onBrand, marginTop: 2 },
-  bars: { flexDirection: 'row', gap: 4, marginTop: 14 },
-  bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(31,65,39,0.16)' },
-  barOn: { backgroundColor: colors.band },
-  quick: { flexDirection: 'row', paddingHorizontal: 12, paddingTop: 22 },
-  quickItem: { flex: 1, alignItems: 'center', gap: 8 },
-  quickSign: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-  quickText: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.text },
-  hero: { marginHorizontal: 16, height: 196, borderRadius: 24, overflow: 'hidden' },
+  hero: { marginHorizontal: 16, height: 196, borderRadius: radius.lg, overflow: 'hidden' },
   slide: { height: 196 },
   slideArt: { position: 'absolute', right: 6, bottom: 0, width: 168, height: 180 },
   slideText: { position: 'absolute', left: 22, top: 22, width: 186 },
-  slideTitle: { fontSize: 25, lineHeight: 28, fontFamily: fonts.display },
-  slideBody: { fontSize: 13.5, lineHeight: 18, fontFamily: fonts.sansMedium, marginTop: 6, opacity: 0.85 },
-  slideCta: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.text, marginTop: 14 },
-  slideCtaText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  slideTitle: { ...type.section },
+  slideBody: { ...type.small, fontFamily: fonts.sansMedium, marginTop: 6, opacity: 0.85 },
+  slideCta: { alignSelf: 'flex-start', height: 44, paddingHorizontal: 20, borderRadius: radius.pill, backgroundColor: colors.green, justifyContent: 'center', marginTop: 14 },
+  slideCtaText: { fontSize: 15, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 2, marginTop: 4 },
   dotHit: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D0D0CB' },
   dotOn: { width: 22, backgroundColor: colors.text },
   section: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12, gap: 12 },
-  sectionTitle: { fontSize: 25, lineHeight: 30, fontFamily: fonts.display, color: colors.text },
+  sectionTitle: { ...type.section, color: colors.text },
   link: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
   rail: { paddingHorizontal: 16, gap: 10, paddingBottom: 1 },
   railItem: { width: 162, flexDirection: 'row' },
-  // Flyer and Club: one white plate each, picture on the left.
-  plateRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: 16, marginTop: 24, padding: 14, borderRadius: 20,
+  // Flyer: one white plate, the cover on the left.
+  plateRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: 16, marginTop: 32, padding: 16, borderRadius: radius.md,
     backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  plateTitle: { fontSize: 16, lineHeight: 21, fontFamily: fonts.sansBold, color: colors.text },
-  plateText: { fontSize: 13.5, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
+  plateTitle: { ...type.cardTitle, color: colors.text },
+  plateText: { ...type.small, color: colors.muted, marginTop: 2 },
   flyerCover: { width: 46, aspectRatio: 0.71, borderRadius: 4, overflow: 'hidden', backgroundColor: colors.well },
-  clubCard: { width: 64, height: 40, borderRadius: 4 },
   departments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, rowGap: 14 },
   department: { paddingHorizontal: 4 },
-  departmentName: { marginTop: 6, fontSize: 13, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
+  departmentName: { marginTop: 6, ...type.small, textAlign: 'center', fontFamily: fonts.sansSemiBold, color: colors.text },
   footer: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6, paddingHorizontal: 20, paddingTop: 22 },
   footerLink: { fontSize: 13, color: colors.green, fontFamily: fonts.sansSemiBold, textDecorationLine: 'underline' },
 });

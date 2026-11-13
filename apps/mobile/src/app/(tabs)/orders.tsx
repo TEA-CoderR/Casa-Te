@@ -10,6 +10,7 @@ import { EmptyState, Loading, Notice, orderStatusTone, PageTitle, PrimaryButton,
 import { Icon } from '@/components/Icon';
 import { ProductImage } from '@/components/ProductImage';
 import { OrderTimeline } from '@/components/OrderTimeline';
+import { OrderTicket } from '@/components/OrderTicket';
 import { colors, fonts } from '@/config/theme';
 import { fetchOrders, imageUrl, type OrderWithItems } from '@/lib/api';
 import { useLayout, useStores } from '@/lib/hooks';
@@ -33,17 +34,12 @@ export default function OrdersScreen() {
       <PrimaryButton title="Accedi o registrati" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/orders' } })} />
     </EmptyState></Screen>;
 
-  // Phone (November 2026): the "In corso" / "Completati" switch; orders in progress as lime tickets (as on Home),
-  // the finished ones as a plain list on hairlines.
+  // Phone (November 2026): the "In corso" / "Completati" switch over the same tickets as Home (OrderTicket).
   if (phone && orders?.length) {
     const DONE = new Set(['completed', 'cancelled']);
     const live = orders.filter((o) => !DONE.has(o.status));
     const past = orders.filter((o) => DONE.has(o.status));
-    const euro = (c: number) => formatEuro(c).replace(/€\s/, '€');
-    const count = (o: OrderWithItems) => o.order_items.reduce((s, i) => s + i.quantity, 0);
-    const date = (o: OrderWithItems, year = true) => new Date(o.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', ...(year ? { year: 'numeric' } : {}) });
-    const place = (o: OrderWithItems) => o.fulfilment === 'store'
-      ? `Ritiro a ${stores.find((x) => x.id === o.store_id)?.name.replace(/^CASA & TE\s*/, '') ?? 'negozio'}` : FULFILMENT_LABELS[o.fulfilment];
+    const storeName = (o: OrderWithItems) => stores.find((x) => x.id === o.store_id)?.name.replace(/^CASA & TE\s*/, '') ?? null;
     return <Screen header={band} ground={palette.page} onRefresh={refetch} refreshing={loading && !!orders} contentContainerStyle={{ padding: 16, paddingTop: 18 }}>
       <View style={styles.seg} accessibilityRole="tablist">
         {([['active', 'In corso', live.length], ['done', 'Completati', past.length]] as const).map(([k, label, n]) => <Pressable key={k} onPress={() => setTab(k)}
@@ -53,31 +49,8 @@ export default function OrdersScreen() {
       {tab === 'active' && !live.length && <Text style={styles.none}>Nessun ordine in corso.</Text>}
       {tab === 'done' && !past.length && <Text style={styles.none}>Nessun ordine completato.</Text>}
       {/* The same ticket on both tabs: lime while in progress, a quiet neutral once finished (greyed text if cancelled). */}
-      <View style={{ gap: 12, marginTop: 16 }}>{(tab === 'active' ? live : past).map((order) => {
-        const steps = orderTimeline(order.fulfilment);
-        const at = steps.indexOf(order.status);
-        const n = count(order);
-        const finished = DONE.has(order.status);
-        const cancelled = order.status === 'cancelled';
-        const ink = cancelled ? colors.muted : colors.band;
-        return <Pressable key={order.id} onPress={() => router.push(`/order/${order.id}`)} accessibilityRole="link"
-          style={({ pressed }) => [styles.ticket, finished && styles.ticketDone, pressed && { transform: [{ scale: 0.985 }] }]}>
-          <View style={styles.ticketTop}>
-            <Text style={[styles.ticketKicker, { color: ink }]} numberOfLines={1}>ORDINE {order.order_number}</Text>
-            <Text style={[styles.ticketDate, { color: ink }]}>{date(order, false)}</Text>
-          </View>
-          <Text style={[styles.ticketTitle, { color: ink }]} numberOfLines={1}>
-            {order.status === 'ready' && order.fulfilment === 'store' ? 'Pronto al ritiro' : orderStatusLabel(order.status, order.fulfilment)}</Text>
-          <Text style={[styles.ticketSub, { color: ink }]} numberOfLines={1}>{place(order)} · {n} {n === 1 ? 'articolo' : 'articoli'} · <Text
-            style={cancelled ? { textDecorationLine: 'line-through' } : undefined}>{euro(order.total_cents)}</Text></Text>
-          <View style={[styles.ticketThumbs, cancelled && { opacity: 0.5 }]}>{order.order_items.slice(0, 5).map((line) =>
-            <View key={line.id} style={styles.ticketThumb}><View style={{ width: 38, height: 38 }}>
-              <ProductImage uri={imageUrl(line.image_path)} sku={line.sku} inset={0} /></View></View>)}
-            {order.order_items.length > 5 && <Text style={[styles.ticketMore, { color: ink }]}>+{order.order_items.length - 5}</Text>}</View>
-          {!cancelled && order.status !== 'pending_payment' && <View style={styles.bars}>{[0, 1, 2, 3].map((i) =>
-            <View key={i} style={[styles.bar, (finished || at >= Math.round(i * (steps.length - 1) / 3)) && styles.barOn]} />)}</View>}
-        </Pressable>;
-      })}</View>
+      <View style={{ gap: 12, marginTop: 16 }}>{(tab === 'active' ? live : past).map((order) =>
+        <OrderTicket key={order.id} order={order} thumbs storeName={storeName(order)} onPress={() => router.push(`/order/${order.id}`)} />)}</View>
     </Screen>;
   }
 
@@ -114,24 +87,7 @@ const styles = StyleSheet.create({
   segOn: { backgroundColor: '#FFFFFF', shadowColor: '#18201A', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   segText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
   none: { fontSize: 15, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center', marginTop: 32 },
-  // In progress: the lime ticket (the logo's colours reversed), as on Home.
-  ticket: { padding: 18, paddingBottom: 20, borderRadius: 22, backgroundColor: colors.bandLogo,
-    shadowColor: '#143019', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 4 },
-  ticketTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
-  ticketKicker: { flexShrink: 1, fontSize: 11.5, letterSpacing: 2, fontFamily: fonts.sansBold, color: colors.band },
-  ticketDate: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.band, opacity: 0.75 },
-  ticketTitle: { fontSize: 26, lineHeight: 31, letterSpacing: -0.7, fontFamily: fonts.display, color: colors.band, marginTop: 8 },
-  ticketSub: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.band, opacity: 0.8, marginTop: 2 },
-  ticketThumbs: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
-  ticketThumb: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  ticketMore: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.band, marginLeft: 4 },
-  barOn: { backgroundColor: colors.band },
-  // Finished: the same ticket in a quiet sage instead of the lime.
-  ticketDone: { backgroundColor: '#E4EADF', shadowOpacity: 0.08 }, // ui-check: allow (finished orders: the ticket's quiet colour)
-  pastRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 66, borderBottomWidth: 1, borderColor: '#ECECE7' },
-  pastDate: { fontSize: 17, letterSpacing: -0.2, fontFamily: fonts.sansSemiBold, color: colors.text },
-  pastMeta: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
-  pastTotal: { fontSize: 16, fontFamily: fonts.sansBold, color: colors.text },
+  // Finished: the same ticket in a quiet sage instead of the lime. // ui-check: allow (finished orders: the ticket's quiet colour)
   order: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.line },
   bars: { flexDirection: 'row', gap: 4, marginTop: 14 },
   bar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(31,65,39,0.16)' },

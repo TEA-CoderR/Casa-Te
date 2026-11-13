@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, radius, type } from '@/config/theme';
 import { LOGO_MONO } from '@/config/logoPaths';
 import { Barcode } from './Barcode';
+import { Icon } from './Icon';
 
 /** The interlaced CT of the logo, drawn as a vector (crisp at any size). */
 export function Monogram({ width, color, opacity = 1, style }: { width: number; color: string; opacity?: number; style?: ViewStyle }) {
@@ -48,16 +49,41 @@ export function ClubPass({ name, card, title, action, onPress, style, kicker = '
         {!!action && <View style={styles.button}><Text style={styles.buttonText}>{action}</Text></View>}
       </View>}
     </Pressable>
-    {!!card && <Modal visible={zoom} transparent animationType="fade" onRequestClose={() => setZoom(false)}>
-      <Pressable style={styles.scrim} onPress={() => setZoom(false)} accessibilityRole="button" accessibilityLabel="Chiudi">
-        <View style={styles.big}>
-          <Text style={styles.bigKicker}>TESSERA SOCI · CASA & TE</Text>
-          <Barcode value={card} height={120} color="#000" />
-          <Text style={styles.bigNumber} selectable>{spaced(card)}</Text>
-          <Text style={styles.bigHint}>Mostrala alla cassa. Tocca per chiudere.</Text>
-        </View>
-      </Pressable>
-    </Modal>}
+    {!!card && <ClubCodeModal card={card} visible={zoom} onClose={() => setZoom(false)} />}
+  </>;
+}
+
+/** The member's barcode, large and on white, to scan at the till. */
+export function ClubCodeModal({ card, visible, onClose }: { card: string; visible: boolean; onClose: () => void }) {
+  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Pressable style={styles.scrim} onPress={onClose} accessibilityRole="button" accessibilityLabel="Chiudi">
+      <View style={styles.big}>
+        <Text style={styles.bigKicker}>TESSERA SOCI · CASA & TE</Text>
+        <Barcode value={card} height={120} color="#000" />
+        <Text style={styles.bigNumber} selectable>{spaced(card)}</Text>
+        <Text style={styles.bigHint}>Mostrala alla cassa. Tocca per chiudere.</Text>
+      </View>
+    </Pressable>
+  </Modal>;
+}
+
+/**
+ * The member's card in one row (Home): a small lime card on the left, two lines, a chevron. With a linked card it opens
+ * the barcode; without, `onPress` (to link it on the Club page).
+ */
+export function ClubRow({ card, title, text, onPress, style }: { card?: string | null; title: string; text: string; onPress?: () => void; style?: ViewStyle }) {
+  const [zoom, setZoom] = useState(false);
+  return <>
+    <Pressable onPress={card ? () => setZoom(true) : onPress} accessibilityRole="button" accessibilityLabel={`${title}. ${text}`}
+      style={({ pressed }) => [styles.row, style, pressed && { opacity: 0.85 }]}>
+      <View style={styles.mini}><Monogram width={26} color={colors.band} /></View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.rowTitle} numberOfLines={1}>{title}</Text>
+        <Text style={styles.rowText} numberOfLines={1}>{text}</Text>
+      </View>
+      <Icon name="chevron" size={16} color={colors.faint} strokeWidth={2.2} />
+    </Pressable>
+    {!!card && <ClubCodeModal card={card} visible={zoom} onClose={() => setZoom(false)} />}
   </>;
 }
 
@@ -72,6 +98,11 @@ const styles = StyleSheet.create({
   title: { fontSize: 25, lineHeight: 28, letterSpacing: -0.6, fontFamily: fonts.display, color: colors.band },
   button: { alignSelf: 'flex-start', marginTop: 14, height: 44, paddingHorizontal: 20, borderRadius: 22, backgroundColor: colors.band, justifyContent: 'center' },
   buttonText: { fontSize: 15, fontFamily: fonts.sansSemiBold, color: '#FFFFFF' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 72, paddingHorizontal: 16, paddingVertical: 12, borderRadius: radius.md,
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  mini: { width: 44, height: 28, borderRadius: 6, backgroundColor: colors.bandLogo, alignItems: 'center', justifyContent: 'center' },
+  rowTitle: { ...type.cardTitle, color: colors.text },
+  rowText: { ...type.small, color: colors.muted, marginTop: 1 },
   scrim: { flex: 1, backgroundColor: 'rgba(12,24,15,0.72)', alignItems: 'center', justifyContent: 'center', padding: 20 },
   big: { alignSelf: 'stretch', backgroundColor: '#FFFFFF', borderRadius: 22, padding: 22, gap: 12 },
   bigKicker: { fontSize: 12, letterSpacing: 2, fontFamily: fonts.sansBold, color: colors.green, textAlign: 'center' },

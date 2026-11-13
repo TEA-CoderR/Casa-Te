@@ -10,7 +10,7 @@ import { RevealOnOpen } from '@/components/Reveal';
 import { OrderTimeline } from '@/components/OrderTimeline';
 import { ProductImage } from '@/components/ProductImage';
 import { EmptyState, Loading, Notice, orderStatusTone, PrimaryButton, SecondaryButton, SectionTitle, StatusMark, SummaryRow } from '@/components/UI';
-import { colors, floatShadow, fonts } from '@/config/theme';
+import { colors, floatShadow, fonts, radius, type } from '@/config/theme';
 import { cancelPendingOrder, fetchOrder, imageUrl, resumeCheckout } from '@/lib/api';
 import { useLayout, useStores } from '@/lib/hooks';
 import { Icon } from '@/components/Icon';
@@ -18,6 +18,8 @@ import { openCheckout } from '@/lib/payments';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useCartStore } from '@/store/cart';
 import { OrderReturns } from '@/components/OrderReturns';
+import { OrderTicket } from '@/components/OrderTicket';
+import { ListGroup, ListRow } from '@/components/ListRow';
 
 const HEADLINES: Record<string, string> = {
   pending_payment: 'In attesa di pagamento', paid: 'Abbiamo ricevuto il tuo ordine', picking: 'Stiamo preparando il tuo ordine',
@@ -66,27 +68,19 @@ export default function OrderDetailScreen() {
       [until ? 'Ritira entro' : 'Ordinato il', until ?? new Date(order.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })],
       ['Pagato', `${euro(order.total_cents)} · ${count} ${count === 1 ? 'articolo' : 'articoli'}`],
     ];
+    const storeLabel = store?.name.replace(/^CASA & TE\s*/, '') ?? null;
     const header = <BrandHeader inScroll title="Il tuo ordine" titleSize={26} pad={[14, 16, 18]}
       left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/orders')} />} />;
     return <Screen header={<StatusBand />} top={header} ground={colors.page} onRefresh={refetch} refreshing={loading}
       contentContainerStyle={{ padding: 0, paddingBottom: 24 }} bodyStyle={{ paddingHorizontal: 16 }}>
       <Stack.Screen options={{ headerShown: false, title: `Ordine ${order.order_number}` }} />
-      <View style={[styles.pass, { marginTop: 4 }]} accessibilityLabel={`${HEADLINES[order.status] ?? ''}. Ordine ${order.order_number}`}>
-        <View style={styles.passTop}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View style={[styles.passDot, order.status === 'cancelled' && { backgroundColor: colors.danger, borderColor: colors.danger }]} />
-            <Text style={styles.passStatus}>{orderStatusLabel(order.status, order.fulfilment)}</Text>
-          </View>
-          <Text style={styles.passHead} accessibilityRole="header">{order.fulfilment === 'store' && order.status === 'ready' ? 'Il tuo ordine ti aspetta' : HEADLINES[order.status] ?? orderStatusLabel(order.status, order.fulfilment)}</Text>
-          <View style={styles.passGrid}>{grid.map(([k, v]) => <View key={k} style={styles.passCell}>
-            <Text style={styles.passKey}>{k}</Text><Text style={styles.passValue}>{v}</Text></View>)}</View>
-        </View>
-        <View style={styles.tear}><View style={[styles.notch, { left: -12 }]} /><View style={styles.tearLine} /><View style={[styles.notch, { right: -12 }]} /></View>
-        <View style={styles.passBottom}>
-          <Text style={styles.passHint}>{order.fulfilment === 'store' ? 'Mostra questo codice in cassa' : 'Numero d’ordine'}</Text>
-          <PassCode number={order.order_number} scan={order.fulfilment === 'store'} />
-        </View>
-      </View>
+      {/* The same ticket as on Home and the order list, with the code on its white stub (plan §5.4, F4). */}
+      <OrderTicket order={order} variant="full" storeName={storeLabel} style={{ marginTop: 4 }} stub={<>
+        <Text style={styles.passHint}>{order.fulfilment !== 'store' ? 'Numero d’ordine'
+          : order.status === 'ready' ? 'Mostra questo codice in cassa' : 'Codice ordine · ti scriviamo quando è pronto'}</Text>
+        <PassCode number={order.order_number} scan={order.fulfilment === 'store'} />
+      </>} />
+      <ListGroup style={{ marginTop: 20 }}>{grid.map(([k, v], i) => <ListRow key={k} first={i === 0} title={v} subtitle={k} />)}</ListGroup>
 
       {pending && <View style={{ marginTop: 14 }}><Notice title="In attesa di pagamento" message="Completa il pagamento per confermare l'ordine.">
         <View style={{ gap: 8, marginTop: 6 }}>
@@ -124,12 +118,11 @@ export default function OrderDetailScreen() {
         {order.tracking_url && <Text style={[styles.stepSub, { color: colors.green, fontFamily: fonts.sansBold }]}>Traccia spedizione</Text>}
       </Pressable>}
 
-      <View style={styles.actions}>
-        {!!store?.address && <Pressable onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${store.address}, ${store.city}`)}`)}
-          accessibilityRole="link" style={styles.action}><Icon name="pin" size={19} color={colors.green} strokeWidth={2} /><Text style={styles.actionText}>Indicazioni</Text></Pressable>}
-        {!!store?.phone && <Pressable onPress={() => Linking.openURL(`tel:${store.phone}`)} accessibilityRole="link" style={styles.action}>
-          <Icon name="phone" size={19} color={colors.green} strokeWidth={2} /><Text style={styles.actionText}>Chiama il negozio</Text></Pressable>}
-      </View>
+      {order.fulfilment === 'store' && (!!store?.address || !!store?.phone) && <View style={styles.actions}>
+        {!!store?.address && <View style={{ flex: 1 }}><SecondaryButton title="Indicazioni" icon="pin"
+          onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${store.address}, ${store.city}`)}`)} /></View>}
+        {!!store?.phone && <View style={{ flex: 1 }}><SecondaryButton title="Chiama" icon="phone" onPress={() => Linking.openURL(`tel:${store.phone}`)} /></View>}
+      </View>}
 
       <RevealOnOpen open={itemsOpen} style={styles.fold}>
         <Pressable onPress={() => setItemsOpen(!itemsOpen)} accessibilityRole="button" accessibilityState={{ expanded: itemsOpen }} style={styles.foldHead}>
@@ -152,8 +145,7 @@ export default function OrderDetailScreen() {
 
       <OrderReturns order={order} />
 
-      {order.status !== 'pending_payment' && <Pressable onPress={reorder} accessibilityRole="button" style={styles.reorder}>
-        <Icon name="bag" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.actionText}>Ordina di nuovo</Text></Pressable>}
+      {order.status !== 'pending_payment' && <View style={{ marginTop: 12 }}><SecondaryButton title="Ordina di nuovo" icon="bag" onPress={reorder} /></View>}
       {!!order.seller_snapshot && <Text style={[styles.fine, { marginTop: 12, marginHorizontal: 4 }]}>
         Venditore: {order.seller_snapshot.legal_name} · P.IVA {order.seller_snapshot.vat_number}.</Text>}
     </Screen>;
@@ -285,10 +277,9 @@ const styles = StyleSheet.create({
   tlLine: { flex: 1, width: 2, backgroundColor: colors.line, marginVertical: 4 },
   stepTitle: { fontSize: 15.5, fontFamily: fonts.sansSemiBold, color: colors.text },
   stepSub: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
-  fold: { marginTop: 12, borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
+  fold: { marginTop: 12, borderRadius: radius.md, backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   foldHead: { height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   foldTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
-  reorder: { marginTop: 12, height: 54, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   passTop: { padding: 20, paddingBottom: 18 },
   passDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.yellow },
   passStatus: { fontSize: 13.5, fontFamily: fonts.heavy, color: colors.green },
@@ -308,9 +299,9 @@ const styles = StyleSheet.create({
   passScan: { alignSelf: 'stretch', marginTop: 10, alignItems: 'center' },
   passScanNumber: { marginTop: 8, fontSize: 20, letterSpacing: 3, fontFamily: fonts.heavy, color: colors.text },
   passName: { fontSize: 13, fontFamily: fonts.sansMedium, color: colors.muted, marginTop: 8 },
-  card: { marginTop: 18, padding: 18, paddingBottom: 6, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  cardTitle: { fontSize: 21, lineHeight: 26, fontFamily: fonts.display, color: colors.text },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  card: { marginTop: 20, padding: 16, paddingBottom: 4, borderRadius: radius.md, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  cardTitle: { ...type.section, color: colors.text },
+  actions: { flexDirection: 'row', gap: 12, marginTop: 12 },
   action: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 54, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   actionText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
