@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { scheduleOnRN } from 'react-native-worklets';
 import type { FlyerRow } from '@casa-te/shared';
 import { SiteHeader } from '@/components/site/SiteHeader';
 import { Screen } from '@/components/Screen';
@@ -128,12 +130,57 @@ function FlyerSection({ flyer, hanging, onOpen }: { flyer: Flyer; hanging: boole
   </View>;
 }
 
+/**
+ * One flyer page that zooms: pinch (up to 4×) or double tap (2.5× where you tapped, again to go back); when zoomed,
+ * drag to move around the page (kept within its edges). Works the same on Android, iOS and the web shop.
+ */
+function ZoomPage({ uri, width, height, label, resetKey, onZoom }: {
+  uri: string; width: number; height: number; label: string; resetKey: number; onZoom: (zoomed: boolean) => void;
+}) {
+  const scale = useSharedValue(1), saved = useSharedValue(1);
+  const tx = useSharedValue(0), ty = useSharedValue(0), sx = useSharedValue(0), sy = useSharedValue(0);
+  const [zoomed, setZoomedLocal] = useState(false);
+  const report = (z: boolean) => { setZoomedLocal(z); onZoom(z); };
+  const reset = () => { scale.value = withTiming(1); saved.value = 1; tx.value = withTiming(0); ty.value = withTiming(0); };
+  // Turning the page resets the zoom of the others.
+  useEffect(() => { reset(); setZoomedLocal(false); }, [resetKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const limit = (v: number, s: number, size: number) => { 'worklet'; const m = (size * (s - 1)) / 2; return Math.min(m, Math.max(-m, v)); };
+  const pinch = Gesture.Pinch()
+    .onUpdate((e) => {
+      scale.value = Math.min(4, Math.max(1, saved.value * e.scale));
+      tx.value = limit(tx.value, scale.value, width); ty.value = limit(ty.value, scale.value, height);
+    })
+    .onEnd(() => {
+      if (scale.value < 1.05) { scale.value = withTiming(1); saved.value = 1; tx.value = withTiming(0); ty.value = withTiming(0); scheduleOnRN(report, false); }
+      else { saved.value = scale.value; scheduleOnRN(report, true); }
+    });
+  const pan = Gesture.Pan().enabled(zoomed).averageTouches(true)
+    .onStart(() => { sx.value = tx.value; sy.value = ty.value; })
+    .onUpdate((e) => { tx.value = limit(sx.value + e.translationX, scale.value, width); ty.value = limit(sy.value + e.translationY, scale.value, height); });
+  const doubleTap = Gesture.Tap().numberOfTaps(2).maxDuration(300)
+    .onEnd((e) => {
+      if (saved.value > 1.05) { scale.value = withTiming(1); saved.value = 1; tx.value = withTiming(0); ty.value = withTiming(0); scheduleOnRN(report, false); return; }
+      const s = 2.5;
+      scale.value = withTiming(s); saved.value = s;
+      tx.value = withTiming(limit((width / 2 - e.x) * (s - 1), s, width)); ty.value = withTiming(limit((height / 2 - e.y) * (s - 1), s, height));
+      scheduleOnRN(report, true);
+    });
+  const style = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }] }));
+  return <GestureDetector gesture={Gesture.Simultaneous(pinch, pan, doubleTap)}>
+    <Animated.View style={[{ width, height }, style]} collapsable={false}>
+      <Animated.Image entering={FadeIn.duration(250)} source={{ uri }} resizeMode="contain" accessibilityLabel={label} style={{ width, height }} />
+    </Animated.View>
+  </GestureDetector>;
+}
+
 /** Full-screen pages, one per screen: swipe or use the arrows; the strip at the bottom jumps to a page. */
 function FlyerViewer({ flyer, start, onClose }: { flyer: Flyer; start: number; onClose: () => void }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const pager = useRef<ScrollView>(null);
   const [page, setPage] = useState(start);
+  // While a page is zoomed, one finger moves around the page instead of turning it.
+  const [zoomed, setZoomed] = useState(false);
   const go = (i: number) => { const to = Math.max(0, Math.min(flyer.pages.length - 1, i)); setPage(to); pager.current?.scrollTo({ x: to * width, animated: true }); };
   useEffect(() => { const t = setTimeout(() => pager.current?.scrollTo({ x: start * width, animated: false }), 0); return () => clearTimeout(t); }, [start, width]);
   // Arrow keys on the web shop.
@@ -145,7 +192,7 @@ function FlyerViewer({ flyer, start, onClose }: { flyer: Flyer; start: number; o
   const pageH = height - insets.top - insets.bottom - 64 - 92;
 
   return <Modal visible animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-    <View style={[styles.viewer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <GestureHandlerRootView style={[styles.viewer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.vBar}>
         <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Chiudi" hitSlop={8} style={styles.vClose}><Icon name="close" size={20} color="#FFFFFF" strokeWidth={2.4} /></Pressable>
         <View style={{ flex: 1, alignItems: 'center' }}>
@@ -154,14 +201,13 @@ function FlyerViewer({ flyer, start, onClose }: { flyer: Flyer; start: number; o
         </View>
         <View style={{ width: 44 }} />
       </View>
-      <ScrollView ref={pager} horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ flex: 1 }}
+      <ScrollView ref={pager} horizontal pagingEnabled scrollEnabled={!zoomed} showsHorizontalScrollIndicator={false} style={{ flex: 1 }}
         onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
         onScroll={Platform.OS === 'web' ? (e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width)) : undefined} scrollEventThrottle={64}>
-        {flyer.pages.map((uri, i) => <ScrollView key={uri} style={{ width }} contentContainerStyle={styles.vPage} maximumZoomScale={3} minimumZoomScale={1}
-          centerContent showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
-          <Animated.Image entering={FadeIn.duration(250)} source={{ uri }} resizeMode="contain" accessibilityLabel={`${pageName(flyer, i)}, pagina ${i + 1}`}
-            style={{ width: width - 24, height: pageH }} />
-        </ScrollView>)}
+        {flyer.pages.map((uri, i) => <View key={uri} style={[{ width }, styles.vPage]}>
+          <ZoomPage uri={uri} width={width - 24} height={pageH} label={`${pageName(flyer, i)}, pagina ${i + 1}`}
+            resetKey={page} onZoom={(z) => setZoomed(z)} />
+        </View>)}
       </ScrollView>
       {flyer.pages.length > 1 && <>
         {page > 0 && <Pressable onPress={() => go(page - 1)} accessibilityRole="button" accessibilityLabel="Pagina precedente" style={[styles.vArrow, { left: 8 }]}>
@@ -175,7 +221,8 @@ function FlyerViewer({ flyer, start, onClose }: { flyer: Flyer; start: number; o
           </Pressable>)}
         </ScrollView>
       </>}
-    </View>
+      {!zoomed && <Text style={styles.vHint} pointerEvents="none">Allarga con due dita o tocca due volte per ingrandire</Text>}
+    </GestureHandlerRootView>
   </Modal>;
 }
 
@@ -220,6 +267,7 @@ const styles = StyleSheet.create({
   thumbName: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.text, marginTop: 7, marginLeft: 2 },
 
   viewer: { flex: 1, backgroundColor: '#0F1A12' },
+  vHint: { position: 'absolute', alignSelf: 'center', bottom: 104, fontSize: 12.5, fontFamily: fonts.sansMedium, color: 'rgba(255,255,255,0.6)' },
   vBar: { height: 64, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10 },
   vClose: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
   vTitle: { fontSize: 18, fontFamily: fonts.display, color: '#FFFFFF' },

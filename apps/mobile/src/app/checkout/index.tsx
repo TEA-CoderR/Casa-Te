@@ -171,7 +171,8 @@ export default function CheckoutScreen() {
   const err = (k: string) => liveErrors[k];
   const fieldError = (k: string) => err(k) ? <Text style={styles.error} {...({ dataSet: { fieldError: 'true' } } as object)} accessibilityRole="alert">{err(k)}</Text> : null;
 
-  const pending = attempted ? Object.keys(liveErrors).filter((k) => k !== 'cart').length : 0;
+  // The terms have their own message right under the checkbox: count only the fields higher up the page.
+  const pending = attempted ? Object.keys(liveErrors).filter((k) => k !== 'cart' && k !== 'accepted').length : 0;
 
   // Phone (design F, F-Checkout): ivory page with its own header, radio cards, grouped white field cards,
   // a folding summary, the terms, and the total with "Paga" in a white sheet.
