@@ -60,6 +60,9 @@ Rules (`supabase/migrations/20261013000002_erp_sync.sql`):
   curated in the admin. VAT, `active` and a missing barcode or weight are updated.
 - **Store items** set the store price, the dated promotion and the ERP stock. Sellable quantity =
   ERP stock − quantity in this store's online orders that are not yet registered at the till.
+- A promotion whose price equals the member price is the cardholders' offer (the flyer: "per chi ha la Fidelity Card o è
+  iscritto al canale WhatsApp"): the agent sends it only as the member price, so online only Club members get it
+  (owner's choice, 13/11/2026). Promotions at any other price stay public.
 - `member_price_cents` / `member_price_ends_on`: Club member price ("Prezzo Soci"; no end date = permanent). A row
   without the key keeps the stored member price (`20261028155548_member_prices.sql`).
 - A row older than the last one applied (`sent_at`) is ignored (`stale`), so retries and out-of-order calls are safe.

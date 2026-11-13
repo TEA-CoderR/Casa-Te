@@ -68,6 +68,19 @@ test('buildBatch: member price (PrezzoVedi3 or dated prodotti_vip), only when be
   assert.equal(b.storeItems[1].member_price_cents, null, 'above the store price');
 });
 
+test('buildBatch: a promotion at the member price is the cardholders\' offer: member price only', () => {
+  const r = rows();
+  r.memberPrices = [{ CodArticolo: 10001, PrezzoVedi: '4.99', Prezzofine: '2026-10-20' }];
+  const b = buildBatch(r, { storeNumber: 3, today: '2026-10-13' });
+  assert.equal(b.storeItems[0].promo_price_cents, null, 'promo dropped: same price as the member price');
+  assert.equal(b.storeItems[0].member_price_cents, 499);
+  assert.equal(b.storeItems[1].promo_price_cents, 390, 'other promotions unchanged');
+  r.memberPrices = [{ CodArticolo: 10001, PrezzoVedi: '4.50', Prezzofine: '2026-10-20' }];
+  const c = buildBatch(r, { storeNumber: 3, today: '2026-10-13' });
+  assert.equal(c.storeItems[0].promo_price_cents, 499, 'a different promo price stays public');
+  assert.equal(c.storeItems[0].member_price_cents, 450);
+});
+
 test('diff: only changes; removed web articles are deactivated', () => {
   const b = buildBatch(rows(), { storeNumber: 3, today: '2026-10-13' });
   const state = { products: { '10001': fingerprint(b.products[0]), '99999': 'x' }, items: { 'LU3:10001': fingerprint(b.storeItems[0]) } };
