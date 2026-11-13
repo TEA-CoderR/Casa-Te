@@ -25,30 +25,27 @@ const spaced = (card: string) => card.replace(/(.{4})(?=.)/g, '$1 ');
  * The member's card (November 2026): the logo's colours reversed — green lettering on the lime — hanging from the band.
  * With a linked card it carries the barcode to scan at the till (tap to enlarge); otherwise it invites the next step.
  */
-export function ClubPass({ name, card, title, action, onPress, style, kicker = 'TESSERA SOCI', sign }: {
-  /** The shop sign's own colours (lime lettering on the green) instead of the lime card: for invitations, so the lime stays rare. */
-  sign?: boolean;
+export function ClubPass({ name, card, title, action, onPress, style, kicker = 'TESSERA SOCI' }: {
   kicker?: string; name?: string; card?: string | null; title?: string; action?: string; onPress?: () => void; style?: ViewStyle;
 }) {
   const [zoom, setZoom] = useState(false);
   const press = card ? () => setZoom(true) : onPress;
-  const ink = sign ? colors.bandLogo : colors.band;
   return <>
     <Pressable onPress={press} accessibilityRole="button"
       accessibilityLabel={card ? 'Tessera Soci: tocca per ingrandire il codice a barre' : [title, action].filter(Boolean).join('. ')}
-      style={({ pressed }) => [styles.card, sign && { backgroundColor: colors.band }, style, pressed && { transform: [{ scale: 0.985 }] }]}>
-      <Monogram width={300} color={ink} opacity={sign ? 0.1 : 0.07} style={{ position: 'absolute', right: -90, bottom: -70 }} />
+      style={({ pressed }) => [styles.card, style, pressed && { transform: [{ scale: 0.985 }] }]}>
+      <Monogram width={300} color={colors.band} opacity={0.07} style={{ position: 'absolute', right: -90, bottom: -70 }} />
       <View style={styles.head}>
-        <Text style={[styles.kicker, sign && { color: colors.bandMuted }]}>{kicker}</Text>
-        <Monogram width={54} color={ink} />
+        <Text style={styles.kicker}>{kicker}</Text>
+        <Monogram width={54} color={colors.band} />
       </View>
       {!!name && <Text style={styles.name} numberOfLines={1}>{name}</Text>}
       {card ? <View style={styles.code}>
         <Barcode value={card} height={52} color={colors.text} />
         <Text style={styles.number}>{spaced(card)}</Text>
       </View> : <View style={{ marginTop: 'auto' }}>
-        {!!title && <Text style={[styles.title, sign && { color: '#FFFFFF' }]}>{title}</Text>}
-        {!!action && <View style={[styles.button, sign && { backgroundColor: colors.bandLogo }]}><Text style={[styles.buttonText, sign && { color: colors.band }]}>{action}</Text></View>}
+        {!!title && <Text style={styles.title}>{title}</Text>}
+        {!!action && <View style={styles.button}><Text style={styles.buttonText}>{action}</Text></View>}
       </View>}
     </Pressable>
     {!!card && <Modal visible={zoom} transparent animationType="fade" onRequestClose={() => setZoom(false)}>

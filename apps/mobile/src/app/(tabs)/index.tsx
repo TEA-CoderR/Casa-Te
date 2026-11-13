@@ -235,9 +235,9 @@ function HomePhone() {
 
     {/* The Club as the lime card: members are sent to their card on Profilo, the others to the Club. */}
     {(club.enabled || !!profile.data?.club_member_since) && (profile.data?.club_member_since
-      ? <ClubPass sign kicker="CASA & TE CLUB" title={'La tua tessera\nè nel Profilo.'} action="Apri la tessera"
+      ? <ClubPass kicker="CASA & TE CLUB" title={'La tua tessera\nè nel Profilo.'} action="Apri la tessera"
         onPress={() => router.push('/profile')} style={{ marginHorizontal: 16, marginTop: 30, height: 200 }} />
-      : <ClubPass sign kicker="CASA & TE CLUB" title={'Prezzi Soci su tutto\nil catalogo.'} action="Scopri il Club"
+      : <ClubPass kicker="CASA & TE CLUB" title={'Prezzi Soci su tutto\nil catalogo.'} action="Scopri il Club"
         onPress={() => router.push('/club')} style={{ marginHorizontal: 16, marginTop: 30, height: 200 }} />)}
 
     <View style={styles.footer}>
