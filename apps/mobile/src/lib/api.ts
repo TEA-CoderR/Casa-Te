@@ -106,7 +106,10 @@ export type ProductQuery = {
  */
 export async function fetchOffers(storeId: string | null, limit: number): Promise<CatalogProduct[]> {
   const { items } = await fetchProducts({ storeId, onSale: true, pageSize: 60 });
-  const pct = (p: CatalogProduct) => p.compare_at_price_cents ? (p.compare_at_price_cents - p.price_cents) / p.compare_at_price_cents : 0;
+  // Offers are mostly members-only (the flyer's Fidelity Card prices arrive as member prices): count those too.
+  const pct = (p: CatalogProduct) => Math.max(
+    p.compare_at_price_cents ? (p.compare_at_price_cents - p.price_cents) / p.compare_at_price_cents : 0,
+    p.member_price_cents != null && p.member_price_cents < p.price_cents ? (p.price_cents - p.member_price_cents) / p.price_cents : 0);
   const rank = (p: CatalogProduct) => p.offer_rank ?? Number.MAX_SAFE_INTEGER;
   return items.filter((p) => pct(p) > 0).sort((a, b) => rank(a) - rank(b) || pct(b) - pct(a)).slice(0, limit);
 }
