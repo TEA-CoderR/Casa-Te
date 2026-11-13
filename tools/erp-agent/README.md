@@ -34,3 +34,9 @@ Contratto e mappatura: `docs/ERP_SYNC.md`.
   lettura) e scrive accanto un `.csv` con lo stesso nome. Per controlli sui dati ITO senza aprire un client MySQL.
 
 Il negozio non riceve mai prezzi di acquisto, clienti, personale o vendite.
+
+## Daily schedule (Windows)
+`schedule-daily.bat` (on the PC: `设置每日定时同步.bat`) registers the scheduled task `CasaTe-ERP-Sync`: every day at
+07:00 it runs `sync-daily.bat` (`node agent.mjs --once`, output appended to `logs\sync.log`, rotated at 5 MB). It runs as the
+signed-in user, so it reads the same user environment variables (`ERP_MYSQL_PASSWORD`, `ERP_SYNC_SECRET`); a run missed while
+the PC was off starts when it is back on. `unschedule-daily.bat` (`取消定时同步.bat`) removes it.
