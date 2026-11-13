@@ -4,7 +4,7 @@ import { FULFILMENT_LABELS, type FulfilmentMethod, type Quote } from '@casa-te/s
 import { formatShipping } from '@/lib/price';
 import { colors, fonts } from '@/config/theme';
 import { usePreferences } from '@/store/preferences';
-import { useDelivery } from '@/lib/hooks';
+import { useDelivery, useStores } from '@/lib/hooks';
 import { Icon } from './Icon';
 import { OptionCard } from './UI';
 
@@ -16,6 +16,7 @@ export function FulfilmentSheet({ visible, onClose, quote, storeName, onChangeSt
   const setFulfilment = usePreferences((s) => s.setFulfilment);
   const methods: FulfilmentMethod[] = ['store', 'home', 'pickup'];
   const { open: deliveryOpen, known } = useDelivery();
+  const { canChoose } = useStores();
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Chiudi" />
     <View style={styles.sheet} accessibilityViewIsModal>
@@ -35,8 +36,8 @@ export function FulfilmentSheet({ visible, onClose, quote, storeName, onChangeSt
             onPress={() => { setFulfilment(m); onClose(); }} />;
         })}
       </View>
-      <Pressable onPress={() => { onClose(); onChangeStore(); }} accessibilityRole="button" style={{ alignSelf: 'flex-start', paddingVertical: 6 }}>
-        <Text style={styles.link}>Cambia negozio ({storeName})</Text></Pressable>
+      {canChoose && <Pressable onPress={() => { onClose(); onChangeStore(); }} accessibilityRole="button" style={{ alignSelf: 'flex-start', paddingVertical: 6 }}>
+        <Text style={styles.link}>Cambia negozio ({storeName})</Text></Pressable>}
     </View>
   </Modal>;
 }

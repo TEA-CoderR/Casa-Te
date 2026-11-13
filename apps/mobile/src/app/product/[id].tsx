@@ -32,7 +32,7 @@ import { shownProduct, useClubMember } from '@/store/club';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { selected } = useStores();
+  const { selected, canChoose } = useStores();
   const delivery = useDelivery();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(0);
@@ -144,11 +144,11 @@ export default function ProductDetailScreen() {
       <Stars value={product.rating_avg ?? 0} size={15} />
       <Text style={styles.ratingText}>{product.rating_count ? `(${product.rating_count})` : 'Nessuna recensione'}</Text>
     </View>}
-    <Pressable style={styles.availability} onPress={() => setStoreSheet(true)} accessibilityRole="button"
-      accessibilityLabel={`${stock.text}. Cambia negozio`}>
+    <Pressable style={styles.availability} onPress={() => setStoreSheet(true)} disabled={!canChoose} accessibilityRole={canChoose ? 'button' : 'text'}
+      accessibilityLabel={canChoose ? `${stock.text}. Cambia negozio` : stock.text}>
       <View style={[styles.dot, !stock.available && { backgroundColor: colors.danger }]} />
       <Text style={[styles.availabilityText, !stock.available && { color: colors.danger }]}>{stock.text}{caption ? ` · ${caption}` : ''}</Text>
-      <Text style={styles.change}>Cambia</Text>
+      {canChoose && <Text style={styles.change}>Cambia</Text>}
     </Pressable>
     <View style={styles.features}>
       {features.map((f) => <View key={f.icon + f.text} style={styles.feature}><Icon name={f.icon} size={23} color={colors.text} strokeWidth={1.15} />
@@ -251,7 +251,7 @@ export default function ProductDetailScreen() {
         </View>
         {sociLine}
         {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
-        <Pressable style={({ pressed }) => [styles.phoneCard, pressed && { opacity: 0.9 }]} onPress={() => setStoreSheet(true)} accessibilityRole="button" accessibilityLabel={`${stock.text}. Cambia negozio`}>
+        <Pressable style={({ pressed }) => [styles.phoneCard, pressed && { opacity: 0.9 }]} onPress={() => setStoreSheet(true)} disabled={!canChoose} accessibilityRole={canChoose ? 'button' : 'text'} accessibilityLabel={canChoose ? `${stock.text}. Cambia negozio` : stock.text}>
           {/* Design H: no icon, a status line with a dot ("DISPONIBILE") over the store name. */}
           <View style={{ flex: 1 }}>
             {!!stockState && <View style={styles.stockRow}>
@@ -259,9 +259,9 @@ export default function ProductDetailScreen() {
               <Text style={[styles.stockState, !stock.available && { color: colors.danger }]}>{stockState.toUpperCase()}</Text>
             </View>}
             <Text style={styles.phoneCardTitle}>{stockState ? stockPlace : stock.text.replace(/ a (\S+) (?!·)/, ' a $1 · ') || 'Scegli il negozio'}</Text>
-            <Text style={styles.phoneCardText}>{['Ritiro gratuito · resta 14 giorni in negozio', caption].filter(Boolean).join(' · ')}</Text>
+            <Text style={styles.phoneCardText}>{['Ritiro gratuito in negozio', caption].filter(Boolean).join(' · ')}</Text>
           </View>
-          <Text style={styles.phoneLink}>Cambia</Text>
+          {canChoose && <Text style={styles.phoneLink}>Cambia</Text>}
         </Pressable>
         <View style={styles.folds}>{sections.map((f, i) => {
           const open = openKey === f.key;

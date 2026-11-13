@@ -44,14 +44,17 @@ export function storeStatus(hours: string | null | undefined, now = new Date()):
  * The customer's store (design F): a white card that hangs from the awning. Stock, prices and free pickup are
  * always about this store, so it is named everywhere the customer shops.
  */
-export function StoreCard({ onPress, label = 'Ritiro gratuito nel tuo negozio', action = 'Cambia', compact, showStatus = true, style }: {
-  onPress: () => void; label?: string; action?: string; compact?: boolean; showStatus?: boolean; style?: ViewStyle;
+export function StoreCard({ onPress, label = 'Ritiro gratuito nel tuo negozio', action = 'Cambia', compact, showStatus = true, changeable = true, style }: {
+  onPress: () => void; label?: string; action?: string; compact?: boolean; showStatus?: boolean;
+  /** False when there is nothing to change (one open store, no delivery): the card only names the store. */
+  changeable?: boolean; style?: ViewStyle;
 }) {
   const { selected } = useStores();
   const name = storeShortName(selected).replace(/^(\S+)\s+(?!·)/, '$1 · ');
   const status = showStatus ? storeStatus(selected?.opening_hours) : null;
-  return <Pressable onPress={onPress} accessibilityRole="button"
-    accessibilityLabel={name ? `${label}: ${name}. ${action} negozio` : 'Scegli il tuo negozio'}
+  const fixed = !!name && !changeable;
+  return <Pressable onPress={onPress} disabled={fixed} accessibilityRole={fixed ? 'text' : 'button'}
+    accessibilityLabel={name ? `${label}: ${name}${fixed ? '' : `. ${action} negozio`}` : 'Scegli il tuo negozio'}
     style={({ pressed }) => [styles.card, compact && styles.compact, style, pressed && { opacity: 0.92 }]}>
     <View style={{ flex: 1, minWidth: 0 }}>
       <Text style={styles.label} numberOfLines={1}>{(name ? label : 'Prezzi e disponibilità del negozio').toUpperCase()}</Text>
@@ -61,7 +64,7 @@ export function StoreCard({ onPress, label = 'Ritiro gratuito nel tuo negozio', 
         <Text style={[styles.hoursText, status.open === false && { color: colors.muted }]} numberOfLines={1}>{status.text}</Text>
       </View>}
     </View>
-    <View style={styles.actionPill}><Text style={styles.action}>{name ? action : 'Scegli'}</Text></View>
+    {!fixed && <View style={styles.actionPill}><Text style={styles.action}>{name ? action : 'Scegli'}</Text></View>}
   </Pressable>;
 }
 

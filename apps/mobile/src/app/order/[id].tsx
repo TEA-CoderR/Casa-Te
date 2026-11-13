@@ -27,7 +27,7 @@ const HEADLINES: Record<string, string> = {
 export default function OrderDetailScreen() {
   const { id, reso } = useLocalSearchParams<{ id: string; reso?: string }>();
   const { data: order, loading, refetch } = useQuery(id ? `orders:${id}` : null, () => fetchOrder(id!));
-  const { stores } = useStores();
+  const { allStores: stores } = useStores();
   const add = useCartStore((s) => s.add);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

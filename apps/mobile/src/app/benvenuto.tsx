@@ -20,7 +20,7 @@ import { usePreferences } from '@/store/preferences';
 export default function Welcome() {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
-  const { stores, selected } = useStores();
+  const { stores, selected, canChoose } = useStores();
   const setStoreId = usePreferences((s) => s.setStoreId);
   const setOnboarded = usePreferences((s) => s.setOnboarded);
   const [pick, setPick] = useState<string | null>(null);
@@ -33,7 +33,9 @@ export default function Welcome() {
   };
   const skip = <Pressable onPress={() => done()} accessibilityRole="button" hitSlop={10} style={styles.skip}>
     <Text style={styles.skipText}>Salta</Text></Pressable>;
-  const kicker = (n: number) => <Text style={styles.kicker}>PASSO {n} DI 2</Text>;
+  // With one open store there is nothing to choose: welcome → account, and the store is set on the way.
+  const kicker = (n: number) => canChoose ? <Text style={styles.kicker}>PASSO {n} DI 2</Text> : null;
+  const start = () => { if (canChoose) { setStep(1); return; } if (chosen) setStoreId(chosen); setStep(2); };
 
   return <View style={styles.page}>
     <Stack.Screen options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />
@@ -47,7 +49,7 @@ export default function Welcome() {
           Ordina online e ritira gratis nel tuo negozio Casa & Te.</Animated.Text>
       </View>
       <Animated.View entering={FadeInDown.delay(520).duration(500)} style={{ gap: 16, marginTop: 36 }}>
-        <Pressable onPress={() => setStep(1)} accessibilityRole="button" style={({ pressed }) => [styles.white, pressed && { opacity: 0.9 }]}>
+        <Pressable onPress={start} accessibilityRole="button" style={({ pressed }) => [styles.white, pressed && { opacity: 0.9 }]}>
           <Text style={styles.whiteText}>Inizia</Text></Pressable>
         <Pressable onPress={() => done(true)} accessibilityRole="button" hitSlop={8} style={{ alignSelf: 'center' }}>
           <Text style={styles.link}>Hai già un account? <Text style={{ fontFamily: fonts.sansBold, textDecorationLine: 'underline' }}>Accedi</Text></Text></Pressable>
@@ -85,7 +87,7 @@ export default function Welcome() {
     </Animated.View>}
 
     {step === 2 && <Animated.View key="s2" entering={FadeInRight.duration(350)} style={[styles.fill, { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 24 }]}>
-      <View style={styles.topRow}><Pressable onPress={() => setStep(1)} accessibilityRole="button" accessibilityLabel="Indietro" hitSlop={8} style={styles.back}>
+      <View style={styles.topRow}><Pressable onPress={() => setStep(canChoose ? 1 : 0)} accessibilityRole="button" accessibilityLabel="Indietro" hitSlop={8} style={styles.back}>
         <Icon name="back" size={20} color="#FFFFFF" strokeWidth={2.4} /></Pressable>{skip}</View>
       {kicker(2)}
       <Text style={styles.title} accessibilityRole="header">Il tuo account</Text>
@@ -113,7 +115,7 @@ export default function Welcome() {
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.band, overflow: 'hidden' },
   fill: { flex: 1, paddingHorizontal: 24 },
-  hero: { fontSize: 52, lineHeight: 56, letterSpacing: -1.8, fontFamily: fonts.display, color: '#FFFFFF' },
+  hero: { fontSize: 48, lineHeight: 52, letterSpacing: -1.6, fontFamily: fonts.display, color: '#FFFFFF' },
   lead: { fontSize: 16, lineHeight: 23, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 12 },
   white: { height: 56, borderRadius: 28, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   whiteText: { fontSize: 17, fontFamily: fonts.sansBold, color: colors.text },

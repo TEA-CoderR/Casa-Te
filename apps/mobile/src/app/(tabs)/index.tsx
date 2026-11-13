@@ -37,7 +37,7 @@ function HomePhone() {
   const insets = useSafeAreaInsets();
   // Light status bar over the green band while Home is on screen.
   useFocusEffect(useCallback(() => { setStatusBarStyle('light'); return () => setStatusBarStyle('dark'); }, []));
-  const { selected } = useStores();
+  const { selected, canChoose } = useStores();
   const user = useUser();
   const { width } = useWindowDimensions();
   const [storeSheet, setStoreSheet] = useState(false);
@@ -126,11 +126,11 @@ function HomePhone() {
       <Pressable onPress={() => router.push('/favorites')} accessibilityRole="button" accessibilityLabel="Preferiti" hitSlop={4}
         style={({ pressed }) => [styles.bandButton, pressed && { opacity: 0.7 }]}><Icon name="heart" size={21} color={colors.bandText} strokeWidth={1.9} /></Pressable>
     </View>
-    <Pressable onPress={() => setStoreSheet(true)} accessibilityRole="button"
-      accessibilityLabel={selected ? `Il tuo negozio: ${short}. Cambia negozio` : 'Scegli il tuo negozio'} style={({ pressed }) => [styles.storeHero, pressed && { opacity: 0.85 }]}>
+    <Pressable onPress={() => setStoreSheet(true)} disabled={!!selected && !canChoose} accessibilityRole={selected && !canChoose ? 'text' : 'button'}
+      accessibilityLabel={selected ? `Il tuo negozio: ${short}${canChoose ? '. Cambia negozio' : ''}` : 'Scegli il tuo negozio'} style={({ pressed }) => [styles.storeHero, pressed && { opacity: 0.85 }]}>
       <View style={styles.storeTop}>
         <Text style={styles.storeKicker} numberOfLines={1}>{selected ? `RITIRO GRATIS${city ? ` · ${city.toUpperCase()}` : ''}` : 'IL TUO NEGOZIO'}</Text>
-        <View style={styles.storeChange}><Text style={styles.storeChangeText}>{selected ? 'Cambia' : 'Scegli'}</Text></View>
+        {(canChoose || !selected) && <View style={styles.storeChange}><Text style={styles.storeChangeText}>{selected ? 'Cambia' : 'Scegli'}</Text></View>}
       </View>
       <Text style={styles.storePlace} numberOfLines={1} adjustsFontSizeToFit>{selected ? place : 'Scegli il negozio'}</Text>
       {!!status && <View style={styles.storeStatus}>
@@ -205,8 +205,8 @@ function HomePhone() {
       })}</View>
     </View>}
 
-    {/* Offers: the same cards as "In evidenza", side by side. */}
-    {offerItems.length > 0 && <View style={{ paddingTop: 28 }}>
+    {/* Offers: the same cards as "In evidenza", side by side; one or two alone look broken, the banner still links them. */}
+    {offerItems.length >= 3 && <View style={{ paddingTop: 28 }}>
       {sectionHead('h-offerte', 'Offerte', 'Vedi tutte', () => openCatalog({ offerte: '1' }), 'QUESTA SETTIMANA')}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.rail}>
         {offerItems.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}

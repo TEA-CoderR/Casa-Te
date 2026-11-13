@@ -42,7 +42,7 @@ export default function ReturnRequestScreen() {
   const user = useUser();
   const order = useQuery(orderId && user ? `orders:${orderId}` : null, () => fetchOrder(orderId!));
   const returns = useQuery(orderId && user ? `returns:${orderId}` : null, () => fetchOrderReturns(orderId!));
-  const { stores } = useStores();
+  const { allStores: stores } = useStores();
   const [step, setStep] = useState(0);
   const [forward, setForward] = useState(true);
   const [qty, setQty] = useState<Record<string, number>>({});

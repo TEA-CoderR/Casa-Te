@@ -62,7 +62,7 @@ function Shortcut({ icon, label, detail, onPress, square }: { icon: IconName; la
 export default function ProfileScreen() {
   const user = useUser();
   const storeId = usePreferences((s) => s.storeId);
-  const { selected } = useStores();
+  const { selected, canChoose } = useStores();
   const { wide } = useLayout();
   const insets = useSafeAreaInsets();
   const favourites = useFavorites((s) => s.ids.length);
@@ -109,9 +109,9 @@ export default function ProfileScreen() {
     </View>
     <Text style={styles.storeName}>{selected ? `CASA & TE ${storeName}` : 'Nessun negozio scelto'}</Text>
     <Text style={styles.storeText}>{selected?.opening_hours ? `Orari: ${selected.opening_hours}` : 'Disponibilità dei prodotti e ritiro gratuito in questo negozio.'}</Text>
-    <Pressable onPress={() => setStoreSheet(true)} accessibilityRole="button" style={styles.storeChange}>
+    {(canChoose || !selected) && <Pressable onPress={() => setStoreSheet(true)} accessibilityRole="button" style={styles.storeChange}>
       {({ hovered }: WebState) => <Text style={[styles.link, hovered && { textDecorationLine: 'underline' }]}>{selected ? 'Cambia negozio' : 'Scegli il negozio'}</Text>}
-    </Pressable>
+    </Pressable>}
   </View>;
 
   const clubCard = (club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link"

@@ -19,7 +19,7 @@ import { Icon } from '@/components/Icon';
 import { colors, floatShadow, fonts } from '@/config/theme';
 import { fetchCartSuggestions, fetchProducts, imageUrl } from '@/lib/api';
 import { ProductCard } from '@/components/ProductCard';
-import { useCartQuote, useClubSettings, useDelivery, useLayout } from '@/lib/hooks';
+import { useCartQuote, useClubSettings, useDelivery, useLayout, useStores } from '@/lib/hooks';
 import { cartItemCount, useCartStore } from '@/store/cart';
 import { useUser } from '@/store/session';
 import { ALL_PRODUCTS } from '@/lib/links';
@@ -37,7 +37,8 @@ export default function CartScreen() {
   const remove = useCartStore((s) => s.remove);
   const add = useCartStore((s) => s.add);
   const fulfilment = usePreferences((s) => s.fulfilment);
-  useDelivery();
+  const { open: deliveryOpen } = useDelivery();
+  const { canChoose } = useStores();
   const [removed, setRemoved] = useState<{ id: string; name: string; qty: number } | null>(null);
   // "Svuota carrello" asks once, in place (no system dialog).
   const [confirmClear, setConfirmClear] = useState(false);
@@ -178,7 +179,7 @@ export default function CartScreen() {
         onChangeStore={() => setStoreSheet(true)} />
       <View style={{ marginTop: -30 }}>
         {fulfilment === 'store'
-          ? <StoreCard compact showStatus={false} label="Ritiro gratuito a" onPress={() => setDeliverySheet(true)} />
+          ? <StoreCard compact showStatus={false} label="Ritiro gratuito a" changeable={canChoose || deliveryOpen} onPress={() => setDeliverySheet(true)} />
           : <Pressable onPress={() => setDeliverySheet(true)} accessibilityRole="button" style={styles.pCard}>
               <Icon name={fulfilment === 'home' ? 'truck' : 'pin'} size={26} color={colors.green} strokeWidth={1.9} />
               <View style={{ flex: 1 }}>

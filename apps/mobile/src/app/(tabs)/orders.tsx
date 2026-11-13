@@ -22,7 +22,7 @@ export default function OrdersScreen() {
   // Phones: the green band with a way back (these pages open from the header heart and Profilo).
   const band = phone ? <BrandHeader title="I miei ordini" titleSize={28} left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/profile')} />} /> : undefined;
   const [tab, setTab] = useState<'active' | 'done'>('active');
-  const { stores } = useStores();
+  const { allStores: stores } = useStores();
   const page = phone ? { header: band, ground: palette.page } : {};
   const user = useUser();
   const { data: orders, loading, error, refetch } = useQuery<OrderWithItems[]>(user ? `orders:list:${user.id}` : null, fetchOrders);

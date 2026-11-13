@@ -46,7 +46,7 @@ export default function CheckoutReturnScreen() {
   const cleared = useRef(false);
   const { wide } = useLayout();
   const insets = useSafeAreaInsets();
-  const { stores } = useStores();
+  const { allStores: stores } = useStores();
 
   useEffect(() => {
     if (!orderId || !ready) return;

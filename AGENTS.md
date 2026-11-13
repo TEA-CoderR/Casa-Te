@@ -24,25 +24,24 @@ Read `docs/ARCHITECTURE.md` and `docs/DECISIONS.md` first.
 7. Run `npm test` (needs `psql` + PostgreSQL binaries or `DATABASE_URL`) and `npm run typecheck` before committing.
 
 ## Design rules (customer app, `apps/mobile`)
-The phone app follows design F "La Tenda" (`apps/mobile/src/config/theme.ts`), unified in November 2026 with the sign-in pages:
-white header band (no striped awning), the logo as a small lime-on-green sign (`LogoSign`, `BrandLogo`), Figtree titles,
-outlined fields and search, green pill buttons; the floating dark-green tab bar, the Categorie rail and every animation stay.
+The phone app follows the November 2026 design (`docs/design/ui-audit-2026-11.md`): a deep-green band (`colors.band`) with the
+CT monogram texture (`Monogram`, `BandWatermark`), white pages for content, Figtree everywhere. Lime (`colors.bandLogo`) only
+for what is yours and in progress: the member card (`ClubPass`), live order tickets, the paid receipt, the active tab, the cart
+count, the account step of the welcome. The floating dark-green tab bar, the Categorie rail and every animation stay.
 The desktop shop is the printed catalogue.
 The September demo (built with Codex) left generic AI patterns that kept coming back; do not reintroduce them.
-1. **Start from the shared components** in `components/UI.tsx` (`OptionCard`, `RadioMark`, `StatusMark`, `Notice`,
-   `PrimaryButton`, `SecondaryButton`, `QuantityControl`, `EmptyState`, `PriceTag`…) and `components/ShopMarks.tsx`;
-   copy a screen's styles only after checking them against the design boards.
+1. **Start from the shared components**: `components/UI.tsx` (`PrimaryButton`, `SecondaryButton`, `PillButton`, `SearchField`,
+   `OptionCard`, `RadioMark`, `StatusMark`, `Notice`, `QuantityControl`, `EmptyState`, `PriceTag`…), `ListRow` / `ListGroup`
+   for every list, `OrderTicket` for orders, `ClubPass` for the card. Sizes come only from `theme.ts`: `type` (font sizes),
+   `radius` (`sm` 12, `md` 16, `lg` 22, `pill`), spacing in steps of 4. Do not write new values.
 2. **Choices** (delivery, address, store, refund…): white card, radio on the left, the chosen one gets a green edge only.
    No tinted fill, no thicker coloured frame with a fill, no icon that turns into a filled circle.
-3. **Status** (orders, returns): `StatusMark` — a dot and the words. The logo lime (`colors.yellow`) is the single signal
-   (active tab, price chips, cart count, "ready"/"approved"); red only for discounts and errors.
+3. **Status** (orders, returns): `StatusMark` — a dot and the words; lime as above; red only for discounts and errors.
 4. **Messages**: `Notice` — a white plate with a coloured edge and title, never a pale green/red/yellow panel.
-5. **Icons** stand alone, never inside a tinted circle; prefer signs from the shop (`StepTag`, `EmptyReceipt`, `AwningMark`).
-6. **Grounds**: white page and header band (`colors.page`, `colors.band`), white plates with a hairline (`colors.line`),
-   cool neutrals (`well`) for quiet fills; the shop-sign green (`colors.sign`) only for the logo and the Club.
-   Pale tints are only for content that is not a state (department tiles, the home banners, the desktop offers tile).
-7. **Type**: every text style sets `fontFamily` from `fonts` (Figtree everywhere: `display` for titles); a `fontWeight` alone
+5. **Icons** stand alone, never inside a tinted circle.
+6. **Say it once**: the same line (free pickup, the store name, a total) appears once per screen. Uppercase kickers only on
+   tickets, the card, welcome steps, the store line of the home band and list group titles.
+7. **Type**: every text style sets `fontFamily` from `fonts` (`display` for titles); a `fontWeight` alone
    falls back to the system font on phones.
 8. `npm run test:ui` checks 2–4 and 7 (`tools/ui-check`); a deliberate exception carries
-   `// ui-check: allow (<reason>)` on the line or the line above. New UI is compared with the boards before merging.
-
+   `// ui-check: allow (<reason>)` on the line or the line above. Rejected directions are listed in §6 of the design plan.
