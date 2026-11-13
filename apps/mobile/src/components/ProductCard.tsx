@@ -3,7 +3,7 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Link } from 'expo-router';
 import { discountLabel, formatEuro, unitPriceLabel } from '@/lib/price';
 import type { CatalogProduct } from '@/lib/api';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, radius, type } from '@/config/theme';
 import { useCartStore } from '@/store/cart';
 import { useFavorites } from '@/store/favorites';
 import { ProductImage } from './ProductImage';
@@ -158,9 +158,9 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
 }
 
 const styles = StyleSheet.create({
-  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 10,
+  card: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, padding: 8, paddingBottom: 10,
     borderWidth: 1, borderColor: colors.line },
-  media: { backgroundColor: colors.surface, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  media: { backgroundColor: colors.surface, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   heart: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 6, right: 6, zIndex: 2 },
   discount: { position: 'absolute', left: 0, top: 0, backgroundColor: colors.sale, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },

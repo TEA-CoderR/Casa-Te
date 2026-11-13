@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp, FadeOutUp, ZoomIn } from 'react-native-reanimated';
 import { Link, useLocalSearchParams, router, Stack } from 'expo-router';
@@ -9,10 +9,10 @@ import { Screen } from '@/components/Screen';
 import { RevealOnOpen } from '@/components/Reveal';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductImage } from '@/components/ProductImage';
-import { FavoriteButton, stockLabel } from '@/components/ProductCard';
+import { FavoriteButton, ProductCard, stockLabel } from '@/components/ProductCard';
 import { Icon, type IconName } from '@/components/Icon';
-import { EmptyState, Loading, PriceTag, PrimaryButton, QuantityControl } from '@/components/UI';
-import { colors, fonts } from '@/config/theme';
+import { EmptyState, Loading, PillButton, PriceTag, PrimaryButton, QuantityControl } from '@/components/UI';
+import { cardShadow, colors, fonts, radius, type } from '@/config/theme';
 import { fetchCategories, fetchProduct, fetchProducts, fetchVariants } from '@/lib/api';
 import { Stars } from '@/components/Stars';
 import { ProductReviews } from '@/components/ProductReviews';
@@ -59,8 +59,9 @@ export default function ProductDetailScreen() {
   const variants = useQuery(group ? `variants:${group}:${selected?.id}` : null, () => fetchVariants(group!, selected?.id ?? null));
   const [folds, setFolds] = useState<string | null>(null);
   const related = useQuery(product?.category_id && !wide ? `related:${product.category_id}:${selected?.id}` : null,
-    () => fetchProducts({ storeId: selected?.id ?? null, categoryIds: [product!.category_id as string], sort: 'featured', pageSize: 3 }));
+    () => fetchProducts({ storeId: selected?.id ?? null, categoryIds: [product!.category_id as string], sort: 'featured', pageSize: 5 }));
 
+  const { width: screenW } = useWindowDimensions();
   const back = () => router.canGoBack() ? router.back() : router.replace('/');
   const share = async (name: string) => {
     const url = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.href : undefined;
@@ -81,10 +82,6 @@ export default function ProductDetailScreen() {
   </EmptyState></Screen>;
 
   const stock = stockLabel(product.stock, storeShortName(selected));
-  // "Disponibile a Lucca S. Filippo" → state "Disponibile" + place "a Lucca · S. Filippo".
-  const stockSplit = stock.text.match(/^(.*?)\s((?:a|ad|in)\s.+)$/);
-  const stockState = stockSplit?.[1] ?? '';
-  const stockPlace = (stockSplit?.[2] ?? '').replace(/ a (\S+) (?!·)/, ' a $1 · ').replace(/^(a|ad|in) (\S+) (?!·)/, '$1 $2 · ');
   const maxQty = Math.max(1, Math.min(product.max_per_order, (product.stock ?? 99) - inCart));
   const canAdd = stock.available && (product.stock === null || inCart + quantity <= product.stock);
   const addToCart = () => { add(product.id, quantity); setAdded(quantity); setQuantity(1); };
@@ -214,8 +211,9 @@ export default function ProductDetailScreen() {
       <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={4} style={({ pressed }) => [styles.roundPhone, pressed && { opacity: 0.7 }]}>
         <Icon name={icon} size={icon === 'back' ? 22 : 20} color={filled ? colors.sale : colors.text} fill={filled ? colors.sale : undefined} strokeWidth={icon === 'back' ? 2.2 : 2} />
       </Pressable>;
-    const details = [pack && `Formato: ${pack}`, product.brand && `Marca: ${product.brand}`, department && `Reparto: ${top ? `${top.name} › ` : ''}${department.name}`,
-      product.color && `Colore: ${product.color}`, product.weight_g ? `Peso: ${formatWeight(product.weight_g)}` : null, `Codice: ${product.sku}`].filter(Boolean).join('\n');
+    // The department is already in the breadcrumb above the title.
+    const details = [pack && `Formato: ${pack}`, product.brand && `Marca: ${product.brand}`,
+      product.color && `Colore: ${product.color}`, product.weight_g ? `Peso: ${formatWeight(product.weight_g)}` : null, `Codice articolo: ${product.sku}`].filter(Boolean).join('\n');
     const sections: Array<{ key: string; title: string; body: React.ReactNode }> = [
       ...(product.description ? [{ key: 'd', title: 'Descrizione', body: <Text style={styles.foldText}>{product.description}</Text> }] : []),
       { key: 'i', title: 'Dettagli', body: <Text style={styles.foldText}>{details}</Text> },
@@ -227,8 +225,9 @@ export default function ProductDetailScreen() {
       contentContainerStyle={{ padding: 0, paddingBottom: 20 }}>
       <Stack.Screen options={{ title: product.name, headerShown: false }} />
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-      <View style={styles.stage}>
-        <View style={styles.stageImage}><ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0} /></View>
+      {/* A square stage as wide as the screen, the photo with an 8% margin (plan §5.3). */}
+      <View style={[styles.stage, { height: screenW }]}>
+        <View style={[styles.stageImage, { top: screenW * 0.08, left: screenW * 0.08, width: screenW * 0.84, height: screenW * 0.84 }]}><ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0} /></View>
         {/* The discount rate on the photo: "−25%" (the Soci line under the price says who it is for). */}
         {!!phoneRate && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{phoneRate}</Text></View>}
         <View style={styles.stageBar}>
@@ -252,16 +251,14 @@ export default function ProductDetailScreen() {
         {sociLine}
         {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
         <Pressable style={({ pressed }) => [styles.phoneCard, pressed && { opacity: 0.9 }]} onPress={() => setStoreSheet(true)} disabled={!canChoose} accessibilityRole={canChoose ? 'button' : 'text'} accessibilityLabel={canChoose ? `${stock.text}. Cambia negozio` : stock.text}>
-          {/* Design H: no icon, a status line with a dot ("DISPONIBILE") over the store name. */}
-          <View style={{ flex: 1 }}>
-            {!!stockState && <View style={styles.stockRow}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={styles.stockRow}>
               <View style={[styles.stockDot, !stock.available && { backgroundColor: colors.danger }]} />
-              <Text style={[styles.stockState, !stock.available && { color: colors.danger }]}>{stockState.toUpperCase()}</Text>
-            </View>}
-            <Text style={styles.phoneCardTitle}>{stockState ? stockPlace : stock.text.replace(/ a (\S+) (?!·)/, ' a $1 · ') || 'Scegli il negozio'}</Text>
+              <Text style={[styles.phoneCardTitle, !stock.available && { color: colors.danger }]} numberOfLines={2}>{stock.text || 'Scegli il negozio'}</Text>
+            </View>
             <Text style={styles.phoneCardText}>{['Ritiro gratuito in negozio', caption].filter(Boolean).join(' · ')}</Text>
           </View>
-          {canChoose && <Text style={styles.phoneLink}>Cambia</Text>}
+          {canChoose && <PillButton title="Cambia" />}
         </Pressable>
         <View style={styles.folds}>{sections.map((f, i) => {
           const open = openKey === f.key;
@@ -275,12 +272,11 @@ export default function ProductDetailScreen() {
         })}</View>
         {related.data && related.data.items.filter((p) => p.id !== product.id).length > 0 && <>
           <Text style={styles.relatedTitle} accessibilityRole="header">Altro in {department?.name ?? 'questo reparto'}</Text>
-          <View style={{ flexDirection: 'row', gap: 10 }}>{related.data.items.filter((p) => p.id !== product.id).slice(0, 2).map((p) =>
-            <Pressable key={p.id} onPress={() => router.push(`/product/${p.id}`)} accessibilityRole="link" accessibilityLabel={`${p.name}, ${formatEuro(shownProduct(p, isMember).price_cents)}`} style={styles.related}>
-              <View style={{ height: 92, alignItems: 'center', justifyContent: 'center' }}><View style={{ width: 84, height: 84 }}><ProductImage uri={p.image} sku={p.sku} inset={0} /></View></View>
-              <Text style={styles.relatedName} numberOfLines={2}>{p.name}</Text>
-              <Text style={styles.relatedPrice}>{euro(shownProduct(p, isMember).price_cents)}</Text>
-            </Pressable>)}</View>
+          {/* The same cards as "In evidenza" on Home. */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingBottom: 1 }}>
+            {related.data.items.filter((p) => p.id !== product.id).slice(0, 4).map((p) =>
+              <View key={p.id} style={{ width: 162, flexDirection: 'row' }}><ProductCard product={p} rail /></View>)}
+          </ScrollView>
         </>}
       </View>
       {sharedNote}
@@ -326,37 +322,32 @@ const styles = StyleSheet.create({
   crumbSep: { fontSize: 13, color: colors.rule, fontFamily: fonts.sans },
   titleWide: { fontSize: 48, lineHeight: 52, letterSpacing: -0.8 },
   // Plain white stage on the white page: the photo alone, no floor shadow or rounded edge.
-  stage: { height: 380, backgroundColor: colors.photo },
-  stageImage: { position: 'absolute', top: 58, alignSelf: 'center', width: 270, height: 270 },
+  stage: { backgroundColor: colors.photo },
+  stageImage: { position: 'absolute' },
   stageBar: { position: 'absolute', top: 14, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
-  roundPhone: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
+  roundPhone: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', ...cardShadow },
   phoneBadge: { position: 'absolute', left: 16, top: 70, backgroundColor: colors.sale, borderRadius: 9, paddingHorizontal: 10, paddingVertical: 3 },
   phoneBadgeText: { fontSize: 18, fontFamily: fonts.heavy, color: '#FFFFFF' },
   phoneInfo: { paddingHorizontal: 20, paddingTop: 18 },
-  phoneCrumb: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green },
-  phoneTitle: { fontSize: 28, lineHeight: 32, fontFamily: fonts.display, color: colors.text, marginTop: 6, letterSpacing: -0.2 },
+  phoneCrumb: { ...type.small, fontFamily: fonts.sansBold, color: colors.green },
+  phoneTitle: { ...type.title, color: colors.text, marginTop: 6 },
   phonePriceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginTop: 10, flexWrap: 'wrap' },
   sociLine: { marginTop: 6, marginBottom: 4 },
   sociText: { fontSize: 13, lineHeight: 18, color: colors.sale, fontFamily: fonts.sans },
   sociStrong: { fontFamily: fonts.sansBold, fontWeight: '700' },
   phoneStruck: { textDecorationLine: 'line-through' },
   phoneUnit: { fontSize: 14, fontFamily: fonts.sans, color: colors.muted, paddingBottom: 6, flexShrink: 1 },
-  phoneCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  stockRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  phoneCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, padding: 16, borderRadius: radius.md, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  stockRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stockDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2E9B3A' },
-  stockState: { fontSize: 12.5, fontFamily: fonts.heavy, letterSpacing: 0.5, color: '#2E6B34' },
-  phoneCardTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
-  phoneCardText: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
-  phoneLink: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green },
+  phoneCardTitle: { ...type.cardTitle, color: colors.text, flexShrink: 1 },
+  phoneCardText: { ...type.small, color: colors.muted, marginTop: 2, marginLeft: 16 },
   folds: { marginTop: 12, borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   foldHead: { height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   foldTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
   foldBody: { paddingHorizontal: 16, paddingBottom: 16, marginTop: -6 },
   foldText: { fontSize: 15, lineHeight: 22, fontFamily: fonts.sans, color: '#4E554B' },
-  relatedTitle: { fontSize: 21, lineHeight: 26, fontFamily: fonts.display, color: colors.text, marginTop: 24, marginBottom: 10 },
-  related: { flex: 1, padding: 8, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  relatedName: { fontSize: 13, lineHeight: 16, fontFamily: fonts.sansSemiBold, color: colors.text, marginTop: 4 },
-  relatedPrice: { fontSize: 15, fontFamily: fonts.heavy, color: colors.text, marginTop: 4 },
+  relatedTitle: { ...type.section, color: colors.text, marginTop: 32, marginBottom: 12 },
   addPhone: { height: 60, borderRadius: 30, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 20 },
   addPhoneText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF', flexShrink: 1, textAlign: 'center' },
   priceChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16, backgroundColor: colors.yellow },

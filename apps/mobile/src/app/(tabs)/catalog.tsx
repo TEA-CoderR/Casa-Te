@@ -13,7 +13,7 @@ import { Loading, Notice, SearchField, searchInput, SecondaryButton } from '@/co
 import { Icon } from '@/components/Icon';
 import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
 import { RollingAwning } from '@/components/RollingAwning';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, radius, type } from '@/config/theme';
 import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchFacets, fetchProducts, type CatalogProduct } from '@/lib/api';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { useLayout, useStores } from '@/lib/hooks';
@@ -337,7 +337,8 @@ export default function CatalogScreen() {
     // A subcategory names the page, with its department above it ("Profumeria / Shampoo").
     const sub = !collection && parent && current && current.id !== parent.id ? current : null;
     const deptTitle = collection ? (parent ? `${collection} · ${parent.name}` : collection) : sub ? sub.name : parent?.name ?? 'Tutti i prodotti';
-    return <RollingAwning title={deptTitle} eyebrow={sub ? parent!.name : undefined} image={parent && !collection ? coverOf(activeTab && activeTab !== parent.id ? activeTab as string : parent.id) : null}
+    // No photo before the title (plan §5.2): it cut long names short, and the tabs below already show the subcategory.
+    return <RollingAwning title={deptTitle} eyebrow={sub ? parent!.name : undefined} image={null}
       onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
       onSearch={openSearch} resetKey={`${categoryId ?? ''}|${collection ?? ''}`}
       overlay={<>{filterSheetPhone}
@@ -351,6 +352,7 @@ export default function CatalogScreen() {
           {filterCount > 0 && <View style={styles.fBadge}><Text style={styles.fBadgeText}>{filterCount}</Text></View>}
         </Pressable>} />}>
       <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+        {!loading && count > 0 && <Text style={styles.fCount}>{count} {count === 1 ? 'prodotto' : 'prodotti'}</Text>}
         {results}
         <View style={styles.fGrid}>{loading && !items.length ? <ProductSkeletons /> : shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
         {more}
@@ -449,6 +451,7 @@ const styles = StyleSheet.create({
   skel: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 14, borderWidth: 1, borderColor: colors.line },
   skelPhoto: { width: '100%', aspectRatio: 1, borderRadius: 14, backgroundColor: colors.well, marginBottom: 12 },
   skelLine: { height: 12, borderRadius: 6, backgroundColor: colors.well, marginTop: 7, marginLeft: 4 },
+  fCount: { ...type.small, color: colors.muted, marginBottom: 10 },
   fGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   fCell: { width: '48.6%', flexDirection: 'row' },
   sClear: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EDEDE9', alignItems: 'center', justifyContent: 'center' },
