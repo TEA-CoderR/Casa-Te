@@ -8,11 +8,12 @@ import { orderStatusLabel } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { Icon, type IconName } from '@/components/Icon';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
-import { PrimaryButton } from '@/components/UI';
+import { PillButton, PrimaryButton } from '@/components/UI';
+import { ListGroup, ListRow } from '@/components/ListRow';
 import { StatusBand } from '@/components/BrandHeader';
 import { StoreCard } from '@/components/StoreCard';
 import { BandWatermark, ClubPass } from '@/components/ClubPass';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, type } from '@/config/theme';
 import { fetchOrders, fetchProfile, updateProfile, type OrderWithItems } from '@/lib/api';
 import { useClubSettings, useLayout, useStores } from '@/lib/hooks';
 import { useFavorites } from '@/store/favorites';
@@ -196,11 +197,6 @@ export default function ProfileScreen() {
   // Phone (design F, F-Profilo): the person on the awning, the active order hanging from it, three shortcuts,
   // the store, the Club, then plain grouped lists.
   if (!wide) {
-    const prow = (title: string, onPress: () => void, subtitle?: string, first?: boolean) =>
-      <Pressable key={title} onPress={onPress} accessibilityRole="link" style={({ pressed }) => [styles.fRow, !first && styles.fRule, pressed && { opacity: 0.7 }]}>
-        <View style={{ flex: 1, minWidth: 0 }}><Text style={styles.fTitle}>{title}</Text>{!!subtitle && <Text style={styles.fSub} numberOfLines={1}>{subtitle}</Text>}</View>
-        <Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
-      </Pressable>;
     const card = profile.data?.member_card_number ?? null;
     const first = name.split(' ')[0];
     const since = member ? new Date(profile.data!.club_member_since!).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
@@ -211,21 +207,13 @@ export default function ProfileScreen() {
       : club.enabled ? { name: name || undefined, title: 'Prezzi Soci su tutto\nil catalogo.', action: 'Iscriviti gratis', onPress: () => go('/club') }
       : null;
     const hint = !user ? 'Hai già la tessera del negozio? La colleghi dopo l’accesso.' : card ? 'Mostrala alla cassa: tocca per ingrandire.' : '';
-    // Main destinations as large words on hairlines (no icons, no boxes).
-    const big = (title: string, onPress: () => void, detail?: string) =>
-      <Pressable key={title} onPress={onPress} accessibilityRole="link" accessibilityLabel={detail ? `${title}, ${detail}` : title}
-        style={({ pressed }) => [styles.gRow, pressed && { opacity: 0.6 }]}>
-        <Text style={styles.gRowTitle}>{title}</Text>
-        {!!detail && <Text style={styles.gRowDetail} numberOfLines={1}>{detail}</Text>}
-        <Icon name="chevron" size={16} color="#9A9F94" strokeWidth={2.2} />
-      </Pressable>;
+    const live = (orders.data ?? []).filter((o) => ACTIVE.has(o.status)).length;
     return <Screen header={<StatusBand />} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 28 }}
       top={<View style={[styles.gZone, !pass && { paddingBottom: 30 }]}>
         <BandWatermark top={0} />
         <View style={styles.gTop}>
           <Text style={styles.gKicker}>PROFILO</Text>
-          {user && <Pressable onPress={() => go('/account/edit')} accessibilityRole="button" accessibilityLabel="Modifica dati personali" hitSlop={6}
-            style={({ pressed }) => [styles.gEdit, pressed && { opacity: 0.7 }]}><Text style={styles.gEditText}>Modifica</Text></Pressable>}
+          {user && <PillButton onDark title="Modifica" accessibilityLabel="Modifica dati personali" onPress={() => go('/account/edit')} />}
         </View>
         <Text style={styles.gName} numberOfLines={1} adjustsFontSizeToFit accessibilityRole="header">{user ? first || 'Ciao!' : 'Benvenuto'}</Text>
         <Text style={styles.gSub} numberOfLines={1}>{!user ? 'Accedi con la tua email, niente password.' : member ? `Socio Casa & Te dal ${since}` : user.email}</Text>
@@ -234,33 +222,24 @@ export default function ProfileScreen() {
       <View style={{ paddingHorizontal: 22 }}>
         {pass && <ClubPass {...pass} style={{ marginTop: -96 }} />}
         {!!hint && <Text style={styles.gHint}>{hint}</Text>}
-        {active && <Pressable onPress={() => go(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.gLive, pressed && { opacity: 0.8 }]}>
-          <View style={styles.gDot} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.fTitle} numberOfLines={1}>{orderStatusLabel(active.status, active.fulfilment)}</Text>
-            <Text style={styles.fSub} numberOfLines={1}>{active.order_number}{selected && active.fulfilment === 'store' ? ` · ${storeName}` : ''}</Text>
-          </View>
-          <Icon name="chevron" size={16} color="#9A9F94" strokeWidth={2.2} />
-        </Pressable>}
-        <View style={{ marginTop: 12 }}>
-          {user && big('Ordini', () => go('/orders'), orderCount ? String(orderCount) : undefined)}
-          {big('Preferiti', () => go('/favorites'), favourites ? String(favourites) : undefined)}
-          {user && big('Indirizzi', () => go('/account/addresses'))}
-          {big('Il tuo negozio', () => setStoreSheet(true), selected ? storeName : 'Scegli')}
-        </View>
-        {user && <><Text style={styles.fGroup} accessibilityRole="header">ACCOUNT</Text>
-          <View style={styles.fList}>
-            {prow('Dati personali', () => go('/account/edit'), [name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono', true)}
-            {prow('Password', () => go('/account/password'), 'Imposta o cambia la password')}
-          </View></>}
-        <Text style={styles.fGroup} accessibilityRole="header">ASSISTENZA E INFORMAZIONI</Text>
-        <View style={styles.fList}>
-          {prow('Spedizioni e ritiro', () => go('/legal/shipping'), 'Tariffe, tempi e ritiro in negozio', true)}
-          {prow('Condizioni di vendita e resi', () => go('/legal/terms'))}
-          {prow('Informativa privacy', () => go('/legal/privacy'))}
-        </View>
+        {/* One list for everything (plan §5.6); the order in progress is on Home, here only counted. */}
+        <ListGroup style={{ marginTop: 16 }}>
+          {user && <ListRow first title="Ordini" detail={live ? `${live} in corso` : orderCount ? String(orderCount) : undefined} onPress={() => go('/orders')} />}
+          <ListRow first={!user} title="Preferiti" detail={favourites ? String(favourites) : undefined} onPress={() => go('/favorites')} />
+          {user && <ListRow title="Indirizzi" onPress={() => go('/account/addresses')} />}
+          <ListRow title="Il tuo negozio" detail={selected ? storeName : 'Scegli'} onPress={canChoose || !selected ? () => setStoreSheet(true) : undefined} />
+        </ListGroup>
+        {user && <ListGroup title="Account">
+          <ListRow first title="Dati personali" subtitle={[name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono'} onPress={() => go('/account/edit')} />
+          <ListRow title="Password" subtitle="Imposta o cambia la password" onPress={() => go('/account/password')} />
+        </ListGroup>}
+        <ListGroup title="Assistenza e informazioni">
+          <ListRow first title="Spedizioni e ritiro" subtitle="Tariffe, tempi e ritiro in negozio" onPress={() => go('/legal/shipping')} />
+          <ListRow title="Condizioni di vendita e resi" onPress={() => go('/legal/terms')} />
+          <ListRow title="Informativa privacy" onPress={() => go('/legal/privacy')} />
+        </ListGroup>
         {user && <View style={styles.fSession}>
-          <Pressable onPress={() => supabase.auth.signOut()} accessibilityRole="button" style={styles.fOut}><Text style={styles.fOutText}>Esci dall’account</Text></Pressable>
+          <Pressable onPress={() => supabase.auth.signOut()} accessibilityRole="button" hitSlop={8}><Text style={styles.fOutText}>Esci dall’account</Text></Pressable>
           <Pressable onPress={() => go('/account/delete')} accessibilityRole="link" hitSlop={6}><Text style={styles.fDelete}>Elimina account</Text></Pressable>
         </View>}
         <Text style={styles.fVersion}>Casa & Te · Versione {Constants.expoConfig?.version ?? '1.0.0'} · Pagamenti gestiti da Stripe</Text>
@@ -286,17 +265,9 @@ const styles = StyleSheet.create({
   gZone: { backgroundColor: colors.band, paddingTop: 10, paddingHorizontal: 22, paddingBottom: 122, overflow: 'hidden' },
   gTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 36 },
   gKicker: { fontSize: 13, letterSpacing: 1.8, fontFamily: fonts.sansSemiBold, color: colors.bandMuted },
-  gEdit: { height: 34, paddingHorizontal: 14, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', justifyContent: 'center' },
-  gEditText: { fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.bandText },
-  gName: { fontSize: 46, lineHeight: 52, letterSpacing: -1.6, fontFamily: fonts.display, color: colors.bandText, marginTop: 18 },
-  gSub: { fontSize: 15, lineHeight: 20, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 6 },
-  gHint: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center', marginTop: 12 },
-  gLive: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 18, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 16,
-    borderWidth: 1, borderColor: colors.line },
-  gDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#B9CC2E', borderWidth: 3, borderColor: '#EEF5B8' }, // ui-check: allow (live dot halo)
-  gRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 58, borderBottomWidth: 1, borderColor: '#ECECE7' },
-  gRowTitle: { flex: 1, fontSize: 19, letterSpacing: -0.3, fontFamily: fonts.sansSemiBold, color: colors.text },
-  gRowDetail: { maxWidth: 170, fontSize: 15, fontFamily: fonts.sans, color: colors.muted },
+  gName: { ...type.display, color: colors.bandText, marginTop: 16 },
+  gSub: { ...type.body, color: colors.bandMuted, marginTop: 4 },
+  gHint: { ...type.small, color: colors.muted, textAlign: 'center', marginTop: 12 }, // ui-check: allow (live dot halo)
   // Green band at the top (as on every page), a white card hanging from its edge (as the store card on Home).
   fHero: { backgroundColor: colors.band, paddingTop: 14, paddingHorizontal: 20, paddingBottom: 58 },
   fAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.signInk, alignItems: 'center', justifyContent: 'center' },
@@ -320,17 +291,10 @@ const styles = StyleSheet.create({
   fClubCard: { width: 64, height: 40, borderRadius: 4 },
   fClubTitle: { fontSize: 16, lineHeight: 21, fontFamily: fonts.sansBold, color: colors.text },
   fClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
-  fGroup: { fontSize: 13, letterSpacing: 0.6, fontFamily: fonts.heavy, color: colors.muted, marginTop: 20, marginBottom: 8, marginLeft: 4 },
-  fList: { borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
-  fRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 58, paddingVertical: 8, paddingHorizontal: 16 },
-  fRule: { borderTopWidth: 1, borderColor: '#EDEDE9' },
-  fTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
-  fSub: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
-  fSession: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 },
-  fOut: { height: 48, paddingHorizontal: 20, borderRadius: 24, borderWidth: 1.5, borderColor: '#D5D0C3', justifyContent: 'center' },
-  fOutText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
-  fDelete: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.danger },
-  fVersion: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center', marginTop: 16 },
+  fSession: { alignItems: 'center', gap: 14, marginTop: 32 },
+  fOutText: { ...type.body, fontFamily: fonts.sansMedium, color: colors.muted },
+  fDelete: { ...type.small, fontFamily: fonts.sansSemiBold, color: colors.danger },
+  fVersion: { ...type.small, fontSize: 12, color: colors.faint, textAlign: 'center', marginTop: 24 },
   pageTitle: { fontSize: 56, lineHeight: 62, letterSpacing: -1, fontFamily: fonts.serif, color: colors.text, paddingTop: 40, paddingBottom: 28,
     borderBottomWidth: 1, borderColor: colors.text, marginBottom: 36 },
   columns: { flexDirection: 'row', gap: 56, alignItems: 'flex-start' },

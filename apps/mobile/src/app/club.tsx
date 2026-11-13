@@ -7,7 +7,7 @@ import { Screen } from '@/components/Screen';
 import { Icon } from '@/components/Icon';
 import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
 import { Checkbox, Loading, Notice, PrimaryButton, SecondaryButton, TextField } from '@/components/UI';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, radius, type } from '@/config/theme';
 import { fetchClubOffers, fetchProfile, joinClub, setClubMembership } from '@/lib/api';
 import { useQuery } from '@/lib/useQuery';
 import { useClubSettings, useLayout } from '@/lib/hooks';
@@ -18,6 +18,7 @@ import { useUser } from '@/store/session';
 import { useClubStore } from '@/store/club';
 import { MemberCardLink, MemberCardView } from '@/components/MemberCard';
 import { ClubPass } from '@/components/ClubPass';
+import { ListGroup, ListRow } from '@/components/ListRow';
 
 /** What the Club gives, one line each (the card section below covers linking an existing card). */
 const PERKS = ['Prezzi Soci', 'Codici sconto', 'Gratis'];
@@ -62,12 +63,13 @@ export default function ClubScreen() {
     {wide ? <View style={styles.cardWrap}>
       <Image source={CARD} accessibilityLabel="La tessera Casa & Te" resizeMode="cover" style={styles.cardImage} />
     </View> : <ClubPass style={{ marginTop: -96 }} kicker={card ? 'TESSERA SOCI' : 'CASA & TE CLUB'} name={member ? profile.data?.full_name ?? undefined : undefined}
-      card={card} title={member ? 'Sei uno di\nfamiglia.' : 'Prezzi Soci su tutto\nil catalogo.'} />}
+      card={card} title={member ? 'Collega la tessera\ndel negozio.' : 'Prezzi Soci su tutto\nil catalogo.'}
+      onPress={member && !card ? () => setLinkOpen(true) : undefined} />}
     {wide && <Text style={styles.title} accessibilityRole="header">Sei uno di famiglia</Text>}
     {member && <Text style={[styles.lead, !wide && styles.leadPhone]}>{card ? 'Mostra la tessera alla cassa: tocca per ingrandire. ' : ''}Sei nel Club dal {since}.</Text>}
 
     {/* The perks as three words on one line: the card says the rest; details come in the sign-up step. */}
-    {(member || step === 'intro') && <Text style={[styles.perks, !wide && { textAlign: 'left', marginTop: member ? 8 : 18 }]}>{PERKS.join('  ·  ')}</Text>}
+    {(wide ? member || step === 'intro' : !member && step === 'intro') && <Text style={[styles.perks, !wide && { textAlign: 'left', marginTop: member ? 8 : 18 }]}>{PERKS.join('  ·  ')}</Text>}
 
     {!!error && <Notice tone="error" message={error} />}
     {!user ? <View style={{ marginTop: 20 }}><PrimaryButton title="Accedi per iscriverti o collegare la tessera" onPress={() => router.push({ pathname: '/auth/sign-in', params: { next: '/club' } })} /></View>
@@ -86,11 +88,26 @@ export default function ClubScreen() {
             : cardSection}
         </>
       : <>
-          {/* Members: a linked card shows first; without one, linking the shop card is a quiet option further down. */}
+          {/* Members: a linked card shows first; without one, linking the shop card is the first thing offered. */}
           {card && cardSection}
-          <Text style={styles.section} accessibilityRole="header">Le tue offerte</Text>
+          {!card && !!profile.data && (linkOpen ? cardSection : !wide ? <View style={styles.linkPlate}>
+            <Text style={styles.linkTitle}>Hai la tessera del negozio?</Text>
+            <Text style={styles.linkText}>Collegala per usarla anche nell’app.</Text>
+            <View style={{ marginTop: 16 }}><PrimaryButton title="Collega la tessera" onPress={() => setLinkOpen(true)} /></View>
+          </View> : <Pressable onPress={() => setLinkOpen(true)} accessibilityRole="button" style={styles.linkRow}>
+            <Icon name="card" size={22} color={colors.sign} strokeWidth={1.8} />
+            <View style={{ flex: 1 }}><Text style={styles.linkTitle}>Hai anche la tessera del negozio?</Text>
+              <Text style={styles.linkText}>Collegala al tuo account</Text></View>
+            <Icon name="chevron" size={18} color={colors.muted} strokeWidth={2.2} />
+          </Pressable>)}
+          {/* With no codes, how the Club works instead of an empty "no offers" line. */}
+          <Text style={styles.section} accessibilityRole="header">{offers.data?.length ? 'Le tue offerte' : 'Come funziona'}</Text>
           {offers.loading && !offers.data ? <Loading /> : !offers.data?.length
-            ? <Text style={styles.empty}>Al momento non ci sono offerte attive. Torna a trovarci presto.</Text>
+            ? <ListGroup>
+              <ListRow first icon="crown" title="Prezzi Soci in automatico" subtitle="Applicati nel carrello e alla cassa, senza codici" />
+              <ListRow icon="percent" title="Codici sconto riservati" subtitle="Quando ce ne sono, li trovi qui" />
+              <ListRow icon="scan" title="Tessera digitale" subtitle="Mostrala alla cassa del negozio" />
+            </ListGroup>
             : offers.data.map((o) => <View key={o.code} style={styles.offer}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.offerTitle}>{o.description || offerText(o)}</Text>
@@ -99,15 +116,10 @@ export default function ClubScreen() {
                 </View>
                 <Text selectable style={styles.code} accessibilityLabel={`Codice ${o.code}`}>{o.code}</Text>
               </View>)}
-          <Text style={styles.howto}>Inserisci il codice al checkout, nella sezione "Codice sconto".</Text>
-          {!card && !!profile.data && (linkOpen ? cardSection
-            : <Pressable onPress={() => setLinkOpen(true)} accessibilityRole="button" style={styles.linkRow}>
-                <Icon name="card" size={22} color={colors.sign} strokeWidth={1.8} />
-                <View style={{ flex: 1 }}><Text style={styles.linkTitle}>Hai anche la tessera del negozio?</Text>
-                  <Text style={styles.linkText}>Collegala al tuo account</Text></View>
-                <Icon name="chevron" size={18} color={colors.muted} strokeWidth={2.2} />
-              </Pressable>)}
-          <View style={{ marginTop: 28 }}><SecondaryButton title="Esci dal Club" onPress={leave} disabled={busy} /></View>
+          {!!offers.data?.length && <Text style={styles.howto}>Inserisci il codice al checkout, nella sezione "Codice sconto".</Text>}
+          {/* Leaving is for the few: a quiet link at the bottom. */}
+          <Pressable onPress={leave} disabled={busy} accessibilityRole="button" hitSlop={8} style={styles.leave}>
+            <Text style={[styles.leaveText, busy && { opacity: 0.5 }]}>Esci dal Club</Text></Pressable>
         </>}
   </Screen>;
 }
@@ -179,7 +191,7 @@ const styles = StyleSheet.create({
   leadPhone: { textAlign: 'left', fontSize: 14, marginTop: 14 },
   lead: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans, marginTop: 4 },
   perks: { marginTop: 14, fontSize: 16, lineHeight: 22, fontFamily: fonts.sansBold, color: colors.sign, textAlign: 'center' },
-  section: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text, marginTop: 28, marginBottom: 10 },
+  section: { ...type.section, color: colors.text, marginTop: 32, marginBottom: 10 },
   empty: { fontSize: 14, color: colors.muted, fontFamily: fonts.sans, lineHeight: 20 },
   offer: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 14, padding: 14, marginBottom: 10 },
   offerTitle: { fontSize: 16, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
@@ -189,7 +201,10 @@ const styles = StyleSheet.create({
   stepBack: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 18, paddingVertical: 6 },
   stepBackText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.green },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 24, padding: 14, borderRadius: 16, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
-  linkTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
-  linkText: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
+  linkPlate: { marginTop: 20, padding: 16, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
+  linkTitle: { ...type.cardTitle, color: colors.text },
+  linkText: { ...type.small, color: colors.muted, marginTop: 2 },
+  leave: { alignSelf: 'center', marginTop: 32, paddingVertical: 4 },
+  leaveText: { ...type.body, fontFamily: fonts.sansMedium, color: colors.muted },
   howto: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans, marginTop: 6 },
 });
