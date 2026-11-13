@@ -10,9 +10,14 @@ export const usePreferences = create<{
   /** How the customer wants to receive orders; preselected in the cart and at checkout. */
   fulfilment: FulfilmentMethod;
   setFulfilment: (fulfilment: FulfilmentMethod) => void;
+  /** The first-launch welcome (app/benvenuto) has been seen or skipped. */
+  onboarded: boolean;
+  setOnboarded: () => void;
 }>()(persist((set) => ({
   storeId: null,
   setStoreId: (storeId) => set({ storeId }),
   fulfilment: 'store',
   setFulfilment: (fulfilment) => set({ fulfilment }),
+  onboarded: false,
+  setOnboarded: () => set({ onboarded: true }),
 }), { name: 'casa-te-preferences-v2', skipHydration: true, storage: createJSONStorage(() => AsyncStorage) }));

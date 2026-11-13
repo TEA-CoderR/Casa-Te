@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
-import { Tabs } from 'expo-router';
-import { PanResponder, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { router, Tabs } from 'expo-router';
+import { PanResponder, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeOutDown, ZoomIn, ZoomOut, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -11,6 +11,8 @@ import { SiteHeader } from '@/components/site/SiteHeader';
 import { cartItemCount, useCartStore } from '@/store/cart';
 import { useCartQuote } from '@/lib/hooks';
 import { formatEuro } from '@/lib/price';
+import { usePreferences } from '@/store/preferences';
+import { useSession } from '@/store/session';
 
 const tabs: Array<{ name: string; title: string; icon: IconName; hidden?: boolean }> = [
   { name: 'index', title: 'Home', icon: 'home' },
@@ -145,6 +147,16 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
 
 export default function TabsLayout() {
   const { wide } = useLayout();
+  // First launch of the app (not the web shop): the welcome steps, once. Signed-in customers skip it.
+  const onboarded = usePreferences((p) => p.onboarded);
+  const setOnboarded = usePreferences((p) => p.setOnboarded);
+  const session = useSession();
+  useEffect(() => {
+    if (Platform.OS === 'web' || onboarded || !session.ready) return;
+    if (session.session) { setOnboarded(); return; }
+    const t = setTimeout(() => router.push('/benvenuto'), 0);
+    return () => clearTimeout(t);
+  }, [onboarded, session.ready, session.session, setOnboarded]);
   // Desktop web shop: the catalogue masthead (search, wordmark, departments) replaces the tab bar.
   // Back follows the order the screens were opened in (a product list returns to Home or Categorie, whichever opened it).
   return <Tabs backBehavior="history" tabBar={wide ? () => <SiteHeader /> : (props) => <FloatingTabBar {...props} />} screenOptions={{

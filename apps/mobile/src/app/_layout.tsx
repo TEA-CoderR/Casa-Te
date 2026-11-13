@@ -80,6 +80,7 @@ export default function RootLayout() {
         <Stack.Screen name="legal/[doc]" options={{ title: 'Informazioni legali' }} />
         <Stack.Screen name="club" options={{ title: 'Casa & Te Club' }} />
         <Stack.Screen name="volantino" options={{ title: 'Volantino' }} />
+        <Stack.Screen name="benvenuto" options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />
       </Stack>
     </PersistenceGate>
   );
