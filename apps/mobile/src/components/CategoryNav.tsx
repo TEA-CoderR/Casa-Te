@@ -6,6 +6,7 @@ import { colors, fonts } from '@/config/theme';
 import { BrandHeader } from './BrandHeader';
 import { CategoryIcon } from './CategoryIcon';
 import { RemoteImage } from './RemoteImage';
+import { SearchField } from './UI';
 import { Icon } from './Icon';
 
 type Covers = Record<string, { image: string | null }> | null | undefined;
@@ -70,11 +71,7 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
   const panel = useRef<ScrollView>(null);
 
   const header = <BrandHeader title="Categorie" pad={[12, 16, 16]}>
-    <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
-      style={({ pressed }) => [styles.search, pressed && { opacity: 0.9 }]}>
-      <Icon name="search" size={19} color={colors.text} strokeWidth={2.1} />
-      <Text style={styles.searchText} numberOfLines={1}>Cerca prodotti, marche e reparti</Text>
-    </Pressable>
+    <SearchField onPress={onSearch} style={{ marginTop: 14 }} />
   </BrandHeader>;
 
   const subs = active ? liveChildren(all, counts, active.id) : [];
@@ -193,9 +190,6 @@ export function SubcategorySheet({ visible, onClose, title, items, active, onSel
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.page },
-  search: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 52, marginTop: 14, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#FFFFFF',
-    borderWidth: 1.5, borderColor: '#8C9189' },
-  searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
 
   split: { flex: 1, flexDirection: 'row' },
   rail: { width: 104, flexGrow: 0, backgroundColor: colors.page },

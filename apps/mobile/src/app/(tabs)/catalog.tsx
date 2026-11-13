@@ -9,7 +9,7 @@ import type { CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
 import { EMPTY_FILTERS, FilterSheet, type FilterSection, type Filters } from '@/components/FilterSheet';
-import { Loading, Notice, SecondaryButton } from '@/components/UI';
+import { Loading, Notice, SearchField, searchInput, SecondaryButton } from '@/components/UI';
 import { Icon } from '@/components/Icon';
 import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
 import { RollingAwning } from '@/components/RollingAwning';
@@ -218,15 +218,13 @@ export default function CatalogScreen() {
       const header = <BrandHeader plain pad={[14, 16, 16]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <HeaderBack onPress={closeSearch} />
-          <View style={styles.sBox}>
-            <Icon name="search" size={20} color={colors.text} strokeWidth={2.1} />
+          <SearchField style={{ flex: 1 }} right={!!query && <Pressable onPress={() => { setQuery(''); setDebounced(''); }} accessibilityRole="button" accessibilityLabel="Cancella ricerca" style={styles.sClear}>
+              <Icon name="close" size={15} color={colors.text} strokeWidth={2.6} /></Pressable>}>
             <TextInput value={query} onChangeText={setQuery} placeholder="Prodotto, marca o reparto" placeholderTextColor={colors.faint}
               accessibilityLabel="Cerca prodotti" autoFocus returnKeyType="search" autoCorrect={false} keyboardType={params.code ? 'number-pad' : 'default'}
               onSubmitEditing={() => recent.remember(query)} onFocus={() => setFocused(true)}
-              onBlur={() => { setFocused(false); if (shown.length) recent.remember(query); }} style={styles.sInput} />
-            {!!query && <Pressable onPress={() => { setQuery(''); setDebounced(''); }} accessibilityRole="button" accessibilityLabel="Cancella ricerca" style={styles.sClear}>
-              <Icon name="close" size={15} color={colors.text} strokeWidth={2.6} /></Pressable>}
-          </View>
+              onBlur={() => { setFocused(false); if (shown.length) recent.remember(query); }} style={[searchInput, { outlineStyle: 'none' } as object]} />
+          </SearchField>
         </View>
       </BrandHeader>;
       const showRecents = focused && !query && recent.terms.length > 0;
@@ -453,8 +451,6 @@ const styles = StyleSheet.create({
   skelLine: { height: 12, borderRadius: 6, backgroundColor: colors.well, marginTop: 7, marginLeft: 4 },
   fGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   fCell: { width: '48.6%', flexDirection: 'row' },
-  sBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, height: 50, paddingLeft: 15, paddingRight: 6, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: colors.green },
-  sInput: { flex: 1, minWidth: 0, height: 44, fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0, outlineStyle: 'none' } as object,
   sClear: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EDEDE9', alignItems: 'center', justifyContent: 'center' },
   sHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sCaps: { fontSize: 13, letterSpacing: 0.6, fontFamily: fonts.heavy, color: colors.muted },

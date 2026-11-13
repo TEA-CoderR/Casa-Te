@@ -96,12 +96,38 @@ export const spacing = {
   xl: 24,
 } as const;
 
+/**
+ * Corners (November 2026 plan §3.2): `sm` fields, thumbnails, badges; `md` cards, list groups, product and option cards;
+ * `lg` the member card, order tickets, sheet tops, the home carousel; `pill` every button, chip and search field.
+ * `xl` is an alias of `lg` for older code.
+ */
 export const radius = {
-  sm: 10,
-  md: 14,
-  lg: 18,
+  sm: 12,
+  md: 16,
+  lg: 22,
   xl: 22,
   pill: 999,
+} as const;
+
+/**
+ * The phone type scale (plan §3.1). Every phone text size comes from here; spread one and add colour:
+ * `{ ...type.cardTitle, color: colors.text }`. Prices keep `PriceTag`.
+ */
+export const type = {
+  /** Only full green brand pages: welcome, order confirmed. */
+  hero: { fontSize: 48, lineHeight: 52, letterSpacing: -1.6, fontFamily: fonts.display },
+  /** The big name in the band: the home store, the Profilo name. */
+  display: { fontSize: 36, lineHeight: 40, letterSpacing: -1.1, fontFamily: fonts.display },
+  title: { fontSize: 28, lineHeight: 33, letterSpacing: -0.6, fontFamily: fonts.display },
+  /** The status on an order ticket. */
+  ticket: { fontSize: 26, lineHeight: 31, letterSpacing: -0.7, fontFamily: fonts.display },
+  section: { fontSize: 22, lineHeight: 27, letterSpacing: -0.4, fontFamily: fonts.display },
+  cardTitle: { fontSize: 17, lineHeight: 22, letterSpacing: -0.2, fontFamily: fonts.sansSemiBold },
+  body: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sans },
+  small: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans },
+  /** Uppercase: only tickets, the card, welcome steps, the home store line, list group titles. */
+  kicker: { fontSize: 11.5, lineHeight: 14, letterSpacing: 1.6, fontFamily: fonts.sansBold },
+  micro: { fontSize: 11, lineHeight: 13, letterSpacing: 0.2, fontFamily: fonts.sansBold },
 } as const;
 
 /** Soft card shadow used for product cards and floating search. */

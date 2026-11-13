@@ -10,7 +10,7 @@ import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { storeStatus } from '@/components/StoreCard';
 import { BandWatermark, ClubPass } from '@/components/ClubPass';
 import { Icon, type IconName } from '@/components/Icon';
-import { Loading, Notice } from '@/components/UI';
+import { Loading, Notice, SearchField } from '@/components/UI';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '@/components/ProductImage';
@@ -138,14 +138,10 @@ function HomePhone() {
         <Text style={styles.storeStatusText} numberOfLines={1}>{status.text}</Text>
       </View>}
     </Pressable>
-    <Pressable onPress={() => openCatalog({ search: '1' })} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
-      style={({ pressed }) => [styles.search, pressed && { opacity: 0.95 }]}>
-      <Icon name="search" size={21} color={colors.text} strokeWidth={2.1} />
-      <Text style={styles.searchText} numberOfLines={1}>Cerca prodotti, marche e reparti</Text>
-      <Pressable onPress={() => openCatalog({ search: '1', code: '1' })} accessibilityRole="button" accessibilityLabel="Cerca per codice a barre" hitSlop={4} style={styles.scan}>
+    <SearchField onPress={() => openCatalog({ search: '1' })} style={{ marginTop: 20 }}
+      right={<Pressable onPress={() => openCatalog({ search: '1', code: '1' })} accessibilityRole="button" accessibilityLabel="Cerca per codice a barre" hitSlop={4} style={styles.scan}>
         <Icon name="scan" size={19} color={colors.text} strokeWidth={2} />
-      </Pressable>
-    </Pressable>
+      </Pressable>} />
   </View>;
 
   return <Screen header={<View style={{ height: insets.top, backgroundColor: colors.band }} />} top={header} ground={colors.page} refreshing={featured.loading && !!featured.data} onRefresh={refresh}
@@ -271,9 +267,6 @@ const styles = StyleSheet.create({
   bandButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
   hello: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, color: '#FFFFFF', letterSpacing: -0.6, marginTop: 18 },
   helloSub: { fontSize: 15.5, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
-  // Outlined like the sign-in fields.
-  search: { marginTop: 20, flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 18, paddingRight: 6, borderRadius: 26, backgroundColor: '#FFFFFF' },
-  searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.muted },
   scan: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
   // The order in progress: deep green with the lime signal on the progress bars.
   order: { marginHorizontal: 16, marginTop: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.green },

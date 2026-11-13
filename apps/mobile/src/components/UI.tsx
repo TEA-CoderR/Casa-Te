@@ -1,6 +1,6 @@
 import { useRef, type PropsWithChildren, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, radius, type } from '@/config/theme';
 import { Icon, type IconName } from './Icon';
 import { useLayout } from '@/lib/hooks';
 import { useReveal } from './Reveal';
@@ -34,15 +34,17 @@ export function PriceTag({ cents, size = 22, sale, color }: { cents: number; siz
   </View>;
 }
 
-export function PrimaryButton({ title, onPress, disabled, loading, icon = null }: {
+export function PrimaryButton({ title, onPress, disabled, loading, icon = null, small }: {
   title: string; onPress: () => void; disabled?: boolean; loading?: boolean; icon?: IconName | null;
+  /** 44 high, for a button inside a card (the home carousel). */
+  small?: boolean;
 }) {
   const off = disabled || loading;
   const { wide } = useLayout();
   return <Pressable accessibilityRole="button" accessibilityState={{ disabled: off, busy: loading }} disabled={off} onPress={onPress}
-    style={({ pressed }) => [styles.button, wide && deskButton, { opacity: off ? 0.45 : pressed ? 0.8 : 1 }]}>
+    style={({ pressed }) => [styles.button, small && styles.buttonSmall, wide && deskButton, { opacity: off ? 0.45 : pressed ? 0.8 : 1 }]}>
     {loading ? <ActivityIndicator color="#fff" /> : icon ? <Icon name={icon} color="#fff" size={19} /> : null}
-    <Text style={[styles.buttonText, wide && deskLabel]}>{title}</Text>
+    <Text style={[styles.buttonText, small && { fontSize: 15 }, wide && deskLabel]}>{title}</Text>
   </Pressable>;
 }
 
@@ -52,7 +54,7 @@ export function SecondaryButton({ title, onPress, disabled, icon, danger }: {
   const color = danger ? colors.danger : colors.green;
   const { wide } = useLayout();
   return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress}
-    style={({ pressed }) => [styles.secondary, wide && deskButton, { borderColor: color, opacity: disabled ? 0.45 : pressed ? 0.7 : 1 }]}>
+    style={({ pressed }) => [styles.secondary, wide && deskButton, { borderColor: danger ? color : colors.line, opacity: disabled ? 0.45 : pressed ? 0.7 : 1 }]}>
     {icon && <Icon name={icon} color={color} size={18} />}
     <Text style={[styles.secondaryText, { color }]}>{title}</Text>
   </Pressable>;
@@ -136,16 +138,37 @@ export function SummaryRow({ label, value, strong, tone }: { label: string; valu
   </View>;
 }
 
-export function ListRow({ icon, title, subtitle, onPress, danger }: { icon: IconName; title: string; subtitle?: string; onPress: () => void; danger?: boolean }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.listRow, pressed && { opacity: 0.6 }]}>
-    <Icon name={icon} color={danger ? colors.danger : colors.green} size={21} />
-    <View style={{ flex: 1 }}>
-      <Text style={[styles.listTitle, danger && { color: colors.danger }]}>{title}</Text>
-      {subtitle && <Text style={styles.listSubtitle}>{subtitle}</Text>}
-    </View>
-    <Icon name="chevron" size={17} color={colors.muted} />
-  </Pressable>;
+/** Small inline action (Cambia, Modifica, Tutti): 32 high, outlined pill. `onDark` on the green band. */
+export function PillButton({ title, onPress, onDark, accessibilityLabel }: {
+  title: string; onPress?: () => void; onDark?: boolean; accessibilityLabel?: string;
+}) {
+  const body = <Text style={[styles.pillText, onDark && { color: '#FFFFFF' }]} numberOfLines={1}>{title}</Text>;
+  // Without onPress it is only the look of a pill inside a larger pressable (the whole store card is the target).
+  if (!onPress) return <View style={[styles.pill, onDark && styles.pillDark]}>{body}</View>;
+  return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? title} hitSlop={8}
+    style={({ pressed }) => [styles.pill, onDark && styles.pillDark, pressed && { opacity: 0.7 }]}>{body}</Pressable>;
 }
+
+/**
+ * The one search field (home, Categorie, search page): 52 high, pill, white with no frame on the green band,
+ * the quiet `well` fill on a white page. Pass `onPress` for a field that opens search, or `children` (the TextInput).
+ */
+export function SearchField({ onPress, placeholder = 'Cerca prodotti, marche e reparti', onWell, right, children, style }: PropsWithChildren<{
+  onPress?: () => void; placeholder?: string; onWell?: boolean; right?: ReactNode; style?: object;
+}>) {
+  const inner = <>
+    <Icon name="search" size={20} color={colors.text} strokeWidth={2.1} />
+    {children ?? <Text style={styles.searchText} numberOfLines={1}>{placeholder}</Text>}
+    {right}
+  </>;
+  const box = [styles.searchField, onWell && { backgroundColor: colors.well }, !right && { paddingRight: 16 }, style];
+  if (!onPress) return <View style={box}>{inner}</View>;
+  return <Pressable onPress={onPress} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
+    style={({ pressed }) => [...box, pressed && { opacity: 0.95 }]}>{inner}</Pressable>;
+}
+
+/** Text input style inside `SearchField`. */
+export const searchInput = { flex: 1, minWidth: 0, height: 52, fontSize: 15, color: colors.text, outlineWidth: 0, fontFamily: fonts.sansMedium } as const;
 
 /** Radio mark of the choice cards (design F checkout): a ring, with a green dot when chosen. */
 export function RadioMark({ on }: { on: boolean }) {
@@ -192,10 +215,16 @@ const styles = StyleSheet.create({
   title: { fontSize: 29, lineHeight: 35, fontFamily: fonts.display, color: colors.text },
   serifTitle: { fontSize: 31, lineHeight: 37, fontFamily: fonts.serif, fontWeight: '400', letterSpacing: -0.2 },
   subtitle: { fontSize: 13.5, color: colors.muted, marginTop: 3, fontFamily: fonts.sansMedium },
-  button: { minHeight: 56, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: colors.green,
+  button: { minHeight: 54, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: colors.green,
     borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  buttonText: { fontSize: 17, fontFamily: fonts.sansBold, fontWeight: '700', color: '#fff', flexShrink: 1, textAlign: 'center' },
-  secondary: { minHeight: 52, borderRadius: 999, borderWidth: 1.5, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  buttonSmall: { minHeight: 44, paddingVertical: 10, paddingHorizontal: 20, alignSelf: 'flex-start' },
+  buttonText: { fontSize: 16, fontFamily: fonts.sansBold, fontWeight: '700', color: '#fff', flexShrink: 1, textAlign: 'center' },
+  pill: { height: 32, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.line, justifyContent: 'center', alignSelf: 'center' },
+  pillDark: { borderColor: 'rgba(255,255,255,0.35)' },
+  pillText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green },
+  searchField: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 52, paddingLeft: 18, paddingRight: 6, borderRadius: radius.pill, backgroundColor: '#FFFFFF' },
+  searchText: { flex: 1, ...type.body, fontFamily: fonts.sansMedium, color: colors.muted },
+  secondary: { minHeight: 48, borderRadius: 999, borderWidth: 1, backgroundColor: '#FFFFFF', paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   secondaryText: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700' },
   quantity: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.line, borderRadius: 999, backgroundColor: colors.page },
   step: { width: 40, height: 46, alignItems: 'center', justifyContent: 'center' },
@@ -220,9 +249,6 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7, gap: 12 },
   summaryLabel: { color: colors.muted, fontSize: 14.5, flex: 1, fontFamily: fonts.sansMedium },
   summaryValue: { color: colors.text, fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700' },
-  listRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, borderBottomWidth: 1, borderColor: colors.line, minHeight: 56 },
-  listTitle: { fontSize: 15.5, color: colors.text, fontFamily: fonts.sansBold, fontWeight: '700' },
-  listSubtitle: { fontSize: 12, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
   option: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, borderWidth: 1, borderColor: colors.line,
     backgroundColor: colors.surface, marginBottom: 10, minHeight: 66 },
   optionOn: { borderColor: colors.green, borderWidth: 2, paddingVertical: 13, paddingHorizontal: 15 },
