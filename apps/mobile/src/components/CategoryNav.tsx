@@ -200,12 +200,12 @@ const styles = StyleSheet.create({
   railTextOn: { fontFamily: fonts.heavy, color: colors.text },
   panel: { flex: 1, backgroundColor: '#FFFFFF' },
   panelHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 14, marginBottom: 14, borderBottomWidth: 1, borderColor: colors.line },
-  panelTitle: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text },
-  panelLink: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 2 },
+  panelTitle: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text },
+  panelLink: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3, rowGap: 16, marginBottom: 18 },
-  section: { fontSize: 12.5, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginBottom: 10, marginLeft: 1 },
+  section: { fontSize: 13, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginBottom: 10, marginLeft: 1 },
   cell: { width: '33.333%', paddingHorizontal: 3 },
-  cellName: { marginTop: 7, fontSize: 12, lineHeight: 15.5, letterSpacing: -0.15, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
+  cellName: { marginTop: 7, fontSize: 13, lineHeight: 18, letterSpacing: -0.15, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
 
 
   photo: { backgroundColor: colors.photo, borderWidth: 1, borderColor: colors.photoLine, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   close: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 68, paddingVertical: 10, paddingHorizontal: 20 },
   rowLine: { borderTopWidth: 1, borderColor: '#EDEDE9' },
-  rowName: { fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text },
+  rowName: { fontSize: 17, fontFamily: fonts.sansSemiBold, color: colors.text },
   rowNameOn: { fontFamily: fonts.heavy },
   rowCount: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
 });

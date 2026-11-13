@@ -43,7 +43,7 @@ export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, righ
   const size = titleSize ?? (stacked ? 34 : 28);
   const heading = !!title && <View style={[{ flexShrink: 1 }, stacked ? { marginTop: titleGap ?? 12 } : left ? { marginLeft: 12 } : null]}>
     <Text style={[styles.title, { fontSize: size, lineHeight: Math.round(size * 1.13) }]} accessibilityRole="header" numberOfLines={stacked ? 2 : 1}>{title}</Text>
-    {!!subtitle && <Text style={[styles.subtitle, stacked && { fontSize: 14.5, marginTop: 2 }]} numberOfLines={stacked ? 2 : 1}>{subtitle}</Text>}
+    {!!subtitle && <Text style={[styles.subtitle, stacked && { fontSize: 15, marginTop: 2 }]} numberOfLines={stacked ? 2 : 1}>{subtitle}</Text>}
   </View>;
   // No zIndex: a card that hangs from the band (a later sibling in the scroll content) must paint over it.
   return <View>
@@ -125,14 +125,14 @@ const styles = StyleSheet.create({
   scallop: { width: STRIPE, height: 22, borderRadius: 11, marginTop: -11 },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
   title: { fontFamily: fonts.display, color: colors.bandText, letterSpacing: -0.6 },
-  subtitle: { fontSize: 14, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 2 },
+  subtitle: { fontSize: 15, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 2 },
   button: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
   count: { position: 'absolute', top: 1, right: -1, minWidth: 19, height: 19, borderRadius: 10, paddingHorizontal: 4,
     backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
-  countText: { fontSize: 11.5, fontFamily: fonts.heavy, color: colors.text },
+  countText: { fontSize: 11, fontFamily: fonts.heavy, color: colors.text },
   search: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 54, borderRadius: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 16,
     borderWidth: 1.5, borderColor: '#8C9189' },
   searchFocused: { borderWidth: 2, borderColor: colors.green, paddingHorizontal: 15.5 },
-  placeholder: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansMedium, color: colors.muted },
-  input: { flex: 1, minWidth: 0, height: 46, fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0, outlineStyle: 'none' } as object,
+  placeholder: { flex: 1, fontSize: 15, fontFamily: fonts.sansMedium, color: colors.muted },
+  input: { flex: 1, minWidth: 0, height: 46, fontSize: 17, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0, outlineStyle: 'none' } as object,
 });

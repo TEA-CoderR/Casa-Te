@@ -110,8 +110,8 @@ export default function PasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  lead: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 21, color: colors.muted, marginBottom: 18 },
+  lead: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 21, color: colors.muted, marginBottom: 18 },
   linkWrap: { alignSelf: 'flex-start', marginTop: -2, marginBottom: 16, paddingVertical: 2 },
-  link: { fontSize: 14, lineHeight: 20, fontFamily: fonts.sansSemiBold, color: colors.green, textDecorationLine: 'underline' },
+  link: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sansSemiBold, color: colors.green, textDecorationLine: 'underline' },
   back: { marginTop: 14, textAlign: 'center', color: colors.green, fontFamily: fonts.sansSemiBold },
 });

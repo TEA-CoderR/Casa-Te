@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   dotOn: { width: 22, backgroundColor: colors.text },
   section: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12, gap: 12 },
   sectionTitle: { ...type.section, color: colors.text },
-  link: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
+  link: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
   rail: { paddingHorizontal: 16, gap: 10, paddingBottom: 1 },
   railItem: { width: 162, flexDirection: 'row' },
   // Flyer: one white plate, the cover on the left.

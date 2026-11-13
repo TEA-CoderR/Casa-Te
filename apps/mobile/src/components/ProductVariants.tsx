@@ -26,9 +26,9 @@ export function ProductVariants({ title, current, variants }: { title: string | 
 
 const styles = StyleSheet.create({
   wrap: { marginTop: 18, gap: 10 },
-  title: { fontSize: 19, lineHeight: 24, fontFamily: fonts.display, color: colors.text },
+  title: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text },
   item: { width: 84, borderRadius: 16, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, padding: 6, alignItems: 'center', gap: 4 },
   itemOn: { borderColor: colors.green, borderWidth: 2 },
   thumb: { width: '100%' },
-  label: { fontSize: 12, color: colors.text, fontFamily: fonts.sansSemiBold, textAlign: 'center' },
+  label: { fontSize: 13, color: colors.text, fontFamily: fonts.sansSemiBold, textAlign: 'center' },
 });

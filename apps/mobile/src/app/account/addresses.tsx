@@ -92,8 +92,8 @@ export default function AddressesScreen() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
   card: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.line, padding: 16, marginBottom: 12 },
-  title: { fontFamily: fonts.sansSemiBold, fontSize: 14, fontWeight: '600', color: colors.text },
-  text: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 6, lineHeight: 19 },
+  title: { fontFamily: fonts.sansSemiBold, fontSize: 15, fontWeight: '600', color: colors.text },
+  text: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 6, lineHeight: 18 },
   actions: { flexDirection: 'row', gap: 20, marginTop: 10 },
   action: { fontFamily: fonts.sansSemiBold, color: colors.green, fontWeight: '600', paddingVertical: 8 },
 });

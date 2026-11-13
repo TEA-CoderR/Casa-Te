@@ -168,9 +168,9 @@ export default function CheckoutReturnScreen() {
 
 const styles = StyleSheet.create({
   green: { flex: 1, backgroundColor: colors.band, paddingHorizontal: 22, overflow: 'hidden' },
-  gKicker: { fontSize: 12.5, letterSpacing: 1.8, fontFamily: fonts.sansSemiBold, color: colors.bandMuted },
+  gKicker: { fontSize: 13, letterSpacing: 1.8, fontFamily: fonts.sansSemiBold, color: colors.bandMuted },
   gTitle: { fontSize: 48, lineHeight: 52, letterSpacing: -1.6, fontFamily: fonts.display, color: '#FFFFFF', marginTop: 12 },
-  gText: { fontSize: 16, lineHeight: 22, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 10 },
+  gText: { fontSize: 17, lineHeight: 22, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 10 },
   // The till's slot the ticket comes out of.
   slot: { height: 10, borderRadius: 5, backgroundColor: '#132A18', marginTop: 28, marginHorizontal: -4, zIndex: 2 }, // ui-check: allow (slot, darker band)
   tClip: { overflow: 'hidden', marginTop: -5, paddingBottom: 16 },
@@ -178,20 +178,20 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4, borderBottomRightRadius: 4 },
   tTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
   tKicker: { flexShrink: 1, fontSize: 11.5, letterSpacing: 2, fontFamily: fonts.sansBold, color: colors.band, marginTop: 4 },
-  tTitle: { fontSize: 25, lineHeight: 30, letterSpacing: -0.6, fontFamily: fonts.display, color: colors.band, marginTop: 4 },
-  tSub: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.band, opacity: 0.8, marginTop: 2 },
+  tTitle: { fontSize: 28, lineHeight: 33, letterSpacing: -0.6, fontFamily: fonts.display, color: colors.band, marginTop: 4 },
+  tSub: { fontSize: 15, fontFamily: fonts.sansMedium, color: colors.band, opacity: 0.8, marginTop: 2 },
   tCode: { marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 12, paddingTop: 10, paddingHorizontal: 14, paddingBottom: 8 },
-  tCodeText: { textAlign: 'center', fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.text, marginTop: 6 },
+  tCodeText: { textAlign: 'center', fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.text, marginTop: 6 },
   tTear: { position: 'absolute', left: 0, right: 0, bottom: -7, height: 14, flexDirection: 'row', justifyContent: 'space-between', overflow: 'hidden' },
   tTooth: { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.band },
   gButton: { alignSelf: 'stretch', height: 54, paddingHorizontal: 26, borderRadius: 27, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', minWidth: 300 },
-  gButtonText: { fontSize: 16, fontFamily: fonts.sansBold, color: colors.text },
-  gLink: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.onBrand, textDecorationLine: 'underline' },
+  gButtonText: { fontSize: 17, fontFamily: fonts.sansBold, color: colors.text },
+  gLink: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.onBrand, textDecorationLine: 'underline' },
   done: { alignItems: 'center', paddingTop: 24, gap: 8 },
   badge: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   title: { fontSize: 28, lineHeight: 34, fontFamily: fonts.display, color: colors.text, textAlign: 'center' },
   meta: { fontSize: 15, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans },
-  steps: { marginTop: 24, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.line, padding: 18, gap: 14 },
+  steps: { marginTop: 24, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.line, padding: 18, gap: 14 },
   step: { flexDirection: 'row', gap: 14, alignItems: 'center' },
   stepText: { flex: 1, fontSize: 15, lineHeight: 22, color: colors.text, fontFamily: fonts.sans },
 });

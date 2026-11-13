@@ -106,7 +106,7 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
               <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={feature ? 0.1 : 0.09} aspect={feature ? 0.9 : 1.12} blend />
             </View>
             {!!badge && <View style={[styles.discount, styles.discountDesk, feature && styles.discountBig]}>
-              <Text style={[styles.discountText, styles.discountTextDesk, feature && { fontSize: 16 }]} accessibilityLabel={badge.startsWith('Soci') ? `Prezzo Soci, ${badge.slice(5)}` : `Sconto ${badge}`}>{badge}</Text></View>}
+              <Text style={[styles.discountText, styles.discountTextDesk, feature && { fontSize: 17 }]} accessibilityLabel={badge.startsWith('Soci') ? `Prezzo Soci, ${badge.slice(5)}` : `Sconto ${badge}`}>{badge}</Text></View>}
           </View>
           <View style={styles.entryText}>
             {!!product.brand && <Text style={styles.entryBrand} numberOfLines={1}>{product.brand}</Text>}
@@ -121,7 +121,7 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
       <View style={styles.entryBottom}>
         <View style={styles.priceRow}>
           <Text style={[styles.price, feature && { fontSize: 26 }, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
-          {!!discount && <Text style={[styles.compare, feature && { fontSize: 14 }]}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
+          {!!discount && <Text style={[styles.compare, feature && { fontSize: 15 }]}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
         </View>
         {cartButton}
       </View>
@@ -163,12 +163,12 @@ const styles = StyleSheet.create({
   media: { backgroundColor: colors.surface, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   heart: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 6, right: 6, zIndex: 2 },
-  discount: { position: 'absolute', left: 0, top: 0, backgroundColor: colors.sale, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  discountText: { fontSize: 12, color: '#fff', fontFamily: fonts.heavy, fontWeight: '800' },
-  name: { fontSize: 13.5, lineHeight: 17, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text, height: 34, paddingHorizontal: 4 },
-  meta: { fontSize: 11.5, lineHeight: 15, color: colors.muted, marginTop: 2, fontFamily: fonts.sans, paddingHorizontal: 4 },
+  discount: { position: 'absolute', left: 0, top: 0, backgroundColor: colors.sale, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3 },
+  discountText: { fontSize: 13, color: '#fff', fontFamily: fonts.heavy, fontWeight: '800' },
+  name: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text, height: 34, paddingHorizontal: 4 },
+  meta: { fontSize: 11, lineHeight: 13, color: colors.muted, marginTop: 2, fontFamily: fonts.sans, paddingHorizontal: 4 },
   bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 6, paddingLeft: 4, height: 40 },
-  small: { fontSize: 11.5, color: colors.faint, fontFamily: fonts.sansMedium },
+  small: { fontSize: 11, color: colors.faint, fontFamily: fonts.sansMedium },
   compareSmall: { textDecorationLine: 'line-through' },
   soci: { color: colors.sale, fontFamily: fonts.sansBold, fontWeight: '700' },
   sociOffer: { fontFamily: fonts.heavy, fontWeight: '800' },
@@ -176,8 +176,8 @@ const styles = StyleSheet.create({
   priceBig: { fontSize: 23, lineHeight: 26, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
   priceRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
   price: { fontSize: 18.5, fontFamily: fonts.serifMedium, color: colors.text },
-  compare: { fontSize: 12, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
-  add: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  compare: { fontSize: 13, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
+  add: { width: 34, height: 34, borderRadius: 12, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   addRound: { width: 40, height: 40, borderRadius: 20 },
   stepper: { flexDirection: 'row', alignItems: 'center', height: 40, borderRadius: 20, backgroundColor: colors.green },
   stepBtn: { width: 34, height: 40, alignItems: 'center', justifyContent: 'center' },
@@ -190,12 +190,12 @@ const styles = StyleSheet.create({
   discountTextDesk: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, fontWeight: '700', letterSpacing: 0.2 },
   discountBig: { left: 16, top: 16, paddingHorizontal: 11, paddingVertical: 5 },
   entryText: { paddingTop: 16, gap: 3 },
-  entryBrand: { fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  entryBrand: { fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, fontFamily: fonts.sansMedium, fontWeight: '500' },
   entryName: { fontSize: 19, lineHeight: 23, fontFamily: fonts.serif, color: colors.text },
   entryNameBig: { fontSize: 28, lineHeight: 32 },
   entryBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, gap: 8, marginTop: 'auto' },
-  row: { flexDirection: 'row', gap: 12, padding: 10, marginBottom: 8, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', borderWidth: 1, borderColor: colors.line },
+  row: { flexDirection: 'row', gap: 12, padding: 10, marginBottom: 8, borderRadius: 16, backgroundColor: colors.surface, alignItems: 'center', borderWidth: 1, borderColor: colors.line },
   rowLink: { flex: 1, flexDirection: 'row', gap: 14, alignItems: 'center' },
-  rowMedia: { width: 84, borderRadius: 8, backgroundColor: colors.surface, overflow: 'hidden' },
+  rowMedia: { width: 84, borderRadius: 12, backgroundColor: colors.surface, overflow: 'hidden' },
   rowSide: { alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', gap: 8 },
 });

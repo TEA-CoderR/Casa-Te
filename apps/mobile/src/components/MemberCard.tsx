@@ -75,14 +75,14 @@ export function MemberCardLink({ onLinked }: { onLinked: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.green, borderRadius: 18, padding: 18, gap: 12 },
-  cardBrand: { color: colors.yellow, fontFamily: fonts.sansBold, fontWeight: '700', fontSize: 14, letterSpacing: 0.5 },
-  barcode: { backgroundColor: '#fff', borderRadius: 10, padding: 12 },
-  cardNumber: { color: '#fff', fontFamily: fonts.sansSemiBold, fontWeight: '600', fontSize: 18, letterSpacing: 2, textAlign: 'center' },
-  note: { fontSize: 12, lineHeight: 17, color: colors.muted, fontFamily: fonts.sans, marginTop: 8 },
+  card: { backgroundColor: colors.green, borderRadius: 16, padding: 18, gap: 12 },
+  cardBrand: { color: colors.yellow, fontFamily: fonts.sansBold, fontWeight: '700', fontSize: 15, letterSpacing: 0.5 },
+  barcode: { backgroundColor: '#fff', borderRadius: 12, padding: 12 },
+  cardNumber: { color: '#fff', fontFamily: fonts.sansSemiBold, fontWeight: '600', fontSize: 17, letterSpacing: 2, textAlign: 'center' },
+  note: { fontSize: 13, lineHeight: 18, color: colors.muted, fontFamily: fonts.sans, marginTop: 8 },
   switch: { flexDirection: 'row', backgroundColor: colors.well, borderRadius: 12, padding: 3, marginVertical: 10 },
-  switchItem: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center' },
+  switchItem: { flex: 1, paddingVertical: 9, borderRadius: 12, alignItems: 'center' },
   switchOn: { backgroundColor: colors.surface },
-  switchText: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.muted },
+  switchText: { fontSize: 15, fontFamily: fonts.sansMedium, color: colors.muted },
   switchTextOn: { color: colors.text, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
 });
