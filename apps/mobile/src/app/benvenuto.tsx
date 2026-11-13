@@ -90,9 +90,14 @@ export default function Welcome() {
       {kicker(2)}
       <Text style={styles.title} accessibilityRole="header">Il tuo account</Text>
       <ClubPass title={'La tua tessera,\nsempre in tasca.'} style={{ marginTop: 22 }} onPress={() => done(true)} />
-      <View style={{ gap: 12, marginTop: 24 }}>
-        {['Segui i tuoi ordini e i ritiri', 'Prezzi Soci con il Club Casa & Te', 'Entri con un codice via email: nessuna password da ricordare'].map((t) =>
-          <View key={t} style={styles.perk}><Icon name="check" size={18} color={colors.bandLogo} strokeWidth={2.6} /><Text style={styles.perkText}>{t}</Text></View>)}
+      <View style={{ gap: 16, marginTop: 24 }}>
+        {([
+          ['percent', 'Prezzi Soci e codici sconto', 'Riservati agli iscritti al Club Casa & Te, gratuito.'],
+          ['store', 'Ritiro gratuito in negozio', 'Nessuna spesa di spedizione: ordini online, ritiri quando passi.'],
+          ['scan', 'Ordine e ritiro sotto controllo', 'Stato dell’ordine aggiornato e codice di ritiro da mostrare in cassa.'],
+        ] as const).map(([icon, t, d]) =>
+          <View key={t} style={styles.perk}><Icon name={icon} size={22} color={colors.bandLogo} strokeWidth={1.9} />
+            <View style={{ flex: 1 }}><Text style={styles.perkText}>{t}</Text><Text style={styles.perkSub}>{d}</Text></View></View>)}
       </View>
       <View style={{ flex: 1 }} />
       <View style={{ gap: 16 }}>
@@ -130,6 +135,7 @@ const styles = StyleSheet.create({
   greenText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   lime: { height: 56, borderRadius: 28, backgroundColor: colors.bandLogo, alignItems: 'center', justifyContent: 'center' },
   limeText: { fontSize: 17, fontFamily: fonts.sansBold, color: colors.band },
-  perk: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  perkText: { flex: 1, fontSize: 15.5, lineHeight: 21, fontFamily: fonts.sansMedium, color: '#FFFFFF' },
+  perk: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
+  perkText: { fontSize: 16, lineHeight: 21, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  perkSub: { fontSize: 13.5, lineHeight: 19, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 1 },
 });
