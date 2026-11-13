@@ -204,16 +204,18 @@ export default function CartScreen() {
             <View style={{ flex: 1, minWidth: 0, justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Text style={styles.pName} numberOfLines={2}>{line.name}</Text>
-                <Pressable onPress={() => { setRemoved({ id: line.product_id, name: line.name, qty }); remove(line.product_id); }}
+                {/* Without the stepper (not available) the bin stays here; otherwise "−" at 1 becomes the bin. */}
+                {line.issue === 'unavailable' && <Pressable onPress={() => { setRemoved({ id: line.product_id, name: line.name, qty }); remove(line.product_id); }}
                   style={styles.remove} accessibilityRole="button" accessibilityLabel={`Rimuovi ${line.name}`}>
-                  <Icon name="trash" size={18} color={colors.muted} strokeWidth={1.9} /></Pressable>
+                  <Icon name="trash" size={18} color={colors.muted} strokeWidth={1.9} /></Pressable>}
               </View>
               {!!line.issue && <Text style={styles.issue}>{ISSUE_TEXT[line.issue]}{line.issue === 'insufficient_stock' ? ` (disponibili: ${line.available_quantity})` : ''}</Text>}
               <View style={styles.lineBottom}>
                 <View style={{ flexShrink: 1 }}>{!line.issue && <LinePrice line={line} compareUnit={compare} />}</View>
                 {line.issue !== 'unavailable' && <View style={styles.qty}>
                   <Pressable onPress={() => qty <= 1 ? (setRemoved({ id: line.product_id, name: line.name, qty }), remove(line.product_id)) : setQuantity(line.product_id, qty - 1)}
-                    accessibilityRole="button" accessibilityLabel={`Togli un ${line.name}`} style={styles.qtyButton}><Text style={styles.qtyGlyph}>−</Text></Pressable>
+                    accessibilityRole="button" accessibilityLabel={qty <= 1 ? `Rimuovi ${line.name}` : `Togli un ${line.name}`} style={styles.qtyButton}>
+                    {qty <= 1 ? <Icon name="trash" size={17} color={colors.text} strokeWidth={1.9} /> : <Text style={styles.qtyGlyph}>−</Text>}</Pressable>
                   <Text style={styles.qtyValue} accessibilityLabel={`Quantità ${qty}`}>{qty}</Text>
                   <Pressable onPress={() => setQuantity(line.product_id, qty + 1)} disabled={qty >= max} accessibilityRole="button" accessibilityLabel={`Aggiungi un ${line.name}`}
                     style={[styles.qtyButton, qty >= max && { opacity: 0.35 }]}><Text style={styles.qtyGlyph}>+</Text></Pressable>

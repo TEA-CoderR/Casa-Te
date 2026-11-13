@@ -60,16 +60,20 @@ export function SecondaryButton({ title, onPress, disabled, icon, danger }: {
   </Pressable>;
 }
 
-export function QuantityControl({ value, onChange, label = '', min = 0, max = 99, compact }: {
+export function QuantityControl({ value, onChange, label = '', min = 0, max = 99, compact, onRemove }: {
   value: number; onChange: (value: number) => void; label?: string; min?: number; max?: number; compact?: boolean;
+  /** At `min`, "−" becomes a bin that calls this (cart lines: no separate remove button). */
+  onRemove?: () => void;
 }) {
   const { wide } = useLayout();
   const step = compact ? [styles.step, { width: 30, height: 32 }] : styles.step;
   return <View style={[styles.quantity, wide && deskButton]}>
-    <Pressable accessibilityRole="button" accessibilityLabel={`Riduci quantità${label ? ` ${label}` : ''}`}
+    {onRemove && value <= min ? <Pressable accessibilityRole="button" accessibilityLabel={`Rimuovi${label ? ` ${label}` : ''}`} onPress={onRemove} style={step}>
+      <Icon name="trash" size={compact ? 14 : 16} color={colors.text} strokeWidth={1.7} />
+    </Pressable> : <Pressable accessibilityRole="button" accessibilityLabel={`Riduci quantità${label ? ` ${label}` : ''}`}
       disabled={value <= min} onPress={() => onChange(value - 1)} style={step}>
       <Icon name="minus" size={compact ? 14 : 16} color={value <= min ? colors.line : colors.text} strokeWidth={1.5} />
-    </Pressable><Text style={[styles.quantityValue, compact && { fontSize: 15, minWidth: 16 }]} accessibilityLabel={`Quantità ${value}`}>{value}</Text>
+    </Pressable>}<Text style={[styles.quantityValue, compact && { fontSize: 15, minWidth: 16 }]} accessibilityLabel={`Quantità ${value}`}>{value}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={`Aumenta quantità${label ? ` ${label}` : ''}`}
       disabled={value >= max} onPress={() => onChange(value + 1)} style={step}>
       <Icon name="plus" size={compact ? 14 : 16} color={value >= max ? colors.line : colors.text} strokeWidth={1.5} />

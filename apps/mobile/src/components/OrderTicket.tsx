@@ -26,7 +26,10 @@ export function OrderTicket({ order, storeName, variant = 'compact', thumbs, onP
   const at = steps.indexOf(order.status);
   const n = order.order_items.reduce((s, i) => s + i.quantity, 0);
   const date = new Date(order.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
-  const place = order.fulfilment === 'store' ? `Ritiro a ${storeName || 'negozio'}` : FULFILMENT_LABELS[order.fulfilment];
+  // "Lucca S. Filippo" → "S. Filippo": the line has to fit the total on one row.
+  const shortStore = storeName ? storeName.match(/^\S+\s+(.+)$/)?.[1] ?? storeName : 'negozio';
+  const place = order.fulfilment === 'store' ? `Ritiro a ${shortStore}` : FULFILMENT_LABELS[order.fulfilment];
+  const full = variant === 'full' && !!stub;
   const status = customerOrderStatus(order.status, order.fulfilment);
   const top = <View style={[styles.top, finished && styles.done]}>
     <View style={styles.head}>
@@ -34,9 +37,10 @@ export function OrderTicket({ order, storeName, variant = 'compact', thumbs, onP
       {onPress ? <Icon name="chevron" size={18} color={ink} strokeWidth={2.4} /> : <Text style={[styles.date, { color: ink }]}>{date}</Text>}
     </View>
     <Text style={[styles.status, { color: ink }]} numberOfLines={1} accessibilityRole="header">{status}</Text>
-    <Text style={[styles.sub, { color: ink }]} numberOfLines={1}>
+    {/* The full ticket sits over the order's details, which say store, total and items. */}
+    {!full && <Text style={[styles.sub, { color: ink }]} numberOfLines={1}>
       {onPress ? `${date} · ` : ''}{place} · {n} {n === 1 ? 'articolo' : 'articoli'} · <Text
-        style={cancelled ? { textDecorationLine: 'line-through' } : undefined}>{formatEuro(order.total_cents).replace(/€\s/, '€')}</Text></Text>
+        style={cancelled ? { textDecorationLine: 'line-through' } : undefined}>{formatEuro(order.total_cents).replace(/€\s/, '€')}</Text></Text>}
     {thumbs && <View style={[styles.thumbs, cancelled && { opacity: 0.5 }]}>{order.order_items.slice(0, 5).map((line) =>
       <View key={line.id} style={styles.thumb}><View style={{ width: 38, height: 38 }}>
         <ProductImage uri={imageUrl(line.image_path)} sku={line.sku} inset={0} /></View></View>)}
@@ -44,7 +48,6 @@ export function OrderTicket({ order, storeName, variant = 'compact', thumbs, onP
     {!cancelled && order.status !== 'pending_payment' && <View style={styles.bars}>{[0, 1, 2, 3].map((i) =>
       <View key={i} style={[styles.bar, (finished || at >= Math.round(i * (steps.length - 1) / 3)) && styles.barOn]} />)}</View>}
   </View>;
-  const full = variant === 'full' && !!stub;
   const body = full ? <>
     {top}
     <View style={styles.tear}><View style={[styles.notch, { left: -12 }]} /><View style={styles.tearLine} /><View style={[styles.notch, { right: -12 }]} /></View>

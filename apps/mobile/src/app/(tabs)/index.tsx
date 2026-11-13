@@ -35,7 +35,7 @@ function HomePhone() {
   const insets = useSafeAreaInsets();
   // Light status bar over the green band while Home is on screen.
   useFocusEffect(useCallback(() => { setStatusBarStyle('light'); return () => setStatusBarStyle('dark'); }, []));
-  const { selected, canChoose } = useStores();
+  const { selected, canChoose, allStores } = useStores();
   const user = useUser();
   const { width } = useWindowDimensions();
   const [storeSheet, setStoreSheet] = useState(false);
@@ -139,7 +139,7 @@ function HomePhone() {
     contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
     {/* The order in progress: the lime ticket hanging from the band (as on the order list and the order page). */}
-    {active && <OrderTicket order={active} storeName={place} onPress={() => router.push(`/order/${active.id}`)} style={{ marginHorizontal: 16, marginTop: -50 }} />}
+    {active && <OrderTicket order={active} storeName={allStores.find((x) => x.id === active.store_id)?.name.replace(/^CASA & TE\s*/, '')} onPress={() => router.push(`/order/${active.id}`)} style={{ marginHorizontal: 16, marginTop: -50 }} />}
 
     {!!topCategories.length && <View style={{ paddingTop: active ? 28 : 24, paddingHorizontal: 16 }}>
       <View style={[styles.section, { paddingHorizontal: 0 }]}>
