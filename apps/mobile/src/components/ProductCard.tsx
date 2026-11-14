@@ -78,8 +78,7 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
       {!!discount && <Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
       {!!discount && !!unit && ' · '}{unit ?? ''}</Text>}
     <PriceTag cents={product.price_cents} size={22} sale={!!discount} />
-    {soci && <Text style={styles.soci} numberOfLines={1}>Prezzo Soci</Text>}
-    {sociOffer && <SociChip cents={sociCents} style={{ marginTop: 4 }} />}
+    {(soci || sociOffer) && <SociChip cents={sociCents} applied={soci} style={{ marginTop: 4 }} />}
   </View>;
 
   if (variant === 'list') return <View style={styles.row}>
@@ -134,29 +133,32 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
   // Discounted: the regular price struck through, then "Soci" (member price) or the unit price.
   const subline = !stock.available ? stock.text : discount
     ? <><Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number).replace(/€\s/, '€')}</Text>
-        {soci ? <Text style={styles.soci}> · Prezzo Soci</Text> : unitShort ? ` · ${unitShort}` : ''}</>
+        {unitShort ? ` · ${unitShort}` : ''}</>
     : unitShort ?? note;
   // Phone: offers read as the struck regular price and the offer price, with the discount rate on the photo ("−25%").
-  // Not a member: the big price is what this customer pays; the member price is the lime "Soci €x" chip and the
-  // photo says "Soci −x%" in lime (owner's choice, 14/11/2026: never show a price they would not be charged).
+  // Club price, same shape for everyone (owner, 14/11/2026): the big price is what this customer pays; under the name
+  // a red chip — outlined "Soci €x" for others, filled "Prezzo Soci" for members, whose regular price is struck
+  // beside the big one (never next to the words "Prezzo Soci", which read as if the struck one were the member price).
   const phoneBadge = discount ? discount.replace('-', '−') : sociOffer && sociPct ? `Soci ${sociPct.replace('-', '−')}` : '';
-  const sociBadge = !discount && sociOffer;
   return <View style={[styles.card, rail && { paddingBottom: 12 }]}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={[styles.media, { height: rail ? 136 : 132 }]}>
         <View style={{ width: rail ? 120 : 118, height: rail ? 120 : 118 }}>
           <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />
         </View>
-        {!!phoneBadge && <View style={[styles.discount, sociBadge && { backgroundColor: colors.bandLogo }, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
-          <Text style={[styles.discountText, sociBadge && { color: colors.band }]} accessibilityLabel={phoneBadge.startsWith('Soci') ? `Prezzo Soci, ${phoneBadge.slice(5)}` : `Sconto ${phoneBadge}`}>{phoneBadge}</Text></View>}
+        {!!phoneBadge && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
+          <Text style={styles.discountText} accessibilityLabel={phoneBadge.startsWith('Soci') ? `Prezzo Soci, ${phoneBadge.slice(5)}` : `Sconto ${phoneBadge}`}>{phoneBadge}</Text></View>}
       </View>
       <Text style={[styles.name, { marginTop: rail ? 6 : 4 }]} numberOfLines={2}>{product.name}</Text>
-      {sociOffer && stock.available
-        ? <SociChip cents={sociCents} style={{ marginTop: 3, marginLeft: 4 }} />
+      {(sociOffer || soci) && stock.available
+        ? <SociChip cents={sociCents} applied={soci} style={{ marginTop: 3, marginLeft: 4 }} />
         : <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>}
     </Pressable></Link>
     {!rail && <FavoriteButton productId={product.id} name={product.name} size={19} strokeWidth={2} style={styles.heartCorner} />}
-    <View style={styles.bottom}><PriceTag cents={product.price_cents} size={22} sale={!!discount} />{phoneCart}</View>
+    <View style={styles.bottom}><View style={styles.priceWithStruck}>
+      <PriceTag cents={product.price_cents} size={22} sale={!!discount} />
+      {soci && !!discount && <Text style={[styles.meta, styles.compareSmall, { marginTop: 0, paddingHorizontal: 0, flexShrink: 1 }]} numberOfLines={1}>{formatEuro(product.compare_at_price_cents as number).replace(/€\s/, '€')}</Text>}
+    </View>{phoneCart}</View>
   </View>;
 }
 
@@ -173,6 +175,7 @@ const styles = StyleSheet.create({
   bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 6, paddingLeft: 4, height: 40 },
   small: { fontSize: 11, color: colors.faint, fontFamily: fonts.sansMedium },
   compareSmall: { textDecorationLine: 'line-through' },
+  priceWithStruck: { flexDirection: 'row', alignItems: 'baseline', gap: 5, flexShrink: 1, minWidth: 0 },
   soci: { color: colors.sale, fontFamily: fonts.sansBold, fontWeight: '700' },
   sociOffer: { fontFamily: fonts.heavy, fontWeight: '800' },
   sociPct: { fontFamily: fonts.sansBold, fontWeight: '700' },

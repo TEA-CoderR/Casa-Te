@@ -311,8 +311,7 @@ function LinePrice({ line, compareUnit, wide }: { line: QuoteLine; compareUnit: 
       <Text style={[...big, { color: colors.sale }]}>{euroTight(line.line_total_cents)}</Text>
       <Text style={styles.struck}>{euroTight(regular * qty)}</Text>
     </View>
-    <View style={styles.sociTag}><Icon name="crown" size={12} color="#FFFFFF" strokeWidth={2} />
-      <Text style={styles.sociTagText}>Prezzo Soci −{pct(regular, member)}%</Text></View>
+    <SociChip applied suffix={`−${pct(regular, member)}%`} style={{ marginTop: 4 }} />
     {qty > 1 && <Text style={styles.pEach}>{euroTight(member)} cad.</Text>}
   </View>;
   if (member !== null) return <View>
@@ -348,12 +347,6 @@ const styles = StyleSheet.create({
   suggNote: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
   struck: { fontSize: 13, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
-  sociTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: colors.sale, borderRadius: 6,
-    paddingHorizontal: 6, paddingVertical: 2, marginTop: 3 },
-  sociTagText: { fontSize: 11, color: '#FFFFFF', fontFamily: fonts.sansBold, fontWeight: '700' },
-  sociOffer: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.sale, borderRadius: 6,
-    paddingHorizontal: 6, paddingVertical: 1, marginTop: 3 },
-  sociOfferText: { fontSize: 11, color: colors.sale, fontFamily: fonts.sans },
   footSoci: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.sale },
   compare: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.line, paddingVertical: 12, paddingHorizontal: 14, marginBottom: 12 },
   compareNow: { fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.text },

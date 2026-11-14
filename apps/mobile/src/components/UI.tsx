@@ -144,14 +144,17 @@ export function SummaryRow({ label, value, strong, tone }: { label: string; valu
 }
 
 /**
- * The member price shown to someone who is not a member (yet): a small lime chip, "Soci €1,99" with the crown.
- * Lime is the Club; red stays for discounts the customer actually gets.
+ * The Club price as a small red chip with the crown, the same shape for everyone (owner, 14/11/2026):
+ * - not a member: outlined, "Soci €1,99" — the price a member would pay; the big price stays what this customer pays;
+ * - member (`applied`): filled, "Prezzo Soci" — the big red price is the member price, the regular one struck beside it.
  */
-export function SociChip({ cents, suffix, style }: { cents: number; suffix?: string; style?: object }) {
-  const euro = `€${(cents / 100).toFixed(2).replace('.', ',')}`;
-  return <View style={[styles.sociChip, style]} accessibilityLabel={`Prezzo Soci ${euro}${suffix ? `, ${suffix}` : ''}`}>
-    <Icon name="crown" size={12} color={colors.band} strokeWidth={2} />
-    <Text style={styles.sociChipText} numberOfLines={1}>Soci {euro}{suffix ? <Text style={styles.sociChipSuffix}> · {suffix}</Text> : null}</Text>
+export function SociChip({ cents, applied, suffix, style }: { cents?: number; applied?: boolean; suffix?: string; style?: object }) {
+  const euro = cents != null ? `€${(cents / 100).toFixed(2).replace('.', ',')}` : '';
+  const text = applied ? 'Prezzo Soci' : `Soci ${euro}`;
+  const ink = applied ? '#FFFFFF' : colors.sale;
+  return <View style={[styles.sociChip, applied && styles.sociChipOn, style]} accessibilityLabel={`${applied ? 'Prezzo Soci applicato' : `Prezzo Soci ${euro}`}${suffix ? `, ${suffix}` : ''}`}>
+    <Icon name="crown" size={12} color={ink} strokeWidth={2} />
+    <Text style={[styles.sociChipText, { color: ink }]} numberOfLines={1}>{text}{suffix ? <Text style={styles.sociChipSuffix}> · {suffix}</Text> : null}</Text>
   </View>;
 }
 
@@ -237,8 +240,9 @@ const styles = StyleSheet.create({
   buttonSmall: { minHeight: 44, paddingVertical: 10, paddingHorizontal: 20, alignSelf: 'flex-start' },
   buttonText: { fontSize: 17, fontFamily: fonts.sansBold, fontWeight: '700', color: '#fff', flexShrink: 1, textAlign: 'center' },
   sociChip: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', height: 22, paddingHorizontal: 8,
-    borderRadius: radius.pill, backgroundColor: colors.bandLogo },
-  sociChipText: { ...type.micro, color: colors.band },
+    borderRadius: radius.pill, borderWidth: 1, borderColor: colors.sale, backgroundColor: '#FFFFFF' },
+  sociChipOn: { backgroundColor: colors.sale },
+  sociChipText: { ...type.micro },
   sociChipSuffix: { fontFamily: fonts.sansSemiBold },
   pill: { height: 32, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.line, justifyContent: 'center', alignSelf: 'center' },
   pillDark: { borderColor: 'rgba(255,255,255,0.35)' },

@@ -113,7 +113,6 @@ export default function ProductDetailScreen() {
   const badge = discount ? `${product.memberApplied ? 'Soci ' : ''}${discount.replace('-', '−')}` : soci && sociPct ? `Soci ${sociPct.replace('-', '−')}` : '';
   const sociOffer = soci && !product.memberApplied;
   const phoneRate = discount ? discount.replace('-', '−') : sociOffer && sociPct ? `Soci ${sociPct.replace('-', '−')}` : '';
-  const sociRate = !discount && sociOffer;
   const until = product.clubPrice?.endsOn ? untilLabel(product.clubPrice.endsOn) : null;
   const sociText = product.memberApplied ? ['applicato al tuo account', until].filter(Boolean).join(' · ')
     : ['solo per i membri del Club · iscrizione gratuita', until].filter(Boolean).join(' · ');
@@ -230,8 +229,7 @@ export default function ProductDetailScreen() {
       <View style={[styles.stage, { height: screenW }]}>
         <View style={[styles.stageImage, { top: screenW * 0.08, left: screenW * 0.08, width: screenW * 0.84, height: screenW * 0.84 }]}><ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0} /></View>
         {/* The discount rate on the photo: "−25%" (the Soci line under the price says who it is for). */}
-        {!!phoneRate && <View style={[styles.phoneBadge, sociRate && { backgroundColor: colors.bandLogo }]}>
-          <Text style={[styles.phoneBadgeText, sociRate && { color: colors.band }]}>{phoneRate}</Text></View>}
+        {!!phoneRate && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{phoneRate}</Text></View>}
         <View style={styles.stageBar}>
           {round('back', 'Indietro', back)}
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -254,7 +252,10 @@ export default function ProductDetailScreen() {
           accessibilityLabel={`Prezzo Soci ${formatEuro(product.clubPrice!.cents)}. Iscriviti gratis al Club`}>
           <SociChip cents={product.clubPrice!.cents} suffix={until ?? undefined} />
           <Text style={styles.sociJoin}>Iscriviti gratis ›</Text>
-        </Pressable> : sociLine}
+        </Pressable> : product.memberApplied ? <View style={styles.sociRow}>
+          <SociChip applied suffix={until ?? undefined} />
+          <Text style={styles.sociNote}>applicato al tuo account</Text>
+        </View> : null}
         {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
         <Pressable style={({ pressed }) => [styles.phoneCard, pressed && { opacity: 0.9 }]} onPress={() => setStoreSheet(true)} disabled={!canChoose} accessibilityRole={canChoose ? 'button' : 'text'} accessibilityLabel={canChoose ? `${stock.text}. Cambia negozio` : stock.text}>
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -340,6 +341,7 @@ const styles = StyleSheet.create({
   phonePriceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginTop: 10, flexWrap: 'wrap' },
   sociLine: { marginTop: 6, marginBottom: 4 },
   sociRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, marginBottom: 4, alignSelf: 'flex-start' },
+  sociNote: { ...type.small, color: colors.muted },
   sociJoin: { ...type.small, fontFamily: fonts.sansBold, color: colors.green },
   sociText: { fontSize: 13, lineHeight: 18, color: colors.sale, fontFamily: fonts.sans },
   sociStrong: { fontFamily: fonts.sansBold, fontWeight: '700' },
