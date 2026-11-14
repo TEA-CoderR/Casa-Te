@@ -57,7 +57,7 @@ export default function FlyerScreen() {
   const hasCover = !!first?.pages.length;
   // Phone: the band leaves room for the cover to hang from it.
   const band = wide ? undefined : <BrandHeader inScroll title="Volantino" subtitle={first ? validity(first.valid_from, first.valid_to) : undefined}
-    titleSize={30} pad={[14, 16, hasCover ? 190 : 18]} left={<HeaderBack onPress={back} />} />;
+    pad={[14, 16, hasCover ? 190 : 18]} left={<HeaderBack onPress={back} />} />;
 
   return <Screen stack header={wide ? undefined : <StatusBand />} top={band} ground={colors.page} refreshing={loading && !!data} onRefresh={refetch}
     maxWidth={760} contentContainerStyle={wide ? { padding: 24, gap: 12 } : { padding: 0, paddingBottom: 32 }} bodyStyle={wide ? undefined : { paddingHorizontal: 16 }}>

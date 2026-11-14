@@ -40,7 +40,8 @@ export function BrandHeader({ title, subtitle, logo, logoHeight = 36, left, righ
   pad?: [number, number, number];
 }>) {
   const insets = useSafeAreaInsets();
-  const size = titleSize ?? (stacked ? 34 : 28);
+  // A page with a back button has the stack title's size (22, as Indirizzi, Password); the tab pages 28 (plan v2 C1).
+  const size = titleSize ?? (stacked ? 34 : left ? 22 : 28);
   const heading = !!title && <View style={[{ flexShrink: 1 }, stacked ? { marginTop: titleGap ?? 12 } : left ? { marginLeft: 12 } : null]}>
     <Text style={[styles.title, { fontSize: size, lineHeight: Math.round(size * 1.13) }]} accessibilityRole="header" numberOfLines={stacked ? 2 : 1}>{title}</Text>
     {!!subtitle && <Text style={[styles.subtitle, stacked && { fontSize: 15, marginTop: 2 }]} numberOfLines={stacked ? 2 : 1}>{subtitle}</Text>}

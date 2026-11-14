@@ -96,7 +96,8 @@ export function EmptyState({ title, message, icon = 'bag', art, children }: Prop
 export function TextField({ label, error, hint, ...props }: TextInputProps & { label: string; error?: string; hint?: string }) {
   const box = useRef<View>(null);
   const reveal = useReveal();
-  return <View ref={box} style={{ marginBottom: 12 }}>
+  // Fields 16 apart, a hint or error included (plan v2 C2).
+  return <View ref={box} style={{ marginBottom: 16 }}>
     <Text style={styles.fieldLabel}>{label}</Text>
     <TextInput placeholderTextColor={colors.faint} accessibilityLabel={label} {...props}
       // data-invalid lets the checkout scroll to and focus the first field with an error (web).
@@ -258,7 +259,7 @@ const styles = StyleSheet.create({
   input: { minHeight: 54, borderWidth: 1, borderColor: colors.line, borderRadius: 16, paddingHorizontal: 16, fontSize: 17,
     color: colors.text, backgroundColor: colors.surface, fontFamily: fonts.sansSemiBold },
   fieldError: { color: colors.danger, fontSize: 13, marginTop: 5, fontFamily: fonts.sans },
-  fieldHint: { color: colors.muted, fontSize: 13, marginTop: 5, fontFamily: fonts.sans },
+  fieldHint: { color: colors.muted, fontSize: 13, lineHeight: 18, marginTop: 6, fontFamily: fonts.sans },
   checkRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 8, minHeight: 44 },
   checkBox: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: colors.green, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   checkBoxOn: { backgroundColor: colors.green },

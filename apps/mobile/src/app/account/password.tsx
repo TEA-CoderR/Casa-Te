@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { Notice, PrimaryButton, TextField } from '@/components/UI';
@@ -104,7 +104,7 @@ export default function PasswordScreen() {
       autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" hint={PASSWORD_HELP} />
     <TextField label="Ripeti la nuova password" value={repeat} onChangeText={setRepeat} secureTextEntry autoCapitalize="none" autoCorrect={false}
       autoComplete="new-password" textContentType="newPassword" returnKeyType="done" onSubmitEditing={save} error={error} />
-    <PrimaryButton title="Salva password" loading={busy} onPress={save} />
+    <View style={{ marginTop: 8 }}><PrimaryButton title="Salva password" loading={busy} onPress={save} /></View>
     {saved && <Text style={styles.back} onPress={() => router.back()}>Torna al profilo</Text>}
   </Screen>;
 }

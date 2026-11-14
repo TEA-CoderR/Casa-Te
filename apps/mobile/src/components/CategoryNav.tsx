@@ -107,7 +107,8 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
                 accessibilityLabel={c.name}
                 style={({ pressed }) => [styles.cell, pressed && { opacity: 0.7 }]}>
                 <CategoryPhoto image={covers?.[c.id]?.image} slug={active.slug} name={c.name} />
-                <Text style={styles.cellName} numberOfLines={2}>{c.name}</Text>
+                {/* Up to three lines: long names ("Balsamo e maschere capelli") are not cut (plan v2 C3). */}
+                <Text style={styles.cellName} numberOfLines={3}>{c.name}</Text>
               </Pressable>)}
             </View>
           </View>)}
@@ -205,7 +206,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3, rowGap: 16, marginBottom: 18 },
   section: { fontSize: 13, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginBottom: 10, marginLeft: 1 },
   cell: { width: '33.333%', paddingHorizontal: 3 },
-  cellName: { marginTop: 7, fontSize: 13, lineHeight: 18, letterSpacing: -0.15, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
+  cellName: { marginTop: 7, minHeight: 36, fontSize: 13, lineHeight: 18, letterSpacing: -0.15, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
 
 
   photo: { backgroundColor: colors.photo, borderWidth: 1, borderColor: colors.photoLine, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },

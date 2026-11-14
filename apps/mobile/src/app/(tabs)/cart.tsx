@@ -61,7 +61,7 @@ export default function CartScreen() {
   const suggestions = useQuery(basisIds.length ? `cart-suggestions:${store?.id}:${basisIds.join(',')}` : null,
     () => fetchCartSuggestions(store?.id ?? null, basisIds, 10));
 
-  const band = wide ? undefined : <BrandHeader title="Carrello" titleSize={30} subtitle="Nessun articolo" pad={[14, 16, 18]}
+  const band = wide ? undefined : <BrandHeader title="Carrello" titleSize={28} subtitle="Nessun articolo" pad={[14, 16, 18]}
     left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/')} />} />;
   if (empty) return <Screen header={band} ground={wide ? undefined : colors.page}>{wide && <PageTitle title="Il tuo carrello" />}<EmptyState title="Il carrello è vuoto" art={wide ? undefined : <EmptyReceipt />}
     message={wide ? 'La tua casa aspetta nuove idee. Inizia da un piccolo essenziale.' : 'Aggiungi i prodotti che ti servono: li prepariamo noi nel tuo negozio.'}>
@@ -143,7 +143,7 @@ export default function CartScreen() {
   if (!wide) {
     const euro = (c: number) => formatEuro(c).replace(/€\s/, '€');
     const back = () => router.canGoBack() ? router.back() : router.replace('/');
-    const header = <BrandHeader inScroll title="Carrello" titleSize={30} subtitle={`${count} ${count === 1 ? 'articolo' : 'articoli'}`} pad={[14, 16, 40]}
+    const header = <BrandHeader inScroll title="Carrello" titleSize={28} subtitle={`${count} ${count === 1 ? 'articolo' : 'articoli'}`} pad={[14, 16, 40]}
       left={<HeaderBack onPress={back} />} />;
     // The breakdown is read once, in the page; the bar at the bottom keeps only what decides the tap: total and button.
     const summary = <View style={styles.summaryPlate}>

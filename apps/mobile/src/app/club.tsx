@@ -57,7 +57,7 @@ export default function ClubScreen() {
   const since = member ? new Date(profile.data!.club_member_since!).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   const back = () => router.canGoBack() ? router.back() : router.replace('/');
   // Phone: the shop's real Club card hangs from the band, like the store card on the home page.
-  const band = wide ? undefined : <BrandHeader inScroll title="Casa & Te Club" titleSize={30} pad={[14, 16, 122]} left={<HeaderBack onPress={back} />} />;
+  const band = wide ? undefined : <BrandHeader inScroll title="Casa & Te Club" pad={[14, 16, 122]} left={<HeaderBack onPress={back} />} />;
 
   return <Screen stack header={wide ? undefined : <StatusBand />} top={band} ground={colors.page}
     contentContainerStyle={wide ? undefined : { padding: 0, paddingBottom: 32 }} bodyStyle={wide ? undefined : { paddingHorizontal: 16 }}>
@@ -66,10 +66,10 @@ export default function ClubScreen() {
     {wide ? <View style={styles.cardWrap}>
       <Image source={CARD} accessibilityLabel="La tessera Casa & Te" resizeMode="cover" style={styles.cardImage} />
     </View> : <ClubPass style={{ marginTop: -96 }} kicker={card ? 'TESSERA SOCI' : 'CASA & TE CLUB'} name={member ? profile.data?.full_name ?? undefined : undefined}
-      card={card} title={member ? 'Collega la tessera\ndel negozio.' : 'Offerte riservate\nai Soci.'}
-      onPress={member && !card ? () => setLinkOpen(true) : undefined} />}
+      // A member without the shop card: the card only says who and since when; linking is the plate below (plan v2 C5).
+      card={card} title={member ? `Nel Club dal\n${since}.` : 'Offerte riservate\nai Soci.'} />}
     {wide && <Text style={styles.title} accessibilityRole="header">Sei uno di famiglia</Text>}
-    {member && <Text style={[styles.lead, !wide && styles.leadPhone]}>{card ? 'Mostra la tessera alla cassa: tocca per ingrandire. ' : ''}Sei nel Club dal {since}.</Text>}
+    {member && (wide || card) && <Text style={[styles.lead, !wide && styles.leadPhone]}>{card ? 'Mostra la tessera alla cassa: tocca per ingrandire. ' : ''}Sei nel Club dal {since}.</Text>}
 
     {/* The perks as three words on one line: the card says the rest; details come in the sign-up step. */}
     {(wide ? member || step === 'intro' : !member && step === 'intro') && <Text style={[styles.perks, !wide && { textAlign: 'left', marginTop: member ? 8 : 18 }]}>{PERKS.join('  ·  ')}</Text>}

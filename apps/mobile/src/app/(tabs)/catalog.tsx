@@ -314,7 +314,7 @@ export default function CatalogScreen() {
           {!loading && !shown.length ? <Text style={styles.sNoProducts}>Nessun prodotto con questo nome: apri il reparto qui sopra.</Text> : <>
           <View style={styles.sResultsHead}>
             <Text style={styles.sCaps}>PRODOTTI</Text>
-            <Text style={styles.sCount}> </Text>
+            <Text style={styles.sCount}>{loading ? ' ' : `${count} ${count === 1 ? 'risultato' : 'risultati'}`}</Text>
           </View>
           <View style={styles.fGrid}>{loading && !items.length ? <ProductSkeletons n={4} /> : shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
           {more}

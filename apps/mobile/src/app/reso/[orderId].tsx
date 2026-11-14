@@ -121,7 +121,7 @@ export default function ReturnRequestScreen() {
 
   // ---- Sent: the request number and the three things that happen next. ----
   if (sent) {
-    const header = <BrandHeader title="Richiesta inviata" subtitle={`Ordine ${o.order_number}`} titleSize={26} pad={[14, 16, 18]}
+    const header = <BrandHeader title="Richiesta inviata" subtitle={`Ordine ${o.order_number}`} pad={[14, 16, 18]}
       left={<HeaderBack icon="close" label="Chiudi" onPress={toOrder} />} />;
     return <Screen stack header={header} ground={colors.page} maxWidth={640} contentContainerStyle={{ paddingTop: 22, paddingBottom: 32 }}
       footer={<Pressable onPress={toOrder} accessibilityRole="button" style={({ pressed }) => [styles.next, pressed && { opacity: 0.88 }]}>
@@ -155,7 +155,7 @@ export default function ReturnRequestScreen() {
     : step === 1 ? (reason ? RETURN_REASON_LABELS[reason] : 'Tocca il motivo')
     : step === 2 ? (photosNeeded && !photos.length ? 'Aggiungi almeno una foto' : reason === 'other' && !note.trim() ? 'Scrivici due righe' : 'Tutto pronto')
     : refund ? `Rimborso stimato ${euro(estimate)}` : 'Cambio con lo stesso prodotto';
-  const header = <BrandHeader title="Reso e assistenza" subtitle={`Passo ${step + 1} di ${STEPS.length} · ${STEPS[step]}`} titleSize={26} pad={[14, 16, 16]}
+  const header = <BrandHeader title="Reso e assistenza" subtitle={`Passo ${step + 1} di ${STEPS.length} · ${STEPS[step]}`} pad={[14, 16, 16]}
     left={<HeaderBack onPress={back} />}>
     <View style={styles.progress} accessibilityElementsHidden>{STEPS.map((s, i) => <View key={s} style={[styles.progressBar, i <= step && styles.progressOn]} />)}</View>
   </BrandHeader>;

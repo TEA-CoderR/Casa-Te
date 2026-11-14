@@ -69,7 +69,7 @@ export default function OrderDetailScreen() {
       ['Pagato', `${euro(order.total_cents)} · ${count} ${count === 1 ? 'articolo' : 'articoli'}`],
     ];
     const storeLabel = store?.name.replace(/^CASA & TE\s*/, '') ?? null;
-    const header = <BrandHeader inScroll title="Il tuo ordine" titleSize={26} pad={[14, 16, 18]}
+    const header = <BrandHeader inScroll title="Il tuo ordine" pad={[14, 16, 18]}
       left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/orders')} />} />;
     return <Screen header={<StatusBand />} top={header} ground={colors.page} onRefresh={refetch} refreshing={loading}
       contentContainerStyle={{ padding: 0, paddingBottom: 24 }} bodyStyle={{ paddingHorizontal: 16 }}>

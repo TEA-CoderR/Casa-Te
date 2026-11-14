@@ -4,7 +4,7 @@ import { Redirect, router } from 'expo-router';
 import { friendlyError, validateAddress, type Address, type AddressRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { Checkbox, EmptyState, Loading, Notice, PrimaryButton, SecondaryButton, SectionTitle, TextField } from '@/components/UI';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, type } from '@/config/theme';
 import { deleteAddress, fetchAddresses, saveAddress } from '@/lib/api';
 import { useQuery } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
@@ -60,9 +60,9 @@ export default function AddressesScreen() {
           onChangeText={(v) => set({ phone: v })} error={errors.phone} /></View>
       </View>
       <Checkbox checked={editing.isDefault} onChange={(v) => setEditing({ ...editing, isDefault: v })}>
-        <Text style={{ fontFamily: fonts.sans, fontSize: 13, color: colors.text }}>Usa come indirizzo predefinito</Text></Checkbox>
+        <Text style={{ ...type.body, color: colors.text }}>Usa come indirizzo predefinito</Text></Checkbox>
       {!!error && <Notice tone="error" message={error} />}
-      <View style={{ gap: 10, marginTop: 12 }}>
+      <View style={{ gap: 12, marginTop: 24 }}>
         <PrimaryButton title="Salva indirizzo" loading={busy} onPress={save} icon="check" />
         <SecondaryButton title="Annulla" onPress={() => setEditing(null)} />
       </View>
