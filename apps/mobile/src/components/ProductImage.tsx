@@ -4,7 +4,7 @@ import { RemoteImage } from './RemoteImage';
 import { ProductVisual } from './ProductVisual';
 import { productImageCells } from '@/data/productImages';
 import { Icon } from './Icon';
-import { colors } from '@/config/theme';
+import { colors, radius } from '@/config/theme';
 
 /**
  * Product photo from storage/CDN. Falls back to the demo illustration sheet for the seeded
@@ -19,10 +19,13 @@ export function ProductImage({ uri, sku, label, inset = 0.12, aspect = 1, blend,
   const blendStyle = blend ? ({ mixBlendMode: 'multiply' } as object) : null;
   const backdropStyle = blend ? { backgroundColor: backdrop ?? colors.photo } : null;
   const [failed, setFailed] = useState(false);
-  useEffect(() => { setFailed(false); }, [uri]);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { setFailed(false); setLoaded(false); }, [uri]);
+  // Until the photo arrives, a quiet grey tile instead of a white hole (plan v2 A4).
+  const waiting = !loaded && !blend ? { backgroundColor: colors.well, borderRadius: radius.sm } : null;
   if (uri && !failed) {
-    return <View style={[{ width: '100%', aspectRatio: aspect, padding: `${inset * 100}%` as `${number}%` }, backdropStyle]}>
-      <RemoteImage uri={uri} style={[{ width: '100%', height: '100%' }, blendStyle]} label={label} onFailed={() => setFailed(true)} />
+    return <View style={[{ width: '100%', aspectRatio: aspect, padding: `${inset * 100}%` as `${number}%` }, backdropStyle, waiting]}>
+      <RemoteImage uri={uri} style={[{ width: '100%', height: '100%' }, blendStyle]} label={label} onFailed={() => setFailed(true)} onLoad={() => setLoaded(true)} />
     </View>;
   }
   if (sku && productImageCells[sku] !== undefined) return <ProductVisual id={sku} label={label} inset={inset} aspect={aspect} blend={blend} />;

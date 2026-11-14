@@ -19,6 +19,7 @@ import { useClubStore } from '@/store/club';
 import { MemberCardLink, MemberCardView } from '@/components/MemberCard';
 import { ClubPass } from '@/components/ClubPass';
 import { ListGroup, ListRow } from '@/components/ListRow';
+import { ConfirmSheet } from '@/components/ConfirmSheet';
 
 /** What the Club gives, one line each (the card section below covers linking an existing card). */
 const PERKS = ['Prezzi Soci', 'Codici sconto', 'Gratis'];
@@ -38,9 +39,11 @@ export default function ClubScreen() {
   // Not yet a member: one thing at a time — the card and what it gives, then either the sign-up or the old card.
   const [step, setStep] = useState<'intro' | 'join' | 'card'>('intro');
   const [linkOpen, setLinkOpen] = useState(false);
+  const [askLeave, setAskLeave] = useState(false);
 
   const leave = async () => {
     setBusy(true); setError('');
+    setAskLeave(false);
     try { await setClubMembership(false); useClubStore.getState().set(false); await profile.refetch(); } catch (e) { setError(friendlyError(e)); } finally { setBusy(false); }
   };
 
@@ -63,7 +66,7 @@ export default function ClubScreen() {
     {wide ? <View style={styles.cardWrap}>
       <Image source={CARD} accessibilityLabel="La tessera Casa & Te" resizeMode="cover" style={styles.cardImage} />
     </View> : <ClubPass style={{ marginTop: -96 }} kicker={card ? 'TESSERA SOCI' : 'CASA & TE CLUB'} name={member ? profile.data?.full_name ?? undefined : undefined}
-      card={card} title={member ? 'Collega la tessera\ndel negozio.' : 'Prezzi Soci su tutto\nil catalogo.'}
+      card={card} title={member ? 'Collega la tessera\ndel negozio.' : 'Offerte riservate\nai Soci.'}
       onPress={member && !card ? () => setLinkOpen(true) : undefined} />}
     {wide && <Text style={styles.title} accessibilityRole="header">Sei uno di famiglia</Text>}
     {member && <Text style={[styles.lead, !wide && styles.leadPhone]}>{card ? 'Mostra la tessera alla cassa: tocca per ingrandire. ' : ''}Sei nel Club dal {since}.</Text>}
@@ -118,8 +121,11 @@ export default function ClubScreen() {
               </View>)}
           {!!offers.data?.length && <Text style={styles.howto}>Inserisci il codice al checkout, nella sezione "Codice sconto".</Text>}
           {/* Leaving is for the few: a quiet link at the bottom. */}
-          <Pressable onPress={leave} disabled={busy} accessibilityRole="button" hitSlop={8} style={styles.leave}>
+          <Pressable onPress={() => setAskLeave(true)} disabled={busy} accessibilityRole="button" hitSlop={8} style={styles.leave}>
             <Text style={[styles.leaveText, busy && { opacity: 0.5 }]}>Esci dal Club</Text></Pressable>
+          <ConfirmSheet visible={askLeave} title="Vuoi uscire dal Club?" busy={busy}
+            message="Perdi i Prezzi Soci e i codici sconto. Puoi iscriverti di nuovo quando vuoi."
+            keepLabel="Resta nel Club" confirmLabel="Esci dal Club" onClose={() => setAskLeave(false)} onConfirm={leave} />
         </>}
   </Screen>;
 }

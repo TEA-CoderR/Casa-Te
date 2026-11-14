@@ -142,6 +142,18 @@ export function SummaryRow({ label, value, strong, tone }: { label: string; valu
   </View>;
 }
 
+/**
+ * The member price shown to someone who is not a member (yet): a small lime chip, "Soci €1,99" with the crown.
+ * Lime is the Club; red stays for discounts the customer actually gets.
+ */
+export function SociChip({ cents, suffix, style }: { cents: number; suffix?: string; style?: object }) {
+  const euro = `€${(cents / 100).toFixed(2).replace('.', ',')}`;
+  return <View style={[styles.sociChip, style]} accessibilityLabel={`Prezzo Soci ${euro}${suffix ? `, ${suffix}` : ''}`}>
+    <Icon name="crown" size={12} color={colors.band} strokeWidth={2} />
+    <Text style={styles.sociChipText} numberOfLines={1}>Soci {euro}{suffix ? <Text style={styles.sociChipSuffix}> · {suffix}</Text> : null}</Text>
+  </View>;
+}
+
 /** Small inline action (Cambia, Modifica, Tutti): 32 high, outlined pill. `onDark` on the green band. */
 export function PillButton({ title, onPress, onDark, accessibilityLabel }: {
   title: string; onPress?: () => void; onDark?: boolean; accessibilityLabel?: string;
@@ -223,6 +235,10 @@ const styles = StyleSheet.create({
     borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   buttonSmall: { minHeight: 44, paddingVertical: 10, paddingHorizontal: 20, alignSelf: 'flex-start' },
   buttonText: { fontSize: 17, fontFamily: fonts.sansBold, fontWeight: '700', color: '#fff', flexShrink: 1, textAlign: 'center' },
+  sociChip: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', height: 22, paddingHorizontal: 8,
+    borderRadius: radius.pill, backgroundColor: colors.bandLogo },
+  sociChipText: { ...type.micro, color: colors.band },
+  sociChipSuffix: { fontFamily: fonts.sansSemiBold },
   pill: { height: 32, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.line, justifyContent: 'center', alignSelf: 'center' },
   pillDark: { borderColor: 'rgba(255,255,255,0.35)' },
   pillText: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.green },

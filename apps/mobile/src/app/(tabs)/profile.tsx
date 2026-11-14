@@ -10,6 +10,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { PillButton, PrimaryButton } from '@/components/UI';
 import { ListGroup, ListRow } from '@/components/ListRow';
+import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { StatusBand } from '@/components/BrandHeader';
 import { StoreCard } from '@/components/StoreCard';
 import { BandWatermark, ClubPass } from '@/components/ClubPass';
@@ -68,6 +69,9 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const favourites = useFavorites((s) => s.ids.length);
   const [storeSheet, setStoreSheet] = useState(false);
+  const [askSignOut, setAskSignOut] = useState(false);
+  const signOutSheet = <ConfirmSheet visible={askSignOut} title="Vuoi uscire dall’account?" keepLabel="Resta" confirmLabel="Esci"
+    onClose={() => setAskSignOut(false)} onConfirm={() => { setAskSignOut(false); void supabase.auth.signOut(); }} />;
   const profile = useQuery(user ? `profile:${user.id}` : null, () => fetchProfile(user!.id));
   const orders = useQuery<OrderWithItems[]>(user ? `orders:list:${user.id}` : null, fetchOrders);
   useRefetchOnFocus(orders.refetch);
@@ -152,7 +156,7 @@ export default function ProfileScreen() {
       <Row icon="help" title="Informativa privacy" onPress={() => go('/legal/privacy')} last />
     </Group>
     {user && <View style={[styles.session, wide && { alignItems: 'center', flexDirection: 'row', gap: 28 }]}>
-      <Pressable onPress={() => supabase.auth.signOut()} accessibilityRole="button"
+      <Pressable onPress={() => setAskSignOut(true)} accessibilityRole="button"
         style={({ hovered, pressed }: WebState) => [styles.signOut, wide && styles.square, wide && { alignSelf: 'flex-start', paddingHorizontal: 28 }, (hovered || pressed) && { borderColor: colors.text }]}>
         <Text style={styles.signOutText}>Esci dall'account</Text></Pressable>
       <Pressable onPress={() => go('/account/delete')} accessibilityRole="button" hitSlop={6}>
@@ -166,6 +170,7 @@ export default function ProfileScreen() {
   if (wide) return <Screen maxWidth={SITE_WIDTH - 80} contentContainerStyle={{ paddingHorizontal: 40, paddingTop: 0 }}
     after={<SiteFooter />} bleed={40}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
+    {signOutSheet}
     <Text style={styles.pageTitle} accessibilityRole="header">Il mio account</Text>
     <View style={styles.columns}>
       <View style={styles.side}>{identity}{store}{clubCard}</View>
@@ -204,7 +209,7 @@ export default function ProfileScreen() {
     const pass = !user ? { title: 'La tua tessera,\nsempre in tasca.', action: 'Accedi o registrati', onPress: () => go('/auth/sign-in') }
       : card ? { name: name || undefined, card }
       : member ? { name: name || undefined, title: 'Collega la tessera\ndel negozio.', action: 'Collega la tessera', onPress: () => go('/club') }
-      : club.enabled ? { name: name || undefined, title: 'Prezzi Soci su tutto\nil catalogo.', action: 'Iscriviti gratis', onPress: () => go('/club') }
+      : club.enabled ? { name: name || undefined, title: 'Offerte riservate\nai Soci.', action: 'Iscriviti gratis', onPress: () => go('/club') }
       : null;
     const hint = !user ? 'Hai già la tessera del negozio? La colleghi dopo l’accesso.' : card ? 'Mostrala alla cassa: tocca per ingrandire.' : '';
     const live = (orders.data ?? []).filter((o) => ACTIVE.has(o.status)).length;
@@ -219,6 +224,7 @@ export default function ProfileScreen() {
         <Text style={styles.gSub} numberOfLines={1}>{!user ? 'Accedi con la tua email, niente password.' : member ? `Socio Casa & Te dal ${since}` : user.email}</Text>
       </View>}>
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
+    {signOutSheet}
       <View style={{ paddingHorizontal: 22 }}>
         {pass && <ClubPass {...pass} style={{ marginTop: -96 }} />}
         {!!hint && <Text style={styles.gHint}>{hint}</Text>}
@@ -239,7 +245,7 @@ export default function ProfileScreen() {
           <ListRow title="Informativa privacy" onPress={() => go('/legal/privacy')} />
         </ListGroup>
         {user && <View style={styles.fSession}>
-          <Pressable onPress={() => supabase.auth.signOut()} accessibilityRole="button" hitSlop={8}><Text style={styles.fOutText}>Esci dall’account</Text></Pressable>
+          <Pressable onPress={() => setAskSignOut(true)} accessibilityRole="button" hitSlop={8}><Text style={styles.fOutText}>Esci dall’account</Text></Pressable>
           <Pressable onPress={() => go('/account/delete')} accessibilityRole="link" hitSlop={6}><Text style={styles.fDelete}>Elimina account</Text></Pressable>
         </View>}
         <Text style={styles.fVersion}>Casa & Te · Versione {Constants.expoConfig?.version ?? '1.0.0'} · Pagamenti gestiti da Stripe</Text>
@@ -249,6 +255,7 @@ export default function ProfileScreen() {
 
   return <Screen>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
+    {signOutSheet}
     {identity}
     {activeCard}
     {shortcuts}

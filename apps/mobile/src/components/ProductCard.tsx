@@ -11,7 +11,7 @@ import { Icon } from './Icon';
 import { atPlace, storeShortName } from './StoreSheet';
 import { useLayout, useStores } from '@/lib/hooks';
 import { transition, type WebState } from './site/shared';
-import { PriceTag } from './UI';
+import { PriceTag, SociChip } from './UI';
 import { useShownProduct } from '@/store/club';
 
 /** Availability is always about one store; name it so the customer knows which. */
@@ -79,7 +79,7 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
       {!!discount && !!unit && ' · '}{unit ?? ''}</Text>}
     <PriceTag cents={product.price_cents} size={22} sale={!!discount} />
     {soci && <Text style={styles.soci} numberOfLines={1}>Prezzo Soci</Text>}
-    {sociOffer && <Text style={[styles.soci, styles.sociOffer]} numberOfLines={1}>{sociOfferText}</Text>}
+    {sociOffer && <SociChip cents={sociCents} style={{ marginTop: 4 }} />}
   </View>;
 
   if (variant === 'list') return <View style={styles.row}>
@@ -135,25 +135,28 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
   const subline = !stock.available ? stock.text : discount
     ? <><Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number).replace(/€\s/, '€')}</Text>
         {soci ? <Text style={styles.soci}> · Prezzo Soci</Text> : unitShort ? ` · ${unitShort}` : ''}</>
-    : sociOffer ? <><Text style={styles.compareSmall}>{formatEuro(product.price_cents).replace(/€\s/, '€')}</Text><Text style={styles.soci}> · Prezzo Soci</Text></>
     : unitShort ?? note;
-  // Phone: offers read as the struck regular price and the offer price, with the discount rate on the photo
-  // ("−25%"); a members-only offer is marked "Prezzo Soci" next to the struck price.
-  const phoneBadge = discount ? discount.replace('-', '−') : sociOffer && sociPct ? sociPct.replace('-', '−') : '';
+  // Phone: offers read as the struck regular price and the offer price, with the discount rate on the photo ("−25%").
+  // Not a member: the big price is what this customer pays; the member price is the lime "Soci €x" chip and the
+  // photo says "Soci −x%" in lime (owner's choice, 14/11/2026: never show a price they would not be charged).
+  const phoneBadge = discount ? discount.replace('-', '−') : sociOffer && sociPct ? `Soci ${sociPct.replace('-', '−')}` : '';
+  const sociBadge = !discount && sociOffer;
   return <View style={[styles.card, rail && { paddingBottom: 12 }]}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={[styles.media, { height: rail ? 136 : 132 }]}>
         <View style={{ width: rail ? 120 : 118, height: rail ? 120 : 118 }}>
           <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />
         </View>
-        {!!phoneBadge && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
-          <Text style={styles.discountText} accessibilityLabel={phoneBadge.startsWith('Soci') ? `Prezzo Soci, ${phoneBadge.slice(5)}` : `Sconto ${phoneBadge}`}>{phoneBadge}</Text></View>}
+        {!!phoneBadge && <View style={[styles.discount, sociBadge && { backgroundColor: colors.bandLogo }, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
+          <Text style={[styles.discountText, sociBadge && { color: colors.band }]} accessibilityLabel={phoneBadge.startsWith('Soci') ? `Prezzo Soci, ${phoneBadge.slice(5)}` : `Sconto ${phoneBadge}`}>{phoneBadge}</Text></View>}
       </View>
       <Text style={[styles.name, { marginTop: rail ? 6 : 4 }]} numberOfLines={2}>{product.name}</Text>
-      <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>
+      {sociOffer && stock.available
+        ? <SociChip cents={sociCents} style={{ marginTop: 3, marginLeft: 4 }} />
+        : <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>}
     </Pressable></Link>
     {!rail && <FavoriteButton productId={product.id} name={product.name} size={19} strokeWidth={2} style={styles.heartCorner} />}
-    <View style={styles.bottom}><PriceTag cents={sociOffer ? sociCents : product.price_cents} size={22} sale={!!discount || sociOffer} />{phoneCart}</View>
+    <View style={styles.bottom}><PriceTag cents={product.price_cents} size={22} sale={!!discount} />{phoneCart}</View>
   </View>;
 }
 

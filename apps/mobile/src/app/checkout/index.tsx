@@ -227,9 +227,11 @@ export default function CheckoutScreen() {
       <View style={{ gap: 8 }}>{methods.map((m) => {
         const on = m === method;
         const q = quote.shipping[m];
-        return <Pressable key={m} onPress={() => setFulfilment(m)} accessibilityRole="radio" accessibilityState={{ checked: on }}
-          style={[styles.option, on ? styles.optionOn : null]}>
-          {radio(on)}
+        // Only one way to receive the order: say it, without a choice that is not one (plan v2 A5).
+        const only = methods.length === 1;
+        return <Pressable key={m} onPress={() => setFulfilment(m)} disabled={only} accessibilityRole={only ? 'text' : 'radio'}
+          accessibilityState={only ? undefined : { checked: on }} style={[styles.option, on && !only ? styles.optionOn : null]}>
+          {!only && radio(on)}
           <View style={{ flex: 1 }}>
             <Text style={styles.optionTitle}>{m === 'store' ? 'Ritiro in negozio' : FULFILMENT_LABELS[m]}</Text>
             <Text style={styles.optionSub}>{m === 'store' ? [storeShortName(store).replace(/^(\S+)\s+(?!·)/, '$1 · '), store?.opening_hours].filter(Boolean).join(' · ') : METHOD_INFO[m].description}</Text>

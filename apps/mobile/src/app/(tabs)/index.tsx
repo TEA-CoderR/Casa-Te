@@ -10,6 +10,7 @@ import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { storeStatus } from '@/components/StoreCard';
 import { BandWatermark, ClubPass, ClubRow } from '@/components/ClubPass';
 import { OrderTicket } from '@/components/OrderTicket';
+import { ListGroup, ListRow } from '@/components/ListRow';
 import { Icon } from '@/components/Icon';
 import { Loading, Notice, PillButton, SearchField } from '@/components/UI';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -187,10 +188,15 @@ function HomePhone() {
 
     {/* Offers: the same cards as "In evidenza", side by side; one or two alone look broken, the banner still links them. */}
     {offerItems.length >= 3 && <View style={{ paddingTop: 32 }}>
-      {sectionHead('h-offerte', 'Offerte', 'Vedi tutti', () => openCatalog({ offerte: '1' }))}
+      {/* The offers are the members' prices (the flyer's Fidelity Card offers): say so, and show others the way in. */}
+      {sectionHead('h-offerte', 'Offerte Soci', 'Vedi tutti', () => openCatalog({ offerte: '1' }))}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.rail}>
         {offerItems.map((product) => <View key={product.id} style={styles.railItem}><ProductCard product={product} rail /></View>)}
       </ScrollView>
+      {!profile.data?.club_member_since && club.enabled && <ListGroup style={{ marginHorizontal: 16, marginTop: 8 }}>
+        <ListRow first icon="crown" title="Riservate ai Soci" detail="Iscriviti gratis"
+          onPress={() => user ? router.push('/club') : router.push({ pathname: '/auth/sign-in', params: { next: '/club' } })} />
+      </ListGroup>}
     </View>}
 
     {/* The flyer while one is published: its cover, the title and the dates. */}
@@ -218,7 +224,7 @@ function HomePhone() {
       ? (profile.data.member_card_number
         ? <ClubRow card={profile.data.member_card_number} title="Tessera Soci" text="Mostrala in cassa" style={{ marginHorizontal: 16, marginTop: 32 }} />
         : <ClubRow title="Tessera Soci" text="Collega la tessera del negozio" onPress={() => router.push('/club')} style={{ marginHorizontal: 16, marginTop: 32 }} />)
-      : <ClubPass kicker="CASA & TE CLUB" title={'Prezzi Soci su tutto\nil catalogo.'} action="Scopri il Club"
+      : <ClubPass kicker="CASA & TE CLUB" title={'Offerte riservate\nai Soci.'} action="Iscriviti gratis"
         onPress={() => router.push('/club')} style={{ marginHorizontal: 16, marginTop: 32, height: 200 }} />)}
 
     <View style={styles.footer}>

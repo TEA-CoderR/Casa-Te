@@ -13,7 +13,7 @@ import { usePreferences } from '@/store/preferences';
 import { useQuery } from '@/lib/useQuery';
 import { Screen } from '@/components/Screen';
 import { ProductImage } from '@/components/ProductImage';
-import { EmptyState, Loading, Notice, PageTitle, PrimaryButton, QuantityControl, SummaryRow } from '@/components/UI';
+import { EmptyState, Loading, Notice, PageTitle, PrimaryButton, QuantityControl, SociChip, SummaryRow } from '@/components/UI';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
 import { colors, floatShadow, fonts } from '@/config/theme';
@@ -317,10 +317,7 @@ function LinePrice({ line, compareUnit, wide }: { line: QuoteLine; compareUnit: 
   </View>;
   if (member !== null) return <View>
     <Text style={big}>{euroTight(line.line_total_cents)}</Text>
-    <View style={styles.sociOffer}>
-      <Icon name="crown" size={12} color={colors.sale} strokeWidth={2} />
-      <Text style={styles.sociOfferText}>Soci <Text style={{ fontFamily: fonts.sansBold, fontWeight: '700' }}>{euroTight(member * qty)}</Text> −{pct(regular, member)}%</Text>
-    </View>
+    <SociChip cents={member * qty} suffix={`−${pct(regular, member)}%`} style={{ marginTop: 4 }} />
     {qty > 1 && <Text style={styles.pEach}>{euroTight(regular)} cad.</Text>}
   </View>;
   return <View>

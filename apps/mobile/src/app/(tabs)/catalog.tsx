@@ -82,7 +82,7 @@ export default function CatalogScreen() {
   // ?evidenza=1: only the products starred "In evidenza" in the admin.
   const [featuredOnly, setFeaturedOnly] = useState(params.evidenza === '1');
   useEffect(() => { setFeaturedOnly(params.evidenza === '1'); }, [params.evidenza]);
-  const collection = onSale ? 'In offerta' : featuredOnly ? 'In evidenza' : null;
+  const collection = onSale ? 'Offerte Soci' : featuredOnly ? 'In evidenza' : null;
   useEffect(() => { if (params.search) setSearchOpen(true); }, [params.search]);
   useEffect(() => { if (params.sort === 'price_asc') setFilters((f) => ({ ...f, sort: 'price_asc' })); }, [params.sort]);
   // The desktop masthead searches by changing ?q=.
