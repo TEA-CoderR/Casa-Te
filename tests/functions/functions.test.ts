@@ -97,6 +97,18 @@ test('checkout: creates order server-side and a Stripe session for the stored to
   assert.equal(attach.headers.authorization, 'Bearer service', 'attach uses service role');
 });
 
+test('checkout: pay in store creates the order without Stripe', async () => {
+  routes = [
+    route(/GET .*\/auth\/v1\/user$/, () => jsonRes({ id: 'u1', email: 'anna@example.com' })),
+    route(/POST .*\/rpc\/create_order$/, () => jsonRes({ id: ORDER_ID, order_number: 'CT26001002', total_cents: 1497, customer_email: 'anna@example.com',
+      expires_at: '', status: 'paid', payment_method: 'store' })),
+  ];
+  const res = await handle((r) => checkout(r, config))(post('checkout', { platform: 'native', order: { store_id: 's', items: [], payment_method: 'store' } }));
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { order_id: ORDER_ID, order_number: 'CT26001002', checkout_url: null, pay_in_store: true });
+  assert.equal(callsTo(/stripe\.com/).length, 0, 'no Stripe session');
+});
+
 test('checkout: releases reserved stock when Stripe fails', async () => {
   routes = [
     route(/auth\/v1\/user$/, () => jsonRes({ id: 'u1' })),
@@ -312,6 +324,13 @@ test('notification emails', () => {
   const ret = buildEmail({ id: 6, order_id: ORDER_ID, status: null, kind: 'return', note: 'Reso RESO-00001 approvato', visible_to_customer: true }, order, 'x');
   assert.equal(ret?.subject, "Il tuo reso per l'ordine CT26001001");
   assert.match(ret!.body, /RESO-00001 approvato/);
+  const store = { ...order, payment_method: 'store' as const, payment_status: 'unpaid',
+    pickup_slot_start: '2026-11-15T09:00:00Z', pickup_slot_end: '2026-11-15T10:00:00Z' };
+  const paidStore = buildEmail({ id: 7, order_id: ORDER_ID, status: 'paid', kind: 'status', note: null, visible_to_customer: true }, store, 'CASA & TE Lucca 1');
+  assert.match(paidStore!.body, /lo paghi in negozio/);
+  assert.match(paidStore!.body, /domenica 15 novembre, 10:00–11:00/, 'slot in Italian time');
+  const readyStore = buildEmail({ id: 8, order_id: ORDER_ID, status: 'ready', kind: 'status', note: null, visible_to_customer: true }, store, 'x');
+  assert.match(readyStore!.body, /Da pagare alla cassa: €31,88/);
   const xss = buildEmail({ id: 5, order_id: ORDER_ID, status: 'paid', kind: 'status', note: null, visible_to_customer: true }, { ...order, customer_name: '<script>' }, 'x');
   assert.ok(!xss!.body.includes('<script>'));
 });

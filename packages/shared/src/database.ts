@@ -37,8 +37,18 @@ export type StoreRow = {
   id: Uuid; code: string; name: string; city: string; address: string | null; postal_code: string | null;
   province: string | null; phone: string | null; email: string | null; opening_hours: string | null;
   pickup_enabled: boolean; ships_orders: boolean; active: boolean; sort: number; company_id: Uuid | null;
+  /** Minutes between now and the first pickup slot offered. */
+  pickup_lead_minutes?: number;
   created_at: Timestamp; updated_at: Timestamp;
 };
+
+/** Opening hours of a store: ISO weekday 1 = Monday … 7 = Sunday, times as 'HH:MM:SS'. */
+export type StoreOpeningHoursRow = { id: Uuid; store_id: Uuid; weekday: number; opens: string; closes: string };
+/** A day the store is closed (no pickup slots). */
+export type StoreClosureRow = { store_id: Uuid; day: string; note: string | null };
+/** A one-hour pickup slot offered by pickup_slots(). */
+export type PickupSlot = { starts_at: Timestamp; ends_at: Timestamp };
+export type PaymentMethod = 'card' | 'store';
 
 export type CategoryRow = {
   id: Uuid; slug: string; name: string; parent_id: Uuid | null; sort: number; active: boolean;
@@ -147,6 +157,8 @@ export type StaffLocale = 'it' | 'en' | 'zh';
 /** Single-row shop settings (everyone reads, managers write). */
 export type AppSettingsRow = {
   id: true; low_stock_threshold: number; club_enabled: boolean; club_tagline: string;
+  /** Minimum order on the goods (after member prices and coupon, before shipping). */
+  min_order_cents: number;
   updated_at: Timestamp; updated_by: Uuid | null;
 };
 
@@ -194,6 +206,9 @@ export type OrderRow = {
   cancelled_at: Timestamp | null; completed_at: Timestamp | null; created_at: Timestamp; updated_at: Timestamp;
   seller_company_id: Uuid | null; seller_snapshot: SellerSnapshot | null;
   pos_registered_at: Timestamp | null; pos_registered_by: Uuid | null;
+  /** 'store': paid at the till on pickup (payment_status stays 'unpaid' until then). */
+  payment_method: PaymentMethod;
+  pickup_slot_start: Timestamp | null; pickup_slot_end: Timestamp | null;
 };
 
 export type OrderItemRow = {
@@ -261,9 +276,14 @@ export type CreateOrderInput = QuoteInput & {
   notes?: string;
   invoice_requested?: boolean;
   invoice?: InvoiceDetailsSnapshot & { address?: string };
+  /** Default 'card'; 'store' only with fulfilment 'store'. */
+  payment_method?: PaymentMethod;
+  /** starts_at of one of pickup_slots() (store pickup). */
+  pickup_slot_start?: Timestamp;
 };
 
-export type CheckoutResponse = { order_id: Uuid; order_number: string; checkout_url: string };
+/** Pay in store: checkout_url is null and pay_in_store true (the order is already received). */
+export type CheckoutResponse = { order_id: Uuid; order_number: string; checkout_url: string | null; pay_in_store?: boolean };
 
 export type DashboardStats = {
   revenue_cents: number; orders: number; average_order_cents: number; refunded_cents: number;

@@ -3,6 +3,7 @@
 //    or { action: 'resume', order_id }
 // Creates the order server-side (prices, shipping and stock computed in Postgres), then a Stripe
 // Checkout Session for exactly the stored total. Returns { order_id, order_number, checkout_url }.
+// Pay in store (order.payment_method = 'store'): no Stripe session; returns checkout_url null and pay_in_store true.
 import type { Config } from '../_shared/env.ts';
 import { bearer, HttpError, json, readJson } from '../_shared/http.ts';
 import { getUser, rpc, select } from '../_shared/supabase.ts';
@@ -16,7 +17,10 @@ type Body = {
   order_id?: string;
 };
 
-type CreatedOrder = { id: string; order_number: string; total_cents: number; customer_email: string | null; expires_at: string };
+type CreatedOrder = {
+  id: string; order_number: string; total_cents: number; customer_email: string | null; expires_at: string;
+  status?: string; payment_method?: 'card' | 'store';
+};
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -44,6 +48,10 @@ export async function checkout(req: Request, config: Config): Promise<Response> 
 
   if (!body.order || typeof body.order !== 'object') throw new HttpError(400, 'invalid_order');
   const order = await rpc<CreatedOrder>(config, token, 'create_order', { p: body.order });
+  // Pay in store: the order is already received, there is nothing to pay online.
+  if (order.payment_method === 'store') {
+    return json(req, { order_id: order.id, order_number: order.order_number, checkout_url: null, pay_in_store: true });
+  }
 
   try {
     const metadata = { order_id: order.id, order_number: order.order_number };

@@ -11,7 +11,9 @@ import { OrderTimeline } from '@/components/OrderTimeline';
 import { ProductImage } from '@/components/ProductImage';
 import { EmptyState, Loading, Notice, orderStatusTone, PrimaryButton, SecondaryButton, SectionTitle, StatusMark, SummaryRow } from '@/components/UI';
 import { colors, floatShadow, fonts, radius, type } from '@/config/theme';
-import { cancelPendingOrder, fetchOrder, imageUrl, resumeCheckout } from '@/lib/api';
+import { cancelOrder, cancelPendingOrder, fetchOrder, imageUrl, resumeCheckout } from '@/lib/api';
+import { ConfirmSheet } from '@/components/ConfirmSheet';
+import { slotText } from '@/components/CheckoutPickers';
 import { useLayout, useStores } from '@/lib/hooks';
 import { Icon } from '@/components/Icon';
 import { openCheckout } from '@/lib/payments';
@@ -35,6 +37,7 @@ export default function OrderDetailScreen() {
   const [error, setError] = useState('');
   const { wide } = useLayout();
   const [itemsOpen, setItemsOpen] = useState(false);
+  const [askCancel, setAskCancel] = useState(false);
   useRefetchOnFocus(refetch);
 
   if (loading && !order) return <Screen stack><Loading /></Screen>;
@@ -59,14 +62,28 @@ export default function OrderDetailScreen() {
     const when = (iso?: string) => iso ? new Date(iso).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
     const readyAt = at('ready');
     const until = readyAt && order.fulfilment === 'store' ? new Date(new Date(readyAt).getTime() + 14 * 86400000).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : null;
-    const SUB: Record<string, string> = { paid: 'Pagamento confermato', picking: 'Lo staff del negozio raccoglie i tuoi prodotti',
+    const SUB: Record<string, string> = { paid: order.payment_method === 'store' ? 'Ordine ricevuto · paghi al ritiro' : 'Pagamento confermato', picking: 'Lo staff del negozio raccoglie i tuoi prodotti',
       ready: order.fulfilment === 'store' ? 'Ti abbiamo inviato un’email' : 'Pronto per il corriere', shipped: 'Affidato al corriere', completed: order.fulfilment === 'store' ? 'Grazie e a presto!' : 'Consegnato' };
     const count = order.order_items.reduce((n, i) => n + i.quantity, 0);
-    const grid: Array<[string, string]> = [
-      [order.fulfilment === 'store' ? 'Negozio' : 'Consegna', order.fulfilment === 'store' ? (store?.name.replace(/^CASA & TE\s*/, '').replace(/^(\S+)\s+(?!·)/, '$1 · ') ?? 'Negozio') : FULFILMENT_LABELS[order.fulfilment]],
-      [order.fulfilment === 'store' ? 'Orari' : 'Data', order.fulfilment === 'store' && store?.opening_hours ? store.opening_hours : new Date(order.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })],
-      [until ? 'Ritira entro' : 'Ordinato il', until ?? new Date(order.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })],
-      ['Pagato', `${euro(order.total_cents)} · ${count} ${count === 1 ? 'articolo' : 'articoli'}`],
+    // What the rows say depends on where the order is: in progress (when to come, until when), or closed (when it ended).
+    const day = (iso: string) => new Date(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
+    const closed = order.status === 'completed' || order.status === 'cancelled';
+    const slot = order.pickup_slot_start && order.pickup_slot_end ? slotText(order.pickup_slot_start, order.pickup_slot_end) : null;
+    const toPay = order.payment_method === 'store' && order.payment_status === 'unpaid';
+    const placeRow: [string, string] = [order.fulfilment === 'store' ? 'Negozio' : 'Consegna', order.fulfilment === 'store'
+      ? (store?.name.replace(/^CASA & TE\s*/, '').replace(/^(\S+)\s+(?!·)/, '$1 · ') ?? 'Negozio') : FULFILMENT_LABELS[order.fulfilment]];
+    const grid: Array<[string, string]> = closed ? [
+      placeRow,
+      order.status === 'completed'
+        ? [order.fulfilment === 'store' ? 'Ritirato il' : 'Consegnato il', day(order.completed_at ?? order.updated_at)]
+        : ['Annullato il', day(order.cancelled_at ?? order.updated_at)],
+      [order.status === 'cancelled' && toPay ? 'Importo' : 'Pagato', `${euro(order.total_cents)} · ${count} ${count === 1 ? 'articolo' : 'articoli'}`],
+    ] : [
+      placeRow,
+      slot ? ['Ritiro', slot.charAt(0).toUpperCase() + slot.slice(1)]
+        : [order.fulfilment === 'store' ? 'Orari' : 'Data', order.fulfilment === 'store' && store?.opening_hours ? store.opening_hours : day(order.created_at)],
+      ...(until ? [['Ritira entro', until] as [string, string]] : []),
+      [toPay ? 'Da pagare in negozio' : 'Pagato', `${euro(order.total_cents)} · ${count} ${count === 1 ? 'articolo' : 'articoli'}`],
     ];
     const storeLabel = store?.name.replace(/^CASA & TE\s*/, '') ?? null;
     const header = <BrandHeader inScroll title="Il tuo ordine" pad={[14, 16, 18]}
@@ -75,9 +92,11 @@ export default function OrderDetailScreen() {
       contentContainerStyle={{ padding: 0, paddingBottom: 24 }} bodyStyle={{ paddingHorizontal: 16 }}>
       <Stack.Screen options={{ headerShown: false, title: `Ordine ${order.order_number}` }} />
       {/* The same ticket as on Home and the order list, with the code on its white stub (plan §5.4, F4). */}
-      <OrderTicket order={order} variant="full" storeName={storeLabel} style={{ marginTop: 4 }} stub={<>
+      {/* Closed orders: the ticket alone; the code is for collecting. */}
+      <OrderTicket order={order} variant="full" storeName={storeLabel} style={{ marginTop: 4 }} stub={closed ? undefined : <>
         <Text style={styles.passHint}>{order.fulfilment !== 'store' ? 'Numero d’ordine'
-          : order.status === 'ready' ? 'Mostra questo codice in cassa' : 'Codice ordine · ti scriviamo quando è pronto'}</Text>
+          : order.status === 'ready' ? (toPay ? `Mostra questo codice in cassa e paga ${euro(order.total_cents)}` : 'Mostra questo codice in cassa')
+          : 'Codice ordine · ti scriviamo quando è pronto'}</Text>
         <PassCode number={order.order_number} scan={order.fulfilment === 'store'} />
       </>} />
       <ListGroup style={{ marginTop: 20 }}>{grid.map(([k, v], i) => <ListRow key={k} first={i === 0} title={v} subtitle={k} />)}</ListGroup>
@@ -87,6 +106,12 @@ export default function OrderDetailScreen() {
           <PrimaryButton title={`Paga ${formatEuro(order.total_cents)}`} icon="card" loading={busy} onPress={() => act(async () => openCheckout(await resumeCheckout(order.id)))} />
           <SecondaryButton title="Annulla ordine" onPress={() => act(() => cancelPendingOrder(order.id))} disabled={busy} />
         </View></Notice></View>}
+      {toPay && order.status === 'paid' && <View style={{ marginTop: 12 }}>
+        <SecondaryButton title="Annulla ordine" onPress={() => setAskCancel(true)} disabled={busy} />
+        <ConfirmSheet visible={askCancel} title="Vuoi annullare l’ordine?" message="I prodotti tornano disponibili per gli altri clienti."
+          keepLabel="Tieni l’ordine" confirmLabel="Annulla ordine" busy={busy}
+          onClose={() => setAskCancel(false)} onConfirm={() => { setAskCancel(false); void act(() => cancelOrder(order.id)); }} />
+      </View>}
       {(order.payment_status === 'refunded' || order.payment_status === 'partially_refunded') && <View style={{ marginTop: 14 }}>
         <Notice tone="success" title={PAYMENT_STATUS_LABELS[order.payment_status]} message={`Importo rimborsato: ${formatEuro(order.refunded_cents)}. L'accredito può richiedere 5–10 giorni lavorativi.`} /></View>}
       {!!error && <Notice tone="error" message={error} />}

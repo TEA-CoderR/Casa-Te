@@ -7,7 +7,7 @@ import {
 import { invoke, supabase, unwrap } from '../lib/supabase';
 import { errorText, useAsync, useStores } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { Field, Loading, Modal, Notice, PageHead, PaymentBadge, StatusBadge, Success, fmtDate } from '../components/ui';
+import { Field, Loading, Modal, Notice, PageHead, PaymentBadge, SlotBadge, StatusBadge, Success, fmtDate } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { t } from '../lib/i18n';
 
@@ -68,7 +68,7 @@ export function OrderDetailPage() {
       <button className="secondary no-print" onClick={() => window.print()}>{t('Stampa distinta')}</button>
     </>} />
     <div className="row" style={{ marginBottom: 16 }}>
-      <StatusBadge status={o.status} /><PaymentBadge status={o.payment_status} />
+      <StatusBadge status={o.status} /><PaymentBadge status={o.payment_status} method={o.payment_method} /><SlotBadge order={o} />
       <span className="badge muted">{t(FULFILMENT_LABELS[o.fulfilment])}</span>
       {o.shipping_provisional && <span className="badge warn">{t('Tariffa oltre 10 kg (provvisoria)')}</span>}
       {o.invoice_requested && <span className="badge flag">{t('Fattura richiesta')}</span>}
@@ -96,7 +96,8 @@ export function OrderDetailPage() {
     <div className="row no-print" style={{ marginBottom: 18 }}>
       {next.filter((s) => s !== 'cancelled').map((s) => <button key={s} disabled={busy}
         onClick={() => s === 'shipped' ? setModal('ship') : setStatus(s)}>
-        {s === 'completed' && o.fulfilment === 'store' ? t('Consegnato al cliente (ritirato)') : t(ACTION_LABEL[s])}</button>)}
+        {s === 'completed' && o.fulfilment === 'store' ? (o.payment_method === 'store' && o.payment_status === 'unpaid'
+          ? t('Ritirato e pagato in cassa ({total})', { total: formatEuro(o.total_cents) }) : t('Consegnato al cliente (ritirato)')) : t(ACTION_LABEL[s])}</button>)}
       {manager && remaining > 0 && o.payment_status !== 'unpaid' && <button className="secondary" disabled={busy}
         onClick={() => { setForm({ ...form, amount: '', reason: '' }); setModal('refund'); }}>{t('Rimborso parziale')}</button>}
       <button className="secondary" disabled={busy} onClick={() => { setForm({ ...form, note: '', visible: false }); setModal('note'); }}>{t('Aggiungi nota')}</button>

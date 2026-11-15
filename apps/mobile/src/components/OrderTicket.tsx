@@ -5,6 +5,7 @@ import { colors, radius, type } from '@/config/theme';
 import { formatEuro } from '@/lib/price';
 import { imageUrl, type OrderWithItems } from '@/lib/api';
 import { customerOrderStatus } from '@/lib/orderText';
+import { slotText } from './CheckoutPickers';
 import { Icon } from './Icon';
 import { ProductImage } from './ProductImage';
 
@@ -31,6 +32,8 @@ export function OrderTicket({ order, storeName, variant = 'compact', thumbs, onP
   const place = order.fulfilment === 'store' ? `Ritiro a ${shortStore}` : FULFILMENT_LABELS[order.fulfilment];
   const full = variant === 'full' && !!stub;
   const status = customerOrderStatus(order.status, order.fulfilment);
+  // In progress with a chosen pickup time: that time is what matters on the ticket ("Ritiro domani 10:00–11:00").
+  const slot = !finished && order.pickup_slot_start && order.pickup_slot_end ? slotText(order.pickup_slot_start, order.pickup_slot_end) : null;
   const top = <View style={[styles.top, finished && styles.done]}>
     <View style={styles.head}>
       <Text style={[styles.kicker, { color: ink }]} numberOfLines={1}>ORDINE {order.order_number}</Text>
@@ -39,7 +42,7 @@ export function OrderTicket({ order, storeName, variant = 'compact', thumbs, onP
     <Text style={[styles.status, { color: ink }]} numberOfLines={1} accessibilityRole="header">{status}</Text>
     {/* The full ticket sits over the order's details, which say store, total and items. */}
     {!full && <Text style={[styles.sub, { color: ink }]} numberOfLines={1}>
-      {onPress ? `${date} · ` : ''}{place} · {n} {n === 1 ? 'articolo' : 'articoli'} · <Text
+      {slot ? `Ritiro ${slot} · ` : `${onPress ? `${date} · ` : ''}${place} · `}{n} {n === 1 ? 'articolo' : 'articoli'} · <Text
         style={cancelled ? { textDecorationLine: 'line-through' } : undefined}>{formatEuro(order.total_cents).replace(/€\s/, '€')}</Text></Text>}
     {thumbs && <View style={[styles.thumbs, cancelled && { opacity: 0.5 }]}>{order.order_items.slice(0, 5).map((line) =>
       <View key={line.id} style={styles.thumb}><View style={{ width: 38, height: 38 }}>

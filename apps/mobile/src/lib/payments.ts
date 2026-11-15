@@ -11,6 +11,11 @@ const APP_RETURN = 'casate://checkout/return';
  * /checkout/return, which reads the authoritative order status from the server.
  */
 export async function openCheckout(res: CheckoutResponse): Promise<void> {
+  // Pay in store: the order is already received; straight to the confirmation.
+  if (res.pay_in_store || !res.checkout_url) {
+    router.replace({ pathname: '/checkout/return', params: { order: res.order_id, result: 'success' } });
+    return;
+  }
   if (Platform.OS === 'web') {
     window.location.assign(res.checkout_url);
     return;

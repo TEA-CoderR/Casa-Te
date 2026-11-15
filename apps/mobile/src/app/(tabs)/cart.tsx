@@ -16,7 +16,7 @@ import { ProductImage } from '@/components/ProductImage';
 import { EmptyState, Loading, Notice, PageTitle, PrimaryButton, QuantityControl, SociChip, SummaryRow } from '@/components/UI';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
-import { colors, floatShadow, fonts } from '@/config/theme';
+import { colors, floatShadow, fonts, type } from '@/config/theme';
 import { fetchCartSuggestions, fetchProducts, imageUrl } from '@/lib/api';
 import { ProductCard } from '@/components/ProductCard';
 import { useCartQuote, useClubSettings, useDelivery, useLayout, useStores } from '@/lib/hooks';
@@ -31,7 +31,7 @@ const ISSUE_TEXT: Record<NonNullable<QuoteLine['issue']>, string> = {
 };
 
 export default function CartScreen() {
-  const { enabled: clubOn, tagline: clubTagline } = useClubSettings();
+  const { enabled: clubOn, tagline: clubTagline, minOrderCents } = useClubSettings();
   const items = useCartStore((s) => s.items);
   const setQuantity = useCartStore((s) => s.setQuantity);
   const remove = useCartStore((s) => s.remove);
@@ -87,9 +87,13 @@ export default function CartScreen() {
   // Club member prices: already in the totals for members; for everyone else, what joining would save.
   const memberSaved = t?.member_savings_cents ?? 0;
   const memberAvailable = t?.member_savings_available_cents ?? 0;
+  // Minimum order on the goods (checked again by create_order); display only.
+  const goods = t ? t.subtotal_cents - (t.discount_cents ?? 0) : null;
+  const belowMin = goods != null && minOrderCents > 0 && goods < minOrderCents;
+  const minNote = belowMin ? `Ordine minimo ${formatEuro(minOrderCents).replace(/€\s/, '€').replace(',00', '')}: aggiungi ancora ${formatEuro(minOrderCents - goods!).replace(/€\s/, '€')} di prodotti.` : '';
 
   const cta = <PrimaryButton title={user ? 'Procedi al checkout' : 'Accedi e continua'}
-    disabled={hasIssues || quote.item_count === 0 || loading || !methodOk}
+    disabled={hasIssues || quote.item_count === 0 || loading || !methodOk || belowMin}
     onPress={() => user ? router.push('/checkout') : router.push({ pathname: '/auth/sign-in', params: { next: '/checkout' } })} />;
 
   const delivery = <View style={styles.delivery}>
@@ -160,18 +164,18 @@ export default function CartScreen() {
         <Text style={styles.footSumTotal}>{t?.total_cents != null ? euro(t.total_cents) : '—'}</Text></View>
       <Text style={[styles.footNote, { marginTop: 2 }]}>IVA inclusa · importo confermato al pagamento</Text>
     </View>;
-    const footer = <View style={styles.payBar}>
+    const footer = <View>{belowMin && <Text style={styles.minNote} accessibilityLiveRegion="polite">{minNote}</Text>}<View style={styles.payBar}>
       <View style={{ flexShrink: 0 }}>
         <Text style={styles.payBarLabel}>Totale</Text>
         <Text style={styles.footTotal}>{t?.total_cents != null ? euro(t.total_cents) : '—'}</Text>
       </View>
-      <Pressable disabled={hasIssues || quote.item_count === 0 || loading || !methodOk} accessibilityRole="button"
+      <Pressable disabled={hasIssues || quote.item_count === 0 || loading || !methodOk || belowMin} accessibilityRole="button"
         onPress={() => user ? router.push('/checkout') : router.push({ pathname: '/auth/sign-in', params: { next: '/checkout' } })}
-        style={({ pressed }) => [styles.payButton, (hasIssues || !methodOk) && { opacity: 0.45 }, pressed && { opacity: 0.88 }]}>
+        style={({ pressed }) => [styles.payButton, (hasIssues || !methodOk || belowMin) && { opacity: 0.45 }, pressed && { opacity: 0.88 }]}>
         <Text style={styles.payText} numberOfLines={1}>{user ? 'Vai al pagamento' : 'Accedi e continua'}</Text>
         <Icon name="arrow" size={18} color="#FFFFFF" strokeWidth={2.4} />
       </Pressable>
-    </View>;
+    </View></View>;
     return <Screen header={<StatusBand />} top={header} ground={colors.page} onRefresh={refresh} refreshing={loading} footer={footer}
       contentContainerStyle={{ padding: 0, paddingBottom: 24 }} bodyStyle={{ paddingHorizontal: 16 }}>
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
@@ -288,7 +292,7 @@ export default function CartScreen() {
     {suggestionsRow}
     {!wide && <>{delivery}{clubOn && memberAvailable === 0 && club}{summary}</>}
     </View>
-    {wide && <View style={styles.summaryCard}>{delivery}{clubOn && memberAvailable === 0 && club}{summary}<View style={{ marginTop: 18 }}>{cta}</View></View>}
+    {wide && <View style={styles.summaryCard}>{delivery}{clubOn && memberAvailable === 0 && club}{summary}{belowMin && <Text style={[styles.minNote, { marginTop: 14, marginBottom: 0 }]}>{minNote}</Text>}<View style={{ marginTop: 18 }}>{cta}</View></View>}
     </View>
   </Screen>;
 }
@@ -420,6 +424,7 @@ const styles = StyleSheet.create({
   footTotal: { fontSize: 22, lineHeight: 27, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
   payButton: { flex: 1, height: 54, borderRadius: 27, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 16 },
   payBar: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  minNote: { ...type.small, fontFamily: fonts.sansSemiBold, color: colors.text, textAlign: 'center', marginBottom: 10 },
   payBarLabel: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted },
   summaryPlate: { marginTop: 12, padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   footSumTotal: { fontSize: 22, fontFamily: fonts.heavy, color: colors.text },

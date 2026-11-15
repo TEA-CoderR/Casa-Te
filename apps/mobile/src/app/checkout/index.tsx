@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
-import { FULFILMENT_LABELS, formatWeight, friendlyError, isPhone, validateAddress, validateInvoice, type Address, type AddressRow, type CreateOrderInput, type FulfilmentMethod, type InvoiceDetails, type PickupPointRow } from '@casa-te/shared';
+import { FULFILMENT_LABELS, formatWeight, friendlyError, isPhone, validateAddress, validateInvoice, type Address, type AddressRow, type CreateOrderInput, type FulfilmentMethod, type InvoiceDetails, type PaymentMethod, type PickupPointRow, type PickupSlot } from '@casa-te/shared';
 import { formatEuro, formatShipping } from '@/lib/price';
 import { Screen } from '@/components/Screen';
 import { RevealInput, RevealOnOpen } from '@/components/Reveal';
@@ -13,7 +13,8 @@ import {
   Checkbox, EmptyState, Loading, Notice, OptionCard, PrimaryButton, RadioMark, SecondaryButton, SectionTitle, SummaryRow, TextField,
 } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
-import { fetchAddresses, fetchPickupPoints, fetchProfile, imageUrl, saveAddress, startCheckout, updateProfile } from '@/lib/api';
+import { fetchAddresses, fetchPickupPoints, fetchPickupSlots, fetchProfile, imageUrl, saveAddress, startCheckout, updateProfile } from '@/lib/api';
+import { PayMethodPicker, PickupSlotPicker, slotText } from '@/components/CheckoutPickers';
 import { ProductImage } from '@/components/ProductImage';
 import { useCartQuote, useCompanies, useDelivery, useLayout } from '@/lib/hooks';
 import { usePreferences } from '@/store/preferences';
@@ -25,7 +26,7 @@ import { ALL_PRODUCTS } from '@/lib/links';
 const METHOD_INFO: Record<FulfilmentMethod, { description: string; icon: IconName }> = {
   home: { description: 'Consegna con corriere in 2–4 giorni lavorativi', icon: 'truck' },
   pickup: { description: 'Ritira in un punto convenzionato, quando preferisci', icon: 'pin' },
-  store: { description: "Gratuito, quando l'ordine è pronto", icon: 'store' },
+  store: { description: "Gratuito, all'orario che scegli", icon: 'store' },
 };
 
 const emptyAddress: Address = { fullName: '', line1: '', line2: '', city: '', province: '', postalCode: '', phone: '' };
@@ -65,6 +66,12 @@ export default function CheckoutScreen() {
   const [invoiceData, setInvoiceData] = useState<InvoiceDetails>({});
   const [notes, setNotes] = useState('');
   const [accepted, setAccepted] = useState(false);
+  // Store pickup: when the customer comes (one-hour slot) and how they pay (online now, or at the till).
+  const slots = useQuery<PickupSlot[]>(store && method === 'store' ? `pickup-slots:${store.id}` : null, () => fetchPickupSlots(store!.id));
+  const [slot, setSlot] = useState<string | null>(null);
+  const [slotDay, setSlotDay] = useState<string | null>(null);
+  const [payMethod, setPayMethod] = useState<PaymentMethod>('card');
+  const chosenSlot = (slots.data ?? []).find((s) => s.starts_at === slot) ?? null;
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -109,6 +116,7 @@ export default function CheckoutScreen() {
       if (!isPhone(phone)) e.phone = 'Numero di telefono non valido';
     }
     if (method === 'pickup' && !pickupPointId) e.pickup = 'Seleziona un punto di ritiro';
+    if (method === 'store' && (slots.data ?? []).length > 0 && !chosenSlot) e.slot = 'Scegli quando passi a ritirare';
     if (invoice) for (const [k, v] of Object.entries(validateInvoice(invoiceData))) e[`invoice.${k}`] = v as string;
     if (!accepted) e.accepted = 'Devi accettare le condizioni di vendita';
     return e;
@@ -138,6 +146,7 @@ export default function CheckoutScreen() {
         store_id: store.id,
         items: quote.lines.map((l) => ({ product_id: l.product_id, quantity: l.quantity })),
         fulfilment: method,
+        ...(method === 'store' ? { payment_method: payMethod, ...(chosenSlot ? { pickup_slot_start: chosenSlot.starts_at } : {}) } : {}),
         coupon_code: coupon || undefined,
         notes: notes.trim() || undefined,
         ...(method === 'home'
@@ -173,6 +182,7 @@ export default function CheckoutScreen() {
 
   // The terms have their own message right under the checkbox: count only the fields higher up the page.
   const pending = attempted ? Object.keys(liveErrors).filter((k) => k !== 'cart' && k !== 'accepted').length : 0;
+  const payInStore = method === 'store' && payMethod === 'store';
 
   // Phone (design F, F-Checkout): ivory page with its own header, radio cards, grouped white field cards,
   // a folding summary, the terms, and the total with "Paga" in a white sheet.
@@ -211,9 +221,11 @@ export default function CheckoutScreen() {
         <Pressable onPress={pay} disabled={busy} accessibilityRole="button" accessibilityState={{ disabled: !ready, busy }}
           style={({ pressed }) => [styles.payButton, pressed && { opacity: 0.88 }]}>
           {busy && <ActivityIndicator color="#FFFFFF" />}
-          <Text style={styles.payText}>{busy ? 'Pagamento in corso…' : total !== null ? `Paga ${euro(total)} con carta` : 'Scegli la consegna'}</Text>
+          <Text style={styles.payText}>{busy ? (payInStore ? 'Invio in corso…' : 'Pagamento in corso…') : total === null ? 'Scegli la consegna'
+            : payInStore ? `Conferma l’ordine · ${euro(total)}` : `Paga ${euro(total)}`}</Text>
         </Pressable>
-        <View style={styles.secureRow}><Icon name="lock" size={13} color={colors.muted} strokeWidth={2.2} /><Text style={styles.secure}>Pagamento sicuro con Stripe</Text></View>
+        <View style={styles.secureRow}>{payInStore ? <Text style={styles.secure}>Paghi alla cassa quando ritiri{chosenSlot ? ` · ${slotText(chosenSlot.starts_at, chosenSlot.ends_at)}` : ''}</Text>
+          : <><Icon name="lock" size={13} color={colors.muted} strokeWidth={2.2} /><Text style={styles.secure}>Pagamento sicuro con Stripe</Text></>}</View>
       </View>}>
       <Stack.Screen options={{ headerShown: false }} />
       <FulfilmentSheet visible={deliverySheet} onClose={() => setDeliverySheet(false)} quote={quote} storeName={storeShortName(store) || 'negozio'}
@@ -240,6 +252,15 @@ export default function CheckoutScreen() {
         </Pressable>;
       })}</View>
       {!methodQuote && <Text style={styles.fError}>Metodo non disponibile per questo ordine: scegline un altro.</Text>}
+
+      {method === 'store' && <>
+        <Text style={styles.h2}>Quando passi a ritirare</Text>
+        {slots.loading && !slots.data ? <Loading /> : (slots.data ?? []).length
+          ? <PickupSlotPicker slots={slots.data ?? []} value={slot} onChange={setSlot} day={slotDay} onDay={setSlotDay} error={err('slot')} />
+          : <Text style={styles.optionSub}>Ti avvisiamo appena l’ordine è pronto.</Text>}
+        <Text style={styles.h2}>Come paghi</Text>
+        <PayMethodPicker value={payMethod} onChange={setPayMethod} />
+      </>}
 
       {method === 'home' && <>
         <Text style={styles.h2}>Indirizzo di consegna</Text>
@@ -358,7 +379,8 @@ export default function CheckoutScreen() {
         </RevealOnOpen>}
       </View>
 
-      {!!seller && <Text style={styles.finePhone}>Venditore: {seller.legal_name} · P.IVA {seller.vat_number}. Paghi sulla pagina sicura di Stripe: i dati della carta non passano dai nostri server. Recesso entro 14 giorni.</Text>}
+      {!!seller && <Text style={styles.finePhone}>Venditore: {seller.legal_name} · P.IVA {seller.vat_number}. {payInStore ? 'Paghi alla cassa del negozio quando ritiri.'
+        : 'Paghi sulla pagina sicura di Stripe: i dati della carta non passano dai nostri server.'} Recesso entro 14 giorni.</Text>}
     </Screen>;
   }
 
@@ -366,8 +388,8 @@ export default function CheckoutScreen() {
     {pending > 0 ? <Pressable onPress={revealFirstError} accessibilityRole="button">
       <Text style={styles.footerError} accessibilityRole="alert">{pending === 1 ? 'Manca un dato' : `Mancano ${pending} dati`} · <Text style={{ textDecorationLine: 'underline' }}>mostra</Text></Text></Pressable>
       : !!submitError && <Text style={styles.footerError} accessibilityRole="alert">{submitError}</Text>}
-    <Text style={styles.secure}>Pagamento sicuro con Stripe · IVA inclusa · recesso entro 14 giorni</Text>
-    <PrimaryButton title={total !== null ? `Paga ${formatEuro(total)}` : 'Scegli la consegna'} icon="card"
+    <Text style={styles.secure}>{payInStore ? 'Paghi alla cassa quando ritiri' : 'Pagamento sicuro con Stripe'} · IVA inclusa · recesso entro 14 giorni</Text>
+    <PrimaryButton title={total === null ? 'Scegli la consegna' : payInStore ? `Conferma l'ordine · ${formatEuro(total)}` : `Paga ${formatEuro(total)}`} icon={payInStore ? 'check' : 'card'}
       loading={busy} disabled={quoting || total === null || quote.issue_count > 0} onPress={pay} />
   </View>}>
     {quote.issue_count > 0 && <Notice tone="error" title="Alcuni articoli non sono disponibili"
@@ -416,6 +438,15 @@ export default function CheckoutScreen() {
         </View>
         <Checkbox checked={saveToBook} onChange={setSaveToBook}><Text style={styles.checkText}>Salva nella rubrica indirizzi</Text></Checkbox>
       </View>}
+    </>}
+
+    {method === 'store' && <>
+      <SectionTitle>Quando passi a ritirare</SectionTitle>
+      {slots.loading && !slots.data ? <Loading /> : (slots.data ?? []).length
+        ? <PickupSlotPicker slots={slots.data ?? []} value={slot} onChange={setSlot} day={slotDay} onDay={setSlotDay} error={err('slot')} />
+        : <Text style={styles.deliveryText}>Ti avvisiamo appena l'ordine è pronto.</Text>}
+      <SectionTitle>Come paghi</SectionTitle>
+      <PayMethodPicker value={payMethod} onChange={setPayMethod} />
     </>}
 
     {method === 'pickup' && <>
@@ -485,8 +516,8 @@ export default function CheckoutScreen() {
           <Text style={styles.link} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text>.</Text>
       </Checkbox>
       {fieldError('accepted')}
-      <Text style={styles.fine}>Paghi sulla pagina sicura di Stripe con carta o wallet digitale: i dati della carta non passano dai nostri server.
-        Hai 14 giorni per il diritto di recesso.</Text>
+      <Text style={styles.fine}>{payInStore ? 'Paghi alla cassa del negozio quando ritiri.'
+        : 'Paghi sulla pagina sicura di Stripe con carta o wallet digitale: i dati della carta non passano dai nostri server.'} Hai 14 giorni per il diritto di recesso.</Text>
     </View>
   </Screen>;
 }

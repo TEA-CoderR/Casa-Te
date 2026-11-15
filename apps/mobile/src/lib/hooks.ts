@@ -12,7 +12,8 @@ import { useClubMember } from '@/store/club';
 /** Club on/off and tagline from the back office (assumed on while loading). */
 export function useClubSettings() {
   const q = useQuery('app-settings', fetchAppSettings);
-  return { enabled: q.data?.club_enabled ?? true, tagline: q.data?.club_tagline ?? 'Vantaggi esclusivi e offerte dedicate ai nostri clienti.' };
+  return { enabled: q.data?.club_enabled ?? true, tagline: q.data?.club_tagline ?? 'Vantaggi esclusivi e offerte dedicate ai nostri clienti.',
+    minOrderCents: q.data?.min_order_cents ?? 0 };
 }
 
 export function useStores() {

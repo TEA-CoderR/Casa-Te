@@ -75,3 +75,6 @@ insert into public.staff_members (user_id, role, store_id) values
   ('00000000-0000-0000-0000-0000000000c1', 'store_staff', (select id from public.stores where code = 'LU1')),
   ('00000000-0000-0000-0000-0000000000d1', 'manager', null),
   ('00000000-0000-0000-0000-0000000000e1', 'admin', null);
+
+-- The minimum order (14/11/2026) is tested in 28_pickup_slots_pay_in_store.sql; the other suites use small carts.
+update public.app_settings set min_order_cents = 0;

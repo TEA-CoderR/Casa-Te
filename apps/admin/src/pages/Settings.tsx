@@ -111,6 +111,38 @@ function ShopSettingsCard() {
   </section>;
 }
 
+/** Minimum order on the goods (after member prices and coupon, before shipping), checked by create_order. */
+function MinOrderCard() {
+  const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
+  const [euro, setEuro] = useState('');
+  const [error, setError] = useState('');
+  const [done, setDone] = useState('');
+  useEffect(() => { if (settings.data) setEuro(String((settings.data.min_order_cents ?? 0) / 100).replace('.', ',')); }, [settings.data]);
+  const cents = Math.round(Number(euro.replace(',', '.')) * 100);
+  const valid = /^\d+([.,]\d{1,2})?$/.test(euro.trim()) && cents <= 100000;
+  const save = async () => {
+    setError(''); setDone('');
+    if (!valid) { setError(t('Inserisci un importo tra 0 e 1000 €.')); return; }
+    const { error: err } = await supabase.from('app_settings').update({ min_order_cents: cents }).eq('id', true);
+    if (err) { setError(errorText(err)); return; }
+    setDone(t('Ordine minimo salvato.'));
+    void settings.reload();
+  };
+  return <section className="panel">
+    <div className="panel-head"><h2>{t('Ordine minimo')}</h2></div>
+    {!settings.data ? <Loading /> : <>
+      <Field label={t('Importo minimo dei prodotti (€)')} hint={t('Calcolato sui prodotti dopo Prezzi Soci e codici sconto, spedizione esclusa. 0 = nessun minimo.')}>
+        <input inputMode="decimal" value={euro} onChange={(e) => setEuro(e.target.value)} style={{ maxWidth: 140 }} />
+      </Field>
+      {error && <Notice tone="error">{error}</Notice>}
+      {done && <Success onDismiss={() => setDone('')}>{done}</Success>}
+      <div className="row" style={{ marginTop: 12 }}>
+        <button onClick={save} disabled={!valid || cents === settings.data.min_order_cents}>{t('Salva')}</button>
+      </div>
+    </>}
+  </section>;
+}
+
 export function SettingsPage() {
   const { can } = useAuth();
   const manager = can('admin', 'manager');
@@ -120,6 +152,7 @@ export function SettingsPage() {
       <LanguageCard />
       <AccountCard />
       {manager && <ShopSettingsCard />}
+      {manager && <MinOrderCard />}
       {manager && <section className="panel">
         <div className="panel-head"><h2>{t('Altre impostazioni')}</h2></div>
         <ul className="settings-links">

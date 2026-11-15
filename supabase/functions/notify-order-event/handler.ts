@@ -13,7 +13,15 @@ type Order = {
   id: string; order_number: string; fulfilment: 'home' | 'pickup' | 'store'; customer_email: string | null;
   customer_name: string | null; total_cents: number; tracking_number: string | null; tracking_url: string | null;
   carrier: string | null; store_id: string;
+  payment_method?: 'card' | 'store'; payment_status?: string; pickup_slot_start?: string | null; pickup_slot_end?: string | null;
 };
+
+/** "sabato 15 novembre, 10:00–11:00" (Europe/Rome). */
+export function slotLabel(start: string, end: string): string {
+  const day = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Rome' }).format(new Date(start));
+  const hm = (d: string) => new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }).format(new Date(d));
+  return `${day}, ${hm(start)}–${hm(end)}`;
+}
 
 const euro = (c: number) => `€${(c / 100).toFixed(2).replace('.', ',')}`;
 const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]!));
@@ -31,13 +39,21 @@ export function buildEmail(event: EventRecord, order: Order, storeName: string):
     body = `${esc(event.note ?? 'Abbiamo emesso un rimborso.')} L'accredito può richiedere 5–10 giorni lavorativi.`;
   } else if (event.kind === 'status') {
     switch (event.status) {
-      case 'paid':
+      case 'paid': {
+        const slot = order.pickup_slot_start && order.pickup_slot_end
+          ? ` Ritiro scelto: ${esc(slotLabel(order.pickup_slot_start, order.pickup_slot_end))} presso ${esc(storeName)}.` : '';
         subject = `Ordine ${n} confermato`;
-        body = `grazie per il tuo ordine di ${euro(order.total_cents)}. Ti avviseremo quando sarà pronto.`; break;
+        body = order.payment_method === 'store'
+          ? `grazie per il tuo ordine di ${euro(order.total_cents)}: lo paghi in negozio al ritiro.${slot} Ti avviseremo quando sarà pronto.`
+          : `grazie per il tuo ordine di ${euro(order.total_cents)}.${slot} Ti avviseremo quando sarà pronto.`;
+        break;
+      }
       case 'ready':
         if (order.fulfilment !== 'store') return null;
         subject = `Ordine ${n} pronto per il ritiro`;
-        body = `il tuo ordine ti aspetta presso ${esc(storeName)}. Porta con te il numero d'ordine ${n}. L'ordine resta disponibile per 14 giorni.`; break;
+        body = `il tuo ordine ti aspetta presso ${esc(storeName)}. Porta con te il numero d'ordine ${n}.` +
+          (order.payment_method === 'store' && order.payment_status === 'unpaid' ? ` Da pagare alla cassa: ${euro(order.total_cents)}.` : '') +
+          ` L'ordine resta disponibile per 14 giorni.`; break;
       case 'shipped':
         subject = `Ordine ${n} spedito`;
         body = `il tuo ordine è stato affidato al corriere${order.carrier ? ` ${esc(order.carrier)}` : ''}.` +

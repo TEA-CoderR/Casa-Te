@@ -15,6 +15,7 @@ import { Monogram } from '@/components/ClubPass';
 import { Barcode } from '@/components/Barcode';
 import { cancelPendingOrder, fetchOrder, resumeCheckout, type OrderDetail } from '@/lib/api';
 import { openCheckout } from '@/lib/payments';
+import { slotText } from '@/components/CheckoutPickers';
 import { invalidate } from '@/lib/useQuery';
 import { useCartStore } from '@/store/cart';
 import { useSession } from '@/store/session';
@@ -69,7 +70,10 @@ export default function CheckoutReturnScreen() {
     return () => { active = false; };
   }, [orderId, ready, result]);
 
-  const paid = order && order.payment_status !== 'unpaid' && order.status !== 'cancelled';
+  // Confirmed: paid online, or received to be paid in store (payment_method 'store', status 'paid' = received).
+  const atTill = !!order && order.payment_method === 'store';
+  const paid = order && (order.payment_status !== 'unpaid' || (atTill && order.status !== 'pending_payment')) && order.status !== 'cancelled';
+  const slot = order?.pickup_slot_start && order.pickup_slot_end ? slotText(order.pickup_slot_start, order.pickup_slot_end) : null;
   useEffect(() => {
     if (paid && order && !cleared.current) {
       cleared.current = true;
@@ -86,7 +90,8 @@ export default function CheckoutReturnScreen() {
 
   if (paid) {
     const next: Record<string, string[]> = {
-      store: ['Il negozio prepara il tuo ordine.', 'Quando è pronto lo vedi in «Ordini» come "Pronto per il ritiro".', `Passa in negozio con il numero ${order.order_number}.`],
+      store: ['Il negozio prepara il tuo ordine.', 'Quando è pronto lo vedi in «Ordini» come "Pronto per il ritiro".',
+        `Passa in negozio${slot ? ` ${slot}` : ''} con il numero ${order.order_number}${atTill ? ` e paga ${formatEuro(order.total_cents)} alla cassa` : ''}.`],
       home: ['Il negozio prepara il tuo ordine.', 'Lo affidiamo al corriere: in «Ordini» trovi il tracciamento.', 'Consegna in 2–4 giorni lavorativi.'],
       pickup: ['Il negozio prepara il tuo ordine.', 'Lo spediamo al punto di ritiro che hai scelto.', 'In «Ordini» vedi quando è arrivato.'],
     };
@@ -103,7 +108,7 @@ export default function CheckoutReturnScreen() {
         <Animated.Text entering={FadeInDown.delay(60).duration(420)} style={styles.gTitle} accessibilityRole="header" numberOfLines={2}>
           {first ? `Grazie,\n${first}.` : 'Grazie!'}</Animated.Text>
         <Animated.Text entering={FadeInDown.delay(120).duration(420)} style={styles.gText}>{order.fulfilment === 'store'
-          ? 'Lo prepariamo noi: ti scriviamo appena è pronto al ritiro.' : 'Lo prepariamo noi: ti scriviamo quando parte.'}</Animated.Text>
+          ? `Lo prepariamo noi${slot ? ` per ${slot}` : ''}: ti scriviamo appena è pronto.` : 'Lo prepariamo noi: ti scriviamo quando parte.'}</Animated.Text>
         <View style={styles.slot} />
         <PrintedTicket>
           <View style={styles.tTop}>
@@ -111,7 +116,8 @@ export default function CheckoutReturnScreen() {
             <Monogram width={46} color={colors.band} />
           </View>
           <Text style={styles.tTitle} numberOfLines={1}>{order.fulfilment === 'store' ? `Ritiro a ${store ?? 'negozio'}` : 'Consegna in arrivo'}</Text>
-          <Text style={styles.tSub}>{n} {n === 1 ? 'articolo' : 'articoli'} · {formatEuro(order.total_cents)} pagati</Text>
+          {!!slot && <Text style={styles.tSub}>{slot.charAt(0).toUpperCase() + slot.slice(1)}</Text>}
+          <Text style={styles.tSub}>{n} {n === 1 ? 'articolo' : 'articoli'} · {formatEuro(order.total_cents)} {atTill ? 'da pagare in negozio' : 'pagati'}</Text>
           {order.fulfilment === 'store' && <View style={styles.tCode}>
             <Barcode value={order.order_number} height={46} color={colors.text} label={`Codice dell'ordine ${order.order_number}`} />
             <Text style={styles.tCodeText}>Mostralo in cassa quando ritiri</Text>
@@ -128,7 +134,7 @@ export default function CheckoutReturnScreen() {
       <View style={styles.done}>
         <View style={styles.badge}><Icon name="check" size={30} color="#fff" /></View>
         <Text style={styles.title} accessibilityRole="header">Grazie, ordine ricevuto</Text>
-        <Text style={styles.meta}>Ordine {order.order_number} · {formatEuro(order.total_cents)} pagati</Text>
+        <Text style={styles.meta}>Ordine {order.order_number} · {formatEuro(order.total_cents)} {atTill ? 'da pagare in negozio' : 'pagati'}</Text>
       </View>
       <View style={styles.steps}>{(next[order.fulfilment] ?? next.home).map((t, i) => <View key={t} style={styles.step}>
         <StepTag n={i + 1} /><Text style={styles.stepText}>{t}</Text></View>)}</View>

@@ -1,7 +1,7 @@
 // Data access for the customer app. All prices/stock/shipping come from the database; the app
 // never computes an amount that is charged.
 import {
-  flyerFileUrl, productImageUrl, searchKey, type AppSettingsRow, type FlyerRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
+  flyerFileUrl, productImageUrl, searchKey, type AppSettingsRow, type PickupSlot, type FlyerRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
   type CreateOrderInput, type OrderEventRow, type OrderItemRow, type OrderRow, type PickupPointRow,
   type ClubOffer, type ProductReviewRow, type ProductRow, type ProfileRow, type Quote, type QuoteInput,
   type ReviewEligibility, type StoreRow, type CompanyRow,
@@ -247,10 +247,16 @@ export async function setClubMembership(join: boolean): Promise<string | null> {
 
 const CLUB_TAGLINE = 'Vantaggi esclusivi e offerte dedicate ai nostri clienti.';
 
-/** Public shop settings (club on/off and tagline). */
-export async function fetchAppSettings(): Promise<Pick<AppSettingsRow, 'club_enabled' | 'club_tagline'>> {
-  const row = unwrap(await supabase.from('app_settings').select('club_enabled,club_tagline').maybeSingle()) as Pick<AppSettingsRow, 'club_enabled' | 'club_tagline'> | null;
-  return row ?? { club_enabled: true, club_tagline: CLUB_TAGLINE };
+/** Public shop settings (club on/off and tagline, minimum order). */
+export async function fetchAppSettings(): Promise<Pick<AppSettingsRow, 'club_enabled' | 'club_tagline' | 'min_order_cents'>> {
+  const row = unwrap(await supabase.from('app_settings').select('club_enabled,club_tagline,min_order_cents').maybeSingle()) as
+    Pick<AppSettingsRow, 'club_enabled' | 'club_tagline' | 'min_order_cents'> | null;
+  return row ?? { club_enabled: true, club_tagline: CLUB_TAGLINE, min_order_cents: 0 };
+}
+
+/** The one-hour pickup slots the store offers now (today and the next two days). */
+export async function fetchPickupSlots(storeId: string): Promise<PickupSlot[]> {
+  return unwrap(await supabase.rpc('pickup_slots', { p_store_id: storeId })) as PickupSlot[];
 }
 
 export async function fetchClubOffers(): Promise<ClubOffer[]> {
@@ -348,6 +354,11 @@ export async function cancelReturnRequest(id: string): Promise<void> {
 
 export async function cancelPendingOrder(id: string): Promise<void> {
   unwrap(await supabase.rpc('customer_cancel_pending_order', { p_order_id: id }));
+}
+
+/** Cancels an unpaid card order, or a pay-in-store order the store has not started preparing. */
+export async function cancelOrder(id: string): Promise<void> {
+  unwrap(await supabase.rpc('customer_cancel_order', { p_order_id: id }));
 }
 
 // ---- Account -----------------------------------------------------------------

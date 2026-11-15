@@ -12,7 +12,23 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
   return <span className={`badge ${status}`}>{t(ORDER_STATUS_LABELS[status])}</span>;
 }
 
-export function PaymentBadge({ status }: { status: PaymentStatus }) {
+/** "sab 16 nov, 10:00–11:00" in the shop's time zone (pickup slot chosen by the customer). */
+export function slotLabel(start: string, end: string): string {
+  const day = new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(start));
+  const hm = (d: string) => new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit' }).format(new Date(d));
+  return `${day}, ${hm(start)}–${hm(end)}`;
+}
+
+/** The pickup time chosen by the customer, if any. */
+export function SlotBadge({ order }: { order: { pickup_slot_start: string | null; pickup_slot_end: string | null } }) {
+  if (!order.pickup_slot_start || !order.pickup_slot_end) return null;
+  const soon = new Date(order.pickup_slot_start).getTime() - Date.now() < 2 * 3600_000;
+  return <span className={`badge ${soon ? 'warn' : 'muted'}`} title={t('Orario di ritiro scelto dal cliente')}>{t('Ritiro {slot}', { slot: slotLabel(order.pickup_slot_start, order.pickup_slot_end) })}</span>;
+}
+
+export function PaymentBadge({ status, method }: { status: PaymentStatus; method?: 'card' | 'store' }) {
+  // Pay in store: not "unpaid" in the sense of a failed checkout — the customer pays at the till.
+  if (method === 'store' && status === 'unpaid') return <span className="badge flag">{t('Da pagare in negozio')}</span>;
   const cls = status === 'paid' ? 'paid' : status === 'unpaid' ? 'muted' : status === 'failed' ? 'bad' : 'warn';
   return <span className={`badge ${cls}`}>{status === 'failed' ? t(PAYMENT_STATUS_LABELS[status]) : t('Pagamento: {status}', { status: t(PAYMENT_STATUS_LABELS[status]).toLowerCase() })}</span>;
 }
