@@ -16,7 +16,7 @@ import { colors, fonts } from '@/config/theme';
 import { fetchAddresses, fetchPickupPoints, fetchPickupSlots, fetchProfile, imageUrl, saveAddress, startCheckout, updateProfile } from '@/lib/api';
 import { PayMethodPicker, PickupSlotPicker, slotText } from '@/components/CheckoutPickers';
 import { ProductImage } from '@/components/ProductImage';
-import { useCartQuote, useCompanies, useDelivery, useLayout } from '@/lib/hooks';
+import { useCartQuote, useClubSettings, useCompanies, useDelivery, useLayout } from '@/lib/hooks';
 import { usePreferences } from '@/store/preferences';
 import { openCheckout } from '@/lib/payments';
 import { useQuery } from '@/lib/useQuery';
@@ -71,6 +71,7 @@ export default function CheckoutScreen() {
   const [slot, setSlot] = useState<string | null>(null);
   const [slotDay, setSlotDay] = useState<string | null>(null);
   const [payMethod, setPayMethod] = useState<PaymentMethod>('card');
+  const { minOrderCents } = useClubSettings();
   const chosenSlot = (slots.data ?? []).find((s) => s.starts_at === slot) ?? null;
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
@@ -103,10 +104,15 @@ export default function CheckoutScreen() {
 
   const methodQuote = quote.shipping[method];
   const total = quote.total_cents;
+  // Minimum order on the goods (create_order checks it again); display only.
+  const goods = quote.subtotal_cents - (quote.discount_cents ?? 0);
+  const minNote = minOrderCents > 0 && goods < minOrderCents
+    ? `Ordine minimo ${formatEuro(minOrderCents).replace(/€\s/, '€').replace(',00', '')}: aggiungi ancora ${formatEuro(minOrderCents - goods).replace(/€\s/, '€')} di prodotti.` : '';
 
   const validate = (): Record<string, string> => {
     const e: Record<string, string> = {};
     if (quote.issue_count > 0) e.cart = 'cart';
+    if (minNote) e.cart = 'minimum';
     if (!methodQuote) e.method = 'Metodo non disponibile';
     if (method === 'home') {
       const ae = validateAddress(address);
@@ -212,6 +218,7 @@ export default function CheckoutScreen() {
         {pending > 0 ? <Pressable onPress={revealFirstError} accessibilityRole="button">
           <Text style={styles.footerError} accessibilityRole="alert">{pending === 1 ? 'Manca un dato' : `Mancano ${pending} dati`} · <Text style={{ textDecorationLine: 'underline' }}>mostra</Text></Text></Pressable>
           : !!submitError && <Text style={styles.footerError} accessibilityRole="alert">{submitError}</Text>}
+        {!!minNote && <Text style={styles.footerError} accessibilityRole="alert">{minNote}</Text>}
         {/* The consent sits right above the button it unlocks; the button stays green and says what it does. */}
         <Pressable onPress={() => setAccepted(!accepted)} accessibilityRole="checkbox" accessibilityState={{ checked: accepted }} style={styles.terms}>
           <View style={[styles.box, accepted && styles.boxOn]}>{accepted && <Icon name="check" size={15} color="#FFFFFF" strokeWidth={3} />}</View>
@@ -390,7 +397,8 @@ export default function CheckoutScreen() {
       : !!submitError && <Text style={styles.footerError} accessibilityRole="alert">{submitError}</Text>}
     <Text style={styles.secure}>{payInStore ? 'Paghi alla cassa quando ritiri' : 'Pagamento sicuro con Stripe'} · IVA inclusa · recesso entro 14 giorni</Text>
     <PrimaryButton title={total === null ? 'Scegli la consegna' : payInStore ? `Conferma l'ordine · ${formatEuro(total)}` : `Paga ${formatEuro(total)}`} icon={payInStore ? 'check' : 'card'}
-      loading={busy} disabled={quoting || total === null || quote.issue_count > 0} onPress={pay} />
+      loading={busy} disabled={quoting || total === null || quote.issue_count > 0 || !!minNote} onPress={pay} />
+    {!!minNote && <Text style={[styles.secure, { color: colors.danger }]}>{minNote}</Text>}
   </View>}>
     {quote.issue_count > 0 && <Notice tone="error" title="Alcuni articoli non sono disponibili"
       message="Torna al carrello per aggiornare le quantità.">
