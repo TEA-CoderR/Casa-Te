@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { Figtree_400Regular } from '@expo-google-fonts/figtree/400Regular';
 import { Figtree_500Medium } from '@expo-google-fonts/figtree/500Medium';
 import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
 import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 import { Figtree_800ExtraBold } from '@expo-google-fonts/figtree/800ExtraBold';
-import { router, Stack } from 'expo-router';
+import { router, Stack, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors, fonts } from '@/config/theme';
 import { PersistenceGate } from '@/components/PersistenceGate';
@@ -25,6 +25,24 @@ function NotConfigured() {
     <Text style={{ color: colors.muted, lineHeight: 21 }}>
       Copia apps/mobile/.env.example in apps/mobile/.env e inserisci l'URL e la chiave anon del progetto Supabase, poi riavvia Expo.
     </Text>
+  </View>;
+}
+
+
+/**
+ * Shown by expo-router instead of a white screen when a page throws while rendering: what happened in plain words,
+ * a retry and the way home. Plain React Native only (fonts or providers may be what failed).
+ */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  return <View style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+    <Text style={{ fontSize: 22, lineHeight: 27, fontWeight: '700', color: colors.text, textAlign: 'center' }} accessibilityRole="header">Qualcosa è andato storto</Text>{/* ui-check: allow (error screen: fonts may not be loaded) */}
+    <Text style={{ fontSize: 15, lineHeight: 21, color: colors.muted, textAlign: 'center', marginTop: 8 }}>Riprova: se il problema continua, chiudi e riapri l’app.</Text>{/* ui-check: allow (error screen: fonts may not be loaded) */}
+    <Pressable onPress={retry} accessibilityRole="button" style={{ marginTop: 24, height: 54, paddingHorizontal: 32, borderRadius: 27, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>Riprova</Text>{/* ui-check: allow (error screen: fonts may not be loaded) */}
+    </Pressable>
+    <Pressable onPress={() => { router.replace('/'); void retry(); }} accessibilityRole="link" hitSlop={8} style={{ marginTop: 18 }}>
+      <Text style={{ fontSize: 15, fontWeight: '600', color: colors.green, textDecorationLine: 'underline' }}>Torna alla home</Text>{/* ui-check: allow (error screen: fonts may not be loaded) */}
+    </Pressable>
   </View>;
 }
 

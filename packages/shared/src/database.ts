@@ -70,6 +70,10 @@ export type ProductRow = {
   search_text: string; created_at: Timestamp; updated_at: Timestamp;
   /** Article code in the ERP (ITO); set for products synced from the ERP. */
   erp_code?: string | null;
+  /** What the pack's label says (hazards, composition, instructions), typed in by the shop; shown before purchase. */
+  label_info?: string | null;
+  /** Signal word on the label of a hazardous mixture. */
+  label_signal?: 'attenzione' | 'pericolo' | null;
   /** Pack size for the unit price (e.g. 500 ml). Both set or both null. */
   unit_quantity: number | null; unit: ProductUnit | null;
   color: string | null; highlights: ProductHighlight[];

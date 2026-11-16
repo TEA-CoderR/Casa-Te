@@ -13,7 +13,8 @@ import { FavoriteButton, ProductCard, stockLabel } from '@/components/ProductCar
 import { Icon, type IconName } from '@/components/Icon';
 import { EmptyState, Loading, PillButton, PriceTag, PrimaryButton, QuantityControl, SociChip } from '@/components/UI';
 import { cardShadow, colors, fonts, radius, type } from '@/config/theme';
-import { fetchCategories, fetchProduct, fetchProducts, fetchVariants } from '@/lib/api';
+import { fetchCategories, fetchProduct, fetchProducts, fetchReviewEligibility, fetchVariants } from '@/lib/api';
+import { useUser } from '@/store/session';
 import { Stars } from '@/components/Stars';
 import { ProductReviews } from '@/components/ProductReviews';
 import { ProductVariants } from '@/components/ProductVariants';
@@ -58,6 +59,10 @@ export default function ProductDetailScreen() {
   const group = product?.variant_group ?? null;
   const variants = useQuery(group ? `variants:${group}:${selected?.id}` : null, () => fetchVariants(group!, selected?.id ?? null));
   const [folds, setFolds] = useState<string | null>(null);
+  // Same key as ProductReviews, so the answer is fetched once.
+  const user = useUser();
+  const eligibility = useQuery(user && product && !wide && !product.rating_count ? `review-eligibility:${product.id}:${user.id}` : null, () => fetchReviewEligibility(product!.id));
+  const canReview = !!eligibility.data?.eligible || !!eligibility.data?.review;
   const related = useQuery(product?.category_id && !wide ? `related:${product.category_id}:${selected?.id}` : null,
     () => fetchProducts({ storeId: selected?.id ?? null, categoryIds: [product!.category_id as string], sort: 'featured', pageSize: 5 }));
 
@@ -123,6 +128,12 @@ export default function ProductDetailScreen() {
       : <><Text style={styles.sociStrong}>Prezzo Soci</Text> · {sociText} ›</>}</Text>
   </Pressable> : null;
   const pack = formatPackSize(product.unit_quantity, product.unit);
+  // What the label says (typed in by the shop from the pack): the signal word first, then the text as written.
+  const labelInfo = product.label_info ? <View>
+    {!!product.label_signal && <Text style={styles.labelSignal}>{product.label_signal === 'pericolo' ? 'Pericolo' : 'Attenzione'}</Text>}
+    <Text style={styles.foldText} selectable>{product.label_info}</Text>
+    <Text style={styles.labelNote}>Leggere sempre l’etichetta e le informazioni sul prodotto prima dell’uso.</Text>
+  </View> : null;
   const features: Array<{ icon: IconName; text: string }> = product.highlights.length
     ? product.highlights.map((h) => ({ icon: h.icon as IconName, text: h.label }))
     : [{ icon: 'store', text: `Ritiro gratuito\n${atPlace(store)}` }, { icon: 'truck', text: delivery.open ? 'Spedizione gratis\nda €66' : 'Spedizione\nprossimamente' },
@@ -152,6 +163,7 @@ export default function ProductDetailScreen() {
         <Text style={[styles.featureText, wide && styles.featureTextWide]}>{f.text}</Text></View>)}
     </View>
     {!!product.description && <Text style={styles.description}>{product.description}</Text>}
+    {!!labelInfo && <View style={{ marginTop: 18 }}><Text style={[styles.foldText, { fontFamily: fonts.sansBold, marginBottom: 4 }]} accessibilityRole="header">Informazioni di etichetta</Text>{labelInfo}</View>}
     {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
     {wide && <View style={{ marginTop: 24 }}>{buy}</View>}
     <Text style={styles.sku}>Codice articolo {product.sku}{product.color ? ` · Colore ${product.color}` : ''} · IVA inclusa</Text>
@@ -217,8 +229,10 @@ export default function ProductDetailScreen() {
     const sections: Array<{ key: string; title: string; body: React.ReactNode }> = [
       ...(product.description ? [{ key: 'd', title: 'Descrizione', body: <Text style={styles.foldText}>{product.description}</Text> }] : []),
       { key: 'i', title: 'Dettagli', body: <Text style={styles.foldText}>{details}</Text> },
-      { key: 'r', title: product.rating_count ? `Recensioni (${product.rating_count})` : 'Recensioni', body: <ProductReviews productId={product.id} average={product.rating_avg} count={product.rating_count}
-        onChanged={() => { void refetch(); invalidate('featured'); }} /> },
+      ...(product.label_info ? [{ key: 'l', title: 'Informazioni di etichetta', body: labelInfo }] : []),
+      // No reviews yet: the section shows only to who can write the first one (bought the product).
+      ...(!product.rating_count && !canReview ? [] : [{ key: 'r', title: product.rating_count ? `Recensioni (${product.rating_count})` : 'Recensioni', body: <ProductReviews productId={product.id} average={product.rating_avg} count={product.rating_count}
+        onChanged={() => { void refetch(); invalidate('featured'); }} /> }]),
     ];
     const openKey = folds ?? (product.description ? 'd' : 'i');
     return <Screen stack ground={colors.page} footer={phoneBuy} header={<View style={{ height: insets.top, backgroundColor: '#FFFFFF' }} />}
@@ -340,6 +354,8 @@ const styles = StyleSheet.create({
   phoneTitle: { ...type.title, color: colors.text, marginTop: 6 },
   phonePriceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginTop: 10, flexWrap: 'wrap' },
   sociLine: { marginTop: 6, marginBottom: 4 },
+  labelSignal: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sansBold, color: colors.danger, marginBottom: 4 },
+  labelNote: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 8 },
   sociRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, marginBottom: 4, alignSelf: 'flex-start' },
   sociNote: { ...type.small, color: colors.muted },
   sociJoin: { ...type.small, fontFamily: fonts.sansBold, color: colors.green },

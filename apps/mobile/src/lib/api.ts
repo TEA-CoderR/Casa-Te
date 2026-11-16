@@ -12,7 +12,7 @@ import { SUPABASE_URL, supabase } from './supabase';
 import { memberPrice } from './price';
 
 export type CatalogProduct = Pick<ProductRow,
-  'id' | 'sku' | 'name' | 'description' | 'brand' | 'category_id' | 'price_cents' | 'compare_at_price_cents' |
+  'id' | 'sku' | 'name' | 'description' | 'label_info' | 'label_signal' | 'brand' | 'category_id' | 'price_cents' | 'compare_at_price_cents' |
   'weight_g' | 'max_per_order' | 'featured' | 'unit_quantity' | 'unit' | 'color' | 'highlights' |
   'variant_group' | 'variant_title' | 'variant_label' | 'rating_avg' | 'rating_count' | 'featured_rank' | 'offer_rank' |
   'member_price_cents' | 'member_price_ends_on'> & {
@@ -42,7 +42,7 @@ function unwrap<T>(result: { data: T | null; error: { message: string; code?: st
 export const imageUrl = (path: string | null | undefined) => productImageUrl(SUPABASE_URL, path);
 
 const PRODUCT_FIELDS =
-  'id,sku,name,description,brand,category_id,price_cents,compare_at_price_cents,weight_g,max_per_order,featured,featured_rank,offer_rank,' +
+  'id,sku,name,description,label_info,label_signal,brand,category_id,price_cents,compare_at_price_cents,weight_g,max_per_order,featured,featured_rank,offer_rank,' +
   'unit_quantity,unit,color,highlights,variant_group,variant_title,variant_label,rating_avg,rating_count,' +
   'member_price_cents,member_price_ends_on,' +
   'product_images(path,sort),inventory(quantity,store_id)';
@@ -114,7 +114,7 @@ export async function fetchOffers(storeId: string | null, limit: number): Promis
   return items.filter((p) => pct(p) > 0).sort((a, b) => rank(a) - rank(b) || pct(b) - pct(a)).slice(0, limit);
 }
 
-export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogProduct[]; hasMore: boolean; total: number | null }> {
+export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogProduct[]; hasMore: boolean; total: number | null; fuzzy?: boolean }> {
   const pageSize = q.pageSize ?? 40;
   const from = (q.page ?? 0) * pageSize;
   const needle = q.search ? searchKey(q.search) : '';
@@ -126,7 +126,7 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
     const hits = unwrap(await supabase.rpc('search_products', {
       p_query: needle, p_store: q.storeId ?? null, p_category_ids: q.categoryIds?.length ? q.categoryIds : q.categoryId ? [q.categoryId] : null,
       p_on_sale: !!q.onSale, p_limit: pageSize + 1, p_offset: from,
-    })) as Array<{ product_id: string; total: number }>;
+    })) as Array<{ product_id: string; total: number; fuzzy?: boolean }>;
     const ids = hits.slice(0, pageSize).map((h) => h.product_id);
     if (!ids.length) return { items: [], hasMore: false, total: hits[0]?.total ?? 0 };
     let found = supabase.from('products').select(PRODUCT_FIELDS).in('id', ids);
@@ -134,7 +134,8 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
     const rows = unwrap(await found) as unknown as RawProduct[];
     const byId = new Map(rows.map((r) => [r.id, r]));
     const items = ids.map((id) => byId.get(id)).filter((r): r is RawProduct => !!r).map((r) => toCatalogProduct(r, q.storeId));
-    return { items, hasMore: hits.length > pageSize, total: Number(hits[0]?.total ?? items.length) };
+    // Close spellings follow the exact matches: when the first is one, nothing matched exactly.
+    return { items, hasMore: hits.length > pageSize, total: Number(hits[0]?.total ?? items.length), fuzzy: hits[0]?.fuzzy === true };
   }
   let query = supabase.from('products')
     .select(inStockOnly ? PRODUCT_FIELDS.replace('inventory(', 'inventory!inner(') : PRODUCT_FIELDS, { count: 'exact' }).eq('active', true);

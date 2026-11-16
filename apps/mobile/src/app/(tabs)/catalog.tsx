@@ -23,8 +23,8 @@ import { useRecentSearches } from '@/store/recentSearches';
 import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared';
 
 /** First page of the lists seen recently (newest last), to reopen a department without waiting. */
-const firstPages = new Map<string, { items: CatalogProduct[]; hasMore: boolean; total: number | null }>();
-const remember = (key: string, page: { items: CatalogProduct[]; hasMore: boolean; total: number | null }) => {
+const firstPages = new Map<string, { items: CatalogProduct[]; hasMore: boolean; total: number | null; fuzzy?: boolean }>();
+const remember = (key: string, page: { items: CatalogProduct[]; hasMore: boolean; total: number | null; fuzzy?: boolean }) => {
   firstPages.delete(key); firstPages.set(key, page);
   if (firstPages.size > 24) firstPages.delete(firstPages.keys().next().value as string);
 };
@@ -55,6 +55,8 @@ export default function CatalogScreen() {
   const [total, setTotal] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  // Nothing matched as written: the list holds close spellings (search_products marks them).
+  const [fuzzy, setFuzzy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
@@ -121,12 +123,12 @@ export default function CatalogScreen() {
   useEffect(() => {
     let active = true;
     const cached = firstPages.get(key);
-    if (cached) { setItems(cached.items); setHasMore(cached.hasMore); setTotal(cached.total); }
-    else { setItems([]); setHasMore(false); setTotal(null); }
+    if (cached) { setItems(cached.items); setHasMore(cached.hasMore); setTotal(cached.total); setFuzzy(!!cached.fuzzy); }
+    else { setItems([]); setHasMore(false); setTotal(null); setFuzzy(false); }
     setPage(0); setError(null);
     setLoading(true);
     request(0)
-      .then((r) => { if (active) { remember(key, r); setItems(r.items); setHasMore(r.hasMore); setTotal(r.total); setPage(0); setError(null); } })
+      .then((r) => { if (active) { remember(key, r); setItems(r.items); setHasMore(r.hasMore); setTotal(r.total); setFuzzy(!!r.fuzzy); setPage(0); setError(null); } })
       .catch((e) => { if (active) setError(e); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -135,6 +137,7 @@ export default function CatalogScreen() {
 
   const [loadingMore, setLoadingMore] = useState(false);
   const loadMore = async () => {
+    if (loadingMore || loading || !hasMore) return;
     setLoadingMore(true);
     try {
       const r = await request(page + 1);
@@ -293,6 +296,7 @@ export default function CatalogScreen() {
           <Text style={styles.sEmptyTitle}>Nessun risultato per “{debounced.trim()}”</Text>
           <Text style={styles.sEmptyText}>Controlla come l’hai scritto o prova con il nome della marca.</Text>
           <Pressable onPress={() => { setQuery(''); setDebounced(''); }} accessibilityRole="button" style={styles.sEmptyButton}><Text style={styles.sEmptyButtonText}>Nuova ricerca</Text></Pressable>
+          <Pressable onPress={() => openList({ offerte: '1' })} accessibilityRole="link" hitSlop={8} style={{ marginTop: 16 }}><Text style={styles.sLink}>Guarda le Offerte Soci</Text></Pressable>
         </View>
         : <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
           {error && !items.length ? <Notice tone="error" message="Impossibile cercare. Controlla la connessione." /> : null}
@@ -314,7 +318,7 @@ export default function CatalogScreen() {
           {!loading && !shown.length ? <Text style={styles.sNoProducts}>Nessun prodotto con questo nome: apri il reparto qui sopra.</Text> : <>
           <View style={styles.sResultsHead}>
             <Text style={styles.sCaps}>PRODOTTI</Text>
-            <Text style={styles.sCount}>{loading ? ' ' : `${count} ${count === 1 ? 'risultato' : 'risultati'}`}</Text>
+            <Text style={styles.sCount}>{loading ? ' ' : fuzzy ? `Nessun risultato esatto. Prodotti simili a “${debounced.trim()}”` : `${count} ${count === 1 ? 'risultato' : 'risultati'}`}</Text>
           </View>
           <View style={styles.fGrid}>{loading && !items.length ? <ProductSkeletons n={4} /> : shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
           {more}
@@ -340,7 +344,7 @@ export default function CatalogScreen() {
     // No photo before the title (plan §5.2): it cut long names short, and the tabs below already show the subcategory.
     return <RollingAwning title={deptTitle} eyebrow={sub ? parent!.name : undefined} image={null}
       onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
-      onSearch={openSearch} resetKey={`${categoryId ?? ''}|${collection ?? ''}`}
+      onSearch={openSearch} resetKey={`${categoryId ?? ''}|${collection ?? ''}`} onEndReached={loadMore}
       overlay={<>{filterSheetPhone}
         <SubcategorySheet visible={allOpen} onClose={() => setAllOpen(false)} title={parent?.name ?? 'Reparti'} items={sheetItems}
           active={parent ? activeTab : categoryId} onSelect={selectCategory} />

@@ -59,13 +59,14 @@ export function FilterSheet({ visible, section, filters, onChange, onClose, face
           <View style={styles.wrap}>{SORTS.map((o) => <Chip key={o.id} label={o.label} on={filters.sort === o.id}
             onPress={() => onChange({ ...filters, sort: o.id })} radio />)}</View>
         </>}
-        {show('brand') && <>
+        {/* In the full sheet a group with nothing to choose is left out; opened on its own it says why it is empty. */}
+        {show('brand') && (section !== 'all' || !!facets?.brands.length) && <>
           {section === 'all' && <Text style={styles.group}>Marca</Text>}
           {facets?.brands.length ? <View style={styles.wrap}>{facets.brands.map((b) => <Chip key={b} label={b} on={filters.brands.includes(b)}
             onPress={() => onChange({ ...filters, brands: toggle(filters.brands, b) })} />)}</View>
             : <Text style={styles.empty}>Nessuna marca indicata per questi prodotti.</Text>}
         </>}
-        {show('color') && <>
+        {show('color') && (section !== 'all' || !!facets?.colors.length) && <>
           {section === 'all' && <Text style={styles.group}>Colore</Text>}
           {facets?.colors.length ? <View style={styles.wrap}>{facets.colors.map((c) => <Chip key={c} label={c} on={filters.colors.includes(c)}
             onPress={() => onChange({ ...filters, colors: toggle(filters.colors, c) })} />)}</View>

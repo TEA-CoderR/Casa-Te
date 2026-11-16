@@ -215,6 +215,7 @@ export default function CheckoutScreen() {
           <Text style={styles.payLabel}>{method === 'store' ? 'Totale · ritiro gratuito' : `Totale · ${FULFILMENT_LABELS[method].toLowerCase()}`}</Text>
           <Text style={styles.payTotal}>{total !== null ? euro(total) : '—'}</Text>
         </View>
+        {(quote.member_savings_cents ?? 0) > 0 && <Text style={styles.paySaved}>Con i Prezzi Soci risparmi {euro(quote.member_savings_cents ?? 0)}</Text>}
         {pending > 0 ? <Pressable onPress={revealFirstError} accessibilityRole="button">
           <Text style={styles.footerError} accessibilityRole="alert">{pending === 1 ? 'Manca un dato' : `Mancano ${pending} dati`} · <Text style={{ textDecorationLine: 'underline' }}>mostra</Text></Text></Pressable>
           : !!submitError && <Text style={styles.footerError} accessibilityRole="alert">{submitError}</Text>}
@@ -565,6 +566,7 @@ const styles = StyleSheet.create({
   linkPhone: { color: colors.green, fontFamily: fonts.sansBold, textDecorationLine: 'underline' },
   finePhone: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 12, marginHorizontal: 4 },
   payLabel: { fontSize: 15, fontFamily: fonts.sans, color: '#4E554B' },
+  paySaved: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sansSemiBold, color: colors.sale, marginTop: 2 },
   payTotal: { fontSize: 26, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
   payButton: { marginTop: 10, height: 58, borderRadius: 29, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   payText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },

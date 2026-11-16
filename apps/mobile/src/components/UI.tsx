@@ -34,15 +34,17 @@ export function PriceTag({ cents, size = 22, sale, color }: { cents: number; siz
   </View>;
 }
 
-export function PrimaryButton({ title, onPress, disabled, loading, icon = null, small }: {
+export function PrimaryButton({ title, onPress, disabled, loading, icon = null, small, danger }: {
   title: string; onPress: () => void; disabled?: boolean; loading?: boolean; icon?: IconName | null;
+  /** Red: only for a step that cannot be undone (deleting the account). */
+  danger?: boolean;
   /** 44 high, for a button inside a card (the home carousel). */
   small?: boolean;
 }) {
   const off = disabled || loading;
   const { wide } = useLayout();
   return <Pressable accessibilityRole="button" accessibilityState={{ disabled: off, busy: loading }} disabled={off} onPress={onPress}
-    style={({ pressed }) => [styles.button, small && styles.buttonSmall, wide && deskButton, { opacity: off ? 0.45 : pressed ? 0.8 : 1 }]}>
+    style={({ pressed }) => [styles.button, small && styles.buttonSmall, wide && deskButton, danger && { backgroundColor: colors.danger }, { opacity: off ? 0.45 : pressed ? 0.8 : 1 }]}>
     {loading ? <ActivityIndicator color="#fff" /> : icon ? <Icon name={icon} color="#fff" size={19} /> : null}
     <Text style={[styles.buttonText, small && { fontSize: 15 }, wide && deskLabel]}>{title}</Text>
   </Pressable>;

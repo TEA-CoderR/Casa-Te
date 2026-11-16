@@ -33,7 +33,9 @@ const EDGE = 4;
  * products; the awning unrolls only back at the top of the page. A "back to top" button rises while scrolling and
  * hides once the page has been still for a moment.
  */
-export function RollingAwning({ title, eyebrow, subtitle, image, onBack, searchScope, onSearch, chips, overlay, resetKey, children }: {
+export function RollingAwning({ title, eyebrow, subtitle, image, onBack, searchScope, onSearch, chips, overlay, resetKey, onEndReached, children }: {
+  /** Called when the list is scrolled to within a screen of its end (loads the next page). */
+  onEndReached?: () => void;
   title: string; subtitle?: string; onBack?: () => void;
   /** Small line above the title: the department when the title is one of its subcategories. */
   eyebrow?: string;
@@ -62,7 +64,15 @@ export function RollingAwning({ title, eyebrow, subtitle, image, onBack, searchS
   const exp = useDerivedValue(() => expanded);
   const [showTop, setShowTop] = useState(false);
 
-  const onScroll = useAnimatedScrollHandler((e) => { y.value = e.contentOffset.y; });
+  const nearEnd = useSharedValue(false);
+  const reached = () => onEndReached?.();
+  const onScroll = useAnimatedScrollHandler((e) => {
+    y.value = e.contentOffset.y;
+    // Within a screen of the end: ask once for the next page, again only after leaving that zone or growing.
+    const near = e.contentOffset.y + e.layoutMeasurement.height * 2 >= e.contentSize.height;
+    if (near && !nearEnd.value) scheduleOnRN(reached);
+    nearEnd.value = near;
+  });
   // "Torna su": shown while the page moves past TOP_AFTER, hidden after TOP_IDLE ms without scrolling.
   const idle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const moved = (at: number) => {

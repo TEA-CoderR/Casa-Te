@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Icon } from '@/components/Icon';
 import { BrandLogo } from '@/components/BrandLogo';
+import { Monogram } from '@/components/ClubPass';
 
 /** The logo in its own colours: lime lettering on the shop-sign green. */
 const SIGN = { ground: colors.sign, ink: colors.signInk };
@@ -314,13 +315,36 @@ export default function SignInScreen() {
     : page === 'privacy' ? <AuthButton title="Crea account" busy={busy} disabled={!terms} onPress={register} />
     : <AuthButton title={full ? (awaiting === 'signup' ? 'Conferma e accedi' : 'Accedi') : `Inserisci le ${boxes} cifre`} busy={busy} disabled={!full} onPress={verify} />;
 
+    // The first page is the brand's: the same deep-green ground, logo and white button as the first-run welcome,
+    // so the two read as one app (plan v3 X9). The forms after it stay white.
+    if (page === 'welcome') return <SafeAreaView style={styles.gSafe} edges={['top', 'bottom']}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <BackKey onBack={back} />
+      <Monogram width={560} color={colors.bandLogo} opacity={0.07} style={{ position: 'absolute', right: -220, top: 40 }} />
+      <View style={styles.gTop}>
+        <BrandLogo width={150} color={colors.bandLogo} />
+        <Pressable onPress={back} accessibilityRole="button" accessibilityLabel="Chiudi" hitSlop={10} style={({ pressed }) => [styles.gClose, pressed && { opacity: 0.7 }]}>
+          <Icon name="close" size={20} color="#FFFFFF" strokeWidth={2.2} /></Pressable>
+      </View>
+      <View style={{ flex: 1, justifyContent: 'flex-end', paddingHorizontal: 24 }}>
+        <Animated.Text entering={FadeIn.duration(300)} style={styles.gTitle} accessibilityRole="header">Benvenuto in{'\n'}Casa & Te.</Animated.Text>
+        <Text style={styles.gText}>Accedi o registrati: ordini dal tuo negozio, ritiri gratis e segui ogni ordine dall’app.</Text>
+      </View>
+      <View style={styles.gButtons}>
+        <Pressable onPress={() => go('register')} accessibilityRole="button" style={({ pressed }) => [styles.gWhite, pressed && { opacity: 0.9 }]}>
+          <Text style={styles.gWhiteText}>Registrati</Text></Pressable>
+        <Pressable onPress={() => go('login')} accessibilityRole="button" style={({ pressed }) => [styles.gOutline, pressed && { opacity: 0.8 }]}>
+          <Text style={styles.gOutlineText}>Accedi</Text></Pressable>
+      </View>
+    </SafeAreaView>;
+
     return <SafeAreaView style={styles.aSafe} edges={['top', 'bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
       <BackKey onBack={back} />
       <View style={styles.aBar}>
-        <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={page === 'welcome' ? 'Chiudi' : 'Indietro'} hitSlop={10}
+        <Pressable onPress={back} accessibilityRole="button" accessibilityLabel="Indietro" hitSlop={10}
           style={({ pressed }) => [styles.aBarButton, pressed && { opacity: 0.6 }]}>
-          <Icon name={page === 'welcome' ? 'close' : 'back'} size={page === 'welcome' ? 24 : 28} color={colors.text} strokeWidth={1.9} />
+          <Icon name="back" size={28} color={colors.text} strokeWidth={1.9} />
         </Pressable>
       </View>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -453,6 +477,16 @@ const styles = StyleSheet.create({
   aBar: { height: 56, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center' },
   aBarButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   aBody: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 20, paddingBottom: 24 },
+  gSafe: { flex: 1, backgroundColor: colors.band, overflow: 'hidden' },
+  gTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 20 },
+  gClose: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.bandButton, alignItems: 'center', justifyContent: 'center' },
+  gTitle: { fontSize: 48, lineHeight: 52, letterSpacing: -1.6, fontFamily: fonts.display, color: '#FFFFFF' },
+  gText: { marginTop: 12, fontSize: 17, lineHeight: 24, fontFamily: fonts.sans, color: colors.bandMuted },
+  gButtons: { gap: 12, paddingHorizontal: 24, paddingTop: 32, paddingBottom: 24 },
+  gWhite: { height: 56, borderRadius: 28, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  gWhiteText: { fontSize: 17, fontFamily: fonts.sansBold, color: colors.text },
+  gOutline: { height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.45)', alignItems: 'center', justifyContent: 'center' },
+  gOutlineText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   aHero: { flex: 1, minHeight: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
   aHeroSign: { paddingVertical: 26, paddingHorizontal: 30, borderRadius: 22, backgroundColor: SIGN.ground },
   aSign: { alignSelf: 'flex-start', marginBottom: 26, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 16, backgroundColor: SIGN.ground },

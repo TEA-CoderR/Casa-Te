@@ -944,5 +944,10 @@ const dict: Record<string, string> = {
   "Calcolato sui prodotti dopo Prezzi Soci e codici sconto, spedizione esclusa. 0 = nessun minimo.": "Calculated on products after member prices and discount codes, shipping excluded. 0 = no minimum.",
   "Inserisci un importo tra 0 e 1000 €.": "Enter an amount between €0 and €1000.",
   "Ordine minimo salvato.": "Minimum order saved.",
+  "Informazioni di etichetta": "Label information",
+  "Copia dalla confezione: indicazioni di pericolo e consigli di prudenza (detersivi, candeggina, spray), frase sui biocidi (insetticidi), composizione e istruzioni (cibo per animali). Il cliente le legge prima di ordinare.": "Copy from the pack: hazard and precautionary statements (detergents, bleach, sprays), the biocide sentence (insecticides), composition and instructions (pet food). The customer reads them before ordering.",
+  "Avvertenza in etichetta": "Signal word on the label",
+  "Attenzione": "Warning",
+  "Pericolo": "Danger",
 };
 export default dict;

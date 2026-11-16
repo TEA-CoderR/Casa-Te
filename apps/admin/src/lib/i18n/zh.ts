@@ -944,5 +944,10 @@ const dict: Record<string, string> = {
   "Calcolato sui prodotti dopo Prezzi Soci e codici sconto, spedizione esclusa. 0 = nessun minimo.": "按会员价和优惠码之后的商品金额计算，不含运费。0 = 不设下限。",
   "Inserisci un importo tra 0 e 1000 €.": "请输入 0 到 1000 € 之间的金额。",
   "Ordine minimo salvato.": "最低订单金额已保存。",
+  "Informazioni di etichetta": "标签信息",
+  "Copia dalla confezione: indicazioni di pericolo e consigli di prudenza (detersivi, candeggina, spray), frase sui biocidi (insetticidi), composizione e istruzioni (cibo per animali). Il cliente le legge prima di ordinare.": "照包装抄写：危险说明和防范说明（洗涤剂、漂白水、喷雾）、杀虫剂的固定提示语、宠物食品的成分和喂食说明。顾客下单前能看到。",
+  "Avvertenza in etichetta": "标签上的警示词",
+  "Attenzione": "Attenzione（警告）",
+  "Pericolo": "Pericolo（危险）",
 };
 export default dict;
