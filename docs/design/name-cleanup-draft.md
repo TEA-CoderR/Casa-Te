@@ -28,7 +28,6 @@ Removed only when the code is clearly not part of the product:
 
 | Prima | Dopo |
 |---|---|
-| Ace Gentile 2,3 l PROF.LAVAND.MUSCH.C1913 | Ace Gentile 2,3 l PROF.LAVAND.MUSCH. |
 | Last Piatti 950 ml Limone C0006 | Last Piatti 950 ml Limone |
 | Venus Ig. intima 200 ml Lenitivo C1365 | Venus Ig. intima 200 ml Lenitivo |
 | Cuoca Stone Padella 22 cm 9908 | Cuoca Stone Padella 22 cm |
