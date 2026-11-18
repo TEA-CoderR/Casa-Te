@@ -98,6 +98,7 @@ export default function RootLayout() {
         <Stack.Screen name="account/addresses" options={{ title: 'Indirizzi' }} />
         <Stack.Screen name="account/delete" options={{ title: 'Elimina account' }} />
         <Stack.Screen name="legal/[doc]" options={{ title: 'Informazioni legali' }} />
+        <Stack.Screen name="aiuto" options={{ title: 'Domande frequenti' }} />
         <Stack.Screen name="club" options={{ title: 'Casa & Te Club' }} />
         <Stack.Screen name="volantino" options={{ title: 'Volantino' }} />
         <Stack.Screen name="benvenuto" options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />

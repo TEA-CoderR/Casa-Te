@@ -13,7 +13,7 @@ import { useClubMember } from '@/store/club';
 export function useClubSettings() {
   const q = useQuery('app-settings', fetchAppSettings);
   return { enabled: q.data?.club_enabled ?? true, tagline: q.data?.club_tagline ?? 'Vantaggi esclusivi e offerte dedicate ai nostri clienti.',
-    minOrderCents: q.data?.min_order_cents ?? 0 };
+    minOrderCents: q.data?.min_order_cents ?? 0, whatsapp: q.data?.support_whatsapp ?? null };
 }
 
 export function useStores() {

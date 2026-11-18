@@ -143,6 +143,39 @@ function MinOrderCard() {
   </section>;
 }
 
+/** Customer service WhatsApp number (plan v3 X8): shown on the app's FAQ page while set. */
+function SupportCard() {
+  const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
+  const [value, setValue] = useState('');
+  const [error, setError] = useState('');
+  const [done, setDone] = useState('');
+  useEffect(() => { if (settings.data) setValue(settings.data.support_whatsapp ?? ''); }, [settings.data]);
+  // "333 123 4567", "+39 333…", "0039…" → "+39333…".
+  const normal = (() => { const d = value.replace(/[^\d+]/g, ''); if (!d) return ''; if (d.startsWith('+')) return d; if (d.startsWith('00')) return `+${d.slice(2)}`; return `+39${d}`; })();
+  const valid = normal === '' || /^\+[1-9]\d{6,14}$/.test(normal);
+  const save = async () => {
+    setError(''); setDone('');
+    if (!valid) { setError(t('Numero non valido: scrivilo come +39 333 123 4567.')); return; }
+    const { error: err } = await supabase.from('app_settings').update({ support_whatsapp: normal || null }).eq('id', true);
+    if (err) { setError(errorText(err)); return; }
+    setDone(t('Numero salvato.'));
+    void settings.reload();
+  };
+  return <section className="panel">
+    <div className="panel-head"><h2>{t('Assistenza clienti')}</h2></div>
+    {!settings.data ? <Loading /> : <>
+      <Field label={t('Numero WhatsApp')} hint={t('Compare nell’app, in Domande frequenti, come “Scrivici su WhatsApp”. Vuoto = non mostrato.')}>
+        <input inputMode="tel" value={value} onChange={(e) => setValue(e.target.value)} placeholder="+39 333 123 4567" style={{ maxWidth: 220 }} />
+      </Field>
+      {error && <Notice tone="error">{error}</Notice>}
+      {done && <Success onDismiss={() => setDone('')}>{done}</Success>}
+      <div className="row" style={{ marginTop: 12 }}>
+        <button onClick={save} disabled={!valid || normal === (settings.data.support_whatsapp ?? '')}>{t('Salva')}</button>
+      </div>
+    </>}
+  </section>;
+}
+
 /** Safety stock (owner 18/11): units of every product kept on the shelf, not sold online. */
 function SafetyStockCard() {
   const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
@@ -223,6 +256,7 @@ export function SettingsPage() {
       <AccountCard />
       {manager && <ShopSettingsCard />}
       {manager && <MinOrderCard />}
+      {manager && <SupportCard />}
       {manager && <SafetyStockCard />}
       {manager && <AppGateCard />}
       {manager && <section className="panel">

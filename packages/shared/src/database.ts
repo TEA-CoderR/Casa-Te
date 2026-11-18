@@ -171,6 +171,8 @@ export type AppSettingsRow = {
   min_app_version: string | null;
   /** Units of every product kept on the shelf, not sold online (categories and products can override it). */
   safety_stock: number;
+  /** Customer service WhatsApp number (+39…), shown on the FAQ page when set. */
+  support_whatsapp: string | null;
   /** When set, the shop is in maintenance: the app shows it full screen and new orders are refused. */
   maintenance_message: string | null;
   updated_at: Timestamp; updated_by: Uuid | null;

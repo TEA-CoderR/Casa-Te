@@ -151,9 +151,10 @@ export default function ProfileScreen() {
       <Row icon="shield" title="Password" subtitle="Imposta o cambia la password di accesso" onPress={() => go('/account/password')} last />
     </Group>}
     <Group title="Assistenza e informazioni">
+      <Row icon="help" title="Domande frequenti" subtitle="Ritiro, pagamento, resi e contatti" onPress={() => go('/aiuto')} />
       <Row icon="truck" title="Spedizioni e ritiro" subtitle="Tariffe, tempi e ritiro in negozio" onPress={() => go('/legal/shipping')} />
       <Row icon="shield" title="Condizioni di vendita e resi" onPress={() => go('/legal/terms')} />
-      <Row icon="help" title="Informativa privacy" onPress={() => go('/legal/privacy')} last />
+      <Row icon="lock" title="Informativa privacy" onPress={() => go('/legal/privacy')} last />
     </Group>
     {user && <View style={[styles.session, wide && { alignItems: 'center', flexDirection: 'row', gap: 28 }]}>
       <Pressable onPress={() => setAskSignOut(true)} accessibilityRole="button"
@@ -240,7 +241,8 @@ export default function ProfileScreen() {
           <ListRow title="Password" subtitle="Imposta o cambia la password" onPress={() => go('/account/password')} />
         </ListGroup>}
         <ListGroup title="Assistenza e informazioni">
-          <ListRow first title="Spedizioni e ritiro" subtitle="Tariffe, tempi e ritiro in negozio" onPress={() => go('/legal/shipping')} />
+          <ListRow first title="Domande frequenti" subtitle="Ritiro, pagamento, resi e contatti" onPress={() => go('/aiuto')} />
+          <ListRow title="Spedizioni e ritiro" subtitle="Tariffe, tempi e ritiro in negozio" onPress={() => go('/legal/shipping')} />
           <ListRow title="Condizioni di vendita e resi" onPress={() => go('/legal/terms')} />
           <ListRow title="Informativa privacy" onPress={() => go('/legal/privacy')} />
         </ListGroup>
