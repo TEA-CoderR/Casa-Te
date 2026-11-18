@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Icon } from '@/components/Icon';
 import { BrandLogo } from '@/components/BrandLogo';
+import { googleEnabled, signInWithGoogle } from '@/lib/googleAuth';
 
 /** The logo in its own colours: lime lettering on the shop-sign green. */
 const SIGN = { ground: colors.sign, ink: colors.signInk };
@@ -72,6 +73,18 @@ export default function SignInScreen() {
     if (marketing) await supabase.from('profiles').update({ marketing_opt_in: true }).eq('id', userId);
     const target = typeof next === 'string' && next.startsWith('/') ? next : '/profile';
     router.replace(target as never);
+  };
+  // Google sign-in, shown only once it is switched on in Supabase.
+  const [google, setGoogle] = useState(false);
+  useEffect(() => { void googleEnabled().then(setGoogle); }, []);
+  const withGoogle = async () => {
+    setBusy(true); setError(''); setInfo('');
+    try {
+      const uid = await signInWithGoogle(webRedirect(next));
+      if (uid) await done(uid);
+    } catch {
+      setError('Accesso con Google non riuscito. Riprova o usa email e password.');
+    } finally { setBusy(false); }
   };
   const switchMode = (m: Mode) => { setMode(m); setAwaiting(null); setError(''); setInfo(''); setCode(''); setPassword2(''); };
 
@@ -304,9 +317,16 @@ export default function SignInScreen() {
       </View>
     </View>;
 
-    const footer = page === 'welcome' ? <View style={styles.aPair}>
-      <AuthButton title="Accedi" kind="outline" onPress={() => go('login')} style={{ flex: 1 }} />
-      <AuthButton title="Registrati" onPress={() => go('register')} style={{ flex: 1 }} />
+    const footer = page === 'welcome' ? <View>
+      <View style={styles.aPair}>
+        <AuthButton title="Accedi" kind="outline" onPress={() => go('login')} style={{ flex: 1 }} />
+        <AuthButton title="Registrati" onPress={() => go('register')} style={{ flex: 1 }} />
+      </View>
+      {google && <>
+        <AuthButton title="Continua con Google" kind="outline" busy={busy} onPress={withGoogle} style={{ marginTop: 12 }} />
+        {errorLine}
+        <View style={{ marginTop: 10 }}>{legal}</View>
+      </>}
     </View>
     : page === 'login' ? <AuthButton title="Accedi" busy={busy} onPress={signIn} />
     : page === 'code' ? <AuthButton title="Invia il codice" busy={busy} onPress={sendCode} />
@@ -370,6 +390,7 @@ export default function SignInScreen() {
       </>}
       <View style={{ marginTop: 16 }}>
         <PrimaryButton title={mode === 'register' ? 'Crea account' : 'Accedi'} loading={busy} onPress={mode === 'register' ? register : signIn} />
+        {google && <View style={{ marginTop: 10 }}><SecondaryButton title="Continua con Google" onPress={withGoogle} disabled={busy} /></View>}
       </View>
       {mode === 'password' ? <>
         <View style={styles.links}>
