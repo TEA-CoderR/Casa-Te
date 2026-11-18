@@ -114,6 +114,22 @@ export async function fetchOffers(storeId: string | null, limit: number): Promis
   return items.filter((p) => pct(p) > 0).sort((a, b) => rank(a) - rank(b) || pct(b) - pct(a)).slice(0, limit);
 }
 
+/**
+ * "Fotografa un prodotto": the text read from a pack, matched against the catalogue in the database
+ * (match_label_text). `sure` = open the product straight away: its barcode was read, or one product stands out.
+ */
+export async function matchLabelText(text: string, storeId: string | null): Promise<{ items: CatalogProduct[]; sure: boolean }> {
+  const hits = unwrap(await supabase.rpc('match_label_text', { p_text: text.slice(0, 4000), p_store: storeId, p_limit: 6 })) as
+    Array<{ product_id: string; score: number; exact: boolean }>;
+  if (!hits.length) return { items: [], sure: false };
+  const { items } = await fetchProducts({ storeId, ids: hits.map((h) => h.product_id), pageSize: hits.length });
+  const byId = new Map(items.map((p) => [p.id, p]));
+  const ordered = hits.map((h) => byId.get(h.product_id)).filter((p): p is CatalogProduct => !!p);
+  const [a, b] = hits.map((h) => Number(h.score));
+  const sure = hits[0].exact || (a >= 0.9 && (b === undefined || a - b >= 0.25));
+  return { items: ordered, sure: sure && ordered[0]?.id === hits[0].product_id };
+}
+
 export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogProduct[]; hasMore: boolean; total: number | null; fuzzy?: boolean }> {
   const pageSize = q.pageSize ?? 40;
   const from = (q.page ?? 0) * pageSize;

@@ -24,6 +24,7 @@ import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useUser } from '@/store/session';
 import { HomeDesktop } from '@/components/site/HomeDesktop';
 import { ALL_PRODUCTS, productList } from '@/lib/links';
+import { canReadLabels } from '@/lib/labelReader';
 
 /** Desktop web gets the catalogue-style home; phones and the native app keep the phone home. */
 export default function HomeScreen() {
@@ -131,7 +132,11 @@ function HomePhone() {
       </View>}
     </Pressable>
     <SearchField onPress={() => openCatalog({ search: '1' })} style={{ marginTop: 20 }}
-      right={<Pressable onPress={() => openCatalog({ search: '1', code: '1' })} accessibilityRole="button" accessibilityLabel="Cerca per codice a barre" hitSlop={4} style={styles.scan}>
+      // Phones that can read text in a photo: photograph a product to find it; otherwise (web) search by code.
+      right={canReadLabels
+        ? <Pressable onPress={() => router.push('/foto')} accessibilityRole="button" accessibilityLabel="Fotografa un prodotto" hitSlop={4} style={styles.scan}>
+          <Icon name="camera" size={19} color={colors.text} strokeWidth={2} /></Pressable>
+        : <Pressable onPress={() => openCatalog({ search: '1', code: '1' })} accessibilityRole="button" accessibilityLabel="Cerca per codice a barre" hitSlop={4} style={styles.scan}>
         <Icon name="scan" size={19} color={colors.text} strokeWidth={2} />
       </Pressable>} />
   </View>;
