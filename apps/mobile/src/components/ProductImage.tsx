@@ -5,12 +5,18 @@ import { ProductVisual } from './ProductVisual';
 import { productImageCells } from '@/data/productImages';
 import { Icon } from './Icon';
 import { colors, radius } from '@/config/theme';
+import { useClubSettings } from '@/lib/hooks';
+
+/** "…/01.webp" -> "…/01_t.webp" (the 480 px copy made on the image server, tools/image-thumbnails). */
+export const thumbnailUrl = (uri: string) => uri.replace(/\/(\d{2})\.webp$/, '/$1_t.webp');
 
 /**
  * Product photo from storage/CDN. Falls back to the demo illustration sheet for the seeded
  * placeholder SKUs, and to a neutral icon otherwise.
  */
-export function ProductImage({ uri, sku, label, inset = 0.12, aspect = 1, blend, backdrop }: { uri: string | null; sku?: string | null; label?: string; inset?: number; aspect?: number; blend?: boolean;
+export function ProductImage({ uri, sku, label, inset = 0.12, aspect = 1, blend, backdrop, thumb }: { uri: string | null; sku?: string | null; label?: string; inset?: number; aspect?: number; blend?: boolean;
+  /** Small sizes (cards): the thumbnail when the shop has them, the full photo if it is missing. */
+  thumb?: boolean;
   /** With `blend`: the colour the white studio background turns into (default white). */
   backdrop?: string }) {
   // blend: on a tinted backdrop, white studio backgrounds of product photos take the backdrop colour.
@@ -20,12 +26,16 @@ export function ProductImage({ uri, sku, label, inset = 0.12, aspect = 1, blend,
   const backdropStyle = blend ? { backgroundColor: backdrop ?? colors.photo } : null;
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  useEffect(() => { setFailed(false); setLoaded(false); }, [uri]);
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const { thumbnails } = useClubSettings();
+  useEffect(() => { setFailed(false); setLoaded(false); setThumbFailed(false); }, [uri]);
+  const small = !!uri && thumb && thumbnails && !thumbFailed && /\/\d{2}\.webp$/.test(uri) ? thumbnailUrl(uri) : null;
   // Until the photo arrives, a quiet grey tile instead of a white hole (plan v2 A4).
   const waiting = !loaded && !blend ? { backgroundColor: colors.well, borderRadius: radius.sm } : null;
   if (uri && !failed) {
     return <View style={[{ width: '100%', aspectRatio: aspect, padding: `${inset * 100}%` as `${number}%` }, backdropStyle, waiting]}>
-      <RemoteImage uri={uri} style={[{ width: '100%', height: '100%' }, blendStyle]} label={label} onFailed={() => setFailed(true)} onLoad={() => setLoaded(true)} />
+      <RemoteImage uri={small ?? uri} style={[{ width: '100%', height: '100%' }, blendStyle]} label={label}
+        onFailed={() => (small ? setThumbFailed(true) : setFailed(true))} onLoad={() => setLoaded(true)} />
     </View>;
   }
   if (sku && productImageCells[sku] !== undefined) return <ProductVisual id={sku} label={label} inset={inset} aspect={aspect} blend={blend} />;

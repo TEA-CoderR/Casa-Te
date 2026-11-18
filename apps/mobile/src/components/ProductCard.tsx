@@ -83,7 +83,7 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
 
   if (variant === 'list') return <View style={styles.row}>
     <Link href={`/product/${product.id}`} asChild><Pressable style={styles.rowLink} accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
-      <View style={styles.rowMedia}><ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.08} /></View>
+      <View style={styles.rowMedia}><ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.08} thumb /></View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         {!!product.brand && <Text style={styles.meta}>{product.brand}</Text>}
@@ -102,7 +102,7 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
         {({ hovered }: WebState) => <>
           <View style={styles.plate}>
             <View style={[hovered && { transform: [{ scale: 1.035 }] }, transition('transform', 600)]}>
-              <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={feature ? 0.1 : 0.09} aspect={feature ? 0.9 : 1.12} blend />
+              <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={feature ? 0.1 : 0.09} aspect={feature ? 0.9 : 1.12} blend thumb={!feature} />
             </View>
             {!!badge && <View style={[styles.discount, styles.discountDesk, feature && styles.discountBig]}>
               <Text style={[styles.discountText, styles.discountTextDesk, feature && { fontSize: 17 }]} accessibilityLabel={badge.startsWith('Soci') ? `Prezzo Soci, ${badge.slice(5)}` : `Sconto ${badge}`}>{badge}</Text></View>}
@@ -144,7 +144,7 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={[styles.media, { height: rail ? 136 : 132 }]}>
         <View style={{ width: rail ? 120 : 118, height: rail ? 120 : 118 }}>
-          <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />
+          <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} thumb />
         </View>
         {!!phoneBadge && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
           <Text style={styles.discountText} accessibilityLabel={phoneBadge.startsWith('Soci') ? `Prezzo Soci, ${phoneBadge.slice(5)}` : `Sconto ${phoneBadge}`}>{phoneBadge}</Text></View>}

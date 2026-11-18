@@ -273,10 +273,10 @@ export async function fetchAppGate(): Promise<Pick<AppSettingsRow, 'min_app_vers
 }
 
 /** Public shop settings (club on/off and tagline, minimum order). */
-export async function fetchAppSettings(): Promise<Pick<AppSettingsRow, 'club_enabled' | 'club_tagline' | 'min_order_cents' | 'support_whatsapp'>> {
-  const row = unwrap(await supabase.from('app_settings').select('club_enabled,club_tagline,min_order_cents,support_whatsapp').maybeSingle()) as
-    Pick<AppSettingsRow, 'club_enabled' | 'club_tagline' | 'min_order_cents' | 'support_whatsapp'> | null;
-  return row ?? { club_enabled: true, club_tagline: CLUB_TAGLINE, min_order_cents: 0, support_whatsapp: null };
+export async function fetchAppSettings(): Promise<Pick<AppSettingsRow, 'club_enabled' | 'club_tagline' | 'min_order_cents' | 'support_whatsapp' | 'image_thumbnails'>> {
+  const row = unwrap(await supabase.from('app_settings').select('club_enabled,club_tagline,min_order_cents,support_whatsapp,image_thumbnails').maybeSingle()) as
+    Pick<AppSettingsRow, 'club_enabled' | 'club_tagline' | 'min_order_cents' | 'support_whatsapp' | 'image_thumbnails'> | null;
+  return row ?? { club_enabled: true, club_tagline: CLUB_TAGLINE, min_order_cents: 0, support_whatsapp: null, image_thumbnails: false };
 }
 
 /** The one-hour pickup slots the store offers now (today and the next two days). */

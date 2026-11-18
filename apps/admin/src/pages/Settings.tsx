@@ -143,6 +143,29 @@ function MinOrderCard() {
   </section>;
 }
 
+/** Product photo thumbnails (plan v3 L9): on once the image server has made the copies (tools/image-thumbnails). */
+function ImagesCard() {
+  const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
+  const [error, setError] = useState('');
+  const toggle = async (on: boolean) => {
+    setError('');
+    const { error: err } = await supabase.from('app_settings').update({ image_thumbnails: on }).eq('id', true);
+    if (err) { setError(errorText(err)); return; }
+    void settings.reload();
+  };
+  return <section className="panel">
+    <div className="panel-head"><h2>{t('Immagini')}</h2></div>
+    {!settings.data ? <Loading /> : <>
+      <label className="row" style={{ gap: 8, alignItems: 'center' }}>
+        <input type="checkbox" checked={settings.data.image_thumbnails} onChange={(e) => void toggle(e.target.checked)} />
+        {t('Usa le miniature nelle schede prodotto')}
+      </label>
+      <p className="muted" style={{ marginTop: 8 }}>{t('Attivalo solo dopo aver creato le miniature sul server delle immagini (tools/image-thumbnails). Se una miniatura manca, si vede la foto intera.')}</p>
+      {error && <Notice tone="error">{error}</Notice>}
+    </>}
+  </section>;
+}
+
 /** Customer service WhatsApp number (plan v3 X8): shown on the app's FAQ page while set. */
 function SupportCard() {
   const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
@@ -257,6 +280,7 @@ export function SettingsPage() {
       {manager && <ShopSettingsCard />}
       {manager && <MinOrderCard />}
       {manager && <SupportCard />}
+      {manager && <ImagesCard />}
       {manager && <SafetyStockCard />}
       {manager && <AppGateCard />}
       {manager && <section className="panel">

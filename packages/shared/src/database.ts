@@ -173,6 +173,8 @@ export type AppSettingsRow = {
   safety_stock: number;
   /** Customer service WhatsApp number (+39…), shown on the FAQ page when set. */
   support_whatsapp: string | null;
+  /** Product cards load the 480 px copies of the photos ("01_t.webp"), once the image server has made them. */
+  image_thumbnails: boolean;
   /** When set, the shop is in maintenance: the app shows it full screen and new orders are refused. */
   maintenance_message: string | null;
   updated_at: Timestamp; updated_by: Uuid | null;

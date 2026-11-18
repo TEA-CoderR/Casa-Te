@@ -28,6 +28,7 @@ import { BrandHeader, HeaderBack, HeaderButton } from '@/components/BrandHeader'
 import { SiteHeader } from '@/components/site/SiteHeader';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SITE_WIDTH, type WebState } from '@/components/site/shared';
+import Head from 'expo-router/head';
 import { ALL_PRODUCTS, productList } from '@/lib/links';
 import { shownProduct, useClubMember } from '@/store/club';
 
@@ -92,6 +93,13 @@ export default function ProductDetailScreen() {
   const addToCart = () => { add(product.id, quantity); setAdded(quantity); setQuantity(1); };
 
   // One buy box, placed beside the image on desktop and in a sticky footer on phones.
+  // Web: the tab title and the description a shared link shows (search engines and chats that run scripts).
+  const head = Platform.OS === 'web' ? <Head>
+    <title>{`${product.name} · CASA & TE`}</title>
+    <meta name="description" content={`${product.name}: ${formatEuro(product.price_cents)} da CASA & TE, ritiro gratis in negozio.`} />
+    <meta property="og:title" content={product.name} />
+    {!!product.images[0] && <meta property="og:image" content={product.images[0]} />}
+  </Head> : null;
   const buy = <View style={{ gap: 10 }}>
     {added > 0 && <View style={styles.added} accessibilityLiveRegion="polite" accessibilityRole="alert">
       <View style={styles.addedTick}><Icon name="check" size={15} color={colors.text} strokeWidth={3} /></View>
@@ -238,6 +246,7 @@ export default function ProductDetailScreen() {
     return <Screen stack ground={colors.page} footer={phoneBuy} header={<View style={{ height: insets.top, backgroundColor: '#FFFFFF' }} />}
       contentContainerStyle={{ padding: 0, paddingBottom: 20 }}>
       <Stack.Screen options={{ title: product.name, headerShown: false }} />
+      {head}
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
       {/* A square stage as wide as the screen, the photo with an 8% margin (plan §5.3). */}
       <View style={[styles.stage, { height: screenW }]}>
@@ -313,6 +322,7 @@ export default function ProductDetailScreen() {
   return <Screen stack footer={wide ? undefined : buy} maxWidth={wide ? SITE_WIDTH - 80 : undefined}
     contentContainerStyle={wide ? { paddingHorizontal: 40, paddingTop: 0 } : undefined} after={wide ? <SiteFooter /> : undefined} bleed={40}>
     <Stack.Screen options={wide ? { title: product.name, headerShown: true, header: () => <SiteHeader /> } : { title: '', headerShown: false }} />
+    {head}
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
     {wide && <View style={styles.crumbs}>
       {crumb('Home', () => router.push('/'))}<Text style={styles.crumbSep}>/</Text>
