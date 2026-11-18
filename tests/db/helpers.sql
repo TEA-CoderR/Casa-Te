@@ -78,3 +78,5 @@ insert into public.staff_members (user_id, role, store_id) values
 
 -- The minimum order (14/11/2026) is tested in 28_pickup_slots_pay_in_store.sql; the other suites use small carts.
 update public.app_settings set min_order_cents = 0;
+-- Other suites sell down to the last unit; 32_safety_stock tests the shelf reserve.
+update public.app_settings set safety_stock = 0;

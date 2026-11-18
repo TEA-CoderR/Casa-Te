@@ -143,6 +143,38 @@ function MinOrderCard() {
   </section>;
 }
 
+/** Safety stock (owner 18/11): units of every product kept on the shelf, not sold online. */
+function SafetyStockCard() {
+  const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
+  const [value, setValue] = useState('');
+  const [error, setError] = useState('');
+  const [done, setDone] = useState('');
+  useEffect(() => { if (settings.data) setValue(String(settings.data.safety_stock ?? 0)); }, [settings.data]);
+  const n = Number(value);
+  const valid = /^\d{1,4}$/.test(value) && n <= 1000;
+  const save = async () => {
+    setError(''); setDone('');
+    if (!valid) { setError(t('Inserisci un numero tra 0 e 1000.')); return; }
+    const { error: err } = await supabase.from('app_settings').update({ safety_stock: n }).eq('id', true);
+    if (err) { setError(errorText(err)); return; }
+    setDone(t('Scorta di sicurezza salvata.'));
+    void settings.reload();
+  };
+  return <section className="panel">
+    <div className="panel-head"><h2>{t('Scorta di sicurezza')}</h2></div>
+    {!settings.data ? <Loading /> : <>
+      <Field label={t('Pezzi che restano sullo scaffale')} hint={t('Per ogni prodotto e negozio, questi pezzi non si vendono online. Si può cambiare per categoria o per prodotto. 0 = si vende tutto.')}>
+        <input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, ''))} style={{ maxWidth: 140 }} />
+      </Field>
+      {error && <Notice tone="error">{error}</Notice>}
+      {done && <Success onDismiss={() => setDone('')}>{done}</Success>}
+      <div className="row" style={{ marginTop: 12 }}>
+        <button onClick={save} disabled={!valid || n === settings.data.safety_stock}>{t('Salva')}</button>
+      </div>
+    </>}
+  </section>;
+}
+
 /** Forced update and maintenance (plan v3 L5): read by the phone app at start and when it comes back to the front. */
 function AppGateCard() {
   const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
@@ -191,6 +223,7 @@ export function SettingsPage() {
       <AccountCard />
       {manager && <ShopSettingsCard />}
       {manager && <MinOrderCard />}
+      {manager && <SafetyStockCard />}
       {manager && <AppGateCard />}
       {manager && <section className="panel">
         <div className="panel-head"><h2>{t('Altre impostazioni')}</h2></div>

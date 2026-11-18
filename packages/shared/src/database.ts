@@ -54,6 +54,8 @@ export type CategoryRow = {
   id: Uuid; slug: string; name: string; parent_id: Uuid | null; sort: number; active: boolean;
   /** Shown among the (max 8) departments on the shop's home page. */
   show_on_home: boolean;
+  /** Units kept on the shelf for its products (null = the parent's or the shop's value). */
+  safety_stock?: number | null;
   /** Cover photo for the home circle (storage path in product-images, or https URL). */
   image_path: string | null;
   /** Group heading of a subcategory inside its department ("Corpo", "Capelli"…); null = no heading. */
@@ -74,6 +76,8 @@ export type ProductRow = {
   label_info?: string | null;
   /** Signal word on the label of a hazardous mixture. */
   label_signal?: 'attenzione' | 'pericolo' | null;
+  /** Units kept on the shelf, not sold online (null = the category's or the shop's value). */
+  safety_stock?: number | null;
   /** Pack size for the unit price (e.g. 500 ml). Both set or both null. */
   unit_quantity: number | null; unit: ProductUnit | null;
   color: string | null; highlights: ProductHighlight[];
@@ -165,6 +169,8 @@ export type AppSettingsRow = {
   min_order_cents: number;
   /** Apps older than this (x.y.z) must update first; null = any version. */
   min_app_version: string | null;
+  /** Units of every product kept on the shelf, not sold online (categories and products can override it). */
+  safety_stock: number;
   /** When set, the shop is in maintenance: the app shows it full screen and new orders are refused. */
   maintenance_message: string | null;
   updated_at: Timestamp; updated_by: Uuid | null;

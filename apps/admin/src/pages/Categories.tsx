@@ -25,7 +25,7 @@ export function CategoriesPage() {
     if (!edit?.name?.trim()) return;
     setBusy(true); setError('');
     const row = { name: edit.name.trim(), slug: edit.slug?.trim() || slugify(edit.name), sort: Number(edit.sort ?? 0), active: edit.active ?? true, parent_id: edit.parent_id || null,
-      show_on_home: !edit.parent_id && (edit.show_on_home ?? false), image_path: edit.parent_id ? null : edit.image_path ?? null };
+      show_on_home: !edit.parent_id && (edit.show_on_home ?? false), safety_stock: edit.safety_stock ?? null, image_path: edit.parent_id ? null : edit.image_path ?? null };
     try {
       if (edit.id) unwrap(await supabase.from('categories').update(row).eq('id', edit.id));
       else unwrap(await supabase.from('categories').insert(row));
@@ -72,6 +72,9 @@ export function CategoriesPage() {
         <Field label={t('Categoria padre')}><select value={edit.parent_id ?? ''} onChange={(e) => setEdit({ ...edit, parent_id: e.target.value || null })}>
           <option value="">{t('— nessuna (categoria principale) —')}</option>{categories.data?.filter((c) => c.id !== edit.id && !c.parent_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
         <Field label={t('Ordine di visualizzazione')}><input type="number" value={edit.sort ?? 0} onChange={(e) => setEdit({ ...edit, sort: Number(e.target.value) })} /></Field>
+        <Field label={t('Scorta di sicurezza')} hint={t('Pezzi di ogni prodotto che restano sullo scaffale e non si vendono online; vale anche per le sottocategorie. Vuoto = valore del negozio.')}>
+          <input inputMode="numeric" value={edit.safety_stock ?? ''} placeholder={t('come il negozio')}
+            onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); setEdit({ ...edit, safety_stock: v === '' ? null : Math.min(Number(v), 1000) }); }} /></Field>
         <label className="check"><input type="checkbox" checked={edit.active ?? true} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> {t('Visibile ai clienti')}</label>
         {!edit.parent_id && <label className="check"><input type="checkbox" checked={edit.show_on_home ?? false} onChange={(e) => setEdit({ ...edit, show_on_home: e.target.checked })} />
           {t('Mostra in home ({n}/8 scelte; l\'ordine segue il campo "Ordine")', { n: homeCount })}</label>}

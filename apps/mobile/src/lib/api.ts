@@ -45,7 +45,8 @@ const PRODUCT_FIELDS =
   'id,sku,name,description,label_info,label_signal,brand,category_id,price_cents,compare_at_price_cents,weight_g,max_per_order,featured,featured_rank,offer_rank,' +
   'unit_quantity,unit,color,highlights,variant_group,variant_title,variant_label,rating_avg,rating_count,' +
   'member_price_cents,member_price_ends_on,' +
-  'product_images(path,sort),inventory(quantity,store_id)';
+  // `quantity` here is what can be sold online: the store's stock minus its safety stock (inventory.sellable).
+  'product_images(path,sort),inventory(quantity:sellable,store_id)';
 
 type RawProduct = Omit<CatalogProduct, 'image' | 'images' | 'stock'> & {
   product_images: Array<{ path: string; sort: number }>;
@@ -156,7 +157,7 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
   let query = supabase.from('products')
     .select(inStockOnly ? PRODUCT_FIELDS.replace('inventory(', 'inventory!inner(') : PRODUCT_FIELDS, { count: 'exact' }).eq('active', true);
   if (q.storeId) query = query.eq('inventory.store_id', q.storeId);
-  if (inStockOnly) query = query.gt('inventory.quantity', 0);
+  if (inStockOnly) query = query.gt('inventory.sellable', 0);
   if (q.categoryId) query = query.eq('category_id', q.categoryId);
   if (q.categoryIds?.length) query = query.in('category_id', q.categoryIds);
   if (q.brands?.length) query = query.in('brand', q.brands);
