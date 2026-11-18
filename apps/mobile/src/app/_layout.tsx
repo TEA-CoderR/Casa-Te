@@ -10,6 +10,7 @@ import { router, Stack, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors, fonts } from '@/config/theme';
 import { PersistenceGate } from '@/components/PersistenceGate';
+import { AppGate } from '@/components/AppGate';
 import { HeaderBack } from '@/components/BrandHeader';
 import { Monogram } from '@/components/ClubPass';
 import { useLayout } from '@/lib/hooks';
@@ -63,6 +64,7 @@ export default function RootLayout() {
     <PersistenceGate>
       {/* Phones: every page starts with the green awning band (design F), so light status bar icons. */}
       <StatusBar style={wide ? 'dark' : 'light'} />
+      <AppGate>
       <Stack
         screenOptions={{
           headerTintColor: wide ? colors.text : colors.bandText,
@@ -100,6 +102,7 @@ export default function RootLayout() {
         <Stack.Screen name="volantino" options={{ title: 'Volantino' }} />
         <Stack.Screen name="benvenuto" options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />
       </Stack>
+      </AppGate>
     </PersistenceGate>
   );
 }

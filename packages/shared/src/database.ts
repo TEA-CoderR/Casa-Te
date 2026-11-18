@@ -163,6 +163,10 @@ export type AppSettingsRow = {
   id: true; low_stock_threshold: number; club_enabled: boolean; club_tagline: string;
   /** Minimum order on the goods (after member prices and coupon, before shipping). */
   min_order_cents: number;
+  /** Apps older than this (x.y.z) must update first; null = any version. */
+  min_app_version: string | null;
+  /** When set, the shop is in maintenance: the app shows it full screen and new orders are refused. */
+  maintenance_message: string | null;
   updated_at: Timestamp; updated_by: Uuid | null;
 };
 

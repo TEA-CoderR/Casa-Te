@@ -264,6 +264,13 @@ export async function setClubMembership(join: boolean): Promise<string | null> {
 
 const CLUB_TAGLINE = 'Vantaggi esclusivi e offerte dedicate ai nostri clienti.';
 
+/** Minimum app version and maintenance message (AppGate), read again when the app comes back to the foreground. */
+export async function fetchAppGate(): Promise<Pick<AppSettingsRow, 'min_app_version' | 'maintenance_message'>> {
+  const row = unwrap(await supabase.from('app_settings').select('min_app_version,maintenance_message').maybeSingle()) as
+    Pick<AppSettingsRow, 'min_app_version' | 'maintenance_message'> | null;
+  return row ?? { min_app_version: null, maintenance_message: null };
+}
+
 /** Public shop settings (club on/off and tagline, minimum order). */
 export async function fetchAppSettings(): Promise<Pick<AppSettingsRow, 'club_enabled' | 'club_tagline' | 'min_order_cents'>> {
   const row = unwrap(await supabase.from('app_settings').select('club_enabled,club_tagline,min_order_cents').maybeSingle()) as

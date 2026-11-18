@@ -10,6 +10,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   insufficient_stock: 'Un prodotto si è appena esaurito. Controlla il carrello.',
   shipping_unavailable: 'Il metodo di consegna scelto non è disponibile per questo ordine.',
   total_too_low: "L'importo minimo dell'ordine è €0,50.",
+  shop_maintenance: 'Il negozio online è in manutenzione: riprova tra poco.',
   below_minimum_order: "Non hai ancora raggiunto l'ordine minimo: aggiungi altri prodotti.",
   invalid_payment_method: 'Il pagamento in negozio è possibile solo con il ritiro in negozio.',
   invalid_pickup_slot: "L'orario di ritiro scelto non è più disponibile: scegline un altro.",

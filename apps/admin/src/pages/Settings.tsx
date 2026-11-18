@@ -143,6 +143,44 @@ function MinOrderCard() {
   </section>;
 }
 
+/** Forced update and maintenance (plan v3 L5): read by the phone app at start and when it comes back to the front. */
+function AppGateCard() {
+  const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
+  const [version, setVersion] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [done, setDone] = useState('');
+  useEffect(() => { if (settings.data) { setVersion(settings.data.min_app_version ?? ''); setMessage(settings.data.maintenance_message ?? ''); } }, [settings.data]);
+  const versionOk = version.trim() === '' || /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(version.trim());
+  const changed = !!settings.data && ((settings.data.min_app_version ?? '') !== version.trim() || (settings.data.maintenance_message ?? '') !== message.trim());
+  const save = async () => {
+    setError(''); setDone('');
+    if (!versionOk) { setError(t('Scrivi la versione come 1.3.0, oppure lascia vuoto.')); return; }
+    const { error: err } = await supabase.from('app_settings')
+      .update({ min_app_version: version.trim() || null, maintenance_message: message.trim() || null }).eq('id', true);
+    if (err) { setError(errorText(err)); return; }
+    setDone(t('Impostazioni dell’app salvate.'));
+    void settings.reload();
+  };
+  return <section className="panel">
+    <div className="panel-head"><h2>{t('App: aggiornamento e manutenzione')}</h2></div>
+    {!settings.data ? <Loading /> : <>
+      <Field label={t('Versione minima dell’app')} hint={t('Le app più vecchie chiedono di aggiornare prima di continuare. Vuoto = tutte le versioni.')}>
+        <input value={version} onChange={(e) => setVersion(e.target.value)} placeholder="1.3.0" style={{ maxWidth: 140 }} />
+      </Field>
+      <Field label={t('Messaggio di manutenzione')} hint={t('Se scritto, app e sito mostrano solo questo messaggio e non si possono fare ordini. Vuoto = negozio aperto.')}>
+        <textarea rows={3} maxLength={300} value={message} onChange={(e) => setMessage(e.target.value)} />
+      </Field>
+      {message.trim() && <Notice tone="error">{t('Attenzione: salvando, il negozio online si chiude finché non svuoti il messaggio.')}</Notice>}
+      {error && <Notice tone="error">{error}</Notice>}
+      {done && <Success onDismiss={() => setDone('')}>{done}</Success>}
+      <div className="row" style={{ marginTop: 12 }}>
+        <button onClick={save} disabled={!changed}>{t('Salva')}</button>
+      </div>
+    </>}
+  </section>;
+}
+
 export function SettingsPage() {
   const { can } = useAuth();
   const manager = can('admin', 'manager');
@@ -153,6 +191,7 @@ export function SettingsPage() {
       <AccountCard />
       {manager && <ShopSettingsCard />}
       {manager && <MinOrderCard />}
+      {manager && <AppGateCard />}
       {manager && <section className="panel">
         <div className="panel-head"><h2>{t('Altre impostazioni')}</h2></div>
         <ul className="settings-links">
