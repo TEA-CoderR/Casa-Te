@@ -5,7 +5,7 @@ import { supabase, unwrap } from '../lib/supabase';
 import { findOrderIdByNumber, useAsync, useDebounced, useStores } from '../lib/data';
 import { downloadCsv, toCsv } from '../lib/csv';
 import { useAuth } from '../lib/auth';
-import { Empty, Loading, Notice, PageHead, Pager, PaymentBadge, StatusBadge, fmtDate } from '../components/ui';
+import { Empty, Loading, Notice, PageHead, Pager, PaymentBadge, SlotBadge, StatusBadge, fmtDate } from '../components/ui';
 import { t } from '../lib/i18n';
 
 const PAGE = 50;
@@ -71,13 +71,13 @@ export function OrdersPage() {
       }
       const eur = (c: number) => (c / 100).toFixed(2).replace('.', ',');
       downloadCsv(`ordini-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(all.map((o) => ({
-        numero: o.order_number, data: o.created_at, pagato_il: o.paid_at ?? '', stato: ORDER_STATUS_LABELS[o.status], pagamento: o.payment_status,
+        numero: o.order_number, data: o.created_at, pagato_il: o.paid_at ?? '', stato: ORDER_STATUS_LABELS[o.status], pagamento: o.payment_status, metodo_pagamento: o.payment_method === 'store' ? 'in negozio' : 'online', ritiro: o.pickup_slot_start ?? '',
         negozio: storeName(o.store_id), venditore: o.seller_snapshot?.legal_name ?? '', piva_venditore: o.seller_snapshot?.vat_number ?? '', registrato_in_cassa: o.pos_registered_at ?? '', consegna: FULFILMENT_LABELS[o.fulfilment], cliente: o.customer_name, email: o.customer_email, telefono: o.customer_phone,
         prodotti: eur(o.subtotal_cents), sconto: eur(o.discount_cents), spedizione: eur(o.shipping_cents), totale: eur(o.total_cents),
         rimborsato: eur(o.refunded_cents), coupon: o.coupon_code ?? '', fattura: o.invoice_requested ? 'si' : 'no',
         codice_fiscale: o.invoice_details?.tax_code ?? '', partita_iva: o.invoice_details?.vat_number ?? '', ragione_sociale: o.invoice_details?.company_name ?? '',
         sdi: o.invoice_details?.sdi_code ?? '', pec: o.invoice_details?.pec ?? '', stripe_payment_intent: o.stripe_payment_intent_id ?? '',
-      })), ['numero', 'data', 'pagato_il', 'stato', 'pagamento', 'negozio', 'venditore', 'piva_venditore', 'registrato_in_cassa', 'consegna', 'cliente', 'email', 'telefono', 'prodotti', 'sconto', 'spedizione',
+      })), ['numero', 'data', 'pagato_il', 'stato', 'pagamento', 'metodo_pagamento', 'ritiro', 'negozio', 'venditore', 'piva_venditore', 'registrato_in_cassa', 'consegna', 'cliente', 'email', 'telefono', 'prodotti', 'sconto', 'spedizione',
         'totale', 'rimborsato', 'coupon', 'fattura', 'codice_fiscale', 'partita_iva', 'ragione_sociale', 'sdi', 'pec', 'stripe_payment_intent']));
     } finally { setExporting(false); }
   };
@@ -112,11 +112,11 @@ export function OrdersPage() {
     {!orders.data ? <Loading /> : !orders.data.rows.length ? <Empty>{t('Nessun ordine con questi filtri.')}</Empty> : <div className="table-wrap"><table>
       <thead><tr><th>{t('Ordine')}</th><th>{t('Data')}</th><th>{t('Cliente')}</th><th>{t('Negozio')}</th><th>{t('Consegna')}</th><th>{t('Stato')}</th><th>{t('Pagamento')}</th><th className="num">{t('Totale')}</th></tr></thead>
       <tbody>{orders.data.rows.map((o) => <tr key={o.id} className="clickable" onClick={() => navigate(`/orders/${o.id}`)}>
-        <td><Link to={`/orders/${o.id}`} className="row-link" onClick={(e) => e.stopPropagation()}>{o.order_number}</Link></td><td>{fmtDate(o.created_at)}</td>
+        <td><Link to={`/orders/${o.id}`} className="row-link" onClick={(e) => e.stopPropagation()}>{o.order_number}</Link></td><td>{fmtDate(o.created_at)}<div><SlotBadge order={o} /></div></td>
         <td>{o.customer_name}<div className="small muted">{o.customer_email}</div></td>
         <td>{storeName(o.store_id)}</td><td>{t(FULFILMENT_LABELS[o.fulfilment])}</td>
         <td><StatusBadge status={o.status} />{o.payment_status !== 'unpaid' && o.status !== 'cancelled' && !o.pos_registered_at
-          && <div><span className="badge warn" title={t('Da registrare in cassa')}>{t('Cassa')}</span></div>}</td><td><PaymentBadge status={o.payment_status} /></td>
+          && <div><span className="badge warn" title={t('Da registrare in cassa')}>{t('Cassa')}</span></div>}</td><td><PaymentBadge status={o.payment_status} method={o.payment_method} /></td>
         <td className="num">{formatEuro(o.total_cents)}</td></tr>)}</tbody></table></div>}
     {orders.data && <Pager page={page} hasMore={(page + 1) * PAGE < orders.data.count} onPage={setPage} />}
   </>;

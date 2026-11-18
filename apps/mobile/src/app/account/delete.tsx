@@ -28,7 +28,7 @@ export default function DeleteAccountScreen() {
     <Text style={{ fontFamily: fonts.sans, fontSize: 13, color: colors.text, marginVertical: 12, lineHeight: 20 }}>Per confermare scrivi ELIMINA qui sotto.</Text>
     <TextField label="Conferma" value={confirm} onChangeText={setConfirm} autoCapitalize="characters" />
     {!!error && <Notice tone="error" message={error} />}
-    <PrimaryButton title="Elimina il mio account" icon="close" loading={busy} disabled={confirm.trim() !== 'ELIMINA'} onPress={run} />
+    <PrimaryButton danger title="Elimina il mio account" icon="close" loading={busy} disabled={confirm.trim() !== 'ELIMINA'} onPress={run} />
     <SecondaryButton title="Annulla" onPress={() => router.back()} />
   </Screen>;
 }

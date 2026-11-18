@@ -6,22 +6,26 @@ import Animated, {
   ZoomIn, ZoomOut,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { colors, fonts } from '@/config/theme';
-import { AwningEdge, AwningStripes, HeaderBack } from './BrandHeader';
+import { colors, fonts, radius, type } from '@/config/theme';
+import { HeaderBack } from './BrandHeader';
+import { RemoteImage } from './RemoteImage';
 import { Icon } from './Icon';
 
 /** Band height (below the status bar) once rolled up: just the buttons row. */
-const COLLAPSED = 70;
+/** Space above and below the buttons row (compact since the band is white: no awning to roll up). */
+const PAD = 8;
+const COLLAPSED = PAD + 44 + PAD;
 /** Scroll distance over which the awning rolls up. */
 const RANGE = 60;
 /** The "back to top" button appears after this much scrolling… */
 const TOP_AFTER = 360;
 /** …and hides again once the page has been still this long (ms). */
 const TOP_IDLE = 2000;
-const EDGE = 12;
+/** Room below the band (it was the scalloped valance; the band is white and straight now). */
+const EDGE = 4;
 
 /**
- * Department page header (design G, "la tenda si arrotola"): the striped awning with the department title in one row
+ * Department page header (design G, "la tenda si arrotola", white since November 2026): the band with the department title in one row
  * between the back and search buttons, so the products start high on the page.
  * Scrolling down rolls it up into a slim bar with a straight bottom edge (the scalloped valance is pulled up with
  * it), the title fades away and the round search button stretches into a white "Cerca in …" pill. The pill names
@@ -29,8 +33,14 @@ const EDGE = 12;
  * products; the awning unrolls only back at the top of the page. A "back to top" button rises while scrolling and
  * hides once the page has been still for a moment.
  */
-export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, chips, overlay, resetKey, children }: {
+export function RollingAwning({ title, eyebrow, subtitle, image, onBack, searchScope, onSearch, chips, overlay, resetKey, onEndReached, children }: {
+  /** Called when the list is scrolled to within a screen of its end (loads the next page). */
+  onEndReached?: () => void;
   title: string; subtitle?: string; onBack?: () => void;
+  /** Small line above the title: the department when the title is one of its subcategories. */
+  eyebrow?: string;
+  /** The department's cover photo, small, before the title (the list's sign). */
+  image?: string | null;
   /** Department named in the pill ("Cerca in Profumeria"); without it "Cerca in tutti i prodotti". */
   searchScope?: string;
   /** Opens the search page (it searches every department). */
@@ -50,11 +60,19 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   // Expanded band height (below the status bar): the title sits between the back and search buttons, so the band is
   // one row high (padding 14 + the taller of buttons and title + padding 16) and the products start right below it.
   const [titleH, setTitleH] = useState(48);
-  const expanded = 14 + Math.max(44, titleH) + 16;
+  const expanded = PAD + Math.max(44, titleH) + PAD;
   const exp = useDerivedValue(() => expanded);
   const [showTop, setShowTop] = useState(false);
 
-  const onScroll = useAnimatedScrollHandler((e) => { y.value = e.contentOffset.y; });
+  const nearEnd = useSharedValue(false);
+  const reached = () => onEndReached?.();
+  const onScroll = useAnimatedScrollHandler((e) => {
+    y.value = e.contentOffset.y;
+    // Within a screen of the end: ask once for the next page, again only after leaving that zone or growing.
+    const near = e.contentOffset.y + e.layoutMeasurement.height * 2 >= e.contentSize.height;
+    if (near && !nearEnd.value) scheduleOnRN(reached);
+    nearEnd.value = near;
+  });
   // "Torna su": shown while the page moves past TOP_AFTER, hidden after TOP_IDLE ms without scrolling.
   const idle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const moved = (at: number) => {
@@ -74,10 +92,7 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   const band = useDerivedValue(() => exp.value - (exp.value - COLLAPSED) * ease.value);
 
   const bandStyle = useAnimatedStyle(() => ({ height: insets.top + band.value }));
-  // The valance is rolled up with the cloth: it shortens and slides up into the band.
-  const edgeStyle = useAnimatedStyle(() => ({ top: insets.top + band.value - 1, height: EDGE * (1 - ease.value) }));
-  const edgeInner = useAnimatedStyle(() => ({ transform: [{ translateY: -EDGE * ease.value }] }));
-  // Once rolled up, the band ends in a straight dark line.
+  // Once rolled up, the band ends in a hairline.
   const lineStyle = useAnimatedStyle(() => ({ opacity: Math.max(0, (ease.value - 0.6) / 0.4) }));
   const titleStyle = useAnimatedStyle(() => ({
     opacity: Math.max(0, 1 - ease.value * 1.9),
@@ -86,40 +101,40 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
   const pillMax = width - 16 - 44 - 10 - 16;
   const pillStyle = useAnimatedStyle(() => ({
     width: 44 + (pillMax - 44) * ease.value,
-    backgroundColor: interpolateColor(Math.min(1, ease.value / 0.35), [0, 1], ['rgba(255,255,255,0.12)', '#FFFFFF']),
-    shadowOpacity: ease.value > 0.5 ? 0.22 : 0,
-    elevation: ease.value > 0.5 ? 4 : 0,
+    backgroundColor: interpolateColor(Math.min(1, ease.value / 0.35), [0, 1], [colors.bandButton, '#FFFFFF']),
+    borderColor: interpolateColor(Math.min(1, ease.value / 0.35), [0, 1], ['rgba(140,145,137,0)', 'rgba(140,145,137,1)']),
   }));
-  const whiteIcon = useAnimatedStyle(() => ({ opacity: ease.value > 0.2 ? 0 : 1 }));
-  const darkIcon = useAnimatedStyle(() => ({ opacity: ease.value > 0.2 ? 1 : 0 }));
   const labelStyle = useAnimatedStyle(() => ({ opacity: Math.max(0, (ease.value - 0.55) / 0.45) }));
 
   return <View style={styles.page}>
     <Animated.ScrollView ref={ref} onScroll={onScroll} scrollEventThrottle={16} showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingTop: insets.top + expanded + EDGE, paddingBottom: 24 }}>
-      <View style={{ paddingTop: 6 }}>{chips}</View>
+      <View>{chips}</View>
       {children}
     </Animated.ScrollView>
 
     <Animated.View style={[styles.band, bandStyle]}>
-      <AwningStripes />
-      <Animated.View style={[styles.titleBlock, { top: insets.top + 14 + Math.max(0, (44 - titleH) / 2), left: onBack ? 16 + 44 + 12 : 16 }, titleStyle]}
+      <Animated.View style={[styles.titleBlock, { top: insets.top + PAD + Math.max(0, (44 - titleH) / 2), left: onBack ? 16 + 44 + 12 : 16 }, titleStyle]}
         onLayout={(e: LayoutChangeEvent) => { const h = Math.ceil(e.nativeEvent.layout.height); if (h && h !== titleH) setTitleH(h); }}>
-        <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
-        {!!subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          {!!image && <View style={styles.thumb}><RemoteImage uri={image} style={{ width: '100%', height: '100%' }} /></View>}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            {!!eyebrow && <Text style={styles.eyebrow} numberOfLines={1}>{eyebrow}</Text>}
+            {/* Long names step down in size, then take two lines, instead of being cut. */}
+            <Text style={[styles.title, title.length > 26 && styles.titleLong]} accessibilityRole="header"
+              numberOfLines={title.length > 26 ? 2 : 1} adjustsFontSizeToFit minimumFontScale={0.8}>{title}</Text>
+            {!!subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
+          </View>
+        </View>
       </Animated.View>
       <Animated.View pointerEvents="none" style={[styles.line, lineStyle]} />
     </Animated.View>
-    <Animated.View pointerEvents="none" style={[styles.edge, edgeStyle]}><Animated.View style={edgeInner}><AwningEdge /></Animated.View></Animated.View>
 
-    {onBack && <View style={[styles.back, { top: insets.top + 14 }]}><HeaderBack onPress={onBack} /></View>}
-    <Animated.View style={[styles.pill, { top: insets.top + 14 }, pillStyle]}>
+    {onBack && <View style={[styles.back, { top: insets.top + PAD }]}><HeaderBack onPress={onBack} /></View>}
+    <Animated.View style={[styles.pill, { top: insets.top + PAD }, pillStyle]}>
       <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel={`Cerca in ${searchScope ?? 'tutti i prodotti'}`}
         style={({ pressed }) => [styles.pillInner, pressed && { opacity: 0.8 }]}>
-        <View style={{ width: 20, height: 20 }}>
-          <Animated.View style={[StyleSheet.absoluteFill, whiteIcon]}><Icon name="search" size={20} color="#FFFFFF" strokeWidth={2.1} /></Animated.View>
-          <Animated.View style={[StyleSheet.absoluteFill, darkIcon]}><Icon name="search" size={20} color={colors.text} strokeWidth={2.1} /></Animated.View>
-        </View>
+        <View style={{ width: 20, flexShrink: 0 }}><Icon name="search" size={20} color={colors.bandText} strokeWidth={2.1} /></View>
         <Animated.Text style={[styles.pillText, labelStyle]} numberOfLines={1}>
           Cerca in <Text style={styles.pillScope}>{searchScope ?? 'tutti i prodotti'}</Text>
         </Animated.Text>
@@ -138,16 +153,17 @@ export function RollingAwning({ title, subtitle, onBack, searchScope, onSearch, 
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.page, overflow: 'hidden' },
-  band: { position: 'absolute', left: 0, right: 0, top: 0, backgroundColor: colors.brand, overflow: 'hidden', zIndex: 3 },
+  band: { position: 'absolute', left: 0, right: 0, top: 0, backgroundColor: colors.band, overflow: 'hidden', zIndex: 3 },
+  thumb: { width: 40, height: 40, borderRadius: 12, padding: 4, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
   titleBlock: { position: 'absolute', right: 16 + 44 + 10 },
-  title: { fontFamily: fonts.display, color: '#FFFFFF', fontSize: 25, lineHeight: 29, letterSpacing: -0.2 },
-  subtitle: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.onBrand },
-  line: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 2, backgroundColor: colors.greenDark },
-  edge: { position: 'absolute', left: 0, right: 0, zIndex: 3, overflow: 'hidden' },
+  title: { ...type.title, color: colors.bandText },
+  titleLong: { ...type.section },
+  eyebrow: { ...type.small, fontFamily: fonts.sansSemiBold, color: colors.bandMuted },
+  subtitle: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.bandMuted },
+  line: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, backgroundColor: colors.line },
   back: { position: 'absolute', left: 16, zIndex: 4 },
-  pill: { position: 'absolute', right: 16, zIndex: 4, height: 44, borderRadius: 22, overflow: 'hidden',
-    shadowColor: '#0A180C', shadowRadius: 16, shadowOffset: { width: 0, height: 6 } },
-  pillInner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12 },
+  pill: { position: 'absolute', right: 16, zIndex: 4, height: 44, borderRadius: 22, overflow: 'hidden', borderWidth: 1.5 },
+  pillInner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 10.5 },
   pillText: { flex: 1, fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.muted },
   pillScope: { fontFamily: fonts.heavy, color: colors.text },
   toTop: { position: 'absolute', right: 16, bottom: 16, zIndex: 5 },

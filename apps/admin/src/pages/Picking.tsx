@@ -1,11 +1,11 @@
 // Touch-friendly workflow for store staff: new paid orders → pick items → ready → handed over / shipped.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FULFILMENT_LABELS, formatWeight, productImageUrl, type OrderItemRow, type OrderRow } from '@casa-te/shared';
+import { FULFILMENT_LABELS, formatEuro, formatWeight, productImageUrl, type OrderItemRow, type OrderRow } from '@casa-te/shared';
 import { SUPABASE_URL, supabase, unwrap } from '../lib/supabase';
 import { errorText, useAsync, useStores } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { Loading, Notice, PageHead, StatusBadge, Success, fmtDate } from '../components/ui';
+import { Loading, Notice, PageHead, PaymentBadge, SlotBadge, StatusBadge, Success, fmtDate } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { t } from '../lib/i18n';
 
@@ -41,7 +41,9 @@ export function PickingPage() {
   // Refresh the queue every 30 seconds so new orders appear without reloading.
   useEffect(() => { const timer = setInterval(() => { void queue.reload(); }, 30_000); return () => clearInterval(timer); }, [queue.reload]);
 
-  const orders = queue.data ?? [];
+  // Orders with a pickup time first by that time; the others by when they were paid (or placed, for pay in store).
+  const when = (o: Row) => new Date(o.pickup_slot_start ?? o.paid_at ?? o.created_at).getTime();
+  const orders = [...(queue.data ?? [])].sort((a, b) => when(a) - when(b));
   const current = orders.find((o) => o.id === selected) ?? null;
 
   const act = async (fn: () => Promise<unknown>, success = '') => {
@@ -59,11 +61,14 @@ export function PickingPage() {
   const column = (title: string, list: Row[], hint: string) => <section className="card pick-col" aria-label={title}>
     <h2 style={{ marginTop: 0 }}>{title} <span className="badge muted">{list.length}</span></h2>
     {!list.length ? <p className="small muted" style={{ margin: 0 }}>{hint}</p> : list.map((o) => {
-      const a = age(o.paid_at);
+      const a = age(o.paid_at ?? o.created_at);
       return <button key={o.id} className={`pick-order ${selected === o.id ? 'on' : ''}`} aria-pressed={selected === o.id} onClick={() => setSelected(o.id)}>
         <span style={{ minWidth: 0 }}><strong>{o.order_number}</strong><br />
           <span className="small muted">{o.customer_name} · {t(FULFILMENT_LABELS[o.fulfilment])} · {t('{n} pz', { n: o.order_items.reduce((n, i) => n + i.quantity, 0) })}</span></span>
-        {a.text && <span className={`badge ${a.level || 'muted'}`}><Icon name="clock" size={12} /> {a.text}</span>}
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          {o.pickup_slot_start ? <SlotBadge order={o} /> : a.text && <span className={`badge ${a.level || 'muted'}`}><Icon name="clock" size={12} /> {a.text}</span>}
+          {o.payment_method === 'store' && o.payment_status === 'unpaid' && <span className="badge flag">{t('Da pagare {total}', { total: formatEuro(o.total_cents) })}</span>}
+        </span>
       </button>;
     })}
   </section>;
@@ -82,7 +87,7 @@ export function PickingPage() {
     {!queue.data ? <Loading /> : !orders.length ? <div className="card all-clear">
       <span className="kpi-icon"><Icon name="check" size={22} /></span>
       <div><h2 style={{ margin: 0 }}>{t('Nessun ordine da preparare')}</h2>
-        <p className="muted" style={{ margin: '4px 0 0' }}>{t('I nuovi ordini pagati compaiono qui da soli. Puoi lasciare questa pagina aperta.')}</p></div>
+        <p className="muted" style={{ margin: '4px 0 0' }}>{t('I nuovi ordini compaiono qui da soli. Puoi lasciare questa pagina aperta.')}</p></div>
     </div> : <div className={`grid picking-grid ${current ? 'has-selection' : ''}`}>
       <div className="grid pick-lists">
         {column(t('Da preparare'), toPick, t('Nessun nuovo ordine.'))}
@@ -92,7 +97,8 @@ export function PickingPage() {
       <section className="card pick-detail" aria-label={t('Ordine selezionato')}>
         {!current ? <p className="muted" style={{ margin: 0 }}>{t('Scegli un ordine dalla lista: il più vecchio è in cima.')}</p> : <>
           <button className="ghost pick-back" onClick={() => setSelected(null)}><Icon name="back" size={16} /> {t('Tutti gli ordini')}</button>
-          <div className="row"><h2 style={{ margin: 0 }}>{current.order_number}</h2><StatusBadge status={current.status} />
+          <div className="row"><h2 style={{ margin: 0 }}>{current.order_number}</h2><StatusBadge status={current.status} /><SlotBadge order={current} />
+            <PaymentBadge status={current.payment_status} method={current.payment_method} />
             {age(current.paid_at).text && <span className={`badge ${age(current.paid_at).level || 'muted'}`}>{t('pagato {age}', { age: age(current.paid_at).text })}</span>}
             <span className="spacer" /><Link to={`/orders/${current.id}`}>{t('Dettaglio completo')}</Link></div>
           <p className="muted">{current.customer_name} · {current.customer_phone} · {t(FULFILMENT_LABELS[current.fulfilment])} · {formatWeight(current.total_weight_g)} · {fmtDate(current.paid_at)}</p>
@@ -118,7 +124,9 @@ export function PickingPage() {
             {current.status === 'paid' && <button className="big" disabled={busy} onClick={() => setStatus(current, 'picking')}>{t('Inizia preparazione')}</button>}
             {current.status === 'picking' && <button className="big" disabled={busy || current.order_items.some((i) => i.picked_quantity < i.quantity)}
               onClick={() => setStatus(current, 'ready')}>{t('Tutto pronto')}</button>}
-            {current.status === 'ready' && current.fulfilment === 'store' && <button className="big" disabled={busy} onClick={() => setStatus(current, 'completed')}>{t('Consegnato al cliente')}</button>}
+            {current.status === 'ready' && current.fulfilment === 'store' && <button className="big" disabled={busy} onClick={() => setStatus(current, 'completed')}>
+              {current.payment_method === 'store' && current.payment_status === 'unpaid'
+                ? t('Ritirato e pagato in cassa ({total})', { total: formatEuro(current.total_cents) }) : t('Consegnato al cliente')}</button>}
             {current.status === 'ready' && current.fulfilment !== 'store' && <Link className="btn big" to={`/orders/${current.id}`}>{t('Registra spedizione')}</Link>}
             <button className="secondary" onClick={() => window.print()}>{t('Stampa distinta')}</button>
           </div>

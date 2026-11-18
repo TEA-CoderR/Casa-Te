@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, radius, type } from '@/config/theme';
+import { PillButton } from './UI';
 import { useStores } from '@/lib/hooks';
 import { storeShortName } from './StoreSheet';
 
@@ -44,36 +45,37 @@ export function storeStatus(hours: string | null | undefined, now = new Date()):
  * The customer's store (design F): a white card that hangs from the awning. Stock, prices and free pickup are
  * always about this store, so it is named everywhere the customer shops.
  */
-export function StoreCard({ onPress, label = 'Ritiro gratuito nel tuo negozio', action = 'Cambia', compact, showStatus = true, style }: {
-  onPress: () => void; label?: string; action?: string; compact?: boolean; showStatus?: boolean; style?: ViewStyle;
+export function StoreCard({ onPress, label = 'Ritiro gratuito nel tuo negozio', action = 'Cambia', compact, showStatus = true, changeable = true, style }: {
+  onPress: () => void; label?: string; action?: string; compact?: boolean; showStatus?: boolean;
+  /** False when there is nothing to change (one open store, no delivery): the card only names the store. */
+  changeable?: boolean; style?: ViewStyle;
 }) {
   const { selected } = useStores();
   const name = storeShortName(selected).replace(/^(\S+)\s+(?!·)/, '$1 · ');
   const status = showStatus ? storeStatus(selected?.opening_hours) : null;
-  return <Pressable onPress={onPress} accessibilityRole="button"
-    accessibilityLabel={name ? `${label}: ${name}. ${action} negozio` : 'Scegli il tuo negozio'}
+  const fixed = !!name && !changeable;
+  return <Pressable onPress={onPress} disabled={fixed} accessibilityRole={fixed ? 'text' : 'button'}
+    accessibilityLabel={name ? `${label}: ${name}${fixed ? '' : `. ${action} negozio`}` : 'Scegli il tuo negozio'}
     style={({ pressed }) => [styles.card, compact && styles.compact, style, pressed && { opacity: 0.92 }]}>
-    <AwningMark size={compact ? 40 : 46} />
     <View style={{ flex: 1, minWidth: 0 }}>
-      <Text style={styles.label} numberOfLines={1}>{name ? label : 'Prezzi e disponibilità del negozio'}</Text>
-      <Text style={[styles.name, compact && { fontSize: 18 }]} numberOfLines={1}>{name || 'Scegli il tuo negozio'}</Text>
+      <Text style={styles.label} numberOfLines={1}>{(name ? label : 'Prezzi e disponibilità del negozio').toUpperCase()}</Text>
+      <Text style={[styles.name, compact && { fontSize: 17, lineHeight: 22 }]} numberOfLines={1}>{name || 'Scegli il tuo negozio'}</Text>
       {!!status && <View style={styles.hours}>
         {status.open !== null && <View style={[styles.dot, !status.open && { backgroundColor: colors.faint }]} />}
         <Text style={[styles.hoursText, status.open === false && { color: colors.muted }]} numberOfLines={1}>{status.text}</Text>
       </View>}
     </View>
-    <Text style={styles.action}>{name ? action : 'Scegli'}</Text>
+    {!fixed && <PillButton title={name ? action : 'Scegli'} />}
   </Pressable>;
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF',
-    shadowColor: '#18201A', shadowOpacity: 0.12, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: radius.md, backgroundColor: '#FFFFFF',
+    shadowColor: '#18201A', shadowOpacity: 0.12, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6, borderWidth: 1, borderColor: colors.line },
   compact: { gap: 12, paddingVertical: 12 },
-  label: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
-  name: { fontSize: 19, lineHeight: 23, fontFamily: fonts.display, color: colors.text, marginTop: 1 },
+  label: { ...type.kicker, color: colors.muted },
+  name: { ...type.section, color: colors.text, marginTop: 3 },
   hours: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#2E9B3A' },
-  hoursText: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: '#2E6B34', flexShrink: 1 },
-  action: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#9DB521' }, // ui-check: allow (open dot, the logo lime darkened for white)
+  hoursText: { ...type.small, fontFamily: fonts.sansMedium, color: colors.muted, flexShrink: 1 },
 });

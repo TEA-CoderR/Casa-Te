@@ -11,14 +11,14 @@ import { Icon } from '../components/Icon';
 import { t } from '../lib/i18n';
 
 type Form = {
-  sku: string; name: string; slug: string; description: string; brand: string; category_id: string; price: string; compare: string;
-  vat_rate: string; weight_g: string; barcode: string; max_per_order: string; active: boolean; featured: boolean;
+  sku: string; name: string; slug: string; description: string; label_info: string; label_signal: string; brand: string; category_id: string; price: string; compare: string;
+  vat_rate: string; weight_g: string; barcode: string; max_per_order: string; safety_stock: string; active: boolean; featured: boolean;
   unit_quantity: string; unit: '' | ProductUnit; color: string;
   variant_group: string; variant_title: string; variant_label: string;
   highlights: Array<{ icon: HighlightIcon; label: string }>;
 };
-const blank: Form = { sku: '', name: '', slug: '', description: '', brand: '', category_id: '', price: '', compare: '', vat_rate: '22',
-  weight_g: '', barcode: '', max_per_order: '99', active: false, featured: false,
+const blank: Form = { sku: '', name: '', slug: '', description: '', label_info: '', label_signal: '', brand: '', category_id: '', price: '', compare: '', vat_rate: '22',
+  weight_g: '', barcode: '', max_per_order: '99', safety_stock: '', active: false, featured: false,
   unit_quantity: '', unit: '', color: '', variant_group: '', variant_title: '', variant_label: '',
   highlights: [] };
 
@@ -32,9 +32,9 @@ const ICON_LABELS: Record<HighlightIcon, string> = {
 };
 
 const toForm = (p: ProductRow): Form => ({
-  sku: p.sku, name: p.name, slug: p.slug, description: p.description ?? '', brand: p.brand ?? '', category_id: p.category_id ?? '',
+  sku: p.sku, name: p.name, slug: p.slug, description: p.description ?? '', label_info: p.label_info ?? '', label_signal: p.label_signal ?? '', brand: p.brand ?? '', category_id: p.category_id ?? '',
   price: euros(p.price_cents), compare: euros(p.compare_at_price_cents), vat_rate: String(p.vat_rate), weight_g: p.weight_g == null ? '' : String(p.weight_g),
-  barcode: p.barcode ?? '', max_per_order: String(p.max_per_order), active: p.active, featured: p.featured,
+  barcode: p.barcode ?? '', max_per_order: String(p.max_per_order), safety_stock: p.safety_stock == null ? '' : String(p.safety_stock), active: p.active, featured: p.featured,
   unit_quantity: p.unit_quantity === null ? '' : String(p.unit_quantity).replace('.', ','), unit: p.unit ?? '', color: p.color ?? '',
   variant_group: p.variant_group ?? '', variant_title: p.variant_title ?? '', variant_label: p.variant_label ?? '',
   highlights: (p.highlights ?? []).map((h) => ({ icon: h.icon, label: h.label })),
@@ -97,9 +97,11 @@ export function ProductEditPage() {
     if (highlights.some((h) => h.label.length > 40)) return setError(t('Ogni punto di forza può avere al massimo 40 caratteri.'));
     const row = {
       sku: form.sku.trim(), name: form.name.trim(), slug: form.slug.trim() || `${slugify(form.name)}-${slugify(form.sku)}`,
-      description: form.description.trim() || null, brand: form.brand.trim() || null, category_id: form.category_id || null,
+      description: form.description.trim() || null, label_info: form.label_info.trim() || null,
+      label_signal: form.label_info.trim() && form.label_signal ? form.label_signal : null, brand: form.brand.trim() || null, category_id: form.category_id || null,
       price_cents: price, compare_at_price_cents: compare, vat_rate: Number(form.vat_rate), weight_g: weight,
-      barcode: form.barcode.trim() || null, max_per_order: Number(form.max_per_order) || 99, active: form.active, featured: form.featured,
+      barcode: form.barcode.trim() || null, max_per_order: Number(form.max_per_order) || 99,
+      safety_stock: form.safety_stock.trim() === '' ? null : Math.min(Number(form.safety_stock), 1000), active: form.active, featured: form.featured,
       unit_quantity: unitQty, unit: form.unit || null, color: form.color.trim() || null,
       variant_group: group || null, variant_title: group ? form.variant_title.trim() || null : null, variant_label: group ? form.variant_label.trim() : null,
       highlights,
@@ -189,6 +191,12 @@ export function ProductEditPage() {
             <Field label={t('EAN / codice a barre')}><input value={form.barcode} onChange={(e) => set('barcode', e.target.value.replace(/\D/g, ''))} maxLength={14} inputMode="numeric" /></Field>
           </div>
           <div style={{ marginTop: 14 }}><Field label={t('Descrizione')}><textarea value={form.description} onChange={(e) => set('description', e.target.value)} /></Field></div>
+          <div style={{ marginTop: 14 }}><Field label={t('Informazioni di etichetta')}
+            hint={t('Copia dalla confezione: indicazioni di pericolo e consigli di prudenza (detersivi, candeggina, spray), frase sui biocidi (insetticidi), composizione e istruzioni (cibo per animali). Il cliente le legge prima di ordinare.')}>
+            <textarea value={form.label_info} maxLength={4000} rows={5} onChange={(e) => set('label_info', e.target.value)} /></Field></div>
+          <div style={{ marginTop: 14, maxWidth: 260 }}><Field label={t('Avvertenza in etichetta')}>
+            <select value={form.label_signal} onChange={(e) => set('label_signal', e.target.value)}>
+              <option value="">{t('Nessuna')}</option><option value="attenzione">{t('Attenzione')}</option><option value="pericolo">{t('Pericolo')}</option></select></Field></div>
         </fieldset>
         <fieldset className="card">
           <legend>{t('Prezzo e spedizione')}</legend>
@@ -199,6 +207,8 @@ export function ProductEditPage() {
             <Field label={t('Peso in grammi')} hint={form.weight_g ? t('{kg} kg · serve per calcolare la spedizione', { kg: (Number(form.weight_g) / 1000).toFixed(2).replace('.', ',') }) : t('Senza peso il prodotto si può solo ritirare in negozio')}>
               <input value={form.weight_g} onChange={(e) => set('weight_g', e.target.value.replace(/\D/g, ''))} inputMode="numeric" /></Field>
             <Field label={t('Max pezzi per ordine')}><input type="number" min={1} max={99} value={form.max_per_order} onChange={(e) => set('max_per_order', e.target.value)} /></Field>
+            <Field label={t('Scorta di sicurezza')} hint={t('Pezzi che restano sullo scaffale e non si vendono online. Vuoto = valore della categoria o del negozio.')}>
+              <input value={form.safety_stock} onChange={(e) => set('safety_stock', e.target.value.replace(/\D/g, ''))} inputMode="numeric" placeholder={t('come la categoria')} /></Field>
             <Field label={t('Indirizzo pagina (slug)')}><input value={form.slug} onChange={(e) => set('slug', e.target.value)} placeholder={t('generato dal nome')} /></Field>
           </div>
         </fieldset>

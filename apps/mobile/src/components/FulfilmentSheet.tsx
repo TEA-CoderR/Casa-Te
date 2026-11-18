@@ -4,7 +4,7 @@ import { FULFILMENT_LABELS, type FulfilmentMethod, type Quote } from '@casa-te/s
 import { formatShipping } from '@/lib/price';
 import { colors, fonts } from '@/config/theme';
 import { usePreferences } from '@/store/preferences';
-import { useDelivery } from '@/lib/hooks';
+import { useDelivery, useStores } from '@/lib/hooks';
 import { Icon } from './Icon';
 import { OptionCard } from './UI';
 
@@ -16,6 +16,7 @@ export function FulfilmentSheet({ visible, onClose, quote, storeName, onChangeSt
   const setFulfilment = usePreferences((s) => s.setFulfilment);
   const methods: FulfilmentMethod[] = ['store', 'home', 'pickup'];
   const { open: deliveryOpen, known } = useDelivery();
+  const { canChoose } = useStores();
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Chiudi" />
     <View style={styles.sheet} accessibilityViewIsModal>
@@ -35,8 +36,8 @@ export function FulfilmentSheet({ visible, onClose, quote, storeName, onChangeSt
             onPress={() => { setFulfilment(m); onClose(); }} />;
         })}
       </View>
-      <Pressable onPress={() => { onClose(); onChangeStore(); }} accessibilityRole="button" style={{ alignSelf: 'flex-start', paddingVertical: 6 }}>
-        <Text style={styles.link}>Cambia negozio ({storeName})</Text></Pressable>
+      {canChoose && <Pressable onPress={() => { onClose(); onChangeStore(); }} accessibilityRole="button" style={{ alignSelf: 'flex-start', paddingVertical: 6 }}>
+        <Text style={styles.link}>Cambia negozio ({storeName})</Text></Pressable>}
     </View>
   </Modal>;
 }
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, maxWidth: 560, width: '100%', alignSelf: 'center', marginHorizontal: 'auto',
     backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 28, gap: 12 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  title: { fontSize: 25, lineHeight: 30, fontFamily: fonts.display, color: colors.text, flex: 1 },
+  title: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.text, flex: 1 },
   close: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
-  link: { fontSize: 14, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium },
+  link: { fontSize: 15, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium },
 });

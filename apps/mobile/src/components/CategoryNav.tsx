@@ -6,12 +6,12 @@ import { colors, fonts } from '@/config/theme';
 import { BrandHeader } from './BrandHeader';
 import { CategoryIcon } from './CategoryIcon';
 import { RemoteImage } from './RemoteImage';
+import { SearchField } from './UI';
 import { Icon } from './Icon';
 
 type Covers = Record<string, { image: string | null }> | null | undefined;
 type Counts = Record<string, number> | null | undefined;
 
-const plural = (n: number) => `${n.toLocaleString('it-IT')} ${n === 1 ? 'prodotto' : 'prodotti'}`;
 
 /** Products in a department: its own plus its subcategories'. */
 export function departmentCount(all: CategoryRow[], counts: Counts, id: string) {
@@ -71,11 +71,7 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
   const panel = useRef<ScrollView>(null);
 
   const header = <BrandHeader title="Categorie" pad={[12, 16, 16]}>
-    <Pressable onPress={onSearch} accessibilityRole="search" accessibilityLabel="Cerca prodotti"
-      style={({ pressed }) => [styles.search, pressed && { opacity: 0.9 }]}>
-      <Icon name="search" size={19} color={colors.text} strokeWidth={2.1} />
-      <Text style={styles.searchText} numberOfLines={1}>{total ? `Cerca tra ${plural(total)}` : 'Cerca prodotti e marche'}</Text>
-    </Pressable>
+    <SearchField onPress={onSearch} style={{ marginTop: 14 }} />
   </BrandHeader>;
 
   const subs = active ? liveChildren(all, counts, active.id) : [];
@@ -99,7 +95,7 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
             style={({ pressed }) => [styles.panelHead, pressed && { opacity: 0.7 }]}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.panelTitle} numberOfLines={1} accessibilityRole="header">{active.name}</Text>
-              <Text style={styles.panelLink}>Vedi tutti{counts ? ` · ${plural(departmentCount(all, counts, active.id))}` : ''}</Text>
+              <Text style={styles.panelLink}>Vedi tutti</Text>
             </View>
             <Icon name="chevron" size={18} color={colors.text} strokeWidth={2.2} />
           </Pressable>
@@ -108,10 +104,11 @@ export function CategoryBrowser({ all, counts, covers, onOpen, onSearch }: {
             {!!section && <Text style={styles.section} accessibilityRole="header">{section}</Text>}
             <View style={styles.grid}>
               {items.map((c) => <Pressable key={c.id} onPress={() => onOpen(c.id)} accessibilityRole="link"
-                accessibilityLabel={`${c.name}${counts ? `, ${plural(counts[c.id] ?? 0)}` : ''}`}
+                accessibilityLabel={c.name}
                 style={({ pressed }) => [styles.cell, pressed && { opacity: 0.7 }]}>
                 <CategoryPhoto image={covers?.[c.id]?.image} slug={active.slug} name={c.name} />
-                <Text style={styles.cellName} numberOfLines={2}>{c.name}</Text>
+                {/* Up to three lines: long names ("Balsamo e maschere capelli") are not cut (plan v2 C3). */}
+                <Text style={styles.cellName} numberOfLines={3}>{c.name}</Text>
               </Pressable>)}
             </View>
           </View>)}
@@ -183,7 +180,6 @@ export function SubcategorySheet({ visible, onClose, title, items, active, onSel
             <CategoryPhoto image={it.image} slug={it.slug} name={it.name} size={48} radius={12} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={[styles.rowName, on && styles.rowNameOn]} numberOfLines={1}>{it.name}</Text>
-              {it.count !== undefined && <Text style={styles.rowCount}>{plural(it.count)}</Text>}
             </View>
             {on ? <Icon name="check" size={20} color={colors.green} strokeWidth={2.6} /> : <Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />}
           </Pressable>;
@@ -195,8 +191,6 @@ export function SubcategorySheet({ visible, onClose, title, items, active, onSel
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.page },
-  search: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 46, marginTop: 14, paddingHorizontal: 16, borderRadius: 23, backgroundColor: '#FFFFFF' },
-  searchText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
 
   split: { flex: 1, flexDirection: 'row' },
   rail: { width: 104, flexGrow: 0, backgroundColor: colors.page },
@@ -207,12 +201,12 @@ const styles = StyleSheet.create({
   railTextOn: { fontFamily: fonts.heavy, color: colors.text },
   panel: { flex: 1, backgroundColor: '#FFFFFF' },
   panelHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 14, marginBottom: 14, borderBottomWidth: 1, borderColor: colors.line },
-  panelTitle: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text },
-  panelLink: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 2 },
+  panelTitle: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text },
+  panelLink: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3, rowGap: 16, marginBottom: 18 },
-  section: { fontSize: 12.5, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginBottom: 10, marginLeft: 1 },
+  section: { fontSize: 13, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginBottom: 10, marginLeft: 1 },
   cell: { width: '33.333%', paddingHorizontal: 3 },
-  cellName: { marginTop: 7, fontSize: 12, lineHeight: 15.5, letterSpacing: -0.15, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
+  cellName: { marginTop: 7, minHeight: 36, fontSize: 13, lineHeight: 18, letterSpacing: -0.15, textAlign: 'center', fontFamily: fonts.sansMedium, color: colors.text },
 
 
   photo: { backgroundColor: colors.photo, borderWidth: 1, borderColor: colors.photoLine, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
@@ -231,13 +225,13 @@ const styles = StyleSheet.create({
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '82%', maxWidth: 520, alignSelf: 'center', marginHorizontal: 'auto',
     backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10,
     shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 30, shadowOffset: { width: 0, height: -8 } },
-  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: '#DCD7CA' },
+  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: '#DADAD5' },
   sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 8 },
   sheetTitle: { flex: 1, fontSize: 26, lineHeight: 31, fontFamily: fonts.display, color: colors.text },
   close: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 68, paddingVertical: 10, paddingHorizontal: 20 },
-  rowLine: { borderTopWidth: 1, borderColor: '#EFECE3' },
-  rowName: { fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text },
+  rowLine: { borderTopWidth: 1, borderColor: '#EDEDE9' },
+  rowName: { fontSize: 17, fontFamily: fonts.sansSemiBold, color: colors.text },
   rowNameOn: { fontFamily: fonts.heavy },
   rowCount: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
 });

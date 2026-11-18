@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { scheduleOnRN } from 'react-native-worklets';
 import type { FlyerRow } from '@casa-te/shared';
 import { SiteHeader } from '@/components/site/SiteHeader';
 import { Screen } from '@/components/Screen';
@@ -55,7 +57,7 @@ export default function FlyerScreen() {
   const hasCover = !!first?.pages.length;
   // Phone: the band leaves room for the cover to hang from it.
   const band = wide ? undefined : <BrandHeader inScroll title="Volantino" subtitle={first ? validity(first.valid_from, first.valid_to) : undefined}
-    titleSize={30} pad={[14, 16, hasCover ? 190 : 18]} left={<HeaderBack onPress={back} />} />;
+    pad={[14, 16, hasCover ? 190 : 18]} left={<HeaderBack onPress={back} />} />;
 
   return <Screen stack header={wide ? undefined : <StatusBand />} top={band} ground={colors.page} refreshing={loading && !!data} onRefresh={refetch}
     maxWidth={760} contentContainerStyle={wide ? { padding: 24, gap: 12 } : { padding: 0, paddingBottom: 32 }} bodyStyle={wide ? undefined : { paddingHorizontal: 16 }}>
@@ -128,12 +130,57 @@ function FlyerSection({ flyer, hanging, onOpen }: { flyer: Flyer; hanging: boole
   </View>;
 }
 
+/**
+ * One flyer page that zooms: pinch (up to 4×) or double tap (2.5× where you tapped, again to go back); when zoomed,
+ * drag to move around the page (kept within its edges). Works the same on Android, iOS and the web shop.
+ */
+function ZoomPage({ uri, width, height, label, resetKey, onZoom }: {
+  uri: string; width: number; height: number; label: string; resetKey: number; onZoom: (zoomed: boolean) => void;
+}) {
+  const scale = useSharedValue(1), saved = useSharedValue(1);
+  const tx = useSharedValue(0), ty = useSharedValue(0), sx = useSharedValue(0), sy = useSharedValue(0);
+  const [zoomed, setZoomedLocal] = useState(false);
+  const report = (z: boolean) => { setZoomedLocal(z); onZoom(z); };
+  const reset = () => { scale.value = withTiming(1); saved.value = 1; tx.value = withTiming(0); ty.value = withTiming(0); };
+  // Turning the page resets the zoom of the others.
+  useEffect(() => { reset(); setZoomedLocal(false); }, [resetKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const limit = (v: number, s: number, size: number) => { 'worklet'; const m = (size * (s - 1)) / 2; return Math.min(m, Math.max(-m, v)); };
+  const pinch = Gesture.Pinch()
+    .onUpdate((e) => {
+      scale.value = Math.min(4, Math.max(1, saved.value * e.scale));
+      tx.value = limit(tx.value, scale.value, width); ty.value = limit(ty.value, scale.value, height);
+    })
+    .onEnd(() => {
+      if (scale.value < 1.05) { scale.value = withTiming(1); saved.value = 1; tx.value = withTiming(0); ty.value = withTiming(0); scheduleOnRN(report, false); }
+      else { saved.value = scale.value; scheduleOnRN(report, true); }
+    });
+  const pan = Gesture.Pan().enabled(zoomed).averageTouches(true)
+    .onStart(() => { sx.value = tx.value; sy.value = ty.value; })
+    .onUpdate((e) => { tx.value = limit(sx.value + e.translationX, scale.value, width); ty.value = limit(sy.value + e.translationY, scale.value, height); });
+  const doubleTap = Gesture.Tap().numberOfTaps(2).maxDuration(300)
+    .onEnd((e) => {
+      if (saved.value > 1.05) { scale.value = withTiming(1); saved.value = 1; tx.value = withTiming(0); ty.value = withTiming(0); scheduleOnRN(report, false); return; }
+      const s = 2.5;
+      scale.value = withTiming(s); saved.value = s;
+      tx.value = withTiming(limit((width / 2 - e.x) * (s - 1), s, width)); ty.value = withTiming(limit((height / 2 - e.y) * (s - 1), s, height));
+      scheduleOnRN(report, true);
+    });
+  const style = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }] }));
+  return <GestureDetector gesture={Gesture.Simultaneous(pinch, pan, doubleTap)}>
+    <Animated.View style={[{ width, height }, style]} collapsable={false}>
+      <Animated.Image entering={FadeIn.duration(250)} source={{ uri }} resizeMode="contain" accessibilityLabel={label} style={{ width, height }} />
+    </Animated.View>
+  </GestureDetector>;
+}
+
 /** Full-screen pages, one per screen: swipe or use the arrows; the strip at the bottom jumps to a page. */
 function FlyerViewer({ flyer, start, onClose }: { flyer: Flyer; start: number; onClose: () => void }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const pager = useRef<ScrollView>(null);
   const [page, setPage] = useState(start);
+  // While a page is zoomed, one finger moves around the page instead of turning it.
+  const [zoomed, setZoomed] = useState(false);
   const go = (i: number) => { const to = Math.max(0, Math.min(flyer.pages.length - 1, i)); setPage(to); pager.current?.scrollTo({ x: to * width, animated: true }); };
   useEffect(() => { const t = setTimeout(() => pager.current?.scrollTo({ x: start * width, animated: false }), 0); return () => clearTimeout(t); }, [start, width]);
   // Arrow keys on the web shop.
@@ -145,7 +192,7 @@ function FlyerViewer({ flyer, start, onClose }: { flyer: Flyer; start: number; o
   const pageH = height - insets.top - insets.bottom - 64 - 92;
 
   return <Modal visible animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-    <View style={[styles.viewer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <GestureHandlerRootView style={[styles.viewer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.vBar}>
         <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Chiudi" hitSlop={8} style={styles.vClose}><Icon name="close" size={20} color="#FFFFFF" strokeWidth={2.4} /></Pressable>
         <View style={{ flex: 1, alignItems: 'center' }}>
@@ -154,14 +201,13 @@ function FlyerViewer({ flyer, start, onClose }: { flyer: Flyer; start: number; o
         </View>
         <View style={{ width: 44 }} />
       </View>
-      <ScrollView ref={pager} horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ flex: 1 }}
+      <ScrollView ref={pager} horizontal pagingEnabled scrollEnabled={!zoomed} showsHorizontalScrollIndicator={false} style={{ flex: 1 }}
         onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
         onScroll={Platform.OS === 'web' ? (e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width)) : undefined} scrollEventThrottle={64}>
-        {flyer.pages.map((uri, i) => <ScrollView key={uri} style={{ width }} contentContainerStyle={styles.vPage} maximumZoomScale={3} minimumZoomScale={1}
-          centerContent showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
-          <Animated.Image entering={FadeIn.duration(250)} source={{ uri }} resizeMode="contain" accessibilityLabel={`${pageName(flyer, i)}, pagina ${i + 1}`}
-            style={{ width: width - 24, height: pageH }} />
-        </ScrollView>)}
+        {flyer.pages.map((uri, i) => <View key={uri} style={[{ width }, styles.vPage]}>
+          <ZoomPage uri={uri} width={width - 24} height={pageH} label={`${pageName(flyer, i)}, pagina ${i + 1}`}
+            resetKey={page} onZoom={(z) => setZoomed(z)} />
+        </View>)}
       </ScrollView>
       {flyer.pages.length > 1 && <>
         {page > 0 && <Pressable onPress={() => go(page - 1)} accessibilityRole="button" accessibilityLabel="Pagina precedente" style={[styles.vArrow, { left: 8 }]}>
@@ -175,7 +221,8 @@ function FlyerViewer({ flyer, start, onClose }: { flyer: Flyer; start: number; o
           </Pressable>)}
         </ScrollView>
       </>}
-    </View>
+      {!zoomed && <Text style={styles.vHint} pointerEvents="none">Allarga con due dita o tocca due volte per ingrandire</Text>}
+    </GestureHandlerRootView>
   </Modal>;
 }
 
@@ -185,7 +232,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-2deg' }], shadowColor: '#0A180C', shadowOpacity: 0.3, shadowRadius: 26, shadowOffset: { width: 0, height: 14 }, elevation: 10 },
   coverImage: { width: '100%', height: '100%' },
   // A shelf price tag: yellow, a hole at the top, the end date.
-  tag: { position: 'absolute', top: -10, right: -14, width: 74, paddingTop: 16, paddingBottom: 9, borderRadius: 10, backgroundColor: colors.yellow, alignItems: 'center',
+  tag: { position: 'absolute', top: -10, right: -14, width: 74, paddingTop: 16, paddingBottom: 9, borderRadius: 12, backgroundColor: colors.yellow, alignItems: 'center',
     transform: [{ rotate: '6deg' }], shadowColor: '#0A180C', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   tagHole: { position: 'absolute', top: 6, width: 7, height: 7, borderRadius: 4, backgroundColor: colors.brand },
   tagSmall: { fontSize: 11, fontFamily: fonts.sansBold, color: colors.text },
@@ -195,20 +242,20 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 6 },
   status: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.green },
-  statusText: { fontSize: 14, fontFamily: fonts.heavy, color: colors.green },
-  metaText: { fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  statusText: { fontSize: 15, fontFamily: fonts.heavy, color: colors.green },
+  metaText: { fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.muted },
 
   actions: { flexDirection: 'row', gap: 10, marginTop: 18 },
   primary: { flex: 1, height: 54, borderRadius: 27, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  primaryText: { fontSize: 16.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  primaryText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   secondary: { height: 54, paddingHorizontal: 22, borderRadius: 27, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
-  secondaryText: { fontSize: 16, fontFamily: fonts.sansBold, color: colors.text },
+  secondaryText: { fontSize: 17, fontFamily: fonts.sansBold, color: colors.text },
 
-  note: { marginTop: 16, padding: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, borderLeftWidth: 4, borderLeftColor: colors.green },
+  note: { marginTop: 16, padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, borderLeftWidth: 4, borderLeftColor: colors.green },
   noteTitle: { fontSize: 15, fontFamily: fonts.heavy, color: colors.green },
-  noteText: { fontSize: 14.5, lineHeight: 21, fontFamily: fonts.sans, color: colors.text, marginTop: 3 },
+  noteText: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: colors.text, marginTop: 3 },
   noteLink: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 8 },
-  noteLinkText: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green },
+  noteLinkText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.green },
 
   h: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text, marginTop: 26, marginBottom: 10 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 },
@@ -217,13 +264,14 @@ const styles = StyleSheet.create({
   thumbNumber: { position: 'absolute', left: 8, bottom: 8, minWidth: 26, height: 26, borderRadius: 13, paddingHorizontal: 6, backgroundColor: 'rgba(24,32,26,0.78)',
     alignItems: 'center', justifyContent: 'center' },
   thumbNumberText: { fontSize: 13, fontFamily: fonts.heavy, color: '#FFFFFF' },
-  thumbName: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.text, marginTop: 7, marginLeft: 2 },
+  thumbName: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text, marginTop: 7, marginLeft: 2 },
 
   viewer: { flex: 1, backgroundColor: '#0F1A12' },
+  vHint: { position: 'absolute', alignSelf: 'center', bottom: 104, fontSize: 13, fontFamily: fonts.sansMedium, color: 'rgba(255,255,255,0.6)' },
   vBar: { height: 64, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10 },
   vClose: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
-  vTitle: { fontSize: 18, fontFamily: fonts.display, color: '#FFFFFF' },
-  vCount: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.onBrand, marginTop: 1 },
+  vTitle: { fontSize: 17, fontFamily: fonts.display, color: '#FFFFFF' },
+  vCount: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.onBrand, marginTop: 1 },
   vPage: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
   vArrow: { position: 'absolute', top: '46%', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' },
   vStrip: { gap: 8, paddingHorizontal: 16, paddingVertical: 12 },

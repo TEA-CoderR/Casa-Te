@@ -4,12 +4,14 @@ import { supabase, unwrap } from '../lib/supabase';
 import { errorText, loadStores, useAsync } from '../lib/data';
 import { t } from '../lib/i18n';
 import { Field, Loading, Modal, Notice, PageHead } from '../components/ui';
+import { StoreHoursModal } from './StoreHours';
 
 export function StoresPage() {
   const stores = useAsync(() => loadStores(true), []);
   const companies = useAsync(async () => unwrap(await supabase.from('companies').select('id, legal_name, is_operator').order('legal_name')) as Pick<CompanyRow, 'id' | 'legal_name' | 'is_operator'>[], []);
   const companyName = (id: string | null) => companies.data?.find((c) => c.id === id)?.legal_name;
   const [edit, setEdit] = useState<Partial<StoreRow> | null>(null);
+  const [hours, setHours] = useState<StoreRow | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -42,7 +44,9 @@ export function StoresPage() {
         <td>{s.address ? `${s.address}, ${s.postal_code ?? ''} ${s.city}` : <span className="badge warn">{t('Da completare')}</span>}</td><td>{s.phone ?? '—'}</td>
         <td>{s.pickup_enabled ? '✓' : '—'}</td><td>{s.ships_orders ? '✓' : '—'}</td>
         <td>{s.active ? <span className="badge">{t('Attivo')}</span> : <span className="badge muted">{t('Disattivo')}</span>}</td>
-        <td className="num"><button className="ghost" onClick={() => setEdit(s)}>{t('Modifica')}</button></td></tr>)}</tbody></table></div>}
+        <td className="num"><button className="ghost" onClick={() => setHours(s)}>{t('Orari di ritiro')}</button>
+          <button className="ghost" onClick={() => setEdit(s)}>{t('Modifica')}</button></td></tr>)}</tbody></table></div>}
+    {hours && <StoreHoursModal store={hours} onClose={() => setHours(null)} onSaved={() => { void stores.reload(); }} />}
     {edit && <Modal title={edit.id ? t('Modifica negozio') : t('Nuovo negozio')} onClose={() => setEdit(null)}>
       <div className="grid">
         {error && <Notice tone="error">{error}</Notice>}

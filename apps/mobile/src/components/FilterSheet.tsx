@@ -59,13 +59,14 @@ export function FilterSheet({ visible, section, filters, onChange, onClose, face
           <View style={styles.wrap}>{SORTS.map((o) => <Chip key={o.id} label={o.label} on={filters.sort === o.id}
             onPress={() => onChange({ ...filters, sort: o.id })} radio />)}</View>
         </>}
-        {show('brand') && <>
+        {/* In the full sheet a group with nothing to choose is left out; opened on its own it says why it is empty. */}
+        {show('brand') && (section !== 'all' || !!facets?.brands.length) && <>
           {section === 'all' && <Text style={styles.group}>Marca</Text>}
           {facets?.brands.length ? <View style={styles.wrap}>{facets.brands.map((b) => <Chip key={b} label={b} on={filters.brands.includes(b)}
             onPress={() => onChange({ ...filters, brands: toggle(filters.brands, b) })} />)}</View>
             : <Text style={styles.empty}>Nessuna marca indicata per questi prodotti.</Text>}
         </>}
-        {show('color') && <>
+        {show('color') && (section !== 'all' || !!facets?.colors.length) && <>
           {section === 'all' && <Text style={styles.group}>Colore</Text>}
           {facets?.colors.length ? <View style={styles.wrap}>{facets.colors.map((c) => <Chip key={c} label={c} on={filters.colors.includes(c)}
             onPress={() => onChange({ ...filters, colors: toggle(filters.colors, c) })} />)}</View>
@@ -84,7 +85,7 @@ export function FilterSheet({ visible, section, filters, onChange, onClose, face
           <Switch label="Solo disponibili nel mio negozio" on={filters.onlyAvailable} onPress={() => onChange({ ...filters, onlyAvailable: !filters.onlyAvailable })} />
         </>}
       </ScrollView>
-      <PrimaryButton title={total === null ? 'Mostra prodotti' : `Mostra ${total} ${total === 1 ? 'prodotto' : 'prodotti'}`} onPress={onClose} />
+      <PrimaryButton title={total === 0 ? 'Nessun prodotto: cambia i filtri' : 'Mostra i prodotti'} onPress={onClose} />
     </View>
   </Modal>;
 }
@@ -111,19 +112,19 @@ const styles = StyleSheet.create({
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, maxWidth: 560, alignSelf: 'center', width: '100%', marginHorizontal: 'auto',
     backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingTop: 20, paddingBottom: 20, gap: 12 },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 24, lineHeight: 29, fontFamily: fonts.display, color: colors.text },
-  reset: { fontSize: 14.5, color: colors.green, fontFamily: fonts.sansBold },
+  title: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text },
+  reset: { fontSize: 15, color: colors.green, fontFamily: fonts.sansBold },
   group: { fontSize: 13, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginTop: 14, marginBottom: 8 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: '#DCD7CA', marginTop: -10, marginBottom: 2 },
+  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: '#DADAD5', marginTop: -10, marginBottom: 2 },
   switchRow: { marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 56, paddingHorizontal: 16, borderRadius: 16, backgroundColor: colors.page },
-  switchText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text, flexShrink: 1 },
+  switchText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text, flexShrink: 1 },
   saleTag: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: colors.sale },
-  saleTagText: { fontSize: 12, fontFamily: fonts.heavy, color: '#FFFFFF' },
-  track: { width: 50, height: 30, borderRadius: 15, backgroundColor: '#CFC9BA' },
+  saleTagText: { fontSize: 13, fontFamily: fonts.heavy, color: '#FFFFFF' },
+  track: { width: 50, height: 30, borderRadius: 15, backgroundColor: '#D0D0CB' },
   knob: { position: 'absolute', top: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
   chipOn: { backgroundColor: colors.green, borderColor: colors.green },
-  chipText: { fontSize: 14, color: colors.text, fontFamily: fonts.sansBold },
+  chipText: { fontSize: 15, color: colors.text, fontFamily: fonts.sansBold },
   empty: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans, paddingVertical: 6 },
 });

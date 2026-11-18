@@ -6,17 +6,22 @@ import { BrandHeader, HeaderBack, StatusBand } from '@/components/BrandHeader';
 import { formatEuro, formatShipping } from '@/lib/price';
 import { Barcode } from '@/components/Barcode';
 import { Screen } from '@/components/Screen';
+import { RevealOnOpen } from '@/components/Reveal';
 import { OrderTimeline } from '@/components/OrderTimeline';
 import { ProductImage } from '@/components/ProductImage';
 import { EmptyState, Loading, Notice, orderStatusTone, PrimaryButton, SecondaryButton, SectionTitle, StatusMark, SummaryRow } from '@/components/UI';
-import { colors, floatShadow, fonts } from '@/config/theme';
-import { cancelPendingOrder, fetchOrder, imageUrl, resumeCheckout } from '@/lib/api';
+import { colors, floatShadow, fonts, radius, type } from '@/config/theme';
+import { cancelOrder, cancelPendingOrder, fetchOrder, imageUrl, resumeCheckout } from '@/lib/api';
+import { ConfirmSheet } from '@/components/ConfirmSheet';
+import { slotText } from '@/components/CheckoutPickers';
 import { useLayout, useStores } from '@/lib/hooks';
 import { Icon } from '@/components/Icon';
 import { openCheckout } from '@/lib/payments';
 import { useQuery, useRefetchOnFocus } from '@/lib/useQuery';
 import { useCartStore } from '@/store/cart';
 import { OrderReturns } from '@/components/OrderReturns';
+import { OrderTicket } from '@/components/OrderTicket';
+import { ListGroup, ListRow } from '@/components/ListRow';
 
 const HEADLINES: Record<string, string> = {
   pending_payment: 'In attesa di pagamento', paid: 'Abbiamo ricevuto il tuo ordine', picking: 'Stiamo preparando il tuo ordine',
@@ -26,12 +31,13 @@ const HEADLINES: Record<string, string> = {
 export default function OrderDetailScreen() {
   const { id, reso } = useLocalSearchParams<{ id: string; reso?: string }>();
   const { data: order, loading, refetch } = useQuery(id ? `orders:${id}` : null, () => fetchOrder(id!));
-  const { stores } = useStores();
+  const { allStores: stores } = useStores();
   const add = useCartStore((s) => s.add);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const { wide } = useLayout();
   const [itemsOpen, setItemsOpen] = useState(false);
+  const [askCancel, setAskCancel] = useState(false);
   useRefetchOnFocus(refetch);
 
   if (loading && !order) return <Screen stack><Loading /></Screen>;
@@ -56,42 +62,56 @@ export default function OrderDetailScreen() {
     const when = (iso?: string) => iso ? new Date(iso).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
     const readyAt = at('ready');
     const until = readyAt && order.fulfilment === 'store' ? new Date(new Date(readyAt).getTime() + 14 * 86400000).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : null;
-    const SUB: Record<string, string> = { paid: 'Pagamento confermato', picking: 'Lo staff del negozio raccoglie i tuoi prodotti',
+    const SUB: Record<string, string> = { paid: order.payment_method === 'store' ? 'Ordine ricevuto · paghi al ritiro' : 'Pagamento confermato', picking: 'Lo staff del negozio raccoglie i tuoi prodotti',
       ready: order.fulfilment === 'store' ? 'Ti abbiamo inviato un’email' : 'Pronto per il corriere', shipped: 'Affidato al corriere', completed: order.fulfilment === 'store' ? 'Grazie e a presto!' : 'Consegnato' };
     const count = order.order_items.reduce((n, i) => n + i.quantity, 0);
-    const grid: Array<[string, string]> = [
-      [order.fulfilment === 'store' ? 'Negozio' : 'Consegna', order.fulfilment === 'store' ? (store?.name.replace(/^CASA & TE\s*/, '').replace(/^(\S+)\s+(?!·)/, '$1 · ') ?? 'Negozio') : FULFILMENT_LABELS[order.fulfilment]],
-      [order.fulfilment === 'store' ? 'Orari' : 'Data', order.fulfilment === 'store' && store?.opening_hours ? store.opening_hours : new Date(order.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })],
-      [until ? 'Ritira entro' : 'Ordinato il', until ?? new Date(order.created_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })],
-      ['Pagato', `${euro(order.total_cents)} · ${count} ${count === 1 ? 'articolo' : 'articoli'}`],
+    // What the rows say depends on where the order is: in progress (when to come, until when), or closed (when it ended).
+    const day = (iso: string) => new Date(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
+    const closed = order.status === 'completed' || order.status === 'cancelled';
+    const slot = order.pickup_slot_start && order.pickup_slot_end ? slotText(order.pickup_slot_start, order.pickup_slot_end) : null;
+    const toPay = order.payment_method === 'store' && order.payment_status === 'unpaid';
+    const placeRow: [string, string] = [order.fulfilment === 'store' ? 'Negozio' : 'Consegna', order.fulfilment === 'store'
+      ? (store?.name.replace(/^CASA & TE\s*/, '').replace(/^(\S+)\s+(?!·)/, '$1 · ') ?? 'Negozio') : FULFILMENT_LABELS[order.fulfilment]];
+    const grid: Array<[string, string]> = closed ? [
+      placeRow,
+      order.status === 'completed'
+        ? [order.fulfilment === 'store' ? 'Ritirato il' : 'Consegnato il', day(order.completed_at ?? order.updated_at)]
+        : ['Annullato il', day(order.cancelled_at ?? order.updated_at)],
+      [order.status === 'cancelled' && toPay ? 'Importo' : 'Pagato', `${euro(order.total_cents)} · ${count} ${count === 1 ? 'articolo' : 'articoli'}`],
+    ] : [
+      placeRow,
+      slot ? ['Ritiro', slot.charAt(0).toUpperCase() + slot.slice(1)]
+        : [order.fulfilment === 'store' ? 'Orari' : 'Data', order.fulfilment === 'store' && store?.opening_hours ? store.opening_hours : day(order.created_at)],
+      ...(until ? [['Ritira entro', until] as [string, string]] : []),
+      [toPay ? 'Da pagare in negozio' : 'Pagato', `${euro(order.total_cents)} · ${count} ${count === 1 ? 'articolo' : 'articoli'}`],
     ];
-    const header = <BrandHeader inScroll title="Il tuo ordine" titleSize={26} pad={[14, 16, 92]}
+    const storeLabel = store?.name.replace(/^CASA & TE\s*/, '') ?? null;
+    const header = <BrandHeader inScroll title="Il tuo ordine" pad={[14, 16, 18]}
       left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/orders')} />} />;
     return <Screen header={<StatusBand />} top={header} ground={colors.page} onRefresh={refetch} refreshing={loading}
       contentContainerStyle={{ padding: 0, paddingBottom: 24 }} bodyStyle={{ paddingHorizontal: 16 }}>
       <Stack.Screen options={{ headerShown: false, title: `Ordine ${order.order_number}` }} />
-      <View style={[styles.pass, { marginTop: -96 }]} accessibilityLabel={`${HEADLINES[order.status] ?? ''}. Ordine ${order.order_number}`}>
-        <View style={styles.passTop}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View style={[styles.passDot, order.status === 'cancelled' && { backgroundColor: colors.danger, borderColor: colors.danger }]} />
-            <Text style={styles.passStatus}>{orderStatusLabel(order.status, order.fulfilment)}</Text>
-          </View>
-          <Text style={styles.passHead} accessibilityRole="header">{order.fulfilment === 'store' && order.status === 'ready' ? 'Il tuo ordine ti aspetta' : HEADLINES[order.status] ?? orderStatusLabel(order.status, order.fulfilment)}</Text>
-          <View style={styles.passGrid}>{grid.map(([k, v]) => <View key={k} style={styles.passCell}>
-            <Text style={styles.passKey}>{k}</Text><Text style={styles.passValue}>{v}</Text></View>)}</View>
-        </View>
-        <View style={styles.tear}><View style={[styles.notch, { left: -12 }]} /><View style={styles.tearLine} /><View style={[styles.notch, { right: -12 }]} /></View>
-        <View style={styles.passBottom}>
-          <Text style={styles.passHint}>{order.fulfilment === 'store' ? 'Mostra questo codice in cassa' : 'Numero d’ordine'}</Text>
-          <PassCode number={order.order_number} scan={order.fulfilment === 'store'} />
-        </View>
-      </View>
+      {/* The same ticket as on Home and the order list, with the code on its white stub (plan §5.4, F4). */}
+      {/* Closed orders: the ticket alone; the code is for collecting. */}
+      <OrderTicket order={order} variant="full" storeName={storeLabel} style={{ marginTop: 4 }} stub={closed ? undefined : <>
+        <Text style={styles.passHint}>{order.fulfilment !== 'store' ? 'Numero d’ordine'
+          : order.status === 'ready' ? (toPay ? `Mostra questo codice in cassa e paga ${euro(order.total_cents)}` : 'Mostra questo codice in cassa')
+          : 'Codice ordine · ti scriviamo quando è pronto'}</Text>
+        <PassCode number={order.order_number} scan={order.fulfilment === 'store'} />
+      </>} />
+      <ListGroup style={{ marginTop: 20 }}>{grid.map(([k, v], i) => <ListRow key={k} first={i === 0} title={v} subtitle={k} />)}</ListGroup>
 
       {pending && <View style={{ marginTop: 14 }}><Notice title="In attesa di pagamento" message="Completa il pagamento per confermare l'ordine.">
         <View style={{ gap: 8, marginTop: 6 }}>
           <PrimaryButton title={`Paga ${formatEuro(order.total_cents)}`} icon="card" loading={busy} onPress={() => act(async () => openCheckout(await resumeCheckout(order.id)))} />
           <SecondaryButton title="Annulla ordine" onPress={() => act(() => cancelPendingOrder(order.id))} disabled={busy} />
         </View></Notice></View>}
+      {toPay && order.status === 'paid' && <View style={{ marginTop: 12 }}>
+        <SecondaryButton title="Annulla ordine" onPress={() => setAskCancel(true)} disabled={busy} />
+        <ConfirmSheet visible={askCancel} title="Vuoi annullare l’ordine?" message="I prodotti tornano disponibili per gli altri clienti."
+          keepLabel="Tieni l’ordine" confirmLabel="Annulla ordine" busy={busy}
+          onClose={() => setAskCancel(false)} onConfirm={() => { setAskCancel(false); void act(() => cancelOrder(order.id)); }} />
+      </View>}
       {(order.payment_status === 'refunded' || order.payment_status === 'partially_refunded') && <View style={{ marginTop: 14 }}>
         <Notice tone="success" title={PAYMENT_STATUS_LABELS[order.payment_status]} message={`Importo rimborsato: ${formatEuro(order.refunded_cents)}. L'accredito può richiedere 5–10 giorni lavorativi.`} /></View>}
       {!!error && <Notice tone="error" message={error} />}
@@ -123,14 +143,13 @@ export default function OrderDetailScreen() {
         {order.tracking_url && <Text style={[styles.stepSub, { color: colors.green, fontFamily: fonts.sansBold }]}>Traccia spedizione</Text>}
       </Pressable>}
 
-      <View style={styles.actions}>
-        {!!store?.address && <Pressable onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${store.address}, ${store.city}`)}`)}
-          accessibilityRole="link" style={styles.action}><Icon name="pin" size={19} color={colors.green} strokeWidth={2} /><Text style={styles.actionText}>Indicazioni</Text></Pressable>}
-        {!!store?.phone && <Pressable onPress={() => Linking.openURL(`tel:${store.phone}`)} accessibilityRole="link" style={styles.action}>
-          <Icon name="phone" size={19} color={colors.green} strokeWidth={2} /><Text style={styles.actionText}>Chiama il negozio</Text></Pressable>}
-      </View>
+      {order.fulfilment === 'store' && (!!store?.address || !!store?.phone) && <View style={styles.actions}>
+        {!!store?.address && <View style={{ flex: 1 }}><SecondaryButton title="Indicazioni" icon="pin"
+          onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${store.address}, ${store.city}`)}`)} /></View>}
+        {!!store?.phone && <View style={{ flex: 1 }}><SecondaryButton title="Chiama" icon="phone" onPress={() => Linking.openURL(`tel:${store.phone}`)} /></View>}
+      </View>}
 
-      <View style={styles.fold}>
+      <RevealOnOpen open={itemsOpen} style={styles.fold}>
         <Pressable onPress={() => setItemsOpen(!itemsOpen)} accessibilityRole="button" accessibilityState={{ expanded: itemsOpen }} style={styles.foldHead}>
           <Text style={styles.foldTitle}>Articoli nell’ordine</Text>
           <View style={{ transform: [{ rotate: itemsOpen ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color={colors.text} strokeWidth={2.2} /></View>
@@ -141,18 +160,17 @@ export default function OrderDetailScreen() {
             <Text style={styles.itemName} numberOfLines={2}>{item.quantity > 1 ? `${item.quantity} × ` : ''}{item.name}</Text>
             <Text style={styles.itemTotal}>{euro(item.line_total_cents)}</Text>
           </View>)}
-          <View style={{ height: 1, backgroundColor: '#EFECE3', marginVertical: 4 }} />
+          <View style={{ height: 1, backgroundColor: '#EDEDE9', marginVertical: 4 }} />
           <SummaryRow label="Prodotti" value={euro(order.subtotal_cents)} />
           {order.discount_cents > 0 && <SummaryRow label={`Sconto ${order.coupon_code ?? ''}`} value={`-${euro(order.discount_cents)}`} tone="green" />}
           <SummaryRow label={order.fulfilment === 'store' ? 'Ritiro in negozio' : 'Spedizione'} value={formatShipping(order.shipping_cents).replace(/€\s/, '€')} />
           <SummaryRow label="Pagamento" value={PAYMENT_STATUS_LABELS[order.payment_status]} />
         </View>}
-      </View>
+      </RevealOnOpen>
 
       <OrderReturns order={order} />
 
-      {order.status !== 'pending_payment' && <Pressable onPress={reorder} accessibilityRole="button" style={styles.reorder}>
-        <Icon name="bag" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.actionText}>Ordina di nuovo</Text></Pressable>}
+      {order.status !== 'pending_payment' && <View style={{ marginTop: 12 }}><SecondaryButton title="Ordina di nuovo" icon="bag" onPress={reorder} /></View>}
       {!!order.seller_snapshot && <Text style={[styles.fine, { marginTop: 12, marginHorizontal: 4 }]}>
         Venditore: {order.seller_snapshot.legal_name} · P.IVA {order.seller_snapshot.vat_number}.</Text>}
     </Screen>;
@@ -276,25 +294,24 @@ function PassCode({ number, scan }: { number: string; scan: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  pass: { borderRadius: 24, backgroundColor: '#FFFFFF', shadowColor: '#18201A', shadowOpacity: 0.16, shadowRadius: 26, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
+  pass: { borderRadius: 22, backgroundColor: '#FFFFFF', shadowColor: '#18201A', shadowOpacity: 0.16, shadowRadius: 26, shadowOffset: { width: 0, height: 14 }, elevation: 8, borderWidth: 1, borderColor: colors.line },
   tlRow: { flexDirection: 'row', gap: 14, minHeight: 60 },
   tlDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#D5D0C3', alignItems: 'center', justifyContent: 'center' },
   tlDone: { backgroundColor: colors.green, borderColor: colors.green },
   tlNow: { backgroundColor: colors.yellow, borderColor: colors.yellow },
   tlLine: { flex: 1, width: 2, backgroundColor: colors.line, marginVertical: 4 },
-  stepTitle: { fontSize: 15.5, fontFamily: fonts.sansSemiBold, color: colors.text },
+  stepTitle: { fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.text },
   stepSub: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
-  fold: { marginTop: 12, borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
+  fold: { marginTop: 12, borderRadius: radius.md, backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   foldHead: { height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  foldTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
-  reorder: { marginTop: 12, height: 54, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  foldTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   passTop: { padding: 20, paddingBottom: 18 },
   passDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.yellow },
-  passStatus: { fontSize: 13.5, fontFamily: fonts.heavy, color: colors.green },
-  passHead: { fontSize: 30, lineHeight: 34, fontFamily: fonts.display, color: colors.text, marginTop: 8 },
+  passStatus: { fontSize: 13, fontFamily: fonts.heavy, color: colors.green },
+  passHead: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.text, marginTop: 8 },
   passGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 12, marginTop: 16 },
   passCell: { width: '50%', paddingRight: 8 },
-  passKey: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  passKey: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted },
   passValue: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text, marginTop: 2 },
   tear: { height: 24, justifyContent: 'center' },
   tearLine: { marginHorizontal: 22, borderTopWidth: 2, borderStyle: 'dashed', borderColor: colors.line },
@@ -302,27 +319,27 @@ const styles = StyleSheet.create({
   passBottom: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20, alignItems: 'center' },
   passHint: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.muted },
   passCode: { alignSelf: 'stretch', textAlign: 'center', marginTop: 8, paddingVertical: 14, borderRadius: 16, backgroundColor: colors.page,
-    fontSize: 32, letterSpacing: 4, fontFamily: fonts.heavy, color: colors.text, overflow: 'hidden' },
+    fontSize: 36, letterSpacing: 4, fontFamily: fonts.heavy, color: colors.text, overflow: 'hidden' },
   // No plate of its own: the pass is already white, and the barcode carries its own quiet zone at the sides.
   passScan: { alignSelf: 'stretch', marginTop: 10, alignItems: 'center' },
-  passScanNumber: { marginTop: 8, fontSize: 20, letterSpacing: 3, fontFamily: fonts.heavy, color: colors.text },
+  passScanNumber: { marginTop: 8, fontSize: 22, letterSpacing: 3, fontFamily: fonts.heavy, color: colors.text },
   passName: { fontSize: 13, fontFamily: fonts.sansMedium, color: colors.muted, marginTop: 8 },
-  card: { marginTop: 18, padding: 18, paddingBottom: 6, borderRadius: 22, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
-  cardTitle: { fontSize: 21, lineHeight: 26, fontFamily: fonts.display, color: colors.text },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  action: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 54, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  actionText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.text },
+  card: { marginTop: 20, padding: 16, paddingBottom: 4, borderRadius: radius.md, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  cardTitle: { ...type.section, color: colors.text },
+  actions: { flexDirection: 'row', gap: 12, marginTop: 12 },
+  action: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 54, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  actionText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   number: { fontFamily: fonts.sansSemiBold, fontSize: 22, fontWeight: '600', color: colors.text },
-  date: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 4 },
-  tracking: { marginTop: 12, padding: 14, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, gap: 4 },
+  date: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 4 },
+  tracking: { marginTop: 12, padding: 14, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, gap: 4 },
   trackingText: { fontFamily: fonts.sansMedium, color: colors.green, fontSize: 13, fontWeight: '500' },
-  block: { fontSize: 14, lineHeight: 21, color: colors.text, fontFamily: fonts.sans },
+  block: { fontSize: 15, lineHeight: 21, color: colors.text, fontFamily: fonts.sans },
   link: { fontFamily: fonts.sansMedium, color: colors.green, marginTop: 10, fontWeight: '500' },
   item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.line },
   thumb: { width: 56, height: 56, borderRadius: 12, backgroundColor: '#FFFFFF', overflow: 'hidden' },
-  itemName: { flex: 1, fontSize: 14, color: colors.text, fontFamily: fonts.sansSemiBold },
-  itemMeta: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 3 },
-  itemTotal: { fontSize: 14, fontFamily: fonts.heavy, color: colors.text },
-  fine: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, lineHeight: 17 },
+  itemName: { flex: 1, fontSize: 15, color: colors.text, fontFamily: fonts.sansSemiBold },
+  itemMeta: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 3 },
+  itemTotal: { fontSize: 15, fontFamily: fonts.heavy, color: colors.text },
+  fine: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, lineHeight: 18 },
 });

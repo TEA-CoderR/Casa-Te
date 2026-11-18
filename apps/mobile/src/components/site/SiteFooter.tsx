@@ -12,7 +12,7 @@ const INFO: Array<[string, 'shipping' | 'terms' | 'privacy']> = [['Spedizioni e 
 
 /** Desktop colophon: the back cover of the catalogue, on the warm stone ground. */
 export function SiteFooter() {
-  const { stores } = useStores();
+  const { allStores: stores } = useStores();
   const [storeSheet, setStoreSheet] = useState(false);
   const link = (key: string, label: string, onPress: () => void) =>
     <Pressable key={key} onPress={onPress} accessibilityRole="link">

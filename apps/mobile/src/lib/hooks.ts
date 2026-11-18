@@ -12,18 +12,23 @@ import { useClubMember } from '@/store/club';
 /** Club on/off and tagline from the back office (assumed on while loading). */
 export function useClubSettings() {
   const q = useQuery('app-settings', fetchAppSettings);
-  return { enabled: q.data?.club_enabled ?? true, tagline: q.data?.club_tagline ?? 'Vantaggi esclusivi e offerte dedicate ai nostri clienti.' };
+  return { enabled: q.data?.club_enabled ?? true, tagline: q.data?.club_tagline ?? 'Vantaggi esclusivi e offerte dedicate ai nostri clienti.',
+    minOrderCents: q.data?.min_order_cents ?? 0, whatsapp: q.data?.support_whatsapp ?? null,
+    thumbnails: q.data?.image_thumbnails ?? false };
 }
 
 export function useStores() {
-  const { data: stores = [], loading, error, refetch } = useQuery<StoreRow[]>('stores', fetchStores);
+  const { data: allStores = [], loading, error, refetch } = useQuery<StoreRow[]>('stores', fetchStores);
+  // Customers choose only among open stores (a closed one has no stock); `allStores` keeps the closed ones for
+  // looking up the store of an older order by id.
+  const stores = useMemo(() => allStores.filter((s) => s.active), [allStores]);
   const storeId = usePreferences((s) => s.storeId);
   const setStoreId = usePreferences((s) => s.setStoreId);
   const selected = stores.find((s) => s.id === storeId) ?? null;
   useEffect(() => {
     if (stores.length && !selected) setStoreId(stores[0].id);
   }, [stores, selected, setStoreId]);
-  return { stores, selected: selected ?? stores[0] ?? null, loading, error, refetch };
+  return { stores, allStores, canChoose: stores.length > 1, selected: selected ?? stores[0] ?? null, loading, error, refetch };
 }
 
 /**
@@ -43,7 +48,7 @@ export function useDelivery() {
 
 /** Legal companies: the operator, the seller of a store, and the legal pages built from them. */
 export function useCompanies() {
-  const { stores } = useStores();
+  const { allStores: stores } = useStores();
   const q = useQuery<CompanyRow[]>('companies', fetchCompanies);
   const companies = q.data ?? [];
   const sellerOf = (storeId: string | null | undefined) => {

@@ -3,17 +3,19 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { EmptyState, Loading } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
-import { useCompanies } from '@/lib/hooks';
+import { useCompanies, useLayout } from '@/lib/hooks';
 
 export default function LegalScreen() {
   const { doc } = useLocalSearchParams<{ doc: string }>();
   const { docs, loading } = useCompanies();
   const content = docs[doc ?? ''];
+  const { wide } = useLayout();
   if (!content) return <Screen stack><EmptyState title="Pagina non trovata" message="" icon="help" /></Screen>;
   return <Screen stack maxWidth={760}>
     <Stack.Screen options={{ title: content.title }} />
-    <Text style={{ fontFamily: fonts.sansSemiBold, fontSize: 26, fontWeight: '600', color: colors.text, letterSpacing: -0.6 }} accessibilityRole="header">{content.title}</Text>
-    <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 6 }}>Ultimo aggiornamento: {content.updated}</Text>
+    {/* On the phone the title is already in the green bar. */}
+    {wide && <Text style={{ fontFamily: fonts.sansSemiBold, fontSize: 26, fontWeight: '600', color: colors.text, letterSpacing: -0.6 }} accessibilityRole="header">{content.title}</Text>}
+    <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: wide ? 6 : 0 }}>Ultimo aggiornamento: {content.updated}</Text>
     {loading ? <Loading /> : content.sections.map((s) => <View key={s.heading} style={{ marginTop: 22 }}>
       <Text style={{ fontFamily: fonts.sansSemiBold, fontSize: 15, fontWeight: '600', color: colors.text }}>{s.heading}</Text>
       <Text style={{ fontFamily: fonts.sans, fontSize: 13, lineHeight: 21, color: colors.text, marginTop: 6 }}>{s.body}</Text>

@@ -8,10 +8,13 @@ import { orderStatusLabel } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { Icon, type IconName } from '@/components/Icon';
 import { StoreSheet, storeShortName } from '@/components/StoreSheet';
-import { PrimaryButton } from '@/components/UI';
-import { AwningEdge, AwningStripes, StatusBand } from '@/components/BrandHeader';
+import { PillButton, PrimaryButton } from '@/components/UI';
+import { ListGroup, ListRow } from '@/components/ListRow';
+import { ConfirmSheet } from '@/components/ConfirmSheet';
+import { StatusBand } from '@/components/BrandHeader';
 import { StoreCard } from '@/components/StoreCard';
-import { colors, fonts } from '@/config/theme';
+import { BandWatermark, ClubPass } from '@/components/ClubPass';
+import { colors, fonts, type } from '@/config/theme';
 import { fetchOrders, fetchProfile, updateProfile, type OrderWithItems } from '@/lib/api';
 import { useClubSettings, useLayout, useStores } from '@/lib/hooks';
 import { useFavorites } from '@/store/favorites';
@@ -61,11 +64,14 @@ function Shortcut({ icon, label, detail, onPress, square }: { icon: IconName; la
 export default function ProfileScreen() {
   const user = useUser();
   const storeId = usePreferences((s) => s.storeId);
-  const { selected } = useStores();
+  const { selected, canChoose } = useStores();
   const { wide } = useLayout();
   const insets = useSafeAreaInsets();
   const favourites = useFavorites((s) => s.ids.length);
   const [storeSheet, setStoreSheet] = useState(false);
+  const [askSignOut, setAskSignOut] = useState(false);
+  const signOutSheet = <ConfirmSheet visible={askSignOut} title="Vuoi uscire dall’account?" keepLabel="Resta" confirmLabel="Esci"
+    onClose={() => setAskSignOut(false)} onConfirm={() => { setAskSignOut(false); void supabase.auth.signOut(); }} />;
   const profile = useQuery(user ? `profile:${user.id}` : null, () => fetchProfile(user!.id));
   const orders = useQuery<OrderWithItems[]>(user ? `orders:list:${user.id}` : null, fetchOrders);
   useRefetchOnFocus(orders.refetch);
@@ -108,9 +114,9 @@ export default function ProfileScreen() {
     </View>
     <Text style={styles.storeName}>{selected ? `CASA & TE ${storeName}` : 'Nessun negozio scelto'}</Text>
     <Text style={styles.storeText}>{selected?.opening_hours ? `Orari: ${selected.opening_hours}` : 'Disponibilità dei prodotti e ritiro gratuito in questo negozio.'}</Text>
-    <Pressable onPress={() => setStoreSheet(true)} accessibilityRole="button" style={styles.storeChange}>
+    {(canChoose || !selected) && <Pressable onPress={() => setStoreSheet(true)} accessibilityRole="button" style={styles.storeChange}>
       {({ hovered }: WebState) => <Text style={[styles.link, hovered && { textDecorationLine: 'underline' }]}>{selected ? 'Cambia negozio' : 'Scegli il negozio'}</Text>}
-    </Pressable>
+    </Pressable>}
   </View>;
 
   const clubCard = (club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link"
@@ -145,12 +151,13 @@ export default function ProfileScreen() {
       <Row icon="shield" title="Password" subtitle="Imposta o cambia la password di accesso" onPress={() => go('/account/password')} last />
     </Group>}
     <Group title="Assistenza e informazioni">
+      <Row icon="help" title="Domande frequenti" subtitle="Ritiro, pagamento, resi e contatti" onPress={() => go('/aiuto')} />
       <Row icon="truck" title="Spedizioni e ritiro" subtitle="Tariffe, tempi e ritiro in negozio" onPress={() => go('/legal/shipping')} />
       <Row icon="shield" title="Condizioni di vendita e resi" onPress={() => go('/legal/terms')} />
-      <Row icon="help" title="Informativa privacy" onPress={() => go('/legal/privacy')} last />
+      <Row icon="lock" title="Informativa privacy" onPress={() => go('/legal/privacy')} last />
     </Group>
     {user && <View style={[styles.session, wide && { alignItems: 'center', flexDirection: 'row', gap: 28 }]}>
-      <Pressable onPress={() => supabase.auth.signOut()} accessibilityRole="button"
+      <Pressable onPress={() => setAskSignOut(true)} accessibilityRole="button"
         style={({ hovered, pressed }: WebState) => [styles.signOut, wide && styles.square, wide && { alignSelf: 'flex-start', paddingHorizontal: 28 }, (hovered || pressed) && { borderColor: colors.text }]}>
         <Text style={styles.signOutText}>Esci dall'account</Text></Pressable>
       <Pressable onPress={() => go('/account/delete')} accessibilityRole="button" hitSlop={6}>
@@ -164,6 +171,7 @@ export default function ProfileScreen() {
   if (wide) return <Screen maxWidth={SITE_WIDTH - 80} contentContainerStyle={{ paddingHorizontal: 40, paddingTop: 0 }}
     after={<SiteFooter />} bleed={40}>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
+    {signOutSheet}
     <Text style={styles.pageTitle} accessibilityRole="header">Il mio account</Text>
     <View style={styles.columns}>
       <View style={styles.side}>{identity}{store}{clubCard}</View>
@@ -195,72 +203,51 @@ export default function ProfileScreen() {
   // Phone (design F, F-Profilo): the person on the awning, the active order hanging from it, three shortcuts,
   // the store, the Club, then plain grouped lists.
   if (!wide) {
-    const prow = (title: string, onPress: () => void, subtitle?: string, first?: boolean) =>
-      <Pressable key={title} onPress={onPress} accessibilityRole="link" style={({ pressed }) => [styles.fRow, !first && styles.fRule, pressed && { opacity: 0.7 }]}>
-        <View style={{ flex: 1, minWidth: 0 }}><Text style={styles.fTitle}>{title}</Text>{!!subtitle && <Text style={styles.fSub} numberOfLines={1}>{subtitle}</Text>}</View>
-        <Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
-      </Pressable>;
-    const ftile = (icon: IconName, label: string, detail: string, onPress: () => void) =>
-      <Pressable key={label} onPress={onPress} accessibilityRole="link" accessibilityLabel={`${label}${detail ? `, ${detail}` : ''}`} style={({ pressed }) => [styles.fTile, pressed && { opacity: 0.85 }]}>
-        <Icon name={icon} size={24} color={colors.green} strokeWidth={1.8} />
-        <Text style={styles.fTileLabel}>{label}</Text>
-        <Text style={styles.fTileDetail} numberOfLines={1}>{detail || ' '}</Text>
-      </Pressable>;
-    const hang = user ? -36 : 0;
+    const card = profile.data?.member_card_number ?? null;
+    const first = name.split(' ')[0];
+    const since = member ? new Date(profile.data!.club_member_since!).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    // The hanging card: the member's own card, or the next step towards it.
+    const pass = !user ? { title: 'La tua tessera,\nsempre in tasca.', action: 'Accedi o registrati', onPress: () => go('/auth/sign-in') }
+      : card ? { name: name || undefined, card }
+      : member ? { name: name || undefined, title: 'Collega la tessera\ndel negozio.', action: 'Collega la tessera', onPress: () => go('/club') }
+      : club.enabled ? { name: name || undefined, title: 'Offerte riservate\nai Soci.', action: 'Iscriviti gratis', onPress: () => go('/club') }
+      : null;
+    const hint = !user ? 'Hai già la tessera del negozio? La colleghi dopo l’accesso.' : card ? 'Mostrala alla cassa: tocca per ingrandire.' : '';
+    const live = (orders.data ?? []).filter((o) => ACTIVE.has(o.status)).length;
     return <Screen header={<StatusBand />} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 28 }}
-      top={<View>
-        <View style={[styles.fHero, !user && { paddingBottom: 28 }]}>
-          <AwningStripes />
-          {user ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <View style={styles.fAvatar}><Text style={styles.fAvatarText}>{initials(name || user.email || '')}</Text></View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.fHello} numberOfLines={1} accessibilityRole="header">{name ? `Ciao, ${name.split(' ')[0]}` : 'Ciao!'}</Text>
-              <Text style={styles.fEmail} numberOfLines={1}>{user.email}</Text>
-            </View>
-            <Pressable onPress={() => go('/account/edit')} accessibilityRole="button" accessibilityLabel="Modifica dati personali" style={styles.fEdit}>
-              <Text style={styles.fEditText}>Modifica</Text></Pressable>
-          </View> : <>
-            <Text style={styles.fHello} accessibilityRole="header">Benvenuto in Casa & Te</Text>
-            <Text style={[styles.fEmail, { marginTop: 6, lineHeight: 20 }]}>Accedi per seguire i tuoi ordini, salvare gli indirizzi e iscriverti al Club.</Text>
-            <Pressable onPress={() => go('/auth/sign-in')} accessibilityRole="button" style={styles.fSignIn}><Text style={styles.fSignInText}>Accedi o registrati</Text></Pressable>
-          </>}
+      top={<View style={[styles.gZone, !pass && { paddingBottom: 30 }]}>
+        <BandWatermark top={0} />
+        <View style={styles.gTop}>
+          <Text style={styles.gKicker}>PROFILO</Text>
+          {user && <PillButton onDark title="Modifica" accessibilityLabel="Modifica dati personali" onPress={() => go('/account/edit')} />}
         </View>
-        <AwningEdge />
+        <Text style={styles.gName} numberOfLines={1} adjustsFontSizeToFit accessibilityRole="header">{user ? first || 'Ciao!' : 'Benvenuto'}</Text>
+        <Text style={styles.gSub} numberOfLines={1}>{!user ? 'Accedi con la tua email, niente password.' : member ? `Socio Casa & Te dal ${since}` : user.email}</Text>
       </View>}>
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-      <View style={{ paddingHorizontal: 16, marginTop: hang }}>
-        {active && <Pressable onPress={() => go(`/order/${active.id}`)} accessibilityRole="link" style={({ pressed }) => [styles.fOrder, pressed && { opacity: 0.9 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.fOrderLabel}>Ordine in corso · {active.order_number}</Text>
-            <Text style={styles.fOrderStatus}>{orderStatusLabel(active.status, active.fulfilment)}</Text>
-          </View>
-          <View style={styles.fFollow}><Text style={styles.fFollowText}>Segui</Text></View>
-        </Pressable>}
-        {user && <View style={[styles.fTiles, active && { marginTop: 14 }]}>
-          {ftile('box', 'Ordini', orderCount ? String(orderCount) : '', () => go('/orders'))}
-          {ftile('pin', 'Indirizzi', 'Consegna', () => go('/account/addresses'))}
-          {ftile('heart', 'Preferiti', favourites ? String(favourites) : '', () => go('/favorites'))}
-        </View>}
-        <View style={{ marginTop: user ? 10 : 16 }}><StoreCard compact showStatus={false} label="Il tuo negozio" style={styles.fFlat} onPress={() => setStoreSheet(true)} /></View>
-        {(club.enabled || member) && <Pressable onPress={() => go('/club')} accessibilityRole="link" style={({ pressed }) => [styles.fClub, pressed && { opacity: 0.88 }]}>
-          <Icon name="crown" size={26} color="#7A5310" fill="#EBCB86" strokeWidth={1.6} />
-          <View style={{ flex: 1 }}><Text style={styles.fClubTitle}>Casa & Te Club</Text>
-            <Text style={styles.fClubText}>{member ? 'Sei membro: guarda le offerte a te riservate.' : club.tagline}</Text></View>
-          <Icon name="chevron" size={18} color="#3D2A06" strokeWidth={2.2} />
-        </Pressable>}
-        {user && <><Text style={styles.fGroup} accessibilityRole="header">ACCOUNT</Text>
-          <View style={styles.fList}>
-            {prow('Dati personali', () => go('/account/edit'), [name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono', true)}
-            {prow('Password', () => go('/account/password'), 'Imposta o cambia la password')}
-          </View></>}
-        <Text style={styles.fGroup} accessibilityRole="header">ASSISTENZA E INFORMAZIONI</Text>
-        <View style={styles.fList}>
-          {prow('Spedizioni e ritiro', () => go('/legal/shipping'), 'Tariffe, tempi e ritiro in negozio', true)}
-          {prow('Condizioni di vendita e resi', () => go('/legal/terms'))}
-          {prow('Informativa privacy', () => go('/legal/privacy'))}
-        </View>
+    {signOutSheet}
+      <View style={{ paddingHorizontal: 22 }}>
+        {pass && <ClubPass {...pass} style={{ marginTop: -96 }} />}
+        {!!hint && <Text style={styles.gHint}>{hint}</Text>}
+        {/* One list for everything (plan §5.6); the order in progress is on Home, here only counted. */}
+        <ListGroup style={{ marginTop: 16 }}>
+          {user && <ListRow first title="Ordini" detail={live ? `${live} in corso` : orderCount ? String(orderCount) : undefined} onPress={() => go('/orders')} />}
+          <ListRow first={!user} title="Preferiti" detail={favourites ? String(favourites) : undefined} onPress={() => go('/favorites')} />
+          {user && <ListRow title="Indirizzi" onPress={() => go('/account/addresses')} />}
+          <ListRow title="Il tuo negozio" detail={selected ? storeName : 'Scegli'} onPress={canChoose || !selected ? () => setStoreSheet(true) : undefined} />
+        </ListGroup>
+        {user && <ListGroup title="Account">
+          <ListRow first title="Dati personali" subtitle={[name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono'} onPress={() => go('/account/edit')} />
+          <ListRow title="Password" subtitle="Imposta o cambia la password" onPress={() => go('/account/password')} />
+        </ListGroup>}
+        <ListGroup title="Assistenza e informazioni">
+          <ListRow first title="Domande frequenti" subtitle="Ritiro, pagamento, resi e contatti" onPress={() => go('/aiuto')} />
+          <ListRow title="Spedizioni e ritiro" subtitle="Tariffe, tempi e ritiro in negozio" onPress={() => go('/legal/shipping')} />
+          <ListRow title="Condizioni di vendita e resi" onPress={() => go('/legal/terms')} />
+          <ListRow title="Informativa privacy" onPress={() => go('/legal/privacy')} />
+        </ListGroup>
         {user && <View style={styles.fSession}>
-          <Pressable onPress={() => supabase.auth.signOut()} accessibilityRole="button" style={styles.fOut}><Text style={styles.fOutText}>Esci dall’account</Text></Pressable>
+          <Pressable onPress={() => setAskSignOut(true)} accessibilityRole="button" hitSlop={8}><Text style={styles.fOutText}>Esci dall’account</Text></Pressable>
           <Pressable onPress={() => go('/account/delete')} accessibilityRole="link" hitSlop={6}><Text style={styles.fDelete}>Elimina account</Text></Pressable>
         </View>}
         <Text style={styles.fVersion}>Casa & Te · Versione {Constants.expoConfig?.version ?? '1.0.0'} · Pagamenti gestiti da Stripe</Text>
@@ -270,6 +257,7 @@ export default function ProfileScreen() {
 
   return <Screen>
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
+    {signOutSheet}
     {identity}
     {activeCard}
     {shortcuts}
@@ -279,41 +267,43 @@ export default function ProfileScreen() {
   </Screen>;
 }
 
+const CLUB_CARD = require('../../../assets/club-card.webp');
+
 const styles = StyleSheet.create({
-  fHero: { backgroundColor: colors.brand, paddingTop: 18, paddingHorizontal: 20, paddingBottom: 46, overflow: 'hidden' },
-  fAvatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
-  fAvatarText: { fontSize: 21, fontFamily: fonts.heavy, color: colors.text },
-  fHello: { fontSize: 28, lineHeight: 32, fontFamily: fonts.display, color: '#FFFFFF' },
-  fEmail: { fontSize: 14, fontFamily: fonts.sans, color: colors.onBrand, marginTop: 2 },
-  fEdit: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)', justifyContent: 'center' },
-  fEditText: { fontSize: 14, fontFamily: fonts.sansBold, color: '#FFFFFF' },
-  fSignIn: { alignSelf: 'flex-start', height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.yellow, justifyContent: 'center', marginTop: 14 },
-  fSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
-  fOrder: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.yellow,
-    shadowColor: '#18201A', shadowOpacity: 0.14, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
-  fOrderLabel: { fontSize: 12.5, fontFamily: fonts.sansBold, color: '#4A4512' },
-  fOrderStatus: { fontSize: 16, fontFamily: fonts.heavy, color: colors.text, marginTop: 2 },
-  fFollow: { height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.text, justifyContent: 'center' },
-  fFollowText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
-  fTiles: { flexDirection: 'row', gap: 10 },
-  fTile: { flex: 1, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
-  fTileLabel: { fontSize: 14.5, fontFamily: fonts.heavy, color: colors.text, marginTop: 10 },
-  fTileDetail: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted },
-  fFlat: { shadowOpacity: 0, elevation: 0, borderBottomWidth: 1, borderColor: colors.line, borderRadius: 18 },
-  fClub: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10, padding: 16, borderRadius: 18, backgroundColor: '#F5E6C8' },
-  fClubTitle: { fontSize: 18, lineHeight: 22, fontFamily: fonts.display, color: '#3D2A06' },
-  fClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: '#3D2A06', marginTop: 2 },
-  fGroup: { fontSize: 13, letterSpacing: 0.6, fontFamily: fonts.heavy, color: colors.muted, marginTop: 20, marginBottom: 8, marginLeft: 4 },
-  fList: { borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
-  fRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 58, paddingVertical: 8, paddingHorizontal: 16 },
-  fRule: { borderTopWidth: 1, borderColor: '#EFECE3' },
-  fTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
-  fSub: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
-  fSession: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 },
-  fOut: { height: 48, paddingHorizontal: 20, borderRadius: 24, borderWidth: 1.5, borderColor: '#D5D0C3', justifyContent: 'center' },
-  fOutText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
-  fDelete: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.danger },
-  fVersion: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center', marginTop: 16 },
+  // Profilo (November 2026): the green zone with the monogram texture, the first name in large type, the member's card hanging.
+  gZone: { backgroundColor: colors.band, paddingTop: 10, paddingHorizontal: 22, paddingBottom: 122, overflow: 'hidden' },
+  gTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 36 },
+  gKicker: { fontSize: 13, letterSpacing: 1.8, fontFamily: fonts.sansSemiBold, color: colors.bandMuted },
+  gName: { ...type.display, color: colors.bandText, marginTop: 16 },
+  gSub: { ...type.body, color: colors.bandMuted, marginTop: 4 },
+  gHint: { ...type.small, color: colors.muted, textAlign: 'center', marginTop: 12 }, // ui-check: allow (live dot halo)
+  // Green band at the top (as on every page), a white card hanging from its edge (as the store card on Home).
+  fHero: { backgroundColor: colors.band, paddingTop: 14, paddingHorizontal: 20, paddingBottom: 58 },
+  fAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.signInk, alignItems: 'center', justifyContent: 'center' },
+  fAvatarText: { fontSize: 22, fontFamily: fonts.heavy, color: colors.band },
+  fHello: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.bandText, letterSpacing: -0.5 },
+  fEmail: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: colors.bandMuted, marginTop: 3 },
+  fCard: { marginTop: -40, padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line,
+    shadowColor: '#143019', shadowOpacity: 0.1, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  fCardTitle: { fontSize: 17, fontFamily: fonts.sansBold, color: colors.text },
+  fBtn: { flex: 1, height: 46, borderRadius: 23, borderWidth: 1.5, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
+  fBtnPrimary: { backgroundColor: colors.green, borderColor: colors.green },
+  fBtnText: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
+  fStats: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 6 },
+  fStat: { flex: 1, alignItems: 'center', gap: 2, minHeight: 50, justifyContent: 'center' },
+  fStatValue: { fontSize: 22, lineHeight: 26, fontFamily: fonts.heavy, color: colors.text },
+  fStatLabel: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  fStatRule: { width: 1, height: 34, backgroundColor: colors.line },
+  // The Club with its real card, a white plate like the rest.
+  fClub: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 12, padding: 14, borderRadius: 16, backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: colors.line },
+  fClubCard: { width: 64, height: 40, borderRadius: 4 },
+  fClubTitle: { fontSize: 17, lineHeight: 22, fontFamily: fonts.sansBold, color: colors.text },
+  fClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
+  fSession: { alignItems: 'center', gap: 14, marginTop: 32 },
+  fOutText: { ...type.body, fontFamily: fonts.sansMedium, color: colors.muted },
+  fDelete: { ...type.small, fontFamily: fonts.sansSemiBold, color: colors.danger },
+  fVersion: { ...type.small, fontSize: 13, color: colors.faint, textAlign: 'center', marginTop: 24 },
   pageTitle: { fontSize: 56, lineHeight: 62, letterSpacing: -1, fontFamily: fonts.serif, color: colors.text, paddingTop: 40, paddingBottom: 28,
     borderBottomWidth: 1, borderColor: colors.text, marginBottom: 36 },
   columns: { flexDirection: 'row', gap: 56, alignItems: 'flex-start' },
@@ -332,78 +322,78 @@ const styles = StyleSheet.create({
   memberText: { fontSize: 11, color: '#7A5414', fontFamily: fonts.sansSemiBold, fontWeight: '600' },
   editButton: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 14, height: 34, justifyContent: 'center' },
   editText: { fontSize: 13, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500' },
-  link: { fontSize: 13.5, color: colors.green, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
+  link: { fontSize: 13, color: colors.green, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
 
-  welcome: { backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.line, padding: 22, gap: 12, marginTop: 8 },
+  welcome: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.line, padding: 22, gap: 12, marginTop: 8 },
   welcomeTitle: { fontSize: 30, lineHeight: 35, fontFamily: fonts.serif, color: colors.text },
-  welcomeText: { fontSize: 14, lineHeight: 21, color: colors.muted, fontFamily: fonts.sans, marginBottom: 4 },
+  welcomeText: { fontSize: 15, lineHeight: 21, color: colors.muted, fontFamily: fonts.sans, marginBottom: 4 },
 
   activeOrder: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 12, padding: 16, marginTop: 22 },
   pulse: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.green },
-  activeLabel: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans },
+  activeLabel: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
   activeStatus: { fontSize: 17, fontFamily: fonts.serif, color: colors.text, marginTop: 1 },
 
   shortcuts: { flexDirection: 'row', gap: 10, marginTop: 22 },
   shortcut: { flex: 1, borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingVertical: 16, paddingHorizontal: 12, alignItems: 'center', gap: 6 },
-  shortcutLabel: { fontSize: 13.5, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500' },
-  shortcutDetail: { position: 'absolute', top: 8, right: 10, fontSize: 11.5, color: colors.green, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
+  shortcutLabel: { fontSize: 13, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  shortcutDetail: { position: 'absolute', top: 8, right: 10, fontSize: 11, color: colors.green, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
 
   store: { marginTop: 22, padding: 18, borderRadius: 12, backgroundColor: colors.stone, gap: 4 },
   storeHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  storeLabel: { fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.muted, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
+  storeLabel: { fontSize: 13, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.muted, fontFamily: fonts.sansSemiBold, fontWeight: '600' },
   storeName: { fontSize: 22, lineHeight: 26, fontFamily: fonts.serif, color: colors.text },
   storeText: { fontSize: 13, lineHeight: 19, color: colors.muted, fontFamily: fonts.sans },
   storeChange: { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 4 },
 
   club: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.sand, borderRadius: 12, padding: 16, marginTop: 14 },
   clubTitle: { fontSize: 18, fontFamily: fonts.serif, color: colors.text },
-  clubText: { fontSize: 12.5, lineHeight: 17, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
+  clubText: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
 
   group: { marginTop: 30 },
-  groupTitle: { fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.muted, fontFamily: fonts.sansSemiBold, fontWeight: '600',
+  groupTitle: { fontSize: 13, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.muted, fontFamily: fonts.sansSemiBold, fontWeight: '600',
     paddingBottom: 8, borderBottomWidth: 1, borderColor: colors.line },
   row: { flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 58, paddingVertical: 10, paddingHorizontal: 2 },
   rowLine: { borderBottomWidth: 1, borderColor: colors.line },
-  rowOn: { backgroundColor: '#FAF7F2' },
-  rowTitle: { fontSize: 15.5, color: colors.text, fontFamily: fonts.sans },
-  rowSub: { fontSize: 12.5, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
+  rowOn: { backgroundColor: '#F7F7F5' },
+  rowTitle: { fontSize: 15, color: colors.text, fontFamily: fonts.sans },
+  rowSub: { fontSize: 13, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
 
   session: { marginTop: 36, alignItems: 'center', gap: 16 },
-  pHero: { backgroundColor: colors.brand, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 26, overflow: 'hidden' },
+  pHero: { backgroundColor: colors.band, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 26, overflow: 'hidden' },
   pWatermark: { position: 'absolute', right: -40, top: 10, width: 200, height: 112, opacity: 0.22 },
   pAvatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
   pAvatarText: { fontSize: 22, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
-  pHello: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: '#FFFFFF' },
-  pEmail: { fontSize: 14, fontFamily: fonts.sansMedium, color: colors.onBrand, marginTop: 2 },
-  pEdit: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)', justifyContent: 'center' },
-  pEditText: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: '#FFFFFF' },
+  pHello: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.bandText, letterSpacing: -0.5 },
+  pEmail: { fontSize: 15, fontFamily: fonts.sansMedium, color: colors.bandMuted, marginTop: 2 },
+  pEdit: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: colors.bandButton, justifyContent: 'center' },
+  pEditText: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.bandText },
   pMember: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 12, paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.18)' },
   pMemberText: { fontSize: 13, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.yellow },
   pSignIn: { alignSelf: 'flex-start', height: 44, paddingHorizontal: 20, borderRadius: 22, backgroundColor: colors.yellow, justifyContent: 'center', marginTop: 14 },
-  pSignInText: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF' },
+  pSignInText: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, paddingHorizontal: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   pFloat: { backgroundColor: colors.yellow, shadowColor: '#18201A', shadowOpacity: 0.14, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 6 },
   pFollow: { height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.text, justifyContent: 'center' },
-  pFollowText: { fontSize: 13.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  pFollowText: { fontSize: 13, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   pDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.brand, borderWidth: 6, borderColor: colors.well, marginHorizontal: 2 },
-  pStrong: { fontSize: 16, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text, marginTop: 1 },
-  pLink: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
-  pTile: { flex: 1, alignItems: 'flex-start', gap: 8, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 18, backgroundColor: '#FFFFFF' },
+  pStrong: { fontSize: 17, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text, marginTop: 1 },
+  pLink: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
+  pTile: { flex: 1, alignItems: 'flex-start', gap: 8, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   // The icon alone, no tinted circle behind it (design H); the box keeps room for the count.
   pCircle: { width: 28, height: 28, alignItems: 'flex-start', justifyContent: 'center' },
   pCount: { position: 'absolute', top: -4, right: -8, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   pCountText: { fontSize: 11, fontFamily: fonts.heavy, fontWeight: '800', color: '#FFFFFF' },
-  pTileText: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  pClub: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 20, backgroundColor: '#F5E6C8' },
-  pClubTitle: { fontSize: 18, lineHeight: 23, fontFamily: fonts.display, color: '#3D2A06' },
+  pTileText: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  pClub: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 16, backgroundColor: '#F5E6C8' },
+  pClubTitle: { fontSize: 17, lineHeight: 22, fontFamily: fonts.display, color: '#3D2A06' },
   pClubText: { fontSize: 13, lineHeight: 17, fontFamily: fonts.sansMedium, color: '#3D2A06', marginTop: 1 },
-  pGroup: { fontSize: 12.5, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginTop: 12, marginLeft: 4 },
-  pList: { borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 16 },
+  pGroup: { fontSize: 13, letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.heavy, color: colors.muted, marginTop: 12, marginLeft: 4 },
+  pList: { borderRadius: 16, backgroundColor: '#FFFFFF', paddingHorizontal: 16, borderWidth: 1, borderColor: colors.line },
   pRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 56, paddingVertical: 10 },
-  pRowTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  pRowTitle: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   signOut: { alignSelf: 'stretch', height: 52, borderWidth: 1.5, borderColor: colors.line, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   signOutText: { fontSize: 15, color: colors.text, fontFamily: fonts.sansBold, fontWeight: '700' },
-  delete: { fontSize: 14, color: colors.danger, fontFamily: fonts.sansBold },
-  footer: { marginTop: 36, textAlign: 'center', fontSize: 12, color: colors.muted, fontFamily: fonts.sans },
+  delete: { fontSize: 15, color: colors.danger, fontFamily: fonts.sansBold },
+  footer: { marginTop: 36, textAlign: 'center', fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
 });

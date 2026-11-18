@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
-import { FULFILMENT_LABELS, formatWeight, friendlyError, isPhone, validateAddress, validateInvoice, type Address, type AddressRow, type CreateOrderInput, type FulfilmentMethod, type InvoiceDetails, type PickupPointRow } from '@casa-te/shared';
+import { FULFILMENT_LABELS, formatWeight, friendlyError, isPhone, validateAddress, validateInvoice, type Address, type AddressRow, type CreateOrderInput, type FulfilmentMethod, type InvoiceDetails, type PaymentMethod, type PickupPointRow, type PickupSlot } from '@casa-te/shared';
 import { formatEuro, formatShipping } from '@/lib/price';
 import { Screen } from '@/components/Screen';
+import { RevealInput, RevealOnOpen } from '@/components/Reveal';
 import { Icon, type IconName } from '@/components/Icon';
 import { FulfilmentSheet } from '@/components/FulfilmentSheet';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
@@ -12,9 +13,10 @@ import {
   Checkbox, EmptyState, Loading, Notice, OptionCard, PrimaryButton, RadioMark, SecondaryButton, SectionTitle, SummaryRow, TextField,
 } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
-import { fetchAddresses, fetchPickupPoints, fetchProfile, imageUrl, saveAddress, startCheckout, updateProfile } from '@/lib/api';
+import { fetchAddresses, fetchPickupPoints, fetchPickupSlots, fetchProfile, imageUrl, saveAddress, startCheckout, updateProfile } from '@/lib/api';
+import { PayMethodPicker, PickupSlotPicker, slotText } from '@/components/CheckoutPickers';
 import { ProductImage } from '@/components/ProductImage';
-import { useCartQuote, useCompanies, useDelivery, useLayout } from '@/lib/hooks';
+import { useCartQuote, useClubSettings, useCompanies, useDelivery, useLayout } from '@/lib/hooks';
 import { usePreferences } from '@/store/preferences';
 import { openCheckout } from '@/lib/payments';
 import { useQuery } from '@/lib/useQuery';
@@ -24,7 +26,7 @@ import { ALL_PRODUCTS } from '@/lib/links';
 const METHOD_INFO: Record<FulfilmentMethod, { description: string; icon: IconName }> = {
   home: { description: 'Consegna con corriere in 2–4 giorni lavorativi', icon: 'truck' },
   pickup: { description: 'Ritira in un punto convenzionato, quando preferisci', icon: 'pin' },
-  store: { description: "Gratuito, quando l'ordine è pronto", icon: 'store' },
+  store: { description: "Gratuito, all'orario che scegli", icon: 'store' },
 };
 
 const emptyAddress: Address = { fullName: '', line1: '', line2: '', city: '', province: '', postalCode: '', phone: '' };
@@ -64,6 +66,13 @@ export default function CheckoutScreen() {
   const [invoiceData, setInvoiceData] = useState<InvoiceDetails>({});
   const [notes, setNotes] = useState('');
   const [accepted, setAccepted] = useState(false);
+  // Store pickup: when the customer comes (one-hour slot) and how they pay (online now, or at the till).
+  const slots = useQuery<PickupSlot[]>(store && method === 'store' ? `pickup-slots:${store.id}` : null, () => fetchPickupSlots(store!.id));
+  const [slot, setSlot] = useState<string | null>(null);
+  const [slotDay, setSlotDay] = useState<string | null>(null);
+  const [payMethod, setPayMethod] = useState<PaymentMethod>('card');
+  const { minOrderCents } = useClubSettings();
+  const chosenSlot = (slots.data ?? []).find((s) => s.starts_at === slot) ?? null;
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -95,10 +104,15 @@ export default function CheckoutScreen() {
 
   const methodQuote = quote.shipping[method];
   const total = quote.total_cents;
+  // Minimum order on the goods (create_order checks it again); display only.
+  const goods = quote.subtotal_cents - (quote.discount_cents ?? 0);
+  const minNote = minOrderCents > 0 && goods < minOrderCents
+    ? `Ordine minimo ${formatEuro(minOrderCents).replace(/€\s/, '€').replace(',00', '')}: aggiungi ancora ${formatEuro(minOrderCents - goods).replace(/€\s/, '€')} di prodotti.` : '';
 
   const validate = (): Record<string, string> => {
     const e: Record<string, string> = {};
     if (quote.issue_count > 0) e.cart = 'cart';
+    if (minNote) e.cart = 'minimum';
     if (!methodQuote) e.method = 'Metodo non disponibile';
     if (method === 'home') {
       const ae = validateAddress(address);
@@ -108,6 +122,7 @@ export default function CheckoutScreen() {
       if (!isPhone(phone)) e.phone = 'Numero di telefono non valido';
     }
     if (method === 'pickup' && !pickupPointId) e.pickup = 'Seleziona un punto di ritiro';
+    if (method === 'store' && (slots.data ?? []).length > 0 && !chosenSlot) e.slot = 'Scegli quando passi a ritirare';
     if (invoice) for (const [k, v] of Object.entries(validateInvoice(invoiceData))) e[`invoice.${k}`] = v as string;
     if (!accepted) e.accepted = 'Devi accettare le condizioni di vendita';
     return e;
@@ -137,6 +152,7 @@ export default function CheckoutScreen() {
         store_id: store.id,
         items: quote.lines.map((l) => ({ product_id: l.product_id, quantity: l.quantity })),
         fulfilment: method,
+        ...(method === 'store' ? { payment_method: payMethod, ...(chosenSlot ? { pickup_slot_start: chosenSlot.starts_at } : {}) } : {}),
         coupon_code: coupon || undefined,
         notes: notes.trim() || undefined,
         ...(method === 'home'
@@ -170,7 +186,9 @@ export default function CheckoutScreen() {
   const err = (k: string) => liveErrors[k];
   const fieldError = (k: string) => err(k) ? <Text style={styles.error} {...({ dataSet: { fieldError: 'true' } } as object)} accessibilityRole="alert">{err(k)}</Text> : null;
 
-  const pending = attempted ? Object.keys(liveErrors).filter((k) => k !== 'cart').length : 0;
+  // The terms have their own message right under the checkbox: count only the fields higher up the page.
+  const pending = attempted ? Object.keys(liveErrors).filter((k) => k !== 'cart' && k !== 'accepted').length : 0;
+  const payInStore = method === 'store' && payMethod === 'store';
 
   // Phone (design F, F-Checkout): ivory page with its own header, radio cards, grouped white field cards,
   // a folding summary, the terms, and the total with "Paga" in a white sheet.
@@ -180,7 +198,7 @@ export default function CheckoutScreen() {
     const field = (key: string, label: string, value: string, onChange: (v: string) => void, extra: object = {}, last = false) =>
       <View key={key} style={[styles.fRow, !last && styles.fRule]}>
         <Text style={styles.fLabel}>{label}</Text>
-        <TextInput value={value} onChangeText={onChange} accessibilityLabel={label} placeholderTextColor={colors.faint} style={styles.fInput}
+        <RevealInput value={value} onChangeText={onChange} accessibilityLabel={label} placeholderTextColor={colors.faint} style={styles.fInput}
           {...({ dataSet: { invalid: err(key) ? 'true' : 'false' } } as object)} {...extra} />
         {!!err(key) && <Text style={styles.fError} accessibilityLiveRegion="polite">{err(key)}</Text>}
       </View>;
@@ -197,15 +215,25 @@ export default function CheckoutScreen() {
           <Text style={styles.payLabel}>{method === 'store' ? 'Totale · ritiro gratuito' : `Totale · ${FULFILMENT_LABELS[method].toLowerCase()}`}</Text>
           <Text style={styles.payTotal}>{total !== null ? euro(total) : '—'}</Text>
         </View>
+        {(quote.member_savings_cents ?? 0) > 0 && <Text style={styles.paySaved}>Con i Prezzi Soci risparmi {euro(quote.member_savings_cents ?? 0)}</Text>}
         {pending > 0 ? <Pressable onPress={revealFirstError} accessibilityRole="button">
           <Text style={styles.footerError} accessibilityRole="alert">{pending === 1 ? 'Manca un dato' : `Mancano ${pending} dati`} · <Text style={{ textDecorationLine: 'underline' }}>mostra</Text></Text></Pressable>
           : !!submitError && <Text style={styles.footerError} accessibilityRole="alert">{submitError}</Text>}
-        <Pressable onPress={pay} disabled={busy} accessibilityRole="button" accessibilityState={{ disabled: !ready, busy }}
-          style={({ pressed }) => [styles.payButton, !accepted && styles.payOff, pressed && accepted && { opacity: 0.88 }]}>
-          {busy && <ActivityIndicator color="#FFFFFF" />}
-          <Text style={[styles.payText, !accepted && { color: colors.muted }]}>{busy ? 'Pagamento in corso…' : accepted ? (total !== null ? `Paga ${euro(total)} con carta` : 'Scegli la consegna') : 'Accetta i termini per pagare'}</Text>
+        {!!minNote && <Text style={styles.footerError} accessibilityRole="alert">{minNote}</Text>}
+        {/* The consent sits right above the button it unlocks; the button stays green and says what it does. */}
+        <Pressable onPress={() => setAccepted(!accepted)} accessibilityRole="checkbox" accessibilityState={{ checked: accepted }} style={styles.terms}>
+          <View style={[styles.box, accepted && styles.boxOn]}>{accepted && <Icon name="check" size={15} color="#FFFFFF" strokeWidth={3} />}</View>
+          <Text style={styles.termsText}>Accetto le <Text style={styles.linkPhone} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e l’<Text style={styles.linkPhone} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text></Text>
         </Pressable>
-        <View style={styles.secureRow}><Icon name="lock" size={13} color={colors.muted} strokeWidth={2.2} /><Text style={styles.secure}>Pagamento sicuro con Stripe</Text></View>
+        {fieldError('accepted')}
+        <Pressable onPress={pay} disabled={busy} accessibilityRole="button" accessibilityState={{ disabled: !ready, busy }}
+          style={({ pressed }) => [styles.payButton, pressed && { opacity: 0.88 }]}>
+          {busy && <ActivityIndicator color="#FFFFFF" />}
+          <Text style={styles.payText}>{busy ? (payInStore ? 'Invio in corso…' : 'Pagamento in corso…') : total === null ? 'Scegli la consegna'
+            : payInStore ? `Conferma l’ordine · ${euro(total)}` : `Paga ${euro(total)}`}</Text>
+        </Pressable>
+        <View style={styles.secureRow}>{payInStore ? <Text style={styles.secure}>Paghi alla cassa quando ritiri{chosenSlot ? ` · ${slotText(chosenSlot.starts_at, chosenSlot.ends_at)}` : ''}</Text>
+          : <><Icon name="lock" size={13} color={colors.muted} strokeWidth={2.2} /><Text style={styles.secure}>Pagamento sicuro con Stripe</Text></>}</View>
       </View>}>
       <Stack.Screen options={{ headerShown: false }} />
       <FulfilmentSheet visible={deliverySheet} onClose={() => setDeliverySheet(false)} quote={quote} storeName={storeShortName(store) || 'negozio'}
@@ -219,9 +247,11 @@ export default function CheckoutScreen() {
       <View style={{ gap: 8 }}>{methods.map((m) => {
         const on = m === method;
         const q = quote.shipping[m];
-        return <Pressable key={m} onPress={() => setFulfilment(m)} accessibilityRole="radio" accessibilityState={{ checked: on }}
-          style={[styles.option, on ? styles.optionOn : null]}>
-          {radio(on)}
+        // Only one way to receive the order: say it, without a choice that is not one (plan v2 A5).
+        const only = methods.length === 1;
+        return <Pressable key={m} onPress={() => setFulfilment(m)} disabled={only} accessibilityRole={only ? 'text' : 'radio'}
+          accessibilityState={only ? undefined : { checked: on }} style={[styles.option, on && !only ? styles.optionOn : null]}>
+          {!only && radio(on)}
           <View style={{ flex: 1 }}>
             <Text style={styles.optionTitle}>{m === 'store' ? 'Ritiro in negozio' : FULFILMENT_LABELS[m]}</Text>
             <Text style={styles.optionSub}>{m === 'store' ? [storeShortName(store).replace(/^(\S+)\s+(?!·)/, '$1 · '), store?.opening_hours].filter(Boolean).join(' · ') : METHOD_INFO[m].description}</Text>
@@ -230,6 +260,15 @@ export default function CheckoutScreen() {
         </Pressable>;
       })}</View>
       {!methodQuote && <Text style={styles.fError}>Metodo non disponibile per questo ordine: scegline un altro.</Text>}
+
+      {method === 'store' && <>
+        <Text style={styles.h2}>Quando passi a ritirare</Text>
+        {slots.loading && !slots.data ? <Loading /> : (slots.data ?? []).length
+          ? <PickupSlotPicker slots={slots.data ?? []} value={slot} onChange={setSlot} day={slotDay} onDay={setSlotDay} error={err('slot')} />
+          : <Text style={styles.optionSub}>Ti avvisiamo appena l’ordine è pronto.</Text>}
+        <Text style={styles.h2}>Come paghi</Text>
+        <PayMethodPicker value={payMethod} onChange={setPayMethod} />
+      </>}
 
       {method === 'home' && <>
         <Text style={styles.h2}>Indirizzo di consegna</Text>
@@ -281,7 +320,7 @@ export default function CheckoutScreen() {
         {method !== 'home' && field('phone', 'Telefono', phone, setPhone, { keyboardType: 'phone-pad', autoComplete: 'tel', placeholder: 'Per contattarti se serve' }, true)}
       </View>
 
-      <View style={[styles.group, { marginTop: 22 }]}>
+      <RevealOnOpen open={summaryOpen} style={[styles.group, { marginTop: 22 }]}>
         <Pressable onPress={() => setSummaryOpen(!summaryOpen)} accessibilityRole="button" accessibilityState={{ expanded: summaryOpen }} style={styles.sumHead}>
           <View style={{ flexDirection: 'row' }}>{quote.lines.slice(0, 3).map((l, i) =>
             <View key={l.product_id} style={[styles.sumThumb, i > 0 && { marginLeft: -10 }]}><ProductImage uri={imageUrl(l.image_path)} sku={l.sku} inset={0.04} /></View>)}</View>
@@ -289,39 +328,55 @@ export default function CheckoutScreen() {
           <View style={{ transform: [{ rotate: summaryOpen ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color={colors.text} strokeWidth={2.2} /></View>
         </Pressable>
         {summaryOpen && <View style={styles.sumBody}>
-          {quote.lines.map((l) => <View key={l.product_id} style={styles.sumLine}>
-            <Text style={styles.sumText} numberOfLines={1}>{l.quantity > 1 ? `${l.quantity} × ` : ''}{l.name}</Text><Text style={styles.sumText}>{euro(l.line_total_cents)}</Text></View>)}
+          {quote.lines.map((l) => <View key={l.product_id} style={styles.sumItem}>
+            <View style={styles.sumItemThumb}><ProductImage uri={imageUrl(l.image_path)} sku={l.sku} label={l.name} inset={0.04} /></View>
+            <Text style={[styles.sumText, { flex: 1 }]} numberOfLines={2}>{l.quantity > 1 ? `${l.quantity} × ` : ''}{l.name}</Text>
+            <Text style={[styles.sumText, { fontFamily: fonts.sansSemiBold }]}>{euro(l.line_total_cents)}</Text></View>)}
+          <View style={styles.sumRule} />
           {quote.discount_cents > 0 && <View style={styles.sumLine}><Text style={styles.sumText}>Sconto {quote.coupon?.code ?? ''}</Text><Text style={[styles.sumText, { color: colors.green }]}>-{euro(quote.discount_cents)}</Text></View>}
           <View style={styles.sumLine}><Text style={styles.sumText}>{FULFILMENT_LABELS[method]}</Text><Text style={styles.sumText}>{methodQuote ? formatShipping(methodQuote.price_cents).replace(/€\s/, '€') : '—'}</Text></View>
           <View style={styles.sumLine}><Text style={styles.sumText}>Peso</Text><Text style={styles.sumText}>{formatWeight(quote.total_weight_g)}</Text></View>
         </View>}
-      </View>
+      </RevealOnOpen>
 
       <View style={[styles.group, { marginTop: 10 }]}>
         {coupon && !quote.coupon_error ? <View style={[styles.sumHead, { justifyContent: 'space-between' }]}>
           <Text style={styles.sumTitle}>Codice {quote.coupon?.code ?? coupon} applicato</Text>
           <Pressable onPress={() => { setCoupon(''); setCouponInput(''); }} accessibilityRole="button"><Text style={styles.linkPhone}>Rimuovi</Text></Pressable>
-        </View> : !couponOpen ? <Pressable onPress={() => setCouponOpen(true)} accessibilityRole="button" style={styles.sumHead}>
-          <Icon name="percent" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Hai un codice sconto?</Text><Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
-        </Pressable> : <View style={[styles.fRow, { flexDirection: 'row', alignItems: 'flex-end', gap: 10 }]}>
-          <View style={{ flex: 1 }}><Text style={styles.fLabel}>Codice sconto</Text>
-            <TextInput value={couponInput} autoCapitalize="characters" autoCorrect={false} autoFocus onChangeText={(v) => setCouponInput(v.toUpperCase())}
-              onSubmitEditing={() => setCoupon(couponInput.trim())} style={styles.fInput} accessibilityLabel="Codice sconto" />
-            {!!coupon && !!quote.coupon_error && <Text style={styles.fError}>{friendlyError(quote.coupon_error)}</Text>}</View>
-          <Pressable onPress={() => setCoupon(couponInput.trim())} disabled={!couponInput.trim()} accessibilityRole="button" style={styles.apply}><Text style={styles.applyText}>Applica</Text></Pressable>
+        </View> : <View>
+          {/* Opens and closes from the same row; the field scrolls above the keyboard. */}
+          <Pressable onPress={() => setCouponOpen(!couponOpen)} accessibilityRole="button" accessibilityState={{ expanded: couponOpen }} style={styles.sumHead}>
+            <Icon name="percent" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Hai un codice sconto?</Text>
+            <View style={{ transform: [{ rotate: couponOpen ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color="#9A9F94" strokeWidth={2.2} /></View>
+          </Pressable>
+          {couponOpen && <View style={[styles.fRow, { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingTop: 0 }]}>
+            <View style={{ flex: 1 }}>
+              <RevealInput value={couponInput} autoCapitalize="characters" autoCorrect={false} autoFocus onChangeText={(v) => setCouponInput(v.toUpperCase())}
+                onSubmitEditing={() => setCoupon(couponInput.trim())} placeholder="Scrivi il codice" placeholderTextColor={colors.faint} style={styles.fInput} accessibilityLabel="Codice sconto" />
+              {!!coupon && !!quote.coupon_error && <Text style={styles.fError}>{friendlyError(quote.coupon_error)}</Text>}</View>
+            <Pressable onPress={() => setCoupon(couponInput.trim())} disabled={!couponInput.trim()} accessibilityRole="button" style={[styles.apply, !couponInput.trim() && { opacity: 0.4 }]}><Text style={styles.applyText}>Applica</Text></Pressable>
+          </View>}
         </View>}
         <View style={styles.fRule} />
-        {notesOpen || notes ? <View style={styles.fRow}><Text style={styles.fLabel}>Note per il negozio (facoltative)</Text>
-          <TextInput value={notes} onChangeText={setNotes} multiline maxLength={500} autoFocus={!notes} style={[styles.fInput, { minHeight: 60, textAlignVertical: 'top' }]} accessibilityLabel="Note per il negozio" /></View>
-          : <Pressable onPress={() => setNotesOpen(true)} accessibilityRole="button" style={styles.sumHead}>
-            <Icon name="list" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Aggiungi una nota per il negozio</Text><Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
-          </Pressable>}
+        <View>
+          <Pressable onPress={() => setNotesOpen(!notesOpen)} accessibilityRole="button" accessibilityState={{ expanded: notesOpen }} style={styles.sumHead}>
+            <Icon name="list" size={18} color={colors.green} strokeWidth={2} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={[styles.sumTitle, { flex: 0 }]}>{notes ? 'Nota per il negozio' : 'Aggiungi una nota per il negozio'}</Text>
+              {!notesOpen && !!notes && <Text style={styles.fSubPreview} numberOfLines={1}>{notes}</Text>}
+            </View>
+            <View style={{ transform: [{ rotate: notesOpen ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color="#9A9F94" strokeWidth={2.2} /></View>
+          </Pressable>
+          {notesOpen && <View style={[styles.fRow, { paddingTop: 0 }]}>
+            <RevealInput value={notes} onChangeText={setNotes} multiline maxLength={500} autoFocus placeholder="Es. citofono, orario preferito…" placeholderTextColor={colors.faint}
+              style={[styles.fInput, { minHeight: 60, textAlignVertical: 'top' }]} accessibilityLabel="Note per il negozio" /></View>}
+        </View>
         <View style={styles.fRule} />
         <Pressable onPress={() => setInvoice(!invoice)} accessibilityRole="checkbox" accessibilityState={{ checked: invoice }} style={styles.sumHead}>
           <Icon name="card" size={18} color={colors.green} strokeWidth={2} /><Text style={styles.sumTitle}>Richiedo la fattura</Text>
           <View style={[styles.box, invoice && styles.boxOn]}>{invoice && <Icon name="check" size={14} color="#FFFFFF" strokeWidth={3} />}</View>
         </Pressable>
-        {invoice && <View style={{ borderTopWidth: 1, borderColor: '#EFECE3' }}>
+        {invoice && <RevealOnOpen open={invoice} style={{ borderTopWidth: 1, borderColor: '#EDEDE9' }}>
           {field('invoice.taxCode', 'Codice fiscale', invoiceData.taxCode ?? '', (v) => setInvoiceData({ ...invoiceData, taxCode: v.toUpperCase() }), { autoCapitalize: 'characters', maxLength: 16 })}
           {field('invoice.vatNumber', 'Partita IVA (aziende)', invoiceData.vatNumber ?? '', (v) => setInvoiceData({ ...invoiceData, vatNumber: v }), { keyboardType: 'number-pad', maxLength: 13 }, !invoiceData.vatNumber)}
           {!!invoiceData.vatNumber && <>
@@ -329,15 +384,11 @@ export default function CheckoutScreen() {
             {field('invoice.sdiCode', 'Codice SDI', invoiceData.sdiCode ?? '', (v) => setInvoiceData({ ...invoiceData, sdiCode: v.toUpperCase() }), { maxLength: 7, autoCapitalize: 'characters' })}
             {field('invoice.pec', 'PEC (in alternativa al codice SDI)', invoiceData.pec ?? '', (v) => setInvoiceData({ ...invoiceData, pec: v }), { keyboardType: 'email-address', autoCapitalize: 'none' }, true)}
           </>}
-        </View>}
+        </RevealOnOpen>}
       </View>
 
-      <Pressable onPress={() => setAccepted(!accepted)} accessibilityRole="checkbox" accessibilityState={{ checked: accepted }} style={styles.terms}>
-        <View style={[styles.box, accepted && styles.boxOn]}>{accepted && <Icon name="check" size={15} color="#FFFFFF" strokeWidth={3} />}</View>
-        <Text style={styles.termsText}>Ho letto e accetto le <Text style={styles.linkPhone} onPress={() => router.push('/legal/terms')}>Condizioni di vendita</Text> e l’<Text style={styles.linkPhone} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text></Text>
-      </Pressable>
-      {fieldError('accepted')}
-      {!!seller && <Text style={styles.finePhone}>Venditore: {seller.legal_name} · P.IVA {seller.vat_number}. Paghi sulla pagina sicura di Stripe: i dati della carta non passano dai nostri server. Recesso entro 14 giorni.</Text>}
+      {!!seller && <Text style={styles.finePhone}>Venditore: {seller.legal_name} · P.IVA {seller.vat_number}. {payInStore ? 'Paghi alla cassa del negozio quando ritiri.'
+        : 'Paghi sulla pagina sicura di Stripe: i dati della carta non passano dai nostri server.'} Recesso entro 14 giorni.</Text>}
     </Screen>;
   }
 
@@ -345,9 +396,10 @@ export default function CheckoutScreen() {
     {pending > 0 ? <Pressable onPress={revealFirstError} accessibilityRole="button">
       <Text style={styles.footerError} accessibilityRole="alert">{pending === 1 ? 'Manca un dato' : `Mancano ${pending} dati`} · <Text style={{ textDecorationLine: 'underline' }}>mostra</Text></Text></Pressable>
       : !!submitError && <Text style={styles.footerError} accessibilityRole="alert">{submitError}</Text>}
-    <Text style={styles.secure}>Pagamento sicuro con Stripe · IVA inclusa · recesso entro 14 giorni</Text>
-    <PrimaryButton title={total !== null ? `Paga ${formatEuro(total)}` : 'Scegli la consegna'} icon="card"
-      loading={busy} disabled={quoting || total === null || quote.issue_count > 0} onPress={pay} />
+    <Text style={styles.secure}>{payInStore ? 'Paghi alla cassa quando ritiri' : 'Pagamento sicuro con Stripe'} · IVA inclusa · recesso entro 14 giorni</Text>
+    <PrimaryButton title={total === null ? 'Scegli la consegna' : payInStore ? `Conferma l'ordine · ${formatEuro(total)}` : `Paga ${formatEuro(total)}`} icon={payInStore ? 'check' : 'card'}
+      loading={busy} disabled={quoting || total === null || quote.issue_count > 0 || !!minNote} onPress={pay} />
+    {!!minNote && <Text style={[styles.secure, { color: colors.danger }]}>{minNote}</Text>}
   </View>}>
     {quote.issue_count > 0 && <Notice tone="error" title="Alcuni articoli non sono disponibili"
       message="Torna al carrello per aggiornare le quantità.">
@@ -395,6 +447,15 @@ export default function CheckoutScreen() {
         </View>
         <Checkbox checked={saveToBook} onChange={setSaveToBook}><Text style={styles.checkText}>Salva nella rubrica indirizzi</Text></Checkbox>
       </View>}
+    </>}
+
+    {method === 'store' && <>
+      <SectionTitle>Quando passi a ritirare</SectionTitle>
+      {slots.loading && !slots.data ? <Loading /> : (slots.data ?? []).length
+        ? <PickupSlotPicker slots={slots.data ?? []} value={slot} onChange={setSlot} day={slotDay} onDay={setSlotDay} error={err('slot')} />
+        : <Text style={styles.deliveryText}>Ti avvisiamo appena l'ordine è pronto.</Text>}
+      <SectionTitle>Come paghi</SectionTitle>
+      <PayMethodPicker value={payMethod} onChange={setPayMethod} />
     </>}
 
     {method === 'pickup' && <>
@@ -464,8 +525,8 @@ export default function CheckoutScreen() {
           <Text style={styles.link} onPress={() => router.push('/legal/privacy')}>Informativa privacy</Text>.</Text>
       </Checkbox>
       {fieldError('accepted')}
-      <Text style={styles.fine}>Paghi sulla pagina sicura di Stripe con carta o wallet digitale: i dati della carta non passano dai nostri server.
-        Hai 14 giorni per il diritto di recesso.</Text>
+      <Text style={styles.fine}>{payInStore ? 'Paghi alla cassa del negozio quando ritiri.'
+        : 'Paghi sulla pagina sicura di Stripe con carta o wallet digitale: i dati della carta non passano dai nostri server.'} Hai 14 giorni per il diritto di recesso.</Text>
     </View>
   </Screen>;
 }
@@ -474,52 +535,56 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 6, backgroundColor: colors.page },
   headBack: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   headTitle: { flex: 1, fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.text },
-  h2: { fontSize: 15.5, fontFamily: fonts.heavy, color: colors.text, marginTop: 22, marginBottom: 8, marginLeft: 4 },
-  option: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  h2: { fontSize: 15, fontFamily: fonts.heavy, color: colors.text, marginTop: 22, marginBottom: 8, marginLeft: 4 },
+  option: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   optionOn: { borderWidth: 2, borderColor: colors.green, paddingVertical: 13, paddingHorizontal: 15 },
-  optionTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
+  optionTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   optionSub: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
   optionPrice: { fontSize: 14, fontFamily: fonts.heavy, color: colors.text },
-  group: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: colors.line },
+  group: { backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 16, borderWidth: 1, borderColor: colors.line },
   fRow: { paddingVertical: 10 },
-  fRule: { borderBottomWidth: 1, borderColor: '#EFECE3' },
-  fLabel: { fontSize: 12.5, fontFamily: fonts.sansBold, color: colors.muted },
-  fInput: { paddingTop: 4, paddingBottom: 0, fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0 } as object,
-  fError: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.danger, marginTop: 4 },
+  fRule: { borderBottomWidth: 1, borderColor: '#EDEDE9' },
+  fLabel: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.muted },
+  fInput: { paddingTop: 4, paddingBottom: 0, fontSize: 17, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0 } as object,
+  fError: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.danger, marginTop: 4 },
   sumHead: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 10 },
   sumThumb: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, overflow: 'hidden', padding: 2 },
+  fSubPreview: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
+  sumItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+  sumItemThumb: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.line, overflow: 'hidden', backgroundColor: '#FFFFFF' },
+  sumRule: { height: 1, backgroundColor: '#EDEDE9', marginVertical: 6 },
   sumTitle: { flex: 1, fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   sumBody: { paddingBottom: 12, gap: 6 },
   sumLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  sumText: { fontSize: 14, fontFamily: fonts.sans, color: '#4E554B', flexShrink: 1 },
+  sumText: { fontSize: 15, fontFamily: fonts.sans, color: '#4E554B', flexShrink: 1 },
   apply: { height: 40, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.green, justifyContent: 'center', marginBottom: 2 },
-  applyText: { fontSize: 14, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  applyText: { fontSize: 15, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   box: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: '#B9B4A6', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   boxOn: { backgroundColor: colors.green, borderColor: colors.green },
-  terms: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 14, padding: 4 },
-  termsText: { flex: 1, fontSize: 14, lineHeight: 20, fontFamily: fonts.sans, color: '#4E554B' },
+  terms: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, paddingVertical: 2 },
+  termsText: { flex: 1, fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: '#4E554B' },
   linkPhone: { color: colors.green, fontFamily: fonts.sansBold, textDecorationLine: 'underline' },
-  finePhone: { fontSize: 12.5, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 12, marginHorizontal: 4 },
+  finePhone: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 12, marginHorizontal: 4 },
   payLabel: { fontSize: 15, fontFamily: fonts.sans, color: '#4E554B' },
+  paySaved: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sansSemiBold, color: colors.sale, marginTop: 2 },
   payTotal: { fontSize: 26, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
   payButton: { marginTop: 10, height: 58, borderRadius: 29, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  payOff: { backgroundColor: colors.line },
   payText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },
   secureRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8 },
   row: { flexDirection: 'row', gap: 10 },
-  delivery: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.green, borderRadius: 20, padding: 16 },
+  delivery: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.green, borderRadius: 16, padding: 16 },
   deliveryError: { borderColor: colors.danger },
-  deliveryTitle: { fontSize: 18, lineHeight: 23, fontFamily: fonts.display, color: colors.text },
+  deliveryTitle: { fontSize: 17, lineHeight: 22, fontFamily: fonts.display, color: colors.text },
   deliveryText: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
-  modify: { fontSize: 14, color: colors.green, fontFamily: fonts.sansBold, fontWeight: '700' },
-  checkText: { fontSize: 14.5, color: colors.text, lineHeight: 21, fontFamily: fonts.sans },
+  modify: { fontSize: 15, color: colors.green, fontFamily: fonts.sansBold, fontWeight: '700' },
+  checkText: { fontSize: 15, color: colors.text, lineHeight: 21, fontFamily: fonts.sans },
   link: { fontFamily: fonts.sansSemiBold, color: colors.green, textDecorationLine: 'underline', fontWeight: '600' },
   error: { fontFamily: fonts.sans, color: colors.danger, fontSize: 13, marginBottom: 8 },
   fine: { fontFamily: fonts.sans, color: colors.muted, fontSize: 13, lineHeight: 19, marginTop: 10 },
-  footerError: { fontFamily: fonts.sansMedium, color: colors.danger, fontSize: 14, textAlign: 'center', fontWeight: '500' },
-  secure: { color: colors.muted, fontSize: 12.5, textAlign: 'center', fontFamily: fonts.sans },
+  footerError: { fontFamily: fonts.sansMedium, color: colors.danger, fontSize: 15, textAlign: 'center', fontWeight: '500' },
+  secure: { color: colors.muted, fontSize: 13, textAlign: 'center', fontFamily: fonts.sans },
   toggle: { minHeight: 44, justifyContent: 'center', marginTop: 10 },
   // An applied code looks like the voucher of the returns: a dashed edge, like a coupon cut from the flyer.
   applied: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.green, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14 },
-  appliedText: { fontFamily: fonts.sans, flex: 1, fontSize: 14, color: colors.greenDark },
+  appliedText: { fontFamily: fonts.sans, flex: 1, fontSize: 15, color: colors.greenDark },
 });

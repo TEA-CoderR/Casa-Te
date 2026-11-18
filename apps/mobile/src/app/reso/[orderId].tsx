@@ -7,15 +7,16 @@ import { Redirect, router, Stack, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeIn, FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import {
-  RETURN_GUARANTEE_DAYS, RETURN_REASON_LABELS, RETURN_WINDOW_DAYS, daysSinceHandover, friendlyError, returnableQuantities,
+  RETURN_GUARANTEE_DAYS, RETURN_REASON_LABELS, RETURN_WINDOW_DAYS, daysSinceHandover, friendlyError, hasOpenReturn, returnableQuantities,
   type RefundMethod, type ReturnReason, type ReturnResolution,
 } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
+import { RevealInput } from '@/components/Reveal';
 import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
 import { StepTag } from '@/components/ShopMarks';
 import { ProductImage } from '@/components/ProductImage';
 import { Icon } from '@/components/Icon';
-import { Loading, Notice, OptionCard } from '@/components/UI';
+import { Loading, Notice, OptionCard, SecondaryButton } from '@/components/UI';
 import { colors, fonts } from '@/config/theme';
 import { createReturnRequest, fetchOrder, fetchOrderReturns, imageUrl, uploadReturnPhoto } from '@/lib/api';
 import { formatEuro } from '@/lib/price';
@@ -41,7 +42,7 @@ export default function ReturnRequestScreen() {
   const user = useUser();
   const order = useQuery(orderId && user ? `orders:${orderId}` : null, () => fetchOrder(orderId!));
   const returns = useQuery(orderId && user ? `returns:${orderId}` : null, () => fetchOrderReturns(orderId!));
-  const { stores } = useStores();
+  const { allStores: stores } = useStores();
   const [step, setStep] = useState(0);
   const [forward, setForward] = useState(true);
   const [qty, setQty] = useState<Record<string, number>>({});
@@ -82,6 +83,12 @@ export default function ReturnRequestScreen() {
     <Stack.Screen options={{ title: 'Reso e assistenza' }} />
     <Notice title="Nessun articolo da rendere" message="Per questo ordine non è possibile aprire un nuovo reso. Per assistenza rivolgiti al negozio." />
   </Screen>;
+  // One request at a time per order (also enforced by create_return_request).
+  if (!sent && hasOpenReturn(returns.data)) return <Screen stack>
+    <Stack.Screen options={{ title: 'Reso e assistenza' }} />
+    <Notice title="Hai già una richiesta aperta" message="Per questo ordine c’è già una richiesta di reso in corso. Aspetta la risposta del negozio, oppure annullala dalla pagina dell’ordine e inviane una nuova." />
+    <View style={{ marginTop: 12 }}><SecondaryButton title="Torna all’ordine" onPress={toOrder} /></View>
+  </Screen>;
 
   const go = (to: number) => { setError(''); setForward(to > step); setStep(to); };
   const back = () => step > 0 ? go(step - 1) : router.canGoBack() ? router.back() : toOrder();
@@ -114,7 +121,7 @@ export default function ReturnRequestScreen() {
 
   // ---- Sent: the request number and the three things that happen next. ----
   if (sent) {
-    const header = <BrandHeader title="Richiesta inviata" subtitle={`Ordine ${o.order_number}`} titleSize={26} pad={[14, 16, 18]}
+    const header = <BrandHeader title="Richiesta inviata" subtitle={`Ordine ${o.order_number}`} pad={[14, 16, 18]}
       left={<HeaderBack icon="close" label="Chiudi" onPress={toOrder} />} />;
     return <Screen stack header={header} ground={colors.page} maxWidth={640} contentContainerStyle={{ paddingTop: 22, paddingBottom: 32 }}
       footer={<Pressable onPress={toOrder} accessibilityRole="button" style={({ pressed }) => [styles.next, pressed && { opacity: 0.88 }]}>
@@ -148,7 +155,7 @@ export default function ReturnRequestScreen() {
     : step === 1 ? (reason ? RETURN_REASON_LABELS[reason] : 'Tocca il motivo')
     : step === 2 ? (photosNeeded && !photos.length ? 'Aggiungi almeno una foto' : reason === 'other' && !note.trim() ? 'Scrivici due righe' : 'Tutto pronto')
     : refund ? `Rimborso stimato ${euro(estimate)}` : 'Cambio con lo stesso prodotto';
-  const header = <BrandHeader title="Reso e assistenza" subtitle={`Passo ${step + 1} di ${STEPS.length} · ${STEPS[step]}`} titleSize={26} pad={[14, 16, 16]}
+  const header = <BrandHeader title="Reso e assistenza" subtitle={`Passo ${step + 1} di ${STEPS.length} · ${STEPS[step]}`} pad={[14, 16, 16]}
     left={<HeaderBack onPress={back} />}>
     <View style={styles.progress} accessibilityElementsHidden>{STEPS.map((s, i) => <View key={s} style={[styles.progressBar, i <= step && styles.progressOn]} />)}</View>
   </BrandHeader>;
@@ -232,7 +239,7 @@ export default function ReturnRequestScreen() {
           </Pressable>}
         </View>
         <Text style={styles.label}>Messaggio per il negozio{reason === 'other' ? '' : ' (facoltativo)'}</Text>
-        <TextInput value={note} onChangeText={setNote} multiline maxLength={1000} placeholder="Es. la confezione era aperta, il colore non è quello ordinato…"
+        <RevealInput value={note} onChangeText={setNote} multiline maxLength={1000} placeholder="Es. la confezione era aperta, il colore non è quello ordinato…"
           placeholderTextColor={colors.faint} accessibilityLabel="Messaggio per il negozio" style={styles.note} />
       </>}
 
@@ -284,72 +291,72 @@ const styles = StyleSheet.create({
   progress: { flexDirection: 'row', gap: 5, marginTop: 14 },
   progressBar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.22)' },
   progressOn: { backgroundColor: colors.yellow },
-  q: { fontSize: 30, lineHeight: 35, fontFamily: fonts.display, color: colors.text },
-  sub: { fontSize: 14.5, lineHeight: 20, fontFamily: fonts.sans, color: colors.muted, marginTop: 6, marginBottom: 18 },
-  label: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.text, marginTop: 22, marginBottom: 8 },
-  fine: { fontSize: 12.5, lineHeight: 17, color: colors.muted, fontFamily: fonts.sans, marginTop: 10, textAlign: 'center' },
-  plate: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14 },
-  sep: { borderTopWidth: 1, borderColor: '#EFECE3' },
+  q: { fontSize: 28, lineHeight: 33, fontFamily: fonts.display, color: colors.text },
+  sub: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: colors.muted, marginTop: 6, marginBottom: 18 },
+  label: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text, marginTop: 22, marginBottom: 8 },
+  fine: { fontSize: 13, lineHeight: 18, color: colors.muted, fontFamily: fonts.sans, marginTop: 10, textAlign: 'center' },
+  plate: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14 },
+  sep: { borderTopWidth: 1, borderColor: '#EDEDE9' },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   cell: { width: '48.5%', gap: 8 },
-  item: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: colors.line, padding: 10, paddingBottom: 12 },
+  item: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: colors.line, padding: 10, paddingBottom: 12 },
   itemWide: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   itemPhotoWide: { width: 104 },
   itemOn: { borderColor: colors.green, borderWidth: 2, padding: 9, paddingBottom: 11 },
   itemPhoto: { width: '100%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.photo },
-  tick: { position: 'absolute', top: 16, left: 16, width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: '#B9B4A6', backgroundColor: '#FFFFFF',
+  tick: { position: 'absolute', top: 16, left: 16, width: 26, height: 26, borderRadius: 12, borderWidth: 2, borderColor: '#B9B4A6', backgroundColor: '#FFFFFF',
     alignItems: 'center', justifyContent: 'center' },
   tickOn: { backgroundColor: colors.green, borderColor: colors.green },
-  itemName: { fontSize: 13.5, lineHeight: 17, fontFamily: fonts.sansSemiBold, color: colors.text, marginTop: 8, minHeight: 34 },
+  itemName: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sansSemiBold, color: colors.text, marginTop: 8, minHeight: 34 },
   itemPrice: { fontSize: 14, fontFamily: fonts.heavy, color: colors.text, marginTop: 4 },
   qty: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 40, borderRadius: 20, backgroundColor: '#FFFFFF',
     borderWidth: 1, borderColor: colors.line },
   qtyBtn: { width: 40, height: 38, alignItems: 'center', justifyContent: 'center' },
   qtyGlyph: { fontSize: 19, fontFamily: fonts.sansBold, color: colors.text },
-  qtyValue: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.text },
+  qtyValue: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
 
-  reason: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF',
+  reason: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 16, borderRadius: 16, backgroundColor: '#FFFFFF',
     borderWidth: 1, borderColor: colors.line },
   reasonOn: { borderColor: colors.green, borderWidth: 2, paddingVertical: 15, paddingHorizontal: 15 },
-  reasonTitle: { fontSize: 16, fontFamily: fonts.sansBold, color: colors.text },
+  reasonTitle: { fontSize: 17, fontFamily: fonts.sansBold, color: colors.text },
   reasonText: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
 
   photos: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  photo: { width: '31%', aspectRatio: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.photo },
+  photo: { width: '31%', aspectRatio: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.photo, borderWidth: 1, borderColor: colors.line },
   photoX: { position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   photoAdd: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#B9B4A6', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', gap: 4 },
   photoAddNeeded: { borderColor: colors.green },
-  photoAddText: { fontSize: 12.5, color: colors.green, fontFamily: fonts.sansBold },
+  photoAddText: { fontSize: 13, color: colors.green, fontFamily: fonts.sansBold },
   note: { minHeight: 110, textAlignVertical: 'top', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: colors.line,
     padding: 14, fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: colors.text },
 
   summary: { paddingVertical: 12 },
   sumItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
   sumThumb: { width: 36, height: 36 },
-  sumName: { flex: 1, fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.text },
-  sumRule: { height: 1, backgroundColor: '#EFECE3', marginVertical: 8 },
+  sumName: { flex: 1, fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.text },
+  sumRule: { height: 1, backgroundColor: '#EDEDE9', marginVertical: 8 },
   sumRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 34 },
-  sumKey: { width: 82, fontSize: 13.5, fontFamily: fonts.sans, color: colors.muted },
-  sumValue: { flex: 1, fontSize: 14, fontFamily: fonts.sansSemiBold, color: colors.text },
+  sumKey: { width: 82, fontSize: 13, fontFamily: fonts.sans, color: colors.muted },
+  sumValue: { flex: 1, fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.text },
   sumEdit: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
-  sumTotal: { borderTopWidth: 1, borderColor: '#EFECE3', marginTop: 6, paddingTop: 10 },
+  sumTotal: { borderTopWidth: 1, borderColor: '#EDEDE9', marginTop: 6, paddingTop: 10 },
   sumTotalKey: { flex: 1, fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
-  sumTotalValue: { fontSize: 20, fontFamily: fonts.heavy, color: colors.text },
+  sumTotalValue: { fontSize: 22, fontFamily: fonts.heavy, color: colors.text },
 
   footer: { gap: 10 },
   footerHint: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted, textAlign: 'center' },
   next: { height: 54, borderRadius: 27, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   nextOff: { opacity: 0.4 },
-  nextText: { fontSize: 16.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  nextText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },
 
   done: { alignItems: 'center', paddingTop: 8, paddingBottom: 22 },
   doneMark: { width: 72, height: 72, borderRadius: 36, borderWidth: 2.5, borderColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-  doneTitle: { fontSize: 32, lineHeight: 37, fontFamily: fonts.display, color: colors.text, marginTop: 16 },
+  doneTitle: { fontSize: 36, lineHeight: 40, fontFamily: fonts.display, color: colors.text, marginTop: 16 },
   doneLead: { fontSize: 15, fontFamily: fonts.sans, color: colors.muted, marginTop: 4 },
-  doneNumber: { marginTop: 18, paddingVertical: 10, paddingHorizontal: 18, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center' },
-  doneNumberLabel: { fontSize: 12, fontFamily: fonts.sansBold, color: colors.muted },
-  doneNumberValue: { fontSize: 20, letterSpacing: 1, fontFamily: fonts.heavy, color: colors.text, marginTop: 2 },
+  doneNumber: { marginTop: 18, paddingVertical: 10, paddingHorizontal: 18, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center' },
+  doneNumberLabel: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.muted },
+  doneNumberValue: { fontSize: 22, letterSpacing: 1, fontFamily: fonts.heavy, color: colors.text, marginTop: 2 },
   nextStep: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 12 },
   nextStepTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   nextStepText: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },

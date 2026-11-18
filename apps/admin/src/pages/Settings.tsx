@@ -111,6 +111,164 @@ function ShopSettingsCard() {
   </section>;
 }
 
+/** Minimum order on the goods (after member prices and coupon, before shipping), checked by create_order. */
+function MinOrderCard() {
+  const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
+  const [euro, setEuro] = useState('');
+  const [error, setError] = useState('');
+  const [done, setDone] = useState('');
+  useEffect(() => { if (settings.data) setEuro(String((settings.data.min_order_cents ?? 0) / 100).replace('.', ',')); }, [settings.data]);
+  const cents = Math.round(Number(euro.replace(',', '.')) * 100);
+  const valid = /^\d+([.,]\d{1,2})?$/.test(euro.trim()) && cents <= 100000;
+  const save = async () => {
+    setError(''); setDone('');
+    if (!valid) { setError(t('Inserisci un importo tra 0 e 1000 €.')); return; }
+    const { error: err } = await supabase.from('app_settings').update({ min_order_cents: cents }).eq('id', true);
+    if (err) { setError(errorText(err)); return; }
+    setDone(t('Ordine minimo salvato.'));
+    void settings.reload();
+  };
+  return <section className="panel">
+    <div className="panel-head"><h2>{t('Ordine minimo')}</h2></div>
+    {!settings.data ? <Loading /> : <>
+      <Field label={t('Importo minimo dei prodotti (€)')} hint={t('Calcolato sui prodotti dopo Prezzi Soci e codici sconto, spedizione esclusa. 0 = nessun minimo.')}>
+        <input inputMode="decimal" value={euro} onChange={(e) => setEuro(e.target.value)} style={{ maxWidth: 140 }} />
+      </Field>
+      {error && <Notice tone="error">{error}</Notice>}
+      {done && <Success onDismiss={() => setDone('')}>{done}</Success>}
+      <div className="row" style={{ marginTop: 12 }}>
+        <button onClick={save} disabled={!valid || cents === settings.data.min_order_cents}>{t('Salva')}</button>
+      </div>
+    </>}
+  </section>;
+}
+
+/** Product photo thumbnails (plan v3 L9): on once the image server has made the copies (tools/image-thumbnails). */
+function ImagesCard() {
+  const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
+  const [error, setError] = useState('');
+  const toggle = async (on: boolean) => {
+    setError('');
+    const { error: err } = await supabase.from('app_settings').update({ image_thumbnails: on }).eq('id', true);
+    if (err) { setError(errorText(err)); return; }
+    void settings.reload();
+  };
+  return <section className="panel">
+    <div className="panel-head"><h2>{t('Immagini')}</h2></div>
+    {!settings.data ? <Loading /> : <>
+      <label className="row" style={{ gap: 8, alignItems: 'center' }}>
+        <input type="checkbox" checked={settings.data.image_thumbnails} onChange={(e) => void toggle(e.target.checked)} />
+        {t('Usa le miniature nelle schede prodotto')}
+      </label>
+      <p className="muted" style={{ marginTop: 8 }}>{t('Attivalo solo dopo aver creato le miniature sul server delle immagini (tools/image-thumbnails). Se una miniatura manca, si vede la foto intera.')}</p>
+      {error && <Notice tone="error">{error}</Notice>}
+    </>}
+  </section>;
+}
+
+/** Customer service WhatsApp number (plan v3 X8): shown on the app's FAQ page while set. */
+function SupportCard() {
+  const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
+  const [value, setValue] = useState('');
+  const [error, setError] = useState('');
+  const [done, setDone] = useState('');
+  useEffect(() => { if (settings.data) setValue(settings.data.support_whatsapp ?? ''); }, [settings.data]);
+  // "333 123 4567", "+39 333…", "0039…" → "+39333…".
+  const normal = (() => { const d = value.replace(/[^\d+]/g, ''); if (!d) return ''; if (d.startsWith('+')) return d; if (d.startsWith('00')) return `+${d.slice(2)}`; return `+39${d}`; })();
+  const valid = normal === '' || /^\+[1-9]\d{6,14}$/.test(normal);
+  const save = async () => {
+    setError(''); setDone('');
+    if (!valid) { setError(t('Numero non valido: scrivilo come +39 333 123 4567.')); return; }
+    const { error: err } = await supabase.from('app_settings').update({ support_whatsapp: normal || null }).eq('id', true);
+    if (err) { setError(errorText(err)); return; }
+    setDone(t('Numero salvato.'));
+    void settings.reload();
+  };
+  return <section className="panel">
+    <div className="panel-head"><h2>{t('Assistenza clienti')}</h2></div>
+    {!settings.data ? <Loading /> : <>
+      <Field label={t('Numero WhatsApp')} hint={t('Compare nell’app, in Domande frequenti, come “Scrivici su WhatsApp”. Vuoto = non mostrato.')}>
+        <input inputMode="tel" value={value} onChange={(e) => setValue(e.target.value)} placeholder="+39 333 123 4567" style={{ maxWidth: 220 }} />
+      </Field>
+      {error && <Notice tone="error">{error}</Notice>}
+      {done && <Success onDismiss={() => setDone('')}>{done}</Success>}
+      <div className="row" style={{ marginTop: 12 }}>
+        <button onClick={save} disabled={!valid || normal === (settings.data.support_whatsapp ?? '')}>{t('Salva')}</button>
+      </div>
+    </>}
+  </section>;
+}
+
+/** Safety stock (owner 18/11): units of every product kept on the shelf, not sold online. */
+function SafetyStockCard() {
+  const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
+  const [value, setValue] = useState('');
+  const [error, setError] = useState('');
+  const [done, setDone] = useState('');
+  useEffect(() => { if (settings.data) setValue(String(settings.data.safety_stock ?? 0)); }, [settings.data]);
+  const n = Number(value);
+  const valid = /^\d{1,4}$/.test(value) && n <= 1000;
+  const save = async () => {
+    setError(''); setDone('');
+    if (!valid) { setError(t('Inserisci un numero tra 0 e 1000.')); return; }
+    const { error: err } = await supabase.from('app_settings').update({ safety_stock: n }).eq('id', true);
+    if (err) { setError(errorText(err)); return; }
+    setDone(t('Scorta di sicurezza salvata.'));
+    void settings.reload();
+  };
+  return <section className="panel">
+    <div className="panel-head"><h2>{t('Scorta di sicurezza')}</h2></div>
+    {!settings.data ? <Loading /> : <>
+      <Field label={t('Pezzi che restano sullo scaffale')} hint={t('Per ogni prodotto e negozio, questi pezzi non si vendono online. Si può cambiare per categoria o per prodotto. 0 = si vende tutto.')}>
+        <input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, ''))} style={{ maxWidth: 140 }} />
+      </Field>
+      {error && <Notice tone="error">{error}</Notice>}
+      {done && <Success onDismiss={() => setDone('')}>{done}</Success>}
+      <div className="row" style={{ marginTop: 12 }}>
+        <button onClick={save} disabled={!valid || n === settings.data.safety_stock}>{t('Salva')}</button>
+      </div>
+    </>}
+  </section>;
+}
+
+/** Forced update and maintenance (plan v3 L5): read by the phone app at start and when it comes back to the front. */
+function AppGateCard() {
+  const settings = useAsync(async () => unwrap(await supabase.from('app_settings').select('*').single()) as AppSettingsRow, []);
+  const [version, setVersion] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [done, setDone] = useState('');
+  useEffect(() => { if (settings.data) { setVersion(settings.data.min_app_version ?? ''); setMessage(settings.data.maintenance_message ?? ''); } }, [settings.data]);
+  const versionOk = version.trim() === '' || /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(version.trim());
+  const changed = !!settings.data && ((settings.data.min_app_version ?? '') !== version.trim() || (settings.data.maintenance_message ?? '') !== message.trim());
+  const save = async () => {
+    setError(''); setDone('');
+    if (!versionOk) { setError(t('Scrivi la versione come 1.3.0, oppure lascia vuoto.')); return; }
+    const { error: err } = await supabase.from('app_settings')
+      .update({ min_app_version: version.trim() || null, maintenance_message: message.trim() || null }).eq('id', true);
+    if (err) { setError(errorText(err)); return; }
+    setDone(t('Impostazioni dell’app salvate.'));
+    void settings.reload();
+  };
+  return <section className="panel">
+    <div className="panel-head"><h2>{t('App: aggiornamento e manutenzione')}</h2></div>
+    {!settings.data ? <Loading /> : <>
+      <Field label={t('Versione minima dell’app')} hint={t('Le app più vecchie chiedono di aggiornare prima di continuare. Vuoto = tutte le versioni.')}>
+        <input value={version} onChange={(e) => setVersion(e.target.value)} placeholder="1.3.0" style={{ maxWidth: 140 }} />
+      </Field>
+      <Field label={t('Messaggio di manutenzione')} hint={t('Se scritto, app e sito mostrano solo questo messaggio e non si possono fare ordini. Vuoto = negozio aperto.')}>
+        <textarea rows={3} maxLength={300} value={message} onChange={(e) => setMessage(e.target.value)} />
+      </Field>
+      {message.trim() && <Notice tone="error">{t('Attenzione: salvando, il negozio online si chiude finché non svuoti il messaggio.')}</Notice>}
+      {error && <Notice tone="error">{error}</Notice>}
+      {done && <Success onDismiss={() => setDone('')}>{done}</Success>}
+      <div className="row" style={{ marginTop: 12 }}>
+        <button onClick={save} disabled={!changed}>{t('Salva')}</button>
+      </div>
+    </>}
+  </section>;
+}
+
 export function SettingsPage() {
   const { can } = useAuth();
   const manager = can('admin', 'manager');
@@ -120,6 +278,11 @@ export function SettingsPage() {
       <LanguageCard />
       <AccountCard />
       {manager && <ShopSettingsCard />}
+      {manager && <MinOrderCard />}
+      {manager && <SupportCard />}
+      {manager && <ImagesCard />}
+      {manager && <SafetyStockCard />}
+      {manager && <AppGateCard />}
       {manager && <section className="panel">
         <div className="panel-head"><h2>{t('Altre impostazioni')}</h2></div>
         <ul className="settings-links">

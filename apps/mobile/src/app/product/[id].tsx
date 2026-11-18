@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp, FadeOutUp, ZoomIn } from 'react-native-reanimated';
 import { Link, useLocalSearchParams, router, Stack } from 'expo-router';
 import { formatPackSize, formatWeight, type CategoryRow } from '@casa-te/shared';
 import { discountLabel, formatEuro, unitPriceLabel, untilLabel } from '@/lib/price';
 import { Screen } from '@/components/Screen';
+import { RevealOnOpen } from '@/components/Reveal';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductImage } from '@/components/ProductImage';
-import { FavoriteButton, stockLabel } from '@/components/ProductCard';
+import { FavoriteButton, ProductCard, stockLabel } from '@/components/ProductCard';
 import { Icon, type IconName } from '@/components/Icon';
-import { EmptyState, Loading, PriceTag, PrimaryButton, QuantityControl } from '@/components/UI';
-import { colors, fonts } from '@/config/theme';
-import { fetchCategories, fetchProduct, fetchProducts, fetchVariants } from '@/lib/api';
+import { EmptyState, Loading, PillButton, PriceTag, PrimaryButton, QuantityControl, SociChip } from '@/components/UI';
+import { cardShadow, colors, fonts, radius, type } from '@/config/theme';
+import { fetchCategories, fetchProduct, fetchProducts, fetchReviewEligibility, fetchVariants } from '@/lib/api';
+import { useUser } from '@/store/session';
 import { Stars } from '@/components/Stars';
 import { ProductReviews } from '@/components/ProductReviews';
 import { ProductVariants } from '@/components/ProductVariants';
@@ -26,12 +28,13 @@ import { BrandHeader, HeaderBack, HeaderButton } from '@/components/BrandHeader'
 import { SiteHeader } from '@/components/site/SiteHeader';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SITE_WIDTH, type WebState } from '@/components/site/shared';
+import Head from 'expo-router/head';
 import { ALL_PRODUCTS, productList } from '@/lib/links';
 import { shownProduct, useClubMember } from '@/store/club';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { selected } = useStores();
+  const { selected, canChoose } = useStores();
   const delivery = useDelivery();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(0);
@@ -57,9 +60,14 @@ export default function ProductDetailScreen() {
   const group = product?.variant_group ?? null;
   const variants = useQuery(group ? `variants:${group}:${selected?.id}` : null, () => fetchVariants(group!, selected?.id ?? null));
   const [folds, setFolds] = useState<string | null>(null);
+  // Same key as ProductReviews, so the answer is fetched once.
+  const user = useUser();
+  const eligibility = useQuery(user && product && !wide && !product.rating_count ? `review-eligibility:${product.id}:${user.id}` : null, () => fetchReviewEligibility(product!.id));
+  const canReview = !!eligibility.data?.eligible || !!eligibility.data?.review;
   const related = useQuery(product?.category_id && !wide ? `related:${product.category_id}:${selected?.id}` : null,
-    () => fetchProducts({ storeId: selected?.id ?? null, categoryIds: [product!.category_id as string], sort: 'featured', pageSize: 3 }));
+    () => fetchProducts({ storeId: selected?.id ?? null, categoryIds: [product!.category_id as string], sort: 'featured', pageSize: 5 }));
 
+  const { width: screenW } = useWindowDimensions();
   const back = () => router.canGoBack() ? router.back() : router.replace('/');
   const share = async (name: string) => {
     const url = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.href : undefined;
@@ -80,15 +88,18 @@ export default function ProductDetailScreen() {
   </EmptyState></Screen>;
 
   const stock = stockLabel(product.stock, storeShortName(selected));
-  // "Disponibile a Lucca S. Filippo" → state "Disponibile" + place "a Lucca · S. Filippo".
-  const stockSplit = stock.text.match(/^(.*?)\s((?:a|ad|in)\s.+)$/);
-  const stockState = stockSplit?.[1] ?? '';
-  const stockPlace = (stockSplit?.[2] ?? '').replace(/ a (\S+) (?!·)/, ' a $1 · ').replace(/^(a|ad|in) (\S+) (?!·)/, '$1 $2 · ');
   const maxQty = Math.max(1, Math.min(product.max_per_order, (product.stock ?? 99) - inCart));
   const canAdd = stock.available && (product.stock === null || inCart + quantity <= product.stock);
   const addToCart = () => { add(product.id, quantity); setAdded(quantity); setQuantity(1); };
 
   // One buy box, placed beside the image on desktop and in a sticky footer on phones.
+  // Web: the tab title and the description a shared link shows (search engines and chats that run scripts).
+  const head = Platform.OS === 'web' ? <Head>
+    <title>{`${product.name} · CASA & TE`}</title>
+    <meta name="description" content={`${product.name}: ${formatEuro(product.price_cents)} da CASA & TE, ritiro gratis in negozio.`} />
+    <meta property="og:title" content={product.name} />
+    {!!product.images[0] && <meta property="og:image" content={product.images[0]} />}
+  </Head> : null;
   const buy = <View style={{ gap: 10 }}>
     {added > 0 && <View style={styles.added} accessibilityLiveRegion="polite" accessibilityRole="alert">
       <View style={styles.addedTick}><Icon name="check" size={15} color={colors.text} strokeWidth={3} /></View>
@@ -113,6 +124,8 @@ export default function ProductDetailScreen() {
   const soci = !!product.clubPrice;
   const sociPct = product.clubPrice ? discountLabel(product.clubPrice.cents, rawProduct!.price_cents) : null;
   const badge = discount ? `${product.memberApplied ? 'Soci ' : ''}${discount.replace('-', '−')}` : soci && sociPct ? `Soci ${sociPct.replace('-', '−')}` : '';
+  const sociOffer = soci && !product.memberApplied;
+  const phoneRate = discount ? discount.replace('-', '−') : sociOffer && sociPct ? `Soci ${sociPct.replace('-', '−')}` : '';
   const until = product.clubPrice?.endsOn ? untilLabel(product.clubPrice.endsOn) : null;
   const sociText = product.memberApplied ? ['applicato al tuo account', until].filter(Boolean).join(' · ')
     : ['solo per i membri del Club · iscrizione gratuita', until].filter(Boolean).join(' · ');
@@ -120,9 +133,15 @@ export default function ProductDetailScreen() {
     accessibilityLabel={product.memberApplied ? `Prezzo Soci, ${sociText}` : `Prezzo Soci ${formatEuro(product.clubPrice!.cents)}, ${sociText}`}>
     <Text style={styles.sociText}>{product.memberApplied
       ? <><Text style={styles.sociStrong}>Prezzo Soci</Text> · {sociText}</>
-      : <><Text style={styles.sociStrong}>Soci {formatEuro(product.clubPrice!.cents)}</Text> · {sociText} ›</>}</Text>
+      : <><Text style={styles.sociStrong}>Prezzo Soci</Text> · {sociText} ›</>}</Text>
   </Pressable> : null;
   const pack = formatPackSize(product.unit_quantity, product.unit);
+  // What the label says (typed in by the shop from the pack): the signal word first, then the text as written.
+  const labelInfo = product.label_info ? <View>
+    {!!product.label_signal && <Text style={styles.labelSignal}>{product.label_signal === 'pericolo' ? 'Pericolo' : 'Attenzione'}</Text>}
+    <Text style={styles.foldText} selectable>{product.label_info}</Text>
+    <Text style={styles.labelNote}>Leggere sempre l’etichetta e le informazioni sul prodotto prima dell’uso.</Text>
+  </View> : null;
   const features: Array<{ icon: IconName; text: string }> = product.highlights.length
     ? product.highlights.map((h) => ({ icon: h.icon as IconName, text: h.label }))
     : [{ icon: 'store', text: `Ritiro gratuito\n${atPlace(store)}` }, { icon: 'truck', text: delivery.open ? 'Spedizione gratis\nda €66' : 'Spedizione\nprossimamente' },
@@ -141,17 +160,18 @@ export default function ProductDetailScreen() {
       <Stars value={product.rating_avg ?? 0} size={15} />
       <Text style={styles.ratingText}>{product.rating_count ? `(${product.rating_count})` : 'Nessuna recensione'}</Text>
     </View>}
-    <Pressable style={styles.availability} onPress={() => setStoreSheet(true)} accessibilityRole="button"
-      accessibilityLabel={`${stock.text}. Cambia negozio`}>
+    <Pressable style={styles.availability} onPress={() => setStoreSheet(true)} disabled={!canChoose} accessibilityRole={canChoose ? 'button' : 'text'}
+      accessibilityLabel={canChoose ? `${stock.text}. Cambia negozio` : stock.text}>
       <View style={[styles.dot, !stock.available && { backgroundColor: colors.danger }]} />
       <Text style={[styles.availabilityText, !stock.available && { color: colors.danger }]}>{stock.text}{caption ? ` · ${caption}` : ''}</Text>
-      <Text style={styles.change}>Cambia</Text>
+      {canChoose && <Text style={styles.change}>Cambia</Text>}
     </Pressable>
     <View style={styles.features}>
       {features.map((f) => <View key={f.icon + f.text} style={styles.feature}><Icon name={f.icon} size={23} color={colors.text} strokeWidth={1.15} />
         <Text style={[styles.featureText, wide && styles.featureTextWide]}>{f.text}</Text></View>)}
     </View>
     {!!product.description && <Text style={styles.description}>{product.description}</Text>}
+    {!!labelInfo && <View style={{ marginTop: 18 }}><Text style={[styles.foldText, { fontFamily: fonts.sansBold, marginBottom: 4 }]} accessibilityRole="header">Informazioni di etichetta</Text>{labelInfo}</View>}
     {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
     {wide && <View style={{ marginTop: 24 }}>{buy}</View>}
     <Text style={styles.sku}>Codice articolo {product.sku}{product.color ? ` · Colore ${product.color}` : ''} · IVA inclusa</Text>
@@ -211,23 +231,28 @@ export default function ProductDetailScreen() {
       <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={4} style={({ pressed }) => [styles.roundPhone, pressed && { opacity: 0.7 }]}>
         <Icon name={icon} size={icon === 'back' ? 22 : 20} color={filled ? colors.sale : colors.text} fill={filled ? colors.sale : undefined} strokeWidth={icon === 'back' ? 2.2 : 2} />
       </Pressable>;
-    const details = [pack && `Formato: ${pack}`, product.brand && `Marca: ${product.brand}`, department && `Reparto: ${top ? `${top.name} › ` : ''}${department.name}`,
-      product.color && `Colore: ${product.color}`, product.weight_g ? `Peso: ${formatWeight(product.weight_g)}` : null, `Codice: ${product.sku}`].filter(Boolean).join('\n');
+    // The department is already in the breadcrumb above the title.
+    const details = [pack && `Formato: ${pack}`, product.brand && `Marca: ${product.brand}`,
+      product.color && `Colore: ${product.color}`, product.weight_g ? `Peso: ${formatWeight(product.weight_g)}` : null, `Codice articolo: ${product.sku}`].filter(Boolean).join('\n');
     const sections: Array<{ key: string; title: string; body: React.ReactNode }> = [
       ...(product.description ? [{ key: 'd', title: 'Descrizione', body: <Text style={styles.foldText}>{product.description}</Text> }] : []),
       { key: 'i', title: 'Dettagli', body: <Text style={styles.foldText}>{details}</Text> },
-      { key: 'r', title: product.rating_count ? `Recensioni (${product.rating_count})` : 'Recensioni', body: <ProductReviews productId={product.id} average={product.rating_avg} count={product.rating_count}
-        onChanged={() => { void refetch(); invalidate('featured'); }} /> },
+      ...(product.label_info ? [{ key: 'l', title: 'Informazioni di etichetta', body: labelInfo }] : []),
+      // No reviews yet: the section shows only to who can write the first one (bought the product).
+      ...(!product.rating_count && !canReview ? [] : [{ key: 'r', title: product.rating_count ? `Recensioni (${product.rating_count})` : 'Recensioni', body: <ProductReviews productId={product.id} average={product.rating_avg} count={product.rating_count}
+        onChanged={() => { void refetch(); invalidate('featured'); }} /> }]),
     ];
     const openKey = folds ?? (product.description ? 'd' : 'i');
     return <Screen stack ground={colors.page} footer={phoneBuy} header={<View style={{ height: insets.top, backgroundColor: '#FFFFFF' }} />}
       contentContainerStyle={{ padding: 0, paddingBottom: 20 }}>
       <Stack.Screen options={{ title: product.name, headerShown: false }} />
+      {head}
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
-      <View style={styles.stage}>
-        <View pointerEvents="none" style={styles.floor} />
-        <View style={styles.stageImage}><ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0} /></View>
-        {!!badge && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{badge}</Text></View>}
+      {/* A square stage as wide as the screen, the photo with an 8% margin (plan §5.3). */}
+      <View style={[styles.stage, { height: screenW }]}>
+        <View style={[styles.stageImage, { top: screenW * 0.08, left: screenW * 0.08, width: screenW * 0.84, height: screenW * 0.84 }]}><ProductGallery images={product.images} sku={product.sku} label={product.name} inset={0} /></View>
+        {/* The discount rate on the photo: "−25%" (the Soci line under the price says who it is for). */}
+        {!!phoneRate && <View style={styles.phoneBadge}><Text style={styles.phoneBadgeText}>{phoneRate}</Text></View>}
         <View style={styles.stageBar}>
           {round('back', 'Indietro', back)}
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -241,42 +266,47 @@ export default function ProductDetailScreen() {
           <Text style={styles.phoneCrumb} numberOfLines={1}>{top ? `${top.name} › ${department.name}` : department.name}</Text></Pressable>}
         <Text style={styles.phoneTitle} accessibilityRole="header">{product.name}</Text>
         <View style={styles.phonePriceRow}>
+          {/* The big price is always what this customer pays; a members-only price is the lime chip below (14/11/2026). */}
           <PriceTag cents={product.price_cents} size={38} sale={!!discount} />
           <Text style={styles.phoneUnit}>{!!discount && <Text style={styles.phoneStruck}>{euro(product.compare_at_price_cents as number)}</Text>}
-            {[discount ? '' : null, unitPrice?.replace(/€\s/, '€').replace(/\s\/\s/, '/'), 'IVA inclusa'].filter((x) => x !== null && x !== undefined).join(' · ')}</Text>
+            {[discount ? '' : null, unitPrice?.replace(/€\s/, '€').replace(/\s\/\s/, '/')].filter((x) => x !== null && x !== undefined).join(' · ')}</Text>
         </View>
-        {sociLine}
+        {sociOffer ? <Pressable onPress={() => router.push('/club')} accessibilityRole="link" hitSlop={6} style={styles.sociRow}
+          accessibilityLabel={`Prezzo Soci ${formatEuro(product.clubPrice!.cents)}. Iscriviti gratis al Club`}>
+          <SociChip cents={product.clubPrice!.cents} suffix={until ?? undefined} />
+          <Text style={styles.sociJoin}>Iscriviti gratis ›</Text>
+        </Pressable> : product.memberApplied ? <View style={styles.sociRow}>
+          <SociChip applied suffix={until ?? undefined} />
+          <Text style={styles.sociNote}>applicato al tuo account</Text>
+        </View> : null}
         {!!variants.data && <ProductVariants title={product.variant_title} current={product.id} variants={variants.data} />}
-        <Pressable style={({ pressed }) => [styles.phoneCard, pressed && { opacity: 0.9 }]} onPress={() => setStoreSheet(true)} accessibilityRole="button" accessibilityLabel={`${stock.text}. Cambia negozio`}>
-          {/* Design H: no icon, a status line with a dot ("DISPONIBILE") over the store name. */}
-          <View style={{ flex: 1 }}>
-            {!!stockState && <View style={styles.stockRow}>
+        <Pressable style={({ pressed }) => [styles.phoneCard, pressed && { opacity: 0.9 }]} onPress={() => setStoreSheet(true)} disabled={!canChoose} accessibilityRole={canChoose ? 'button' : 'text'} accessibilityLabel={canChoose ? `${stock.text}. Cambia negozio` : stock.text}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={styles.stockRow}>
               <View style={[styles.stockDot, !stock.available && { backgroundColor: colors.danger }]} />
-              <Text style={[styles.stockState, !stock.available && { color: colors.danger }]}>{stockState.toUpperCase()}</Text>
-            </View>}
-            <Text style={styles.phoneCardTitle}>{stockState ? stockPlace : stock.text.replace(/ a (\S+) (?!·)/, ' a $1 · ') || 'Scegli il negozio'}</Text>
-            <Text style={styles.phoneCardText}>{['Ritiro gratuito · resta 14 giorni in negozio', caption].filter(Boolean).join(' · ')}</Text>
+              <Text style={[styles.phoneCardTitle, !stock.available && { color: colors.danger }]} numberOfLines={2}>{stock.text || 'Scegli il negozio'}</Text>
+            </View>
+            <Text style={styles.phoneCardText}>{['Ritiro gratuito in negozio', caption].filter(Boolean).join(' · ')}</Text>
           </View>
-          <Text style={styles.phoneLink}>Cambia</Text>
+          {canChoose && <PillButton title="Cambia" />}
         </Pressable>
         <View style={styles.folds}>{sections.map((f, i) => {
           const open = openKey === f.key;
-          return <View key={f.key} style={i > 0 && { borderTopWidth: 1, borderColor: '#EFECE3' }}>
+          return <RevealOnOpen key={f.key} open={open} style={i > 0 && { borderTopWidth: 1, borderColor: '#EDEDE9' }}>
             <Pressable onPress={() => setFolds(open ? '' : f.key)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={styles.foldHead}>
               <Text style={styles.foldTitle}>{f.title}</Text>
               <View style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}><Icon name="down" size={18} color={colors.text} strokeWidth={2.2} /></View>
             </Pressable>
             {open && <View style={styles.foldBody}>{f.body}</View>}
-          </View>;
+          </RevealOnOpen>;
         })}</View>
         {related.data && related.data.items.filter((p) => p.id !== product.id).length > 0 && <>
           <Text style={styles.relatedTitle} accessibilityRole="header">Altro in {department?.name ?? 'questo reparto'}</Text>
-          <View style={{ flexDirection: 'row', gap: 10 }}>{related.data.items.filter((p) => p.id !== product.id).slice(0, 2).map((p) =>
-            <Pressable key={p.id} onPress={() => router.push(`/product/${p.id}`)} accessibilityRole="link" accessibilityLabel={`${p.name}, ${formatEuro(shownProduct(p, isMember).price_cents)}`} style={styles.related}>
-              <View style={{ height: 92, alignItems: 'center', justifyContent: 'center' }}><View style={{ width: 84, height: 84 }}><ProductImage uri={p.image} sku={p.sku} inset={0} /></View></View>
-              <Text style={styles.relatedName} numberOfLines={2}>{p.name}</Text>
-              <Text style={styles.relatedPrice}>{euro(shownProduct(p, isMember).price_cents)}</Text>
-            </Pressable>)}</View>
+          {/* The same cards as "In evidenza" on Home. */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingBottom: 1 }}>
+            {related.data.items.filter((p) => p.id !== product.id).slice(0, 4).map((p) =>
+              <View key={p.id} style={{ width: 162, flexDirection: 'row' }}><ProductCard product={p} rail /></View>)}
+          </ScrollView>
         </>}
       </View>
       {sharedNote}
@@ -292,6 +322,7 @@ export default function ProductDetailScreen() {
   return <Screen stack footer={wide ? undefined : buy} maxWidth={wide ? SITE_WIDTH - 80 : undefined}
     contentContainerStyle={wide ? { paddingHorizontal: 40, paddingTop: 0 } : undefined} after={wide ? <SiteFooter /> : undefined} bleed={40}>
     <Stack.Screen options={wide ? { title: product.name, headerShown: true, header: () => <SiteHeader /> } : { title: '', headerShown: false }} />
+    {head}
     <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
     {wide && <View style={styles.crumbs}>
       {crumb('Home', () => router.push('/'))}<Text style={styles.crumbSep}>/</Text>
@@ -321,38 +352,38 @@ const styles = StyleSheet.create({
   crumb: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
   crumbSep: { fontSize: 13, color: colors.rule, fontFamily: fonts.sans },
   titleWide: { fontSize: 48, lineHeight: 52, letterSpacing: -0.8 },
-  stage: { height: 380, backgroundColor: colors.photo, borderBottomLeftRadius: 32, borderBottomRightRadius: 32, borderBottomWidth: 1, borderColor: colors.line },
-  floor: { position: 'absolute', top: 318, alignSelf: 'center', width: 180, height: 22, borderRadius: 90, backgroundColor: 'rgba(24,32,26,0.14)', filter: 'blur(9px)' } as object,
-  stageImage: { position: 'absolute', top: 58, alignSelf: 'center', width: 270, height: 270 },
+  // Plain white stage on the white page: the photo alone, no floor shadow or rounded edge.
+  stage: { backgroundColor: colors.photo },
+  stageImage: { position: 'absolute' },
   stageBar: { position: 'absolute', top: 14, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
-  roundPhone: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
-  phoneBadge: { position: 'absolute', left: 16, top: 70, backgroundColor: colors.sale, borderRadius: 9, paddingHorizontal: 10, paddingVertical: 3 },
-  phoneBadgeText: { fontSize: 18, fontFamily: fonts.heavy, color: '#FFFFFF' },
+  roundPhone: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', ...cardShadow },
+  phoneBadge: { position: 'absolute', left: 16, top: 70, backgroundColor: colors.sale, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
+  phoneBadgeText: { fontSize: 17, fontFamily: fonts.heavy, color: '#FFFFFF' },
   phoneInfo: { paddingHorizontal: 20, paddingTop: 18 },
-  phoneCrumb: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green },
-  phoneTitle: { fontSize: 28, lineHeight: 32, fontFamily: fonts.display, color: colors.text, marginTop: 6, letterSpacing: -0.2 },
+  phoneCrumb: { ...type.small, fontFamily: fonts.sansBold, color: colors.green },
+  phoneTitle: { ...type.title, color: colors.text, marginTop: 6 },
   phonePriceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginTop: 10, flexWrap: 'wrap' },
   sociLine: { marginTop: 6, marginBottom: 4 },
+  labelSignal: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sansBold, color: colors.danger, marginBottom: 4 },
+  labelNote: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 8 },
+  sociRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, marginBottom: 4, alignSelf: 'flex-start' },
+  sociNote: { ...type.small, color: colors.muted },
+  sociJoin: { ...type.small, fontFamily: fonts.sansBold, color: colors.green },
   sociText: { fontSize: 13, lineHeight: 18, color: colors.sale, fontFamily: fonts.sans },
   sociStrong: { fontFamily: fonts.sansBold, fontWeight: '700' },
   phoneStruck: { textDecorationLine: 'line-through' },
-  phoneUnit: { fontSize: 14, fontFamily: fonts.sans, color: colors.muted, paddingBottom: 6, flexShrink: 1 },
-  phoneCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
-  stockRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  phoneUnit: { fontSize: 15, fontFamily: fonts.sans, color: colors.muted, paddingBottom: 6, flexShrink: 1 },
+  phoneCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, padding: 16, borderRadius: radius.md, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  stockRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stockDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2E9B3A' },
-  stockState: { fontSize: 12.5, fontFamily: fonts.heavy, letterSpacing: 0.5, color: '#2E6B34' },
-  phoneCardTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
-  phoneCardText: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
-  phoneLink: { fontSize: 14, fontFamily: fonts.sansBold, color: colors.green },
-  folds: { marginTop: 12, borderRadius: 18, backgroundColor: '#FFFFFF', overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
+  phoneCardTitle: { ...type.cardTitle, color: colors.text, flexShrink: 1 },
+  phoneCardText: { ...type.small, color: colors.muted, marginTop: 2, marginLeft: 16 },
+  folds: { marginTop: 12, borderRadius: 16, backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   foldHead: { height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  foldTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
+  foldTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   foldBody: { paddingHorizontal: 16, paddingBottom: 16, marginTop: -6 },
   foldText: { fontSize: 15, lineHeight: 22, fontFamily: fonts.sans, color: '#4E554B' },
-  relatedTitle: { fontSize: 21, lineHeight: 26, fontFamily: fonts.display, color: colors.text, marginTop: 24, marginBottom: 10 },
-  related: { flex: 1, padding: 8, borderRadius: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
-  relatedName: { fontSize: 13, lineHeight: 16, fontFamily: fonts.sansSemiBold, color: colors.text, marginTop: 4 },
-  relatedPrice: { fontSize: 15, fontFamily: fonts.heavy, color: colors.text, marginTop: 4 },
+  relatedTitle: { ...type.section, color: colors.text, marginTop: 32, marginBottom: 12 },
   addPhone: { height: 60, borderRadius: 30, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 20 },
   addPhoneText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF', flexShrink: 1, textAlign: 'center' },
   priceChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16, backgroundColor: colors.yellow },
@@ -361,35 +392,35 @@ const styles = StyleSheet.create({
   stepper: { flexDirection: 'row', alignItems: 'center', height: 60, borderRadius: 30, backgroundColor: colors.page, borderWidth: 1, borderColor: colors.line },
   step: { width: 52, height: 58, alignItems: 'center', justifyContent: 'center' },
   stepGlyph: { fontSize: 24, lineHeight: 28, fontFamily: fonts.sansBold, color: colors.text },
-  stepValue: { minWidth: 24, textAlign: 'center', fontSize: 19, fontFamily: fonts.heavy, color: colors.text },
+  stepValue: { minWidth: 24, textAlign: 'center', fontSize: 22, fontFamily: fonts.heavy, color: colors.text },
   toCart: { flex: 1, height: 60, borderRadius: 30, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-  toCartText: { fontSize: 16, fontFamily: fonts.sansBold, color: '#FFFFFF' },
-  toCartSub: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.onBrand },
+  toCartText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  toCartSub: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.onBrand },
   addedToast: { position: 'absolute', left: 16, right: 16, height: 54, borderRadius: 16, backgroundColor: colors.text, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16,
     shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 30, shadowOffset: { width: 0, height: 12 }, elevation: 10 },
   addedTick: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
   addedToastText: { flex: 1, fontSize: 15, fontFamily: fonts.sansBold, color: '#FFFFFF' },
-  addedToastLink: { fontSize: 14.5, fontFamily: fonts.sansBold, color: colors.yellow },
+  addedToastLink: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.yellow },
   media: { backgroundColor: colors.photo, marginHorizontal: -20, marginTop: -20, marginBottom: 22, borderBottomWidth: 1, borderColor: colors.photoLine },
   overlay: { position: 'absolute', left: 12, right: 12, flexDirection: 'row', justifyContent: 'space-between' },
   round: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#3A2E1A', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+    shadowColor: '#3A2E1A', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2, borderWidth: 1, borderColor: colors.line },
   roundBare: { backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0 },
   roundLeft: { backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0 },
   roundRight: { flexDirection: 'row', gap: 6 },
   toast: { position: 'absolute', alignSelf: 'center', top: 80, backgroundColor: colors.text, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
   toastText: { color: '#fff', fontSize: 13, fontFamily: fonts.sansMedium },
   mediaWide: { flex: 1.25, marginHorizontal: 0, marginTop: 0, marginBottom: 0, borderRadius: 4, overflow: 'hidden', backgroundColor: colors.photo, borderWidth: 1, borderColor: colors.photoLine },
-  brand: { fontSize: 11, letterSpacing: 2.6, textTransform: 'uppercase', color: colors.text, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginBottom: 6 },
+  brand: { fontSize: 11.5, letterSpacing: 2.6, textTransform: 'uppercase', color: colors.text, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginBottom: 6 },
   title: { fontSize: 30, lineHeight: 33, fontFamily: fonts.serif, color: colors.text, letterSpacing: -0.2 },
   discount: { alignSelf: 'center', backgroundColor: colors.sale, borderRadius: 6, paddingHorizontal: 9, paddingVertical: 3 },
   discountText: { fontSize: 15, color: '#fff', fontFamily: fonts.sansSemiBold, fontWeight: '700' },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 10 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
-  ratingText: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans },
+  ratingText: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
   price: { fontSize: 31, fontFamily: fonts.serifMedium, color: colors.text },
   compare: { fontSize: 15, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
-  vat: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans },
+  vat: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
   availability: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 40, marginTop: 6, flexWrap: 'wrap' },
   availabilityText: { fontSize: 13, color: colors.green, fontFamily: fonts.sansMedium, fontWeight: '500' },
   change: { fontSize: 13, color: colors.text, textDecorationLine: 'underline', fontFamily: fonts.sans },
@@ -398,11 +429,11 @@ const styles = StyleSheet.create({
   feature: { flex: 1, alignItems: 'center', gap: 7, paddingHorizontal: 3 },
   featureTextWide: { fontSize: 13, lineHeight: 17, color: colors.text },
   featureText: { fontSize: 11, lineHeight: 14, color: colors.muted, textAlign: 'center', fontFamily: fonts.sans },
-  description: { fontSize: 13.5, lineHeight: 21, color: colors.muted, marginTop: 6, maxWidth: 560, fontFamily: fonts.sans },
+  description: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 6, maxWidth: 560, fontFamily: fonts.sans },
   buyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  sku: { fontSize: 12, color: colors.muted, marginTop: 22, fontFamily: fonts.sans },
+  sku: { fontSize: 13, color: colors.muted, marginTop: 22, fontFamily: fonts.sans },
   // Same confirmation as the phone toast: dark strip, yellow tick.
   added: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.text, borderRadius: 4, paddingHorizontal: 14, paddingVertical: 10 },
-  addedText: { flex: 1, fontSize: 14, color: '#FFFFFF', fontFamily: fonts.sansSemiBold, fontWeight: '600' },
-  addedLink: { fontSize: 14, color: colors.yellow, fontFamily: fonts.sansBold, fontWeight: '700' },
+  addedText: { flex: 1, fontSize: 15, color: '#FFFFFF', fontFamily: fonts.sansSemiBold, fontWeight: '600' },
+  addedLink: { fontSize: 15, color: colors.yellow, fontFamily: fonts.sansBold, fontWeight: '700' },
 });

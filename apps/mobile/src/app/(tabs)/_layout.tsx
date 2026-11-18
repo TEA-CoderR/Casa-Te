@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type ComponentProps } from 'react';
-import { Tabs } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { router, Tabs } from 'expo-router';
+import { PanResponder, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeOutDown, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutDown, ZoomIn, ZoomOut, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { colors, fonts } from '@/config/theme';
 import { Icon, type IconName } from '@/components/Icon';
 import { useLayout } from '@/lib/hooks';
@@ -10,6 +11,8 @@ import { SiteHeader } from '@/components/site/SiteHeader';
 import { cartItemCount, useCartStore } from '@/store/cart';
 import { useCartQuote } from '@/lib/hooks';
 import { formatEuro } from '@/lib/price';
+import { usePreferences } from '@/store/preferences';
+import { useSession } from '@/store/session';
 
 const tabs: Array<{ name: string; title: string; icon: IconName; hidden?: boolean }> = [
   { name: 'index', title: 'Home', icon: 'home' },
@@ -37,7 +40,35 @@ const BAR_MS = 3500;
  */
 function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const count = cartItemCount(useCartStore((s) => s.items));
+  // Swipe the bar left or right to tuck it into a small round handle at that side (the page gets the whole
+  // screen); tap the handle, or pull it towards the middle, to bring the bar back.
+  const [tucked, setTucked] = useState<null | 'left' | 'right'>(null);
+  const x = useSharedValue(0);
+  const tuck = (side: 'left' | 'right') => setTucked(side);
+  const pillPan = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponderCapture: (_e, g) => Math.abs(g.dx) > 14 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6,
+    onPanResponderMove: (_e, g) => { x.value = g.dx; },
+    onPanResponderRelease: (_e, g) => {
+      if (Math.abs(g.dx) > 90 || Math.abs(g.vx) > 0.6) {
+        const side = g.dx < 0 ? 'left' : 'right';
+        x.value = withTiming(side === 'left' ? -width : width, { duration: 180 }, () => scheduleOnRN(tuck, side));
+      } else x.value = withSpring(0, { damping: 18, stiffness: 220 });
+    },
+    onPanResponderTerminate: () => { x.value = withSpring(0); },
+  }), [width]); // eslint-disable-line react-hooks/exhaustive-deps
+  const untuck = () => {
+    const side = tucked;
+    setTucked(null);
+    x.value = side === 'left' ? -width * 0.6 : width * 0.6;
+    x.value = withSpring(0, { damping: 18, stiffness: 200 });
+  };
+  const handlePan = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 8,
+    onPanResponderRelease: (_e, g) => { if ((tucked === 'left' && g.dx > 30) || (tucked === 'right' && g.dx < -30)) untuck(); },
+  }), [tucked]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pillStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }], opacity: 1 - Math.min(0.6, Math.abs(x.value) / (width * 1.2)) }));
   const current = state.routes[state.index]?.name ?? 'index';
   const { quote } = useCartQuote();
   // The cart bar: shown when the count goes up, hidden again after BAR_MS (each new add restarts the wait).
@@ -68,8 +99,10 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     if (name === 'catalog') navigation.navigate('catalog', { offerte: '', evidenza: '', category: '' });
     else navigation.navigate(name);
   };
-  return <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-    {bar && count > 0 && <Animated.View entering={BAR_IN} exiting={FadeOutDown.duration(180)}
+  const cartBar = bar && count > 0;
+  return <View pointerEvents={tucked ? 'box-none' : 'auto'}
+    style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 12) }, tucked && styles.dockTucked]}>
+    {cartBar && <Animated.View entering={BAR_IN} exiting={FadeOutDown.duration(180)}
       accessibilityLiveRegion="polite">
       <Pressable onPress={() => { setBar(false); go('cart'); }} accessibilityRole="button" accessibilityLabel={`Vai al carrello, ${count} ${count === 1 ? 'articolo' : 'articoli'}`}
         style={({ pressed }) => [styles.mini, pressed && { opacity: 0.92 }]}>
@@ -81,7 +114,16 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
         <View style={styles.miniCta}><Text style={styles.miniCtaText}>Vai al carrello</Text></View>
       </Pressable>
     </Animated.View>}
-    <View style={styles.pill} accessibilityRole="tablist">
+    {tucked ? <Animated.View entering={ZoomIn.springify().damping(15)} exiting={ZoomOut.duration(120)} {...handlePan.panHandlers}
+      style={[styles.handleWrap, tucked === 'left' ? { alignSelf: 'flex-start' } : { alignSelf: 'flex-end' }]}>
+      <Pressable onPress={untuck} accessibilityRole="button" accessibilityLabel="Mostra il menu" hitSlop={8}
+        style={({ pressed }) => [styles.handle, pressed && { transform: [{ scale: 0.94 }] }]}>
+        <Icon name={visible.find((t) => t.name === current)?.icon ?? (current === 'prodotti' ? 'grid' : 'menu')} size={22} color={colors.text} strokeWidth={2} />
+        {count > 0 && <View style={styles.handleBadge}><Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text></View>}
+        <View style={[styles.handleGrip, tucked === 'left' ? { right: 7 } : { left: 7 }]} />
+      </Pressable>
+    </Animated.View>
+    : <Animated.View style={[styles.pill, pillStyle]} accessibilityRole="tablist" {...pillPan.panHandlers}>
       {visible.map((tab) => {
         const on = current === tab.name || (tab.name === 'profile' && current === 'orders') || (tab.name === 'catalog' && current === 'prodotti');
         const badge = tab.name === 'cart' && count > 0 ? (count > 99 ? '99+' : String(count)) : '';
@@ -89,7 +131,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
           accessibilityLabel={badge ? `${tab.title}, ${count} ${count === 1 ? 'articolo' : 'articoli'}${total ? `, ${total}` : ''}` : tab.title}
           style={[styles.tab, on && styles.tabOn]}>
           <View>
-            <Icon name={tab.icon} size={21} color={on ? colors.text : '#FFFFFF'} strokeWidth={on ? 1.9 : 1.8}
+            <Icon name={tab.icon} size={21} color={colors.text} strokeWidth={on ? 1.9 : 1.8}
               fill={on && tab.icon !== 'cart' ? colors.text : undefined} />
             {!!badge && !on && <Animated.View key={badge} entering={ZoomIn.springify()} style={styles.badge}>
               <Text style={styles.badgeText}>{badge}</Text></Animated.View>}
@@ -99,12 +141,22 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
             {tab.name === 'cart' && total ? total : tab.title}</Text>
         </Pressable>;
       })}
-    </View>
+    </Animated.View>}
   </View>;
 }
 
 export default function TabsLayout() {
   const { wide } = useLayout();
+  // First launch of the app (not the web shop): the welcome steps, once. Signed-in customers skip it.
+  const onboarded = usePreferences((p) => p.onboarded);
+  const setOnboarded = usePreferences((p) => p.setOnboarded);
+  const session = useSession();
+  useEffect(() => {
+    if (Platform.OS === 'web' || onboarded || !session.ready) return;
+    if (session.session) { setOnboarded(); return; }
+    const t = setTimeout(() => router.push('/benvenuto'), 0);
+    return () => clearTimeout(t);
+  }, [onboarded, session.ready, session.session, setOnboarded]);
   // Desktop web shop: the catalogue masthead (search, wordmark, departments) replaces the tab bar.
   // Back follows the order the screens were opened in (a product list returns to Home or Categorie, whichever opened it).
   return <Tabs backBehavior="history" tabBar={wide ? () => <SiteHeader /> : (props) => <FloatingTabBar {...props} />} screenOptions={{
@@ -117,20 +169,31 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   dock: { backgroundColor: colors.page, paddingHorizontal: 12, paddingTop: 6, gap: 8 },
+  // Tucked away: no room taken from the page; only the handle (and the cart bar after an add) float over it.
+  dockTucked: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'transparent' },
+  handleWrap: { width: 58, height: 58 },
+  handle: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#143019', shadowOpacity: 0.3, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 },
+  handleBadge: { position: 'absolute', top: -3, right: -3, minWidth: 20, height: 20, paddingHorizontal: 4, borderRadius: 10,
+    backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.page },
+  // A short grip on the inner side: "pull me out".
+  handleGrip: { position: 'absolute', top: 21, width: 3, height: 16, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.35)' },
   mini: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 58, paddingLeft: 18, paddingRight: 8, borderRadius: 20, backgroundColor: '#FFFFFF',
-    shadowColor: '#18201A', shadowOpacity: 0.22, shadowRadius: 34, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
+    shadowColor: '#18201A', shadowOpacity: 0.22, shadowRadius: 34, shadowOffset: { width: 0, height: 14 }, elevation: 8, borderWidth: 1, borderColor: colors.line },
   miniLabel: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
   miniTotal: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text },
   miniCta: { height: 44, paddingHorizontal: 16, borderRadius: 14, backgroundColor: colors.green, justifyContent: 'center' },
   miniCtaText: { fontSize: 14.5, fontFamily: fonts.sansBold, color: '#FFFFFF' },
-  pill: { flexDirection: 'row', alignItems: 'center', height: 66, borderRadius: 33, paddingHorizontal: 7, backgroundColor: colors.green,
-    shadowColor: '#143019', shadowOpacity: 0.35, shadowRadius: 28, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
+  // userSelect: a swipe on the web must not select the labels.
+  // White floating bar with a hairline and a soft shadow; the chosen tab on the logo lime.
+  pill: { flexDirection: 'row', alignItems: 'center', height: 66, borderRadius: 33, paddingHorizontal: 7, backgroundColor: '#FFFFFF', userSelect: 'none',
+    borderWidth: 1, borderColor: colors.line, shadowColor: '#143019', shadowOpacity: 0.12, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   tab: { flex: 1, height: 54, borderRadius: 22, alignItems: 'center', justifyContent: 'center', gap: 3 },
   tabOn: { backgroundColor: colors.yellow },
-  tabLabel: { fontSize: 11.5, fontFamily: fonts.sansBold, color: colors.onBrand },
-  tabTotal: { fontFamily: fonts.heavy, color: '#FFFFFF' },
+  tabLabel: { fontSize: 11.5, fontFamily: fonts.sansBold, color: colors.muted },
+  tabTotal: { fontFamily: fonts.heavy, color: colors.text },
   tabLabelOn: { fontFamily: fonts.heavy, color: colors.text },
   badge: { position: 'absolute', top: -7, right: -12, minWidth: 19, height: 19, paddingHorizontal: 4, borderRadius: 10,
-    backgroundColor: colors.yellow, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 11.5, fontFamily: fonts.heavy, color: colors.text },
+    backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontSize: 11.5, fontFamily: fonts.heavy, color: '#FFFFFF' },
 });

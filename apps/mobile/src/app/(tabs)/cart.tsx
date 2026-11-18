@@ -13,13 +13,13 @@ import { usePreferences } from '@/store/preferences';
 import { useQuery } from '@/lib/useQuery';
 import { Screen } from '@/components/Screen';
 import { ProductImage } from '@/components/ProductImage';
-import { EmptyState, Loading, Notice, PageTitle, PrimaryButton, QuantityControl, SummaryRow } from '@/components/UI';
+import { EmptyState, Loading, Notice, PageTitle, PrimaryButton, QuantityControl, SociChip, SummaryRow } from '@/components/UI';
 import { atPlace, StoreSheet, storeShortName } from '@/components/StoreSheet';
 import { Icon } from '@/components/Icon';
-import { colors, floatShadow, fonts } from '@/config/theme';
+import { colors, floatShadow, fonts, type } from '@/config/theme';
 import { fetchCartSuggestions, fetchProducts, imageUrl } from '@/lib/api';
 import { ProductCard } from '@/components/ProductCard';
-import { useCartQuote, useClubSettings, useDelivery, useLayout } from '@/lib/hooks';
+import { useCartQuote, useClubSettings, useDelivery, useLayout, useStores } from '@/lib/hooks';
 import { cartItemCount, useCartStore } from '@/store/cart';
 import { useUser } from '@/store/session';
 import { ALL_PRODUCTS } from '@/lib/links';
@@ -31,14 +31,18 @@ const ISSUE_TEXT: Record<NonNullable<QuoteLine['issue']>, string> = {
 };
 
 export default function CartScreen() {
-  const { enabled: clubOn, tagline: clubTagline } = useClubSettings();
+  const { enabled: clubOn, tagline: clubTagline, minOrderCents } = useClubSettings();
   const items = useCartStore((s) => s.items);
   const setQuantity = useCartStore((s) => s.setQuantity);
   const remove = useCartStore((s) => s.remove);
   const add = useCartStore((s) => s.add);
   const fulfilment = usePreferences((s) => s.fulfilment);
-  useDelivery();
+  const { open: deliveryOpen } = useDelivery();
+  const { canChoose } = useStores();
   const [removed, setRemoved] = useState<{ id: string; name: string; qty: number } | null>(null);
+  // "Svuota carrello" asks once, in place (no system dialog).
+  const [confirmClear, setConfirmClear] = useState(false);
+  const clearCart = useCartStore((s) => s.clear);
   const [storeSheet, setStoreSheet] = useState(false);
   const [deliverySheet, setDeliverySheet] = useState(false);
   // Lines and totals for the chosen delivery, all computed by quote_cart.
@@ -57,7 +61,7 @@ export default function CartScreen() {
   const suggestions = useQuery(basisIds.length ? `cart-suggestions:${store?.id}:${basisIds.join(',')}` : null,
     () => fetchCartSuggestions(store?.id ?? null, basisIds, 10));
 
-  const band = wide ? undefined : <BrandHeader title="Carrello" titleSize={30} subtitle="Nessun articolo" pad={[14, 16, 18]}
+  const band = wide ? undefined : <BrandHeader title="Carrello" titleSize={28} subtitle="Nessun articolo" pad={[14, 16, 18]}
     left={<HeaderBack onPress={() => router.canGoBack() ? router.back() : router.replace('/')} />} />;
   if (empty) return <Screen header={band} ground={wide ? undefined : colors.page}>{wide && <PageTitle title="Il tuo carrello" />}<EmptyState title="Il carrello è vuoto" art={wide ? undefined : <EmptyReceipt />}
     message={wide ? 'La tua casa aspetta nuove idee. Inizia da un piccolo essenziale.' : 'Aggiungi i prodotti che ti servono: li prepariamo noi nel tuo negozio.'}>
@@ -83,9 +87,13 @@ export default function CartScreen() {
   // Club member prices: already in the totals for members; for everyone else, what joining would save.
   const memberSaved = t?.member_savings_cents ?? 0;
   const memberAvailable = t?.member_savings_available_cents ?? 0;
+  // Minimum order on the goods (checked again by create_order); display only.
+  const goods = t ? t.subtotal_cents - (t.discount_cents ?? 0) : null;
+  const belowMin = goods != null && minOrderCents > 0 && goods < minOrderCents;
+  const minNote = belowMin ? `Ordine minimo ${formatEuro(minOrderCents).replace(/€\s/, '€').replace(',00', '')}: aggiungi ancora ${formatEuro(minOrderCents - goods!).replace(/€\s/, '€')} di prodotti.` : '';
 
   const cta = <PrimaryButton title={user ? 'Procedi al checkout' : 'Accedi e continua'}
-    disabled={hasIssues || quote.item_count === 0 || loading || !methodOk}
+    disabled={hasIssues || quote.item_count === 0 || loading || !methodOk || belowMin}
     onPress={() => user ? router.push('/checkout') : router.push({ pathname: '/auth/sign-in', params: { next: '/checkout' } })} />;
 
   const delivery = <View style={styles.delivery}>
@@ -139,7 +147,7 @@ export default function CartScreen() {
   if (!wide) {
     const euro = (c: number) => formatEuro(c).replace(/€\s/, '€');
     const back = () => router.canGoBack() ? router.back() : router.replace('/');
-    const header = <BrandHeader inScroll title="Carrello" titleSize={30} subtitle={`${count} ${count === 1 ? 'articolo' : 'articoli'}`} pad={[14, 16, 40]}
+    const header = <BrandHeader inScroll title="Carrello" titleSize={28} subtitle={`${count} ${count === 1 ? 'articolo' : 'articoli'}`} pad={[14, 16, 40]}
       left={<HeaderBack onPress={back} />} />;
     // The breakdown is read once, in the page; the bar at the bottom keeps only what decides the tap: total and button.
     const summary = <View style={styles.summaryPlate}>
@@ -156,18 +164,18 @@ export default function CartScreen() {
         <Text style={styles.footSumTotal}>{t?.total_cents != null ? euro(t.total_cents) : '—'}</Text></View>
       <Text style={[styles.footNote, { marginTop: 2 }]}>IVA inclusa · importo confermato al pagamento</Text>
     </View>;
-    const footer = <View style={styles.payBar}>
+    const footer = <View>{belowMin && <Text style={styles.minNote} accessibilityLiveRegion="polite">{minNote}</Text>}<View style={styles.payBar}>
       <View style={{ flexShrink: 0 }}>
         <Text style={styles.payBarLabel}>Totale</Text>
         <Text style={styles.footTotal}>{t?.total_cents != null ? euro(t.total_cents) : '—'}</Text>
       </View>
-      <Pressable disabled={hasIssues || quote.item_count === 0 || loading || !methodOk} accessibilityRole="button"
+      <Pressable disabled={hasIssues || quote.item_count === 0 || loading || !methodOk || belowMin} accessibilityRole="button"
         onPress={() => user ? router.push('/checkout') : router.push({ pathname: '/auth/sign-in', params: { next: '/checkout' } })}
-        style={({ pressed }) => [styles.payButton, (hasIssues || !methodOk) && { opacity: 0.45 }, pressed && { opacity: 0.88 }]}>
+        style={({ pressed }) => [styles.payButton, (hasIssues || !methodOk || belowMin) && { opacity: 0.45 }, pressed && { opacity: 0.88 }]}>
         <Text style={styles.payText} numberOfLines={1}>{user ? 'Vai al pagamento' : 'Accedi e continua'}</Text>
         <Icon name="arrow" size={18} color="#FFFFFF" strokeWidth={2.4} />
       </Pressable>
-    </View>;
+    </View></View>;
     return <Screen header={<StatusBand />} top={header} ground={colors.page} onRefresh={refresh} refreshing={loading} footer={footer}
       contentContainerStyle={{ padding: 0, paddingBottom: 24 }} bodyStyle={{ paddingHorizontal: 16 }}>
       <StoreSheet visible={storeSheet} onClose={() => setStoreSheet(false)} />
@@ -175,7 +183,7 @@ export default function CartScreen() {
         onChangeStore={() => setStoreSheet(true)} />
       <View style={{ marginTop: -30 }}>
         {fulfilment === 'store'
-          ? <StoreCard compact showStatus={false} label="Ritiro gratuito a" onPress={() => setDeliverySheet(true)} />
+          ? <StoreCard compact showStatus={false} label="Ritiro gratuito a" changeable={canChoose || deliveryOpen} onPress={() => setDeliverySheet(true)} />
           : <Pressable onPress={() => setDeliverySheet(true)} accessibilityRole="button" style={styles.pCard}>
               <Icon name={fulfilment === 'home' ? 'truck' : 'pin'} size={26} color={colors.green} strokeWidth={1.9} />
               <View style={{ flex: 1 }}>
@@ -200,16 +208,18 @@ export default function CartScreen() {
             <View style={{ flex: 1, minWidth: 0, justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Text style={styles.pName} numberOfLines={2}>{line.name}</Text>
-                <Pressable onPress={() => { setRemoved({ id: line.product_id, name: line.name, qty }); remove(line.product_id); }}
+                {/* Without the stepper (not available) the bin stays here; otherwise "−" at 1 becomes the bin. */}
+                {line.issue === 'unavailable' && <Pressable onPress={() => { setRemoved({ id: line.product_id, name: line.name, qty }); remove(line.product_id); }}
                   style={styles.remove} accessibilityRole="button" accessibilityLabel={`Rimuovi ${line.name}`}>
-                  <Icon name="trash" size={18} color={colors.muted} strokeWidth={1.9} /></Pressable>
+                  <Icon name="trash" size={18} color={colors.muted} strokeWidth={1.9} /></Pressable>}
               </View>
               {!!line.issue && <Text style={styles.issue}>{ISSUE_TEXT[line.issue]}{line.issue === 'insufficient_stock' ? ` (disponibili: ${line.available_quantity})` : ''}</Text>}
               <View style={styles.lineBottom}>
                 <View style={{ flexShrink: 1 }}>{!line.issue && <LinePrice line={line} compareUnit={compare} />}</View>
                 {line.issue !== 'unavailable' && <View style={styles.qty}>
                   <Pressable onPress={() => qty <= 1 ? (setRemoved({ id: line.product_id, name: line.name, qty }), remove(line.product_id)) : setQuantity(line.product_id, qty - 1)}
-                    accessibilityRole="button" accessibilityLabel={`Togli un ${line.name}`} style={styles.qtyButton}><Text style={styles.qtyGlyph}>−</Text></Pressable>
+                    accessibilityRole="button" accessibilityLabel={qty <= 1 ? `Rimuovi ${line.name}` : `Togli un ${line.name}`} style={styles.qtyButton}>
+                    {qty <= 1 ? <Icon name="trash" size={17} color={colors.text} strokeWidth={1.9} /> : <Text style={styles.qtyGlyph}>−</Text>}</Pressable>
                   <Text style={styles.qtyValue} accessibilityLabel={`Quantità ${qty}`}>{qty}</Text>
                   <Pressable onPress={() => setQuantity(line.product_id, qty + 1)} disabled={qty >= max} accessibilityRole="button" accessibilityLabel={`Aggiungi un ${line.name}`}
                     style={[styles.qtyButton, qty >= max && { opacity: 0.35 }]}><Text style={styles.qtyGlyph}>+</Text></Pressable>
@@ -219,6 +229,15 @@ export default function CartScreen() {
           </Animated.View>;
         })}
       </View>
+      {quote.lines.length > 0 && <View style={styles.clearRow}>
+        {confirmClear ? <>
+          <Text style={styles.clearAsk}>Svuotare il carrello?</Text>
+          <Pressable onPress={() => setConfirmClear(false)} accessibilityRole="button" hitSlop={8}><Text style={styles.clearNo}>Annulla</Text></Pressable>
+          <Pressable onPress={() => { setConfirmClear(false); setRemoved(null); clearCart(); }} accessibilityRole="button" hitSlop={8} style={styles.clearYes}>
+            <Text style={styles.clearYesText}>Sì, svuota</Text></Pressable>
+        </> : <Pressable onPress={() => setConfirmClear(true)} accessibilityRole="button" hitSlop={8} style={styles.clearLink}>
+          <Icon name="trash" size={16} color={colors.muted} strokeWidth={1.9} /><Text style={styles.clearText}>Svuota carrello</Text></Pressable>}
+      </View>}
       {quote.lines.length > 0 && summary}
       {suggestionsRow}
       {removed && <Animated.View entering={FadeInDown.springify().damping(18)} style={styles.snack} accessibilityLiveRegion="polite">
@@ -273,7 +292,7 @@ export default function CartScreen() {
     {suggestionsRow}
     {!wide && <>{delivery}{clubOn && memberAvailable === 0 && club}{summary}</>}
     </View>
-    {wide && <View style={styles.summaryCard}>{delivery}{clubOn && memberAvailable === 0 && club}{summary}<View style={{ marginTop: 18 }}>{cta}</View></View>}
+    {wide && <View style={styles.summaryCard}>{delivery}{clubOn && memberAvailable === 0 && club}{summary}{belowMin && <Text style={[styles.minNote, { marginTop: 14, marginBottom: 0 }]}>{minNote}</Text>}<View style={{ marginTop: 18 }}>{cta}</View></View>}
     </View>
   </Screen>;
 }
@@ -296,16 +315,12 @@ function LinePrice({ line, compareUnit, wide }: { line: QuoteLine; compareUnit: 
       <Text style={[...big, { color: colors.sale }]}>{euroTight(line.line_total_cents)}</Text>
       <Text style={styles.struck}>{euroTight(regular * qty)}</Text>
     </View>
-    <View style={styles.sociTag}><Icon name="crown" size={12} color="#FFFFFF" strokeWidth={2} />
-      <Text style={styles.sociTagText}>Prezzo Soci −{pct(regular, member)}%</Text></View>
+    <SociChip applied suffix={`−${pct(regular, member)}%`} style={{ marginTop: 4 }} />
     {qty > 1 && <Text style={styles.pEach}>{euroTight(member)} cad.</Text>}
   </View>;
   if (member !== null) return <View>
     <Text style={big}>{euroTight(line.line_total_cents)}</Text>
-    <View style={styles.sociOffer}>
-      <Icon name="crown" size={12} color={colors.sale} strokeWidth={2} />
-      <Text style={styles.sociOfferText}>Soci <Text style={{ fontFamily: fonts.sansBold, fontWeight: '700' }}>{euroTight(member * qty)}</Text> −{pct(regular, member)}%</Text>
-    </View>
+    <SociChip cents={member * qty} suffix={`−${pct(regular, member)}%`} style={{ marginTop: 4 }} />
     {qty > 1 && <Text style={styles.pEach}>{euroTight(regular)} cad.</Text>}
   </View>;
   return <View>
@@ -317,95 +332,85 @@ function LinePrice({ line, compareUnit, wide }: { line: QuoteLine; compareUnit: 
   </View>;
 }
 
-/** For non-members: the cart total with and without the Club, side by side, and the way in. */
+/** For non-members: one line with what the cart would cost with the Club, and the way in. */
 function ClubCompare({ total, saving }: { total: number; saving: number }) {
-  return <Pressable onPress={() => router.push('/club')} accessibilityRole="link" style={styles.compare}
-    accessibilityLabel={`Totale ${formatEuro(total)}, con il Club ${formatEuro(total - saving)}. Iscriviti gratis`}>
-    <View style={styles.compareCol}>
-      <Text style={styles.compareLabel}>Senza Club</Text>
-      <Text style={styles.compareNow}>{euroTight(total)}</Text>
+  return <Pressable onPress={() => router.push('/club')} accessibilityRole="link" style={({ pressed }) => [styles.compare, pressed && { opacity: 0.85 }]}
+    accessibilityLabel={`Con il Club pagheresti ${formatEuro(total - saving)}, risparmi ${formatEuro(saving)}. Iscriviti gratis`}>
+    <Icon name="crown" size={24} color={colors.sign} strokeWidth={1.8} />
+    <View style={{ flex: 1 }}>
+      <Text style={styles.compareNow}>Con il Club pagheresti <Text style={styles.compareSoci}>{euroTight(total - saving)}</Text></Text>
+      <Text style={styles.compareSave}>Risparmi {euroTight(saving)} · <Text style={styles.compareCtaText}>Iscriviti gratis</Text></Text>
     </View>
-    <View style={[styles.compareCol, styles.compareClub]}>
-      <Text style={[styles.compareLabel, { color: colors.sale }]}>Con il Club</Text>
-      <Text style={styles.compareSoci}>{euroTight(total - saving)}</Text>
-      <Text style={styles.compareSave}>risparmi {euroTight(saving)}</Text>
-    </View>
-    <View style={styles.compareCta}>
-      <Text style={styles.compareCtaText}>Iscriviti{'\n'}gratis</Text>
-      <Icon name="chevron" size={16} color="#FFFFFF" strokeWidth={2.4} />
-    </View>
+    <Icon name="chevron" size={18} color={colors.muted} strokeWidth={2.2} />
   </Pressable>;
 }
 
 const styles = StyleSheet.create({
   sugg: { marginTop: 18 },
-  suggTitle: { fontSize: 19, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  suggNote: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
+  suggTitle: { fontSize: 22, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  suggNote: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
-  struck: { fontSize: 12.5, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
-  sociTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: colors.sale, borderRadius: 6,
-    paddingHorizontal: 6, paddingVertical: 2, marginTop: 3 },
-  sociTagText: { fontSize: 11, color: '#FFFFFF', fontFamily: fonts.sansBold, fontWeight: '700' },
-  sociOffer: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.sale, borderRadius: 6,
-    paddingHorizontal: 6, paddingVertical: 1, marginTop: 3 },
-  sociOfferText: { fontSize: 11.5, color: colors.sale, fontFamily: fonts.sans },
+  struck: { fontSize: 13, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
   footSoci: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.sale },
-  compare: { flexDirection: 'row', alignItems: 'stretch', borderRadius: 16, borderWidth: 1.5, borderColor: colors.sale, overflow: 'hidden', marginBottom: 12 },
-  compareCol: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, justifyContent: 'center' },
-  compareClub: { borderLeftWidth: 1, borderColor: colors.line },
-  compareLabel: { fontSize: 11.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
-  compareNow: { fontSize: 18, fontFamily: fonts.heavy, color: colors.text, marginTop: 2 },
-  compareSoci: { fontSize: 20, fontFamily: fonts.heavy, color: colors.sale, marginTop: 2 },
-  compareSave: { fontSize: 11.5, color: colors.sale, fontFamily: fonts.sans },
-  compareCta: { width: 86, backgroundColor: colors.sale, alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 6 },
-  compareCtaText: { fontSize: 13, lineHeight: 16, color: '#FFFFFF', fontFamily: fonts.sansBold, fontWeight: '700', textAlign: 'center' },
-  undo: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.cream, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
+  compare: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.line, paddingVertical: 12, paddingHorizontal: 14, marginBottom: 12 },
+  compareNow: { fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.text },
+  compareSoci: { fontFamily: fonts.heavy, color: colors.sale },
+  compareSave: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 2 },
+  compareCtaText: { fontFamily: fonts.sansBold, color: colors.green, textDecorationLine: 'underline' },
+  clearRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 16, minHeight: 44, marginTop: 4 },
+  clearLink: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 },
+  clearText: { fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  clearAsk: { flex: 1, fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.text },
+  clearNo: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.green },
+  clearYes: { height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.danger, justifyContent: 'center' },
+  clearYesText: { fontSize: 15, fontFamily: fonts.sansBold, color: '#FFFFFF' },
+  undo: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.well, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
   snack: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, borderRadius: 16, paddingHorizontal: 16, backgroundColor: colors.text },
-  snackText: { flex: 1, fontSize: 14.5, fontFamily: fonts.sansSemiBold, color: '#FFFFFF' },
-  snackLink: { fontSize: 14.5, fontFamily: fonts.heavy, color: colors.yellow },
-  undoText: { flex: 1, fontSize: 14, color: colors.text, fontFamily: fonts.sans },
-  undoLink: { fontSize: 14, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.green, textDecorationLine: 'underline' },
+  snackText: { flex: 1, fontSize: 15, fontFamily: fonts.sansSemiBold, color: '#FFFFFF' },
+  snackLink: { fontSize: 15, fontFamily: fonts.heavy, color: colors.yellow },
+  undoText: { flex: 1, fontSize: 15, color: colors.text, fontFamily: fonts.sans },
+  undoLink: { fontSize: 15, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.green, textDecorationLine: 'underline' },
   wide: { flexDirection: 'row', gap: 40, alignItems: 'flex-start' },
   summaryCard: { flex: 1, maxWidth: 420, backgroundColor: colors.surface, borderRadius: 16, padding: 22, borderWidth: 1, borderColor: colors.line },
   lines: { borderTopWidth: 1, borderColor: '#EEE9E0' },
   line: { flexDirection: 'row', gap: 14, paddingVertical: 12, borderBottomWidth: 1, borderColor: '#EEE9E0' },
-  thumb: { width: 86, height: 86, backgroundColor: colors.surface, borderRadius: 8, borderWidth: 1, borderColor: '#EEE9E0', justifyContent: 'center', overflow: 'hidden' },
+  thumb: { width: 86, height: 86, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: '#EEE9E0', justifyContent: 'center', overflow: 'hidden' },
   name: { fontSize: 16.5, lineHeight: 19, fontFamily: fonts.serif, color: colors.text },
-  meta: { fontSize: 11.5, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
-  issue: { fontSize: 12, color: colors.danger, marginTop: 4, fontFamily: fonts.sansMedium, fontWeight: '500' },
-  hint: { fontSize: 12, color: colors.muted, fontFamily: fonts.sans, marginTop: -2, marginBottom: 4 },
+  meta: { fontSize: 11, color: colors.muted, marginTop: 2, fontFamily: fonts.sans },
+  issue: { fontSize: 13, color: colors.danger, marginTop: 4, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  hint: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans, marginTop: -2, marginBottom: 4 },
   lineBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginTop: 'auto', paddingTop: 6 },
   linePrice: { fontSize: 19.5, fontFamily: fonts.serifMedium, color: colors.text },
   remove: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: -8 },
   delivery: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16 },
   deliveryTitle: { fontSize: 16.5, fontFamily: fonts.serif, color: colors.text },
-  deliveryText: { fontSize: 12, color: colors.muted, marginTop: 2, lineHeight: 17, fontFamily: fonts.sans },
-  modify: { fontSize: 12.5, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium, fontWeight: '500' },
-  banner: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#F5ECDD', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16 },
+  deliveryText: { fontSize: 13, color: colors.muted, marginTop: 2, lineHeight: 18, fontFamily: fonts.sans },
+  modify: { fontSize: 13, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium, fontWeight: '500' },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.well, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16 },
   bannerTitle: { fontSize: 19, fontFamily: fonts.serif, color: colors.text },
   pSoci: { fontSize: 11, color: colors.sale, fontFamily: fonts.sansBold, fontWeight: '700' },
   memberSaved: { fontSize: 13, color: colors.sale, fontFamily: fonts.sansSemiBold, fontWeight: '600', marginTop: 8 },
   memberNudge: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.well, borderRadius: 12,
     paddingHorizontal: 12, paddingVertical: 9, marginBottom: 10 },
   memberNudgeText: { flex: 1, fontSize: 13, color: colors.sale, fontFamily: fonts.sans },
-  bannerText: { fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
+  bannerText: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 3, fontFamily: fonts.sans },
   totals: { marginTop: 16 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 8 },
   totalLabel: { fontSize: 23, fontFamily: fonts.serif, color: colors.text },
   totalValue: { fontSize: 24, fontFamily: fonts.serifMedium, color: colors.text },
-  vat: { fontSize: 12, color: colors.muted, textAlign: 'right', marginTop: 2, fontFamily: fonts.sans },
+  vat: { fontSize: 13, color: colors.muted, textAlign: 'right', marginTop: 2, fontFamily: fonts.sans },
   countPill: { backgroundColor: colors.yellow, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
-  countPillText: { fontSize: 13.5, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
-  pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#FFFFFF',
-    shadowColor: '#18201A', shadowOpacity: 0.12, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
-  pLabel: { fontSize: 12.5, fontFamily: fonts.sansSemiBold, color: colors.muted },
+  countPillText: { fontSize: 13, fontFamily: fonts.heavy, fontWeight: '800', color: colors.text },
+  pCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 16, backgroundColor: '#FFFFFF',
+    shadowColor: '#18201A', shadowOpacity: 0.12, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 6, borderWidth: 1, borderColor: colors.line },
+  pLabel: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted },
   pTitle: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
-  pLink: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green },
-  pLine: { flexDirection: 'row', gap: 12, paddingVertical: 8, paddingLeft: 8, paddingRight: 12, borderRadius: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: colors.line },
+  pLink: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.green },
+  pLine: { flexDirection: 'row', gap: 12, paddingVertical: 8, paddingLeft: 8, paddingRight: 12, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   pThumb: { width: 80, height: 80, borderRadius: 12, backgroundColor: colors.photo, alignItems: 'center', justifyContent: 'center' },
-  pName: { flex: 1, fontSize: 14.5, lineHeight: 18, fontFamily: fonts.sansSemiBold, color: colors.text },
+  pName: { flex: 1, fontSize: 15, lineHeight: 21, fontFamily: fonts.sansSemiBold, color: colors.text },
   pPrice: { fontSize: 17, fontFamily: fonts.heavy, color: colors.text },
-  pEach: { fontSize: 11.5, fontFamily: fonts.sans, color: colors.muted },
+  pEach: { fontSize: 11, fontFamily: fonts.sans, color: colors.muted },
   qty: { flexDirection: 'row', alignItems: 'center', height: 40, borderRadius: 20, backgroundColor: colors.page, borderWidth: 1, borderColor: colors.line },
   qtyButton: { width: 40, height: 38, alignItems: 'center', justifyContent: 'center' },
   qtyGlyph: { fontSize: 19, lineHeight: 22, fontFamily: fonts.sansBold, color: colors.text },
@@ -413,14 +418,15 @@ const styles = StyleSheet.create({
   footRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   footLabel: { fontSize: 15, fontFamily: fonts.sans, color: colors.muted },
   footFree: { color: colors.green, fontFamily: fonts.heavy },
-  footNote: { fontSize: 12.5, fontFamily: fonts.sans, color: colors.muted },
-  footRule: { height: 1, backgroundColor: '#EFECE3', marginVertical: 12 },
-  footTotalLabel: { fontSize: 20, fontFamily: fonts.display, color: colors.text },
-  footTotal: { fontSize: 24, lineHeight: 28, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
+  footNote: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted },
+  footRule: { height: 1, backgroundColor: '#EDEDE9', marginVertical: 12 },
+  footTotalLabel: { fontSize: 22, fontFamily: fonts.display, color: colors.text },
+  footTotal: { fontSize: 22, lineHeight: 27, fontFamily: fonts.heavy, color: colors.text, letterSpacing: -0.4 },
   payButton: { flex: 1, height: 54, borderRadius: 27, backgroundColor: colors.green, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 16 },
   payBar: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  minNote: { ...type.small, fontFamily: fonts.sansSemiBold, color: colors.text, textAlign: 'center', marginBottom: 10 },
   payBarLabel: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted },
-  summaryPlate: { marginTop: 12, padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  summaryPlate: { marginTop: 12, padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
   footSumTotal: { fontSize: 22, fontFamily: fonts.heavy, color: colors.text },
   payText: { fontSize: 17, fontFamily: fonts.sansBold, color: '#FFFFFF' },
 });

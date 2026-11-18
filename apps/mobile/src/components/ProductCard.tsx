@@ -3,7 +3,7 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Link } from 'expo-router';
 import { discountLabel, formatEuro, unitPriceLabel } from '@/lib/price';
 import type { CatalogProduct } from '@/lib/api';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, radius, type } from '@/config/theme';
 import { useCartStore } from '@/store/cart';
 import { useFavorites } from '@/store/favorites';
 import { ProductImage } from './ProductImage';
@@ -11,7 +11,7 @@ import { Icon } from './Icon';
 import { atPlace, storeShortName } from './StoreSheet';
 import { useLayout, useStores } from '@/lib/hooks';
 import { transition, type WebState } from './site/shared';
-import { PriceTag } from './UI';
+import { PriceTag, SociChip } from './UI';
 import { useShownProduct } from '@/store/club';
 
 /** Availability is always about one store; name it so the customer knows which. */
@@ -78,13 +78,12 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
       {!!discount && <Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
       {!!discount && !!unit && ' · '}{unit ?? ''}</Text>}
     <PriceTag cents={product.price_cents} size={22} sale={!!discount} />
-    {soci && <Text style={styles.soci} numberOfLines={1}>Prezzo Soci</Text>}
-    {sociOffer && <Text style={[styles.soci, styles.sociOffer]} numberOfLines={1}>{sociOfferText}</Text>}
+    {(soci || sociOffer) && <SociChip cents={sociCents} applied={soci} style={{ marginTop: 4 }} />}
   </View>;
 
   if (variant === 'list') return <View style={styles.row}>
     <Link href={`/product/${product.id}`} asChild><Pressable style={styles.rowLink} accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
-      <View style={styles.rowMedia}><ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.08} /></View>
+      <View style={styles.rowMedia}><ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0.08} thumb /></View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         {!!product.brand && <Text style={styles.meta}>{product.brand}</Text>}
@@ -103,10 +102,10 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
         {({ hovered }: WebState) => <>
           <View style={styles.plate}>
             <View style={[hovered && { transform: [{ scale: 1.035 }] }, transition('transform', 600)]}>
-              <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={feature ? 0.1 : 0.09} aspect={feature ? 0.9 : 1.12} blend />
+              <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={feature ? 0.1 : 0.09} aspect={feature ? 0.9 : 1.12} blend thumb={!feature} />
             </View>
             {!!badge && <View style={[styles.discount, styles.discountDesk, feature && styles.discountBig]}>
-              <Text style={[styles.discountText, styles.discountTextDesk, feature && { fontSize: 16 }]} accessibilityLabel={badge.startsWith('Soci') ? `Prezzo Soci, ${badge.slice(5)}` : `Sconto ${badge}`}>{badge}</Text></View>}
+              <Text style={[styles.discountText, styles.discountTextDesk, feature && { fontSize: 17 }]} accessibilityLabel={badge.startsWith('Soci') ? `Prezzo Soci, ${badge.slice(5)}` : `Sconto ${badge}`}>{badge}</Text></View>}
           </View>
           <View style={styles.entryText}>
             {!!product.brand && <Text style={styles.entryBrand} numberOfLines={1}>{product.brand}</Text>}
@@ -121,7 +120,7 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
       <View style={styles.entryBottom}>
         <View style={styles.priceRow}>
           <Text style={[styles.price, feature && { fontSize: 26 }, !!discount && { color: colors.sale }]}>{formatEuro(product.price_cents)}</Text>
-          {!!discount && <Text style={[styles.compare, feature && { fontSize: 14 }]}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
+          {!!discount && <Text style={[styles.compare, feature && { fontSize: 15 }]}>{formatEuro(product.compare_at_price_cents as number)}</Text>}
         </View>
         {cartButton}
       </View>
@@ -134,46 +133,57 @@ export function ProductCard({ product: raw, variant = 'grid', rail }: { product:
   // Discounted: the regular price struck through, then "Soci" (member price) or the unit price.
   const subline = !stock.available ? stock.text : discount
     ? <><Text style={styles.compareSmall}>{formatEuro(product.compare_at_price_cents as number).replace(/€\s/, '€')}</Text>
-        {soci ? <Text style={styles.soci}> · Prezzo Soci</Text> : unitShort ? ` · ${unitShort}` : ''}</>
-    : sociOffer ? <Text style={[styles.soci, styles.sociOffer]}>{sociOfferText}</Text>
+        {unitShort ? ` · ${unitShort}` : ''}</>
     : unitShort ?? note;
+  // Phone: offers read as the struck regular price and the offer price, with the discount rate on the photo ("−25%").
+  // Club price, same shape for everyone (owner, 14/11/2026): the big price is what this customer pays; under the name
+  // a red chip — outlined "Soci €x" for others, filled "Prezzo Soci" for members, whose regular price is struck
+  // beside the big one (never next to the words "Prezzo Soci", which read as if the struck one were the member price).
+  const phoneBadge = discount ? discount.replace('-', '−') : sociOffer && sociPct ? `Soci ${sociPct.replace('-', '−')}` : '';
   return <View style={[styles.card, rail && { paddingBottom: 12 }]}>
     <Link href={`/product/${product.id}`} asChild><Pressable accessibilityLabel={`${product.name}, ${formatEuro(product.price_cents)}`}>
       <View style={[styles.media, { height: rail ? 136 : 132 }]}>
         <View style={{ width: rail ? 120 : 118, height: rail ? 120 : 118 }}>
-          <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} />
+          <ProductImage uri={product.image} sku={product.sku} label={product.name} inset={0} thumb />
         </View>
-        {!!badge && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
-          <Text style={styles.discountText} accessibilityLabel={badge.startsWith('Soci') ? `Prezzo Soci, ${badge.slice(5)}` : `Sconto ${badge}`}>{badge}</Text></View>}
+        {!!phoneBadge && <View style={[styles.discount, rail ? { left: 4, top: 4 } : { left: 2, top: 2 }]}>
+          <Text style={styles.discountText} accessibilityLabel={phoneBadge.startsWith('Soci') ? `Prezzo Soci, ${phoneBadge.slice(5)}` : `Sconto ${phoneBadge}`}>{phoneBadge}</Text></View>}
       </View>
       <Text style={[styles.name, { marginTop: rail ? 6 : 4 }]} numberOfLines={2}>{product.name}</Text>
-      <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>
+      {(sociOffer || soci) && stock.available
+        ? <SociChip cents={sociCents} applied={soci} style={{ marginTop: 3, marginLeft: 4 }} />
+        : <Text style={[styles.meta, !stock.available && { color: colors.danger }]} numberOfLines={1}>{subline || ' '}</Text>}
     </Pressable></Link>
     {!rail && <FavoriteButton productId={product.id} name={product.name} size={19} strokeWidth={2} style={styles.heartCorner} />}
-    <View style={styles.bottom}><PriceTag cents={product.price_cents} size={22} sale={!!discount} />{phoneCart}</View>
+    <View style={styles.bottom}><View style={styles.priceWithStruck}>
+      <PriceTag cents={product.price_cents} size={22} sale={!!discount} />
+      {soci && !!discount && <Text style={[styles.meta, styles.compareSmall, { marginTop: 0, paddingHorizontal: 0, flexShrink: 1 }]} numberOfLines={1}>{formatEuro(product.compare_at_price_cents as number).replace(/€\s/, '€')}</Text>}
+    </View>{phoneCart}</View>
   </View>;
 }
 
 const styles = StyleSheet.create({
-  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 10,
-    borderBottomWidth: 1, borderColor: colors.line },
-  media: { backgroundColor: colors.surface, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  card: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, padding: 8, paddingBottom: 10,
+    borderWidth: 1, borderColor: colors.line },
+  media: { backgroundColor: colors.surface, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   heart: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   heartCorner: { position: 'absolute', top: 6, right: 6, zIndex: 2 },
-  discount: { position: 'absolute', left: 0, top: 0, backgroundColor: colors.sale, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  discountText: { fontSize: 12, color: '#fff', fontFamily: fonts.heavy, fontWeight: '800' },
-  name: { fontSize: 13.5, lineHeight: 17, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text, height: 34, paddingHorizontal: 4 },
-  meta: { fontSize: 11.5, lineHeight: 15, color: colors.muted, marginTop: 2, fontFamily: fonts.sans, paddingHorizontal: 4 },
+  discount: { position: 'absolute', left: 0, top: 0, backgroundColor: colors.sale, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3 },
+  discountText: { fontSize: 13, color: '#fff', fontFamily: fonts.heavy, fontWeight: '800' },
+  name: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sansSemiBold, fontWeight: '600', color: colors.text, height: 34, paddingHorizontal: 4 },
+  meta: { fontSize: 11, lineHeight: 13, color: colors.muted, marginTop: 2, fontFamily: fonts.sans, paddingHorizontal: 4 },
   bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 6, paddingLeft: 4, height: 40 },
-  small: { fontSize: 11.5, color: colors.faint, fontFamily: fonts.sansMedium },
+  small: { fontSize: 11, color: colors.faint, fontFamily: fonts.sansMedium },
   compareSmall: { textDecorationLine: 'line-through' },
+  priceWithStruck: { flexDirection: 'row', alignItems: 'baseline', gap: 5, flexShrink: 1, minWidth: 0 },
   soci: { color: colors.sale, fontFamily: fonts.sansBold, fontWeight: '700' },
   sociOffer: { fontFamily: fonts.heavy, fontWeight: '800' },
+  sociPct: { fontFamily: fonts.sansBold, fontWeight: '700' },
   priceBig: { fontSize: 23, lineHeight: 26, fontFamily: fonts.price, fontWeight: '800', color: colors.text },
   priceRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
   price: { fontSize: 18.5, fontFamily: fonts.serifMedium, color: colors.text },
-  compare: { fontSize: 12, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
-  add: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  compare: { fontSize: 13, color: colors.muted, textDecorationLine: 'line-through', fontFamily: fonts.sans },
+  add: { width: 34, height: 34, borderRadius: 12, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   addRound: { width: 40, height: 40, borderRadius: 20 },
   stepper: { flexDirection: 'row', alignItems: 'center', height: 40, borderRadius: 20, backgroundColor: colors.green },
   stepBtn: { width: 34, height: 40, alignItems: 'center', justifyContent: 'center' },
@@ -186,12 +196,12 @@ const styles = StyleSheet.create({
   discountTextDesk: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, fontWeight: '700', letterSpacing: 0.2 },
   discountBig: { left: 16, top: 16, paddingHorizontal: 11, paddingVertical: 5 },
   entryText: { paddingTop: 16, gap: 3 },
-  entryBrand: { fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  entryBrand: { fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, fontFamily: fonts.sansMedium, fontWeight: '500' },
   entryName: { fontSize: 19, lineHeight: 23, fontFamily: fonts.serif, color: colors.text },
   entryNameBig: { fontSize: 28, lineHeight: 32 },
   entryBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, gap: 8, marginTop: 'auto' },
-  row: { flexDirection: 'row', gap: 12, padding: 10, marginBottom: 8, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center' },
+  row: { flexDirection: 'row', gap: 12, padding: 10, marginBottom: 8, borderRadius: 16, backgroundColor: colors.surface, alignItems: 'center', borderWidth: 1, borderColor: colors.line },
   rowLink: { flex: 1, flexDirection: 'row', gap: 14, alignItems: 'center' },
-  rowMedia: { width: 84, borderRadius: 8, backgroundColor: colors.surface, overflow: 'hidden' },
+  rowMedia: { width: 84, borderRadius: 12, backgroundColor: colors.surface, overflow: 'hidden' },
   rowSide: { alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', gap: 8 },
 });

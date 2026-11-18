@@ -2,17 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { CategoryBrowser, SubcategorySheet, SubcategoryTabs, departmentCount, liveChildren } from '@/components/CategoryNav';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { RemoteImage } from '@/components/RemoteImage';
+import { RevealOnOpen } from '@/components/Reveal';
 import { router, useLocalSearchParams, useRoute } from 'expo-router';
 import { productList } from '@/lib/links';
 import type { CategoryRow } from '@casa-te/shared';
 import { Screen } from '@/components/Screen';
 import { ProductCard } from '@/components/ProductCard';
 import { EMPTY_FILTERS, FilterSheet, type FilterSection, type Filters } from '@/components/FilterSheet';
-import { Loading, Notice, SecondaryButton } from '@/components/UI';
+import { Loading, Notice, SearchField, searchInput, SecondaryButton } from '@/components/UI';
 import { Icon } from '@/components/Icon';
 import { BrandHeader, HeaderBack } from '@/components/BrandHeader';
 import { RollingAwning } from '@/components/RollingAwning';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, radius, type } from '@/config/theme';
 import { fetchCategories, fetchCategoryCounts, fetchCategoryCovers, fetchFacets, fetchProducts, type CatalogProduct } from '@/lib/api';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { useLayout, useStores } from '@/lib/hooks';
@@ -22,8 +23,8 @@ import { useRecentSearches } from '@/store/recentSearches';
 import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared';
 
 /** First page of the lists seen recently (newest last), to reopen a department without waiting. */
-const firstPages = new Map<string, { items: CatalogProduct[]; hasMore: boolean; total: number | null }>();
-const remember = (key: string, page: { items: CatalogProduct[]; hasMore: boolean; total: number | null }) => {
+const firstPages = new Map<string, { items: CatalogProduct[]; hasMore: boolean; total: number | null; fuzzy?: boolean }>();
+const remember = (key: string, page: { items: CatalogProduct[]; hasMore: boolean; total: number | null; fuzzy?: boolean }) => {
   firstPages.delete(key); firstPages.set(key, page);
   if (firstPages.size > 24) firstPages.delete(firstPages.keys().next().value as string);
 };
@@ -54,6 +55,8 @@ export default function CatalogScreen() {
   const [total, setTotal] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  // Nothing matched as written: the list holds close spellings (search_products marks them).
+  const [fuzzy, setFuzzy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const categories = useQuery<CategoryRow[]>('categories', fetchCategories);
@@ -81,7 +84,7 @@ export default function CatalogScreen() {
   // ?evidenza=1: only the products starred "In evidenza" in the admin.
   const [featuredOnly, setFeaturedOnly] = useState(params.evidenza === '1');
   useEffect(() => { setFeaturedOnly(params.evidenza === '1'); }, [params.evidenza]);
-  const collection = onSale ? 'In offerta' : featuredOnly ? 'In evidenza' : null;
+  const collection = onSale ? 'Offerte Soci' : featuredOnly ? 'In evidenza' : null;
   useEffect(() => { if (params.search) setSearchOpen(true); }, [params.search]);
   useEffect(() => { if (params.sort === 'price_asc') setFilters((f) => ({ ...f, sort: 'price_asc' })); }, [params.sort]);
   // The desktop masthead searches by changing ?q=.
@@ -120,12 +123,12 @@ export default function CatalogScreen() {
   useEffect(() => {
     let active = true;
     const cached = firstPages.get(key);
-    if (cached) { setItems(cached.items); setHasMore(cached.hasMore); setTotal(cached.total); }
-    else { setItems([]); setHasMore(false); setTotal(null); }
+    if (cached) { setItems(cached.items); setHasMore(cached.hasMore); setTotal(cached.total); setFuzzy(!!cached.fuzzy); }
+    else { setItems([]); setHasMore(false); setTotal(null); setFuzzy(false); }
     setPage(0); setError(null);
     setLoading(true);
     request(0)
-      .then((r) => { if (active) { remember(key, r); setItems(r.items); setHasMore(r.hasMore); setTotal(r.total); setPage(0); setError(null); } })
+      .then((r) => { if (active) { remember(key, r); setItems(r.items); setHasMore(r.hasMore); setTotal(r.total); setFuzzy(!!r.fuzzy); setPage(0); setError(null); } })
       .catch((e) => { if (active) setError(e); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -134,6 +137,7 @@ export default function CatalogScreen() {
 
   const [loadingMore, setLoadingMore] = useState(false);
   const loadMore = async () => {
+    if (loadingMore || loading || !hasMore) return;
     setLoadingMore(true);
     try {
       const r = await request(page + 1);
@@ -183,7 +187,6 @@ export default function CatalogScreen() {
     <View style={styles.deskTitleRow}>
       <Text style={styles.deskTitle} accessibilityRole="header" numberOfLines={1}>
         {searching ? `«${debounced.trim()}»` : collection ? title : parent?.name ?? 'Tutti i prodotti'}</Text>
-      <Text style={styles.deskCount}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}`}</Text>
     </View>
     {searching && <Pressable onPress={() => { setQuery(''); setSearchOpen(false); router.setParams({ q: undefined }); }} accessibilityRole="button" style={{ alignSelf: 'flex-start' }}>
       <Text style={styles.clearSearch}>Cancella la ricerca</Text></Pressable>}
@@ -218,15 +221,13 @@ export default function CatalogScreen() {
       const header = <BrandHeader plain pad={[14, 16, 16]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <HeaderBack onPress={closeSearch} />
-          <View style={styles.sBox}>
-            <Icon name="search" size={20} color={colors.text} strokeWidth={2.1} />
+          <SearchField style={{ flex: 1 }} right={!!query && <Pressable onPress={() => { setQuery(''); setDebounced(''); }} accessibilityRole="button" accessibilityLabel="Cancella ricerca" style={styles.sClear}>
+              <Icon name="close" size={15} color={colors.text} strokeWidth={2.6} /></Pressable>}>
             <TextInput value={query} onChangeText={setQuery} placeholder="Prodotto, marca o reparto" placeholderTextColor={colors.faint}
               accessibilityLabel="Cerca prodotti" autoFocus returnKeyType="search" autoCorrect={false} keyboardType={params.code ? 'number-pad' : 'default'}
               onSubmitEditing={() => recent.remember(query)} onFocus={() => setFocused(true)}
-              onBlur={() => { setFocused(false); if (shown.length) recent.remember(query); }} style={styles.sInput} />
-            {!!query && <Pressable onPress={() => { setQuery(''); setDebounced(''); }} accessibilityRole="button" accessibilityLabel="Cancella ricerca" style={styles.sClear}>
-              <Icon name="close" size={15} color={colors.text} strokeWidth={2.6} /></Pressable>}
-          </View>
+              onBlur={() => { setFocused(false); if (shown.length) recent.remember(query); }} style={[searchInput, { outlineStyle: 'none' } as object]} />
+          </SearchField>
         </View>
       </BrandHeader>;
       const showRecents = focused && !query && recent.terms.length > 0;
@@ -263,10 +264,11 @@ export default function CatalogScreen() {
             const cover = covers.data?.[c.id]?.image ?? subs.map((x) => covers.data?.[x.id]?.image).find(Boolean) ?? null;
             const open = openDept === c.id && subs.length > 1;
             const go = (id: string) => { setOpenDept(null); openList({ category: id }); };
-            return <View key={c.id} style={i > 0 && { borderTopWidth: 1, borderColor: '#EFECE3' }}>
+            // The opened department scrolls to the top, so its heading and subcategories are in view (the one above closes).
+            return <RevealOnOpen key={c.id} open={open} style={i > 0 && { borderTopWidth: 1, borderColor: '#EDEDE9' }}>
               <Pressable onPress={() => subs.length > 1 ? setOpenDept(open ? null : c.id) : go(c.id)}
                 accessibilityRole={subs.length > 1 ? 'button' : 'link'} accessibilityState={subs.length > 1 ? { expanded: open } : undefined}
-                accessibilityLabel={`${c.name}${n ? `, ${n} ${n === 1 ? 'prodotto' : 'prodotti'}` : ''}`} style={styles.sRow}>
+                accessibilityLabel={c.name} style={styles.sRow}>
                 <Thumb image={cover} slug={c.slug} name={c.name} size={44} />
                 <Text style={styles.sRowText} numberOfLines={1}>{c.name}</Text>
                 <View style={open && { transform: [{ rotate: '90deg' }] }}><Icon name="chevron" size={18} color="#9A9F94" strokeWidth={2.2} /></View>
@@ -286,7 +288,7 @@ export default function CatalogScreen() {
                   <Text style={styles.sCellText} numberOfLines={2}>{x.name}</Text>
                 </Pressable>)}</View>
               </View>}
-            </View>;
+            </RevealOnOpen>;
           })}</View>
         </View>
         : !loading && !error && !shown.length && !catHits.length ? <View style={styles.sEmpty}>
@@ -294,6 +296,7 @@ export default function CatalogScreen() {
           <Text style={styles.sEmptyTitle}>Nessun risultato per “{debounced.trim()}”</Text>
           <Text style={styles.sEmptyText}>Controlla come l’hai scritto o prova con il nome della marca.</Text>
           <Pressable onPress={() => { setQuery(''); setDebounced(''); }} accessibilityRole="button" style={styles.sEmptyButton}><Text style={styles.sEmptyButtonText}>Nuova ricerca</Text></Pressable>
+          <Pressable onPress={() => openList({ offerte: '1' })} accessibilityRole="link" hitSlop={8} style={{ marginTop: 16 }}><Text style={styles.sLink}>Guarda le Offerte Soci</Text></Pressable>
         </View>
         : <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
           {error && !items.length ? <Notice tone="error" message="Impossibile cercare. Controlla la connessione." /> : null}
@@ -303,12 +306,11 @@ export default function CatalogScreen() {
               const top = topOf(c.id);
               return <Pressable key={c.id} onPress={() => openCategory(c.id)} accessibilityRole="link"
                 accessibilityLabel={`${c.name}${top && top.id !== c.id ? `, in ${top.name}` : ''}`}
-                style={({ pressed }) => [styles.sCatRow, i > 0 && { borderTopWidth: 1, borderColor: '#EFECE3' }, pressed && { opacity: 0.7 }]}>
+                style={({ pressed }) => [styles.sCatRow, i > 0 && { borderTopWidth: 1, borderColor: '#EDEDE9' }, pressed && { opacity: 0.7 }]}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.sCatName} numberOfLines={1}>{c.name}</Text>
                   {!!top && top.id !== c.id && <Text style={styles.sCatPath} numberOfLines={1}>{top.name}</Text>}
                 </View>
-                <Text style={styles.sCatCount}>{(counts.data?.[c.id] ?? 0) || ''}</Text>
                 <Icon name="chevron" size={17} color="#9A9F94" strokeWidth={2.2} />
               </Pressable>;
             })}</View>
@@ -316,7 +318,7 @@ export default function CatalogScreen() {
           {!loading && !shown.length ? <Text style={styles.sNoProducts}>Nessun prodotto con questo nome: apri il reparto qui sopra.</Text> : <>
           <View style={styles.sResultsHead}>
             <Text style={styles.sCaps}>PRODOTTI</Text>
-            <Text style={styles.sCount}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}${storeLabel ? ` a ${storeLabel}` : ''}`}</Text>
+            <Text style={styles.sCount}>{loading ? ' ' : fuzzy ? `Nessun risultato esatto. Prodotti simili a “${debounced.trim()}”` : `${count} ${count === 1 ? 'risultato' : 'risultati'}`}</Text>
           </View>
           <View style={styles.fGrid}>{loading && !items.length ? <ProductSkeletons n={4} /> : shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
           {more}
@@ -336,11 +338,13 @@ export default function CatalogScreen() {
       ? [{ id: parent.id, name: `Tutto in ${parent.name}`, count: counts.data ? departmentCount(all, counts.data, parent.id) : undefined, image: coverOf(parent.id), slug: parent.slug },
         ...tabs.slice(1).map((t) => ({ id: t.id, name: t.name, count: counts.data?.[t.id as string], image: covers.data?.[t.id as string]?.image, slug: parent.slug }))]
       : all.filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: c.name, count: counts.data ? departmentCount(all, counts.data, c.id) : undefined, image: coverOf(c.id), slug: c.slug }));
-    const deptTitle = collection ? (parent ? `${collection} · ${parent.name}` : collection) : parent?.name ?? 'Tutti i prodotti';
-    return <RollingAwning title={deptTitle}
-      subtitle={loading && !items.length ? ' ' : `${count.toLocaleString('it-IT')} ${count === 1 ? 'prodotto disponibile' : 'prodotti disponibili'}${storeLabel ? ` a ${storeLabel}` : ''}`}
+    // A subcategory names the page, with its department above it ("Profumeria / Shampoo").
+    const sub = !collection && parent && current && current.id !== parent.id ? current : null;
+    const deptTitle = collection ? (parent ? `${collection} · ${parent.name}` : collection) : sub ? sub.name : parent?.name ?? 'Tutti i prodotti';
+    // No photo before the title (plan §5.2): it cut long names short, and the tabs below already show the subcategory.
+    return <RollingAwning title={deptTitle} eyebrow={sub ? parent!.name : undefined} image={null}
       onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
-      onSearch={openSearch} resetKey={`${categoryId ?? ''}|${collection ?? ''}`}
+      onSearch={openSearch} resetKey={`${categoryId ?? ''}|${collection ?? ''}`} onEndReached={loadMore}
       overlay={<>{filterSheetPhone}
         <SubcategorySheet visible={allOpen} onClose={() => setAllOpen(false)} title={parent?.name ?? 'Reparti'} items={sheetItems}
           active={parent ? activeTab : categoryId} onSelect={selectCategory} />
@@ -352,6 +356,7 @@ export default function CatalogScreen() {
           {filterCount > 0 && <View style={styles.fBadge}><Text style={styles.fBadgeText}>{filterCount}</Text></View>}
         </Pressable>} />}>
       <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+        {!loading && count > 0 && <Text style={styles.fCount}>{count} {count === 1 ? 'prodotto' : 'prodotti'}</Text>}
         {results}
         <View style={styles.fGrid}>{loading && !items.length ? <ProductSkeletons /> : shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
         {more}
@@ -411,7 +416,7 @@ export default function CatalogScreen() {
     </ScrollView>
 
     <View style={[styles.toolbar, wide && { marginTop: -36, marginBottom: 28, justifyContent: 'flex-end' }]}>
-      {!wide && <Text style={styles.count}>{loading && !items.length ? ' ' : `${count} ${count === 1 ? 'prodotto' : 'prodotti'}`}</Text>}
+      {!wide && <Text style={styles.count}> </Text>}
       <View style={{ flexDirection: 'row', gap: 2 }} accessibilityRole="radiogroup" accessibilityLabel="Vista">
         {(['grid', 'list'] as const).map((v) => <Pressable key={v} onPress={() => setView(v)} accessibilityRole="radio"
           accessibilityState={{ checked: view === v }} accessibilityLabel={v === 'grid' ? 'Vista a griglia' : 'Vista a elenco'}
@@ -447,44 +452,43 @@ const styles = StyleSheet.create({
   fButton: { width: 52, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderColor: colors.line },
   fBadge: { position: 'absolute', top: 8, right: 7, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   fBadgeText: { fontSize: 11, fontFamily: fonts.heavy, color: '#FFFFFF' },
-  skel: { flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 8, paddingBottom: 14 },
-  skelPhoto: { width: '100%', aspectRatio: 1, borderRadius: 14, backgroundColor: colors.well, marginBottom: 12 },
+  skel: { flex: 1, backgroundColor: colors.surface, borderRadius: 16, padding: 8, paddingBottom: 14, borderWidth: 1, borderColor: colors.line },
+  skelPhoto: { width: '100%', aspectRatio: 1, borderRadius: 16, backgroundColor: colors.well, marginBottom: 12 },
   skelLine: { height: 12, borderRadius: 6, backgroundColor: colors.well, marginTop: 7, marginLeft: 4 },
+  fCount: { ...type.small, color: colors.muted, marginBottom: 10 },
   fGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   fCell: { width: '48.6%', flexDirection: 'row' },
-  sBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, height: 50, paddingLeft: 16, paddingRight: 6, borderRadius: 25, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: colors.yellow },
-  sInput: { flex: 1, minWidth: 0, height: 44, fontSize: 16, fontFamily: fonts.sansSemiBold, color: colors.text, outlineWidth: 0, outlineStyle: 'none' } as object,
-  sClear: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EFECE3', alignItems: 'center', justifyContent: 'center' },
+  sClear: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EDEDE9', alignItems: 'center', justifyContent: 'center' },
   sHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sCaps: { fontSize: 13, letterSpacing: 0.6, fontFamily: fonts.heavy, color: colors.muted },
-  sLink: { fontSize: 13.5, fontFamily: fonts.sansBold, color: colors.green, paddingVertical: 8 },
+  sLink: { fontSize: 13, fontFamily: fonts.sansBold, color: colors.green, paddingVertical: 8 },
   sRecents: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   sRecent: { flexDirection: 'row', alignItems: 'center', height: 38, paddingLeft: 12, borderRadius: 19, borderWidth: 1, borderColor: colors.line, backgroundColor: '#FFFFFF', maxWidth: 260 },
   sRecentTerm: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1, height: 38 },
   sRecentX: { width: 34, height: 38, alignItems: 'center', justifyContent: 'center' },
-  sRecentText: { fontSize: 14.5, fontFamily: fonts.sansSemiBold, color: colors.text },
-  sList: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', borderBottomWidth: 1, borderColor: colors.line },
+  sRecentText: { fontSize: 15, fontFamily: fonts.sansSemiBold, color: colors.text },
+  sList: { backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
   sRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 64, paddingVertical: 10, paddingHorizontal: 16 },
   sSubs: { paddingHorizontal: 12, paddingBottom: 16 },
   sAll: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 4, marginBottom: 12, paddingHorizontal: 14, height: 42,
     borderRadius: 21, backgroundColor: colors.page },
-  sAllText: { fontSize: 14, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
+  sAllText: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.green },
   sGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 },
   sCell: { width: '33.333%', paddingHorizontal: 4, alignItems: 'center' },
   sTile: { width: '100%', aspectRatio: 1, borderRadius: 16, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.photo, borderWidth: 1, borderColor: colors.photoLine },
   sTileImage: { position: 'absolute', top: '12%', left: '12%', right: '12%', bottom: '12%' },
-  sCellText: { marginTop: 7, fontSize: 12.5, lineHeight: 16, textAlign: 'center', fontFamily: fonts.sansMedium, fontWeight: '500', color: colors.text },
-  sRowText: { flex: 1, fontSize: 15.5, fontFamily: fonts.sansBold, color: colors.text },
+  sCellText: { marginTop: 7, fontSize: 13, lineHeight: 18, textAlign: 'center', fontFamily: fonts.sansMedium, fontWeight: '500', color: colors.text },
+  sRowText: { flex: 1, fontSize: 15, fontFamily: fonts.sansBold, color: colors.text },
   sCats: { marginBottom: 22 },
   sCatRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, paddingVertical: 8, paddingHorizontal: 16 },
-  sCatName: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  sCatName: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   sCatPath: { fontSize: 13, fontFamily: fonts.sans, color: colors.muted, marginTop: 1 },
   sCatCount: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted },
   sResultsHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
-  sCount: { fontSize: 13.5, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 16, marginBottom: 8 },
+  sCount: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.muted, marginTop: 16, marginBottom: 8 },
   sEmpty: { paddingTop: 64, paddingHorizontal: 32, alignItems: 'center' },
   sEmptyIcon: { alignItems: 'center', justifyContent: 'center' },
-  sEmptyTitle: { fontSize: 23, lineHeight: 28, fontFamily: fonts.display, color: colors.text, textAlign: 'center', marginTop: 16, marginBottom: 6 },
+  sEmptyTitle: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text, textAlign: 'center', marginTop: 16, marginBottom: 6 },
   sNoProducts: { marginTop: 18, fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: colors.muted },
   sEmptyText: { fontSize: 15, lineHeight: 21, fontFamily: fonts.sans, color: colors.muted, textAlign: 'center' },
   sEmptyButton: { marginTop: 18, height: 46, paddingHorizontal: 20, borderRadius: 23, backgroundColor: colors.green, justifyContent: 'center' },
@@ -504,22 +508,22 @@ const styles = StyleSheet.create({
   pills: { paddingHorizontal: 20, gap: 8 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 32, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: '#E6DFD3', backgroundColor: colors.surface },
   pillOn: { borderColor: colors.text },
-  pillText: { fontSize: 12, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500' },
-  pillTextPhone: { fontSize: 14.5, fontFamily: fonts.sansBold, fontWeight: '700' },
+  pillText: { fontSize: 13, color: colors.text, fontFamily: fonts.sansMedium, fontWeight: '500' },
+  pillTextPhone: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700' },
   pillPhone: { minHeight: 40, borderRadius: 20, paddingHorizontal: 14, borderColor: colors.line, gap: 7 },
   toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, marginBottom: 4 },
-  count: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans },
+  count: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
   viewButton: { width: 32, height: 30, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   viewButtonOn: { backgroundColor: colors.cream },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 8 },
   recent: { marginTop: 4, marginBottom: 10 },
-  recentPhone: { marginHorizontal: 16, marginTop: 6, marginBottom: 6, padding: 14, paddingTop: 6, borderRadius: 20, backgroundColor: '#FFFFFF' },
-  recentCaps: { fontSize: 12.5, letterSpacing: 0.6, color: colors.muted, fontFamily: fonts.heavy },
+  recentPhone: { marginHorizontal: 16, marginTop: 6, marginBottom: 6, padding: 14, paddingTop: 6, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  recentCaps: { fontSize: 13, letterSpacing: 0.6, color: colors.muted, fontFamily: fonts.heavy },
   recentChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   recentChip: { flexDirection: 'row', alignItems: 'center', height: 40, borderRadius: 20, backgroundColor: colors.page, paddingLeft: 12 },
   recentChipTerm: { flexDirection: 'row', alignItems: 'center', gap: 7, height: 40, maxWidth: 220 },
-  recentChipText: { fontSize: 14.5, color: colors.text, fontFamily: fonts.sansSemiBold },
-  countPhone: { fontSize: 13.5, color: colors.muted, fontFamily: fonts.sansSemiBold, flexShrink: 1 },
+  recentChipText: { fontSize: 15, color: colors.text, fontFamily: fonts.sansSemiBold },
+  countPhone: { fontSize: 13, color: colors.muted, fontFamily: fonts.sansSemiBold, flexShrink: 1 },
   viewButtonPhone: { width: 40, height: 38, borderRadius: 12 },
   band: { paddingTop: 4, paddingBottom: 2, gap: 8 },
   chips: { paddingHorizontal: 16, gap: 8 },
@@ -527,7 +531,7 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: colors.green, borderColor: colors.green },
   chipSale: { borderColor: colors.sale, backgroundColor: '#FFFFFF' },
   chipSaleOn: { backgroundColor: colors.sale, borderColor: colors.sale },
-  chipText: { fontSize: 14.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  chipText: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
   chipTextOn: { color: '#FFFFFF', fontFamily: fonts.sansBold, fontWeight: '700' },
   recentHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   recentTitle: { fontSize: 13, color: colors.muted, fontFamily: fonts.sansMedium, fontWeight: '500' },
@@ -543,7 +547,7 @@ const styles = StyleSheet.create({
   deskTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 18 },
   deskTitle: { flexShrink: 1, fontSize: 64, lineHeight: 70, letterSpacing: -1.2, fontFamily: fonts.serif, color: colors.text },
   deskCount: { fontSize: 14, color: colors.muted, fontFamily: fonts.sans },
-  clearSearch: { fontSize: 13.5, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium },
+  clearSearch: { fontSize: 13, color: colors.green, textDecorationLine: 'underline', fontFamily: fonts.sansMedium },
   tabsWide: { marginHorizontal: 0, marginTop: 18, borderColor: colors.rule },
   tabTextWide: { fontSize: 14, color: colors.text },
 });

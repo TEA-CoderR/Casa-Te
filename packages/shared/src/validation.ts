@@ -65,3 +65,15 @@ export function validateInvoice(i: InvoiceDetails): FieldErrors<InvoiceDetails> 
 
 export const MAX_LINE_QUANTITY = 99;
 export const isValidQuantity = (q: number) => Number.isSafeInteger(q) && q > 0 && q <= MAX_LINE_QUANTITY;
+
+/** Password rules for new passwords (sign-up, change password): every one must pass. */
+export const MIN_PASSWORD = 8;
+export function passwordRules(pw: string): Array<{ ok: boolean; label: string }> {
+  return [
+    { ok: pw.length >= MIN_PASSWORD, label: `Almeno ${MIN_PASSWORD} caratteri` },
+    { ok: /[a-zà-ÿ]/.test(pw) && /[A-ZÀ-Þ]/.test(pw), label: 'Una lettera maiuscola e una minuscola' },
+    { ok: /\d/.test(pw), label: 'Almeno un numero' },
+  ];
+}
+export const isValidPassword = (pw: string) => passwordRules(pw).every((r) => r.ok);
+export const PASSWORD_HELP = `Almeno ${MIN_PASSWORD} caratteri, con maiuscole, minuscole e numeri.`;

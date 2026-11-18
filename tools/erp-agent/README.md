@@ -40,3 +40,5 @@ Il negozio non riceve mai prezzi di acquisto, clienti, personale o vendite.
 07:00 it runs `sync-daily.bat` (`node agent.mjs --once`, output appended to `logs\sync.log`, rotated at 5 MB). It runs as the
 signed-in user, so it reads the same user environment variables (`ERP_MYSQL_PASSWORD`, `ERP_SYNC_SECRET`); a run missed while
 the PC was off starts when it is back on. `unschedule-daily.bat` (`取消定时同步.bat`) removes it.
+`schedule-hourly.bat` (`设置每小时定时同步.bat`, 18/11/2026) replaces it with a run every hour from 07:00 to 21:00 (same task
+name, so whichever was set last applies). A run takes about 40 s; the ERP query is read-only and takes under a second.

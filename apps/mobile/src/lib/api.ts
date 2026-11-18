@@ -1,7 +1,7 @@
 // Data access for the customer app. All prices/stock/shipping come from the database; the app
 // never computes an amount that is charged.
 import {
-  flyerFileUrl, productImageUrl, searchKey, type AppSettingsRow, type FlyerRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
+  flyerFileUrl, productImageUrl, searchKey, type AppSettingsRow, type PickupSlot, type FlyerRow, type AddressInput, type AddressRow, type CategoryRow, type CheckoutResponse,
   type CreateOrderInput, type OrderEventRow, type OrderItemRow, type OrderRow, type PickupPointRow,
   type ClubOffer, type ProductReviewRow, type ProductRow, type ProfileRow, type Quote, type QuoteInput,
   type ReviewEligibility, type StoreRow, type CompanyRow,
@@ -12,7 +12,7 @@ import { SUPABASE_URL, supabase } from './supabase';
 import { memberPrice } from './price';
 
 export type CatalogProduct = Pick<ProductRow,
-  'id' | 'sku' | 'name' | 'description' | 'brand' | 'category_id' | 'price_cents' | 'compare_at_price_cents' |
+  'id' | 'sku' | 'name' | 'description' | 'label_info' | 'label_signal' | 'brand' | 'category_id' | 'price_cents' | 'compare_at_price_cents' |
   'weight_g' | 'max_per_order' | 'featured' | 'unit_quantity' | 'unit' | 'color' | 'highlights' |
   'variant_group' | 'variant_title' | 'variant_label' | 'rating_avg' | 'rating_count' | 'featured_rank' | 'offer_rank' |
   'member_price_cents' | 'member_price_ends_on'> & {
@@ -42,10 +42,11 @@ function unwrap<T>(result: { data: T | null; error: { message: string; code?: st
 export const imageUrl = (path: string | null | undefined) => productImageUrl(SUPABASE_URL, path);
 
 const PRODUCT_FIELDS =
-  'id,sku,name,description,brand,category_id,price_cents,compare_at_price_cents,weight_g,max_per_order,featured,featured_rank,offer_rank,' +
+  'id,sku,name,description,label_info,label_signal,brand,category_id,price_cents,compare_at_price_cents,weight_g,max_per_order,featured,featured_rank,offer_rank,' +
   'unit_quantity,unit,color,highlights,variant_group,variant_title,variant_label,rating_avg,rating_count,' +
   'member_price_cents,member_price_ends_on,' +
-  'product_images(path,sort),inventory(quantity,store_id)';
+  // `quantity` here is what can be sold online: the store's stock minus its safety stock (inventory.sellable).
+  'product_images(path,sort),inventory(quantity:sellable,store_id)';
 
 type RawProduct = Omit<CatalogProduct, 'image' | 'images' | 'stock'> & {
   product_images: Array<{ path: string; sort: number }>;
@@ -114,7 +115,23 @@ export async function fetchOffers(storeId: string | null, limit: number): Promis
   return items.filter((p) => pct(p) > 0).sort((a, b) => rank(a) - rank(b) || pct(b) - pct(a)).slice(0, limit);
 }
 
-export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogProduct[]; hasMore: boolean; total: number | null }> {
+/**
+ * "Fotografa un prodotto": the text read from a pack, matched against the catalogue in the database
+ * (match_label_text). `sure` = open the product straight away: its barcode was read, or one product stands out.
+ */
+export async function matchLabelText(text: string, storeId: string | null): Promise<{ items: CatalogProduct[]; sure: boolean }> {
+  const hits = unwrap(await supabase.rpc('match_label_text', { p_text: text.slice(0, 4000), p_store: storeId, p_limit: 6 })) as
+    Array<{ product_id: string; score: number; exact: boolean }>;
+  if (!hits.length) return { items: [], sure: false };
+  const { items } = await fetchProducts({ storeId, ids: hits.map((h) => h.product_id), pageSize: hits.length });
+  const byId = new Map(items.map((p) => [p.id, p]));
+  const ordered = hits.map((h) => byId.get(h.product_id)).filter((p): p is CatalogProduct => !!p);
+  const [a, b] = hits.map((h) => Number(h.score));
+  const sure = hits[0].exact || (a >= 0.9 && (b === undefined || a - b >= 0.25));
+  return { items: ordered, sure: sure && ordered[0]?.id === hits[0].product_id };
+}
+
+export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogProduct[]; hasMore: boolean; total: number | null; fuzzy?: boolean }> {
   const pageSize = q.pageSize ?? 40;
   const from = (q.page ?? 0) * pageSize;
   const needle = q.search ? searchKey(q.search) : '';
@@ -126,7 +143,7 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
     const hits = unwrap(await supabase.rpc('search_products', {
       p_query: needle, p_store: q.storeId ?? null, p_category_ids: q.categoryIds?.length ? q.categoryIds : q.categoryId ? [q.categoryId] : null,
       p_on_sale: !!q.onSale, p_limit: pageSize + 1, p_offset: from,
-    })) as Array<{ product_id: string; total: number }>;
+    })) as Array<{ product_id: string; total: number; fuzzy?: boolean }>;
     const ids = hits.slice(0, pageSize).map((h) => h.product_id);
     if (!ids.length) return { items: [], hasMore: false, total: hits[0]?.total ?? 0 };
     let found = supabase.from('products').select(PRODUCT_FIELDS).in('id', ids);
@@ -134,12 +151,13 @@ export async function fetchProducts(q: ProductQuery): Promise<{ items: CatalogPr
     const rows = unwrap(await found) as unknown as RawProduct[];
     const byId = new Map(rows.map((r) => [r.id, r]));
     const items = ids.map((id) => byId.get(id)).filter((r): r is RawProduct => !!r).map((r) => toCatalogProduct(r, q.storeId));
-    return { items, hasMore: hits.length > pageSize, total: Number(hits[0]?.total ?? items.length) };
+    // Close spellings follow the exact matches: when the first is one, nothing matched exactly.
+    return { items, hasMore: hits.length > pageSize, total: Number(hits[0]?.total ?? items.length), fuzzy: hits[0]?.fuzzy === true };
   }
   let query = supabase.from('products')
     .select(inStockOnly ? PRODUCT_FIELDS.replace('inventory(', 'inventory!inner(') : PRODUCT_FIELDS, { count: 'exact' }).eq('active', true);
   if (q.storeId) query = query.eq('inventory.store_id', q.storeId);
-  if (inStockOnly) query = query.gt('inventory.quantity', 0);
+  if (inStockOnly) query = query.gt('inventory.sellable', 0);
   if (q.categoryId) query = query.eq('category_id', q.categoryId);
   if (q.categoryIds?.length) query = query.in('category_id', q.categoryIds);
   if (q.brands?.length) query = query.in('brand', q.brands);
@@ -247,10 +265,23 @@ export async function setClubMembership(join: boolean): Promise<string | null> {
 
 const CLUB_TAGLINE = 'Vantaggi esclusivi e offerte dedicate ai nostri clienti.';
 
-/** Public shop settings (club on/off and tagline). */
-export async function fetchAppSettings(): Promise<Pick<AppSettingsRow, 'club_enabled' | 'club_tagline'>> {
-  const row = unwrap(await supabase.from('app_settings').select('club_enabled,club_tagline').maybeSingle()) as Pick<AppSettingsRow, 'club_enabled' | 'club_tagline'> | null;
-  return row ?? { club_enabled: true, club_tagline: CLUB_TAGLINE };
+/** Minimum app version and maintenance message (AppGate), read again when the app comes back to the foreground. */
+export async function fetchAppGate(): Promise<Pick<AppSettingsRow, 'min_app_version' | 'maintenance_message'>> {
+  const row = unwrap(await supabase.from('app_settings').select('min_app_version,maintenance_message').maybeSingle()) as
+    Pick<AppSettingsRow, 'min_app_version' | 'maintenance_message'> | null;
+  return row ?? { min_app_version: null, maintenance_message: null };
+}
+
+/** Public shop settings (club on/off and tagline, minimum order). */
+export async function fetchAppSettings(): Promise<Pick<AppSettingsRow, 'club_enabled' | 'club_tagline' | 'min_order_cents' | 'support_whatsapp' | 'image_thumbnails'>> {
+  const row = unwrap(await supabase.from('app_settings').select('club_enabled,club_tagline,min_order_cents,support_whatsapp,image_thumbnails').maybeSingle()) as
+    Pick<AppSettingsRow, 'club_enabled' | 'club_tagline' | 'min_order_cents' | 'support_whatsapp' | 'image_thumbnails'> | null;
+  return row ?? { club_enabled: true, club_tagline: CLUB_TAGLINE, min_order_cents: 0, support_whatsapp: null, image_thumbnails: false };
+}
+
+/** The one-hour pickup slots the store offers now (today and the next two days). */
+export async function fetchPickupSlots(storeId: string): Promise<PickupSlot[]> {
+  return unwrap(await supabase.rpc('pickup_slots', { p_store_id: storeId })) as PickupSlot[];
 }
 
 export async function fetchClubOffers(): Promise<ClubOffer[]> {
@@ -348,6 +379,11 @@ export async function cancelReturnRequest(id: string): Promise<void> {
 
 export async function cancelPendingOrder(id: string): Promise<void> {
   unwrap(await supabase.rpc('customer_cancel_pending_order', { p_order_id: id }));
+}
+
+/** Cancels an unpaid card order, or a pay-in-store order the store has not started preparing. */
+export async function cancelOrder(id: string): Promise<void> {
+  unwrap(await supabase.rpc('customer_cancel_order', { p_order_id: id }));
 }
 
 // ---- Account -----------------------------------------------------------------

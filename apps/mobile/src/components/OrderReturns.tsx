@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import {
   RETURN_GUARANTEE_DAYS, RETURN_REASON_LABELS, RETURN_STATUS_LABELS, RETURN_WINDOW_DAYS, REFUND_METHOD_LABELS,
-  daysSinceHandover, friendlyError, returnableQuantities, type OrderItemRow, type OrderRow, type ReturnWithItems,
+  daysSinceHandover, friendlyError, hasOpenReturn, returnableQuantities, type OrderItemRow, type OrderRow, type ReturnWithItems,
 } from '@casa-te/shared';
 import { Barcode } from '@/components/Barcode';
 import { Icon } from '@/components/Icon';
@@ -30,7 +30,8 @@ export function OrderReturns({ order }: { order: OrderRow & { order_items: Order
   const list = returns.data ?? [];
   const days = daysSinceHandover(order);
   const left = returnableQuantities(order.order_items, list);
-  const canAsk = days !== null && days <= RETURN_GUARANTEE_DAYS && Object.values(left).some((q) => q > 0);
+  const open = hasOpenReturn(list);
+  const canAsk = !open && days !== null && days <= RETURN_GUARANTEE_DAYS && Object.values(left).some((q) => q > 0);
   const names = new Map(order.order_items.map((i) => [i.id, i.name]));
 
   const cancel = async (id: string) => {
@@ -43,6 +44,7 @@ export function OrderReturns({ order }: { order: OrderRow & { order_items: Order
     <Text style={styles.title} accessibilityRole="header">Resi e assistenza</Text>
     {!!error && <Notice tone="error" message={error} />}
     {list.map((r) => <ReturnCard key={r.id} ret={r} names={names} busy={busy === r.id} onCancel={() => cancel(r.id)} />)}
+    {open && <Text style={styles.openNote}>Una richiesta alla volta: potrai chiederne un’altra quando questa sarà conclusa (o annullandola).</Text>}
     {canAsk && <Pressable onPress={() => router.push({ pathname: '/reso/[orderId]', params: { orderId: order.id } })} accessibilityRole="button"
       style={({ pressed }) => [styles.ask, pressed && { opacity: 0.85 }]}>
       <Icon name="recycle" size={19} color={colors.green} strokeWidth={2} />
@@ -84,20 +86,21 @@ function ReturnCard({ ret, names, busy, onCancel }: { ret: ReturnWithItems; name
 }
 
 const styles = StyleSheet.create({
+  openNote: { fontSize: 13, lineHeight: 18, fontFamily: fonts.sans, color: colors.muted, marginTop: 2, marginHorizontal: 4 },
   wrap: { marginTop: 18, gap: 10 },
-  title: { fontSize: 21, lineHeight: 26, fontFamily: fonts.display, color: colors.text, marginLeft: 4 },
-  ask: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
-  askTitle: { fontSize: 15.5, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
-  askText: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
-  card: { padding: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, gap: 4 },
+  title: { fontSize: 22, lineHeight: 27, fontFamily: fonts.display, color: colors.text, marginLeft: 4 },
+  ask: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line },
+  askTitle: { fontSize: 15, fontFamily: fonts.sansBold, fontWeight: '700', color: colors.text },
+  askText: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans, marginTop: 2 },
+  card: { padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.line, gap: 4 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   number: { fontSize: 17, fontFamily: fonts.heavy, color: colors.text, letterSpacing: 0.3 },
-  meta: { fontSize: 12.5, color: colors.muted, fontFamily: fonts.sans },
-  item: { fontSize: 13.5, color: colors.text, fontFamily: fonts.sansMedium },
+  meta: { fontSize: 13, color: colors.muted, fontFamily: fonts.sans },
+  item: { fontSize: 13, color: colors.text, fontFamily: fonts.sansMedium },
   text: { fontSize: 13, color: colors.text, fontFamily: fonts.sans, lineHeight: 18, marginTop: 4 },
-  code: { marginTop: 8, padding: 10, backgroundColor: '#FFFFFF', borderRadius: 10, borderWidth: 1, borderColor: colors.line, alignItems: 'center' },
+  code: { marginTop: 8, padding: 10, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: colors.line, alignItems: 'center' },
   voucher: { marginTop: 8, padding: 12, borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.green, alignItems: 'center' },
-  voucherLabel: { fontSize: 11.5, color: colors.muted, fontFamily: fonts.sansBold, textTransform: 'uppercase', letterSpacing: 0.4 },
-  voucherCode: { fontSize: 20, fontFamily: fonts.heavy, color: colors.green, letterSpacing: 1, marginTop: 2 },
-  cancel: { fontSize: 13.5, color: colors.danger, fontFamily: fonts.sansSemiBold, marginTop: 8, textDecorationLine: 'underline' },
+  voucherLabel: { fontSize: 11, color: colors.muted, fontFamily: fonts.sansBold, textTransform: 'uppercase', letterSpacing: 0.4 },
+  voucherCode: { fontSize: 22, fontFamily: fonts.heavy, color: colors.green, letterSpacing: 1, marginTop: 2 },
+  cancel: { fontSize: 13, color: colors.danger, fontFamily: fonts.sansSemiBold, marginTop: 8, textDecorationLine: 'underline' },
 });

@@ -11,7 +11,7 @@ import { checkoutReturn } from '../../supabase/functions/checkout-return/handler
 import { stripeWebhook } from '../../supabase/functions/stripe-webhook/handler.ts';
 import { adminRefund } from '../../supabase/functions/admin-refund/handler.ts';
 import { deleteAccount } from '../../supabase/functions/delete-account/handler.ts';
-import { buildEmail } from '../../supabase/functions/notify-order-event/handler.ts';
+import { buildEmail, hoursLines } from '../../supabase/functions/notify-order-event/handler.ts';
 import { erpSync } from '../../supabase/functions/erp-sync/handler.ts';
 import { memberCard } from '../../supabase/functions/member-card/handler.ts';
 import { memberCardHashes } from '../../supabase/functions/_shared/member-card.ts';
@@ -95,6 +95,18 @@ test('checkout: creates order server-side and a Stripe session for the stored to
 
   const attach = callsTo(/attach_checkout_session/)[0];
   assert.equal(attach.headers.authorization, 'Bearer service', 'attach uses service role');
+});
+
+test('checkout: pay in store creates the order without Stripe', async () => {
+  routes = [
+    route(/GET .*\/auth\/v1\/user$/, () => jsonRes({ id: 'u1', email: 'anna@example.com' })),
+    route(/POST .*\/rpc\/create_order$/, () => jsonRes({ id: ORDER_ID, order_number: 'CT26001002', total_cents: 1497, customer_email: 'anna@example.com',
+      expires_at: '', status: 'paid', payment_method: 'store' })),
+  ];
+  const res = await handle((r) => checkout(r, config))(post('checkout', { platform: 'native', order: { store_id: 's', items: [], payment_method: 'store' } }));
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { order_id: ORDER_ID, order_number: 'CT26001002', checkout_url: null, pay_in_store: true });
+  assert.equal(callsTo(/stripe\.com/).length, 0, 'no Stripe session');
 });
 
 test('checkout: releases reserved stock when Stripe fails', async () => {
@@ -312,8 +324,41 @@ test('notification emails', () => {
   const ret = buildEmail({ id: 6, order_id: ORDER_ID, status: null, kind: 'return', note: 'Reso RESO-00001 approvato', visible_to_customer: true }, order, 'x');
   assert.equal(ret?.subject, "Il tuo reso per l'ordine CT26001001");
   assert.match(ret!.body, /RESO-00001 approvato/);
+  const store = { ...order, payment_method: 'store' as const, payment_status: 'unpaid',
+    pickup_slot_start: '2026-11-15T09:00:00Z', pickup_slot_end: '2026-11-15T10:00:00Z' };
+  const paidStore = buildEmail({ id: 7, order_id: ORDER_ID, status: 'paid', kind: 'status', note: null, visible_to_customer: true }, store, 'CASA & TE Lucca 1');
+  assert.match(paidStore!.body, /lo paghi in negozio/);
+  assert.match(paidStore!.body, /domenica 15 novembre, 10:00–11:00/, 'slot in Italian time');
+  const readyStore = buildEmail({ id: 8, order_id: ORDER_ID, status: 'ready', kind: 'status', note: null, visible_to_customer: true }, store, 'x');
+  assert.match(readyStore!.body, /Da pagare alla cassa: <strong>€31,88<\/strong>/);
+  // Confirmation: the lines, the totals, the store with its hours, the seller.
+  const ctx = { store: { name: 'CASA & TE Lucca 1', address: 'Via Roma 1', postal_code: '55100', city: 'Lucca', phone: '0583 000000' },
+    hours: [1, 2, 3, 4, 5, 6].map((d) => ({ weekday: d, opens: '08:30:00', closes: '20:00:00' })),
+    items: [{ name: 'Svelto <Limone>', quantity: 2, unit_price_cents: 199, line_total_cents: 398 }], shopUrl: 'https://shop.test' };
+  const full = buildEmail({ id: 9, order_id: ORDER_ID, status: 'paid', kind: 'status', note: null, visible_to_customer: true },
+    { ...store, subtotal_cents: 3388, discount_cents: 200, coupon_code: 'BENVENUTO', shipping_cents: 0,
+      seller_snapshot: { legal_name: 'Esempio S.r.l.', vat_number: '00000000000', address: 'Via X 2', postal_code: '55100', city: 'Lucca', province: 'LU' } }, ctx)!;
+  assert.match(full.body, /2 × Svelto &lt;Limone&gt;/);
+  assert.match(full.body, /€3,98/);
+  assert.match(full.body, /Sconto \(BENVENUTO\)/);
+  assert.match(full.body, /Da pagare al ritiro/);
+  assert.match(full.body, /Via Roma 1, 55100 Lucca/);
+  assert.match(full.body, /Lun–Sab 08:30–20:00<br>Dom chiuso/);
+  assert.match(full.body, /P\.IVA 00000000000/);
+  assert.match(full.body, /https:\/\/shop\.test\/order\//);
+  const readyFull = buildEmail({ id: 10, order_id: ORDER_ID, status: 'ready', kind: 'status', note: null, visible_to_customer: true, created_at: '2026-11-15T09:00:00Z' }, store, ctx)!;
+  assert.match(readyFull.body, /Ritiralo entro domenica 29 novembre/);
+  assert.match(readyFull.body, /google\.com\/maps/);
   const xss = buildEmail({ id: 5, order_id: ORDER_ID, status: 'paid', kind: 'status', note: null, visible_to_customer: true }, { ...order, customer_name: '<script>' }, 'x');
   assert.ok(!xss!.body.includes('<script>'));
+});
+
+test('opening hours grouped for emails', () => {
+  assert.deepEqual(hoursLines([]), []);
+  assert.deepEqual(hoursLines([
+    { weekday: 1, opens: '15:30:00', closes: '19:30:00' },
+    ...[2, 3, 4, 5, 6].flatMap((d) => [{ weekday: d, opens: '08:30:00', closes: '13:00:00' }, { weekday: d, opens: '15:30:00', closes: '19:30:00' }]),
+  ]), ['Lun 15:30–19:30', 'Mar–Sab 08:30–13:00, 15:30–19:30', 'Dom chiuso']);
 });
 
 // ---- Supabase API keys (legacy JWT keys and new sb_publishable_/sb_secret_ keys) ---------------
