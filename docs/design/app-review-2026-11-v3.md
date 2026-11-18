@@ -285,3 +285,20 @@ Supabase 地址是编进 App 的，旧版本可能调用已经改掉的函数。
 - C. 上线初期这些分类只在门店卖，网上暂不上架。
 
 Sources: [ECHA REF-8 online sales](https://echa.europa.eu/-/hazardous-chemicals-sold-online-often-lack-required-information) · [Reg. 767/2009](https://eur-lex.europa.eu/eli/reg/2009/767/oj) · [Reg. 2024/2865](https://eur-lex.europa.eu/eli/reg/2024/2865/oj) · [Reg. 528/2012 art. 72](https://eur-lex.europa.eu/eli/reg/2012/528/oj)
+
+## 10. 11 月 18 日：老板决定和完成情况
+
+| 项目 | 决定 | 状态（`design/lime`，测试库已上线） |
+|---|---|---|
+| L5 强制升级 / 维护 | 做 | 已做：后台"App: aggiornamento e manutenzione"；维护中数据库拒绝新订单 |
+| L3 邮件 | 做 | 已做：商品清单、合计、门店地址和营业时间、取货时段、卖方信息；notify-order-event v23 |
+| L7 安全库存 | 要，可按商品 / 分类设置 | 已做：`inventory.sellable`；后台默认值（代码默认 1，测试库暂设 0，合并后改 1）、分类和商品字段；ERP 同步改为 07–21 点每小时（`设置每小时定时同步.bat`，需老板双击） |
+| X8 常见问题 + WhatsApp | 要，有 WhatsApp | 已做：`/aiuto`；号码在后台"Assistenza clienti"填写 |
+| X9 Google 登录 | 加 | 已做：Supabase 打开 Google 提供方后按钮自动出现，步骤见 `docs/google-login.md` |
+| X10 名称清理 | 可以 | 方案：`docs/design/name-cleanup-draft.md`，等老板确认后再执行 |
+| L1 同义词 | 先拟 | 草案：`docs/design/search-synonyms-draft.md`，等老板确认 |
+| L9 缩略图 | 老板操作 Linux 服务器 | 已做：`tools/image-thumbnails`（480 px）；后台"Immagini"开关，服务器生成后再打开 |
+| L4 Sentry | 暂不做 | — |
+| 评价 | 上线时开 | 现状即开启 |
+| X6 结账内登录、登录表单输入框 | 不改 | — |
+| X3 拍照找商品 | 只做第 1 步（本地读字） | 已做，等 1.3.0 安装包 |
