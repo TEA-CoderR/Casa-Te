@@ -945,7 +945,7 @@ const dict: Record<string, string> = {
   "Inserisci un importo tra 0 e 1000 €.": "Enter an amount between €0 and €1000.",
   "Ordine minimo salvato.": "Minimum order saved.",
   "Usa le miniature nelle schede prodotto": "Use thumbnails in product cards",
-  "Attivalo solo dopo aver creato le miniature sul server delle immagini (tools/image-thumbnails). Se una miniatura manca, si vede la foto intera.": "Turn it on only after making the thumbnails on the image server (tools/image-thumbnails). If a thumbnail is missing, the full photo is shown.",
+  "Le miniature si creano da sole ogni notte (GitHub Actions, sito casate-thumbs). Se una miniatura manca, si vede la foto intera.": "Thumbnails are made automatically every night (GitHub Actions, casate-thumbs site). If one is missing, the full photo is shown.",
   "Numero non valido: scrivilo come +39 333 123 4567.": "Invalid number: write it as +39 333 123 4567.",
   "Numero salvato.": "Number saved.",
   "Assistenza clienti": "Customer service",

@@ -1,0 +1,63 @@
+name: Product photo thumbnails
+
+# The 480 px copies of each product's first photo, published as their own Cloudflare Pages site
+# (https://<CF_THUMBS_PROJECT>.pages.dev/prodotti/<barcode>/01.webp). Every night only new photos are made
+# (kept in the Actions cache); "full" remakes all. The app's product cards use them when the admin switch
+# "Immagini" is on, and fall back to the original photo. Nothing runs on the image server.
+
+on:
+  push:
+    branches: [main, design/lime]
+    paths: ['tools/image-thumbnails/**', '.github/workflows/thumbnails.yml']
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      full:
+        description: 'Remake every thumbnail'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: thumbnails
+  cancel-in-progress: false
+
+jobs:
+  thumbs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SUPABASE_URL: ${{ vars.WEB_SUPABASE_URL || vars.STAGING_SUPABASE_URL || 'https://kejjinbapxnjbceirrtv.supabase.co' }}
+      SUPABASE_KEY: ${{ vars.WEB_SUPABASE_PUBLISHABLE_KEY || vars.STAGING_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_5owPpJOcvD_m6hcDD2Iv7Q_CCVylaXA' }}
+      THUMBS_PROJECT: ${{ vars.CF_THUMBS_PROJECT || 'casate-thumbs' }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pillow==11.0.0
+      - name: Restore thumbnails made earlier
+        uses: actions/cache/restore@v4
+        with:
+          path: thumbs
+          key: thumbs-${{ github.run_id }}
+          restore-keys: thumbs-
+      - name: Make the missing thumbnails
+        run: python3 tools/image-thumbnails/build_thumbs.py thumbs ${{ inputs.full && '--full' || '' }}
+        env:
+          PYTHONSAFEPATH: '1'
+      - name: Keep them for the next run
+        uses: actions/cache/save@v4
+        with:
+          path: thumbs
+          key: thumbs-${{ github.run_id }}
+      - name: Publish to Cloudflare Pages
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        run: |
+          list=$(npx --yes wrangler@3 pages project list 2>&1) || { echo "$list"; exit 1; }
+          echo "$list" | grep -qw "$THUMBS_PROJECT" || npx --yes wrangler@3 pages project create "$THUMBS_PROJECT" --production-branch main
+          npx --yes wrangler@3 pages deploy thumbs --project-name "$THUMBS_PROJECT" --branch main --commit-dirty=true

@@ -7,8 +7,12 @@ import { Icon } from './Icon';
 import { colors, radius } from '@/config/theme';
 import { useClubSettings } from '@/lib/hooks';
 
-/** "…/01.webp" -> "…/01_t.webp" (the 480 px copy made on the image server, tools/image-thumbnails). */
-export const thumbnailUrl = (uri: string) => uri.replace(/\/(\d{2})\.webp$/, '/$1_t.webp');
+/**
+ * The 480 px copy of a product's first photo, published by .github/workflows/thumbnails.yml as its own Cloudflare
+ * Pages site (same path as on img.casaete.top). Other photos have no copy: the card then falls back to the original.
+ */
+const THUMBS = process.env.EXPO_PUBLIC_THUMBS_URL ?? 'https://casate-thumbs.pages.dev';
+export const thumbnailUrl = (uri: string) => uri.replace(/^https:\/\/img\.casaete\.top\//, `${THUMBS}/`);
 
 /**
  * Product photo from storage/CDN. Falls back to the demo illustration sheet for the seeded
@@ -29,7 +33,7 @@ export function ProductImage({ uri, sku, label, inset = 0.12, aspect = 1, blend,
   const [thumbFailed, setThumbFailed] = useState(false);
   const { thumbnails } = useClubSettings();
   useEffect(() => { setFailed(false); setLoaded(false); setThumbFailed(false); }, [uri]);
-  const small = !!uri && thumb && thumbnails && !thumbFailed && /\/\d{2}\.webp$/.test(uri) ? thumbnailUrl(uri) : null;
+  const small = !!uri && thumb && thumbnails && !thumbFailed && /^https:\/\/img\.casaete\.top\/prodotti\/[^/]+\/\d{2}\.webp$/.test(uri) ? thumbnailUrl(uri) : null;
   // Until the photo arrives, a quiet grey tile instead of a white hole (plan v2 A4).
   const waiting = !loaded && !blend ? { backgroundColor: colors.well, borderRadius: radius.sm } : null;
   if (uri && !failed) {
