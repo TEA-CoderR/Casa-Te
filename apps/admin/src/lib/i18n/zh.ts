@@ -945,7 +945,7 @@ const dict: Record<string, string> = {
   "Inserisci un importo tra 0 e 1000 €.": "请输入 0 到 1000 € 之间的金额。",
   "Ordine minimo salvato.": "最低订单金额已保存。",
   "Usa le miniature nelle schede prodotto": "商品卡片使用缩略图",
-  "Attivalo solo dopo aver creato le miniature sul server delle immagini (tools/image-thumbnails). Se una miniatura manca, si vede la foto intera.": "请先在图片服务器上生成缩略图（tools/image-thumbnails）后再打开。缺少缩略图时会显示原图。",
+  "Le miniature si creano da sole ogni notte (GitHub Actions, sito casate-thumbs). Se una miniatura manca, si vede la foto intera.": "缩略图每晚自动生成（GitHub Actions，casate-thumbs 站点）。缺少缩略图时会显示原图。",
   "Numero non valido: scrivilo come +39 333 123 4567.": "号码无效：请按 +39 333 123 4567 的格式填写。",
   "Numero salvato.": "号码已保存。",
   "Assistenza clienti": "客户服务",

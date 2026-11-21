@@ -160,7 +160,7 @@ function ImagesCard() {
         <input type="checkbox" checked={settings.data.image_thumbnails} onChange={(e) => void toggle(e.target.checked)} />
         {t('Usa le miniature nelle schede prodotto')}
       </label>
-      <p className="muted" style={{ marginTop: 8 }}>{t('Attivalo solo dopo aver creato le miniature sul server delle immagini (tools/image-thumbnails). Se una miniatura manca, si vede la foto intera.')}</p>
+      <p className="muted" style={{ marginTop: 8 }}>{t('Le miniature si creano da sole ogni notte (GitHub Actions, sito casate-thumbs). Se una miniatura manca, si vede la foto intera.')}</p>
       {error && <Notice tone="error">{error}</Notice>}
     </>}
   </section>;
