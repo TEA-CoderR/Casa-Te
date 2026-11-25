@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Link } from 'expo-router';
@@ -34,7 +35,7 @@ export function FavoriteButton({ productId, name, size = 22, style, strokeWidth 
   </Pressable>;
 }
 
-export function ProductCard({ product: raw, variant = 'grid', rail }: { product: CatalogProduct; variant?: 'grid' | 'list' | 'feature';
+function ProductCardView({ product: raw, variant = 'grid', rail }: { product: CatalogProduct; variant?: 'grid' | 'list' | 'feature';
   /** Home rail card (design F): taller photo area and no heart. */
   rail?: boolean }) {
   const { wide } = useLayout();
@@ -205,3 +206,9 @@ const styles = StyleSheet.create({
   rowMedia: { width: 84, borderRadius: 12, backgroundColor: colors.surface, overflow: 'hidden' },
   rowSide: { alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', gap: 8 },
 });
+
+/**
+ * Memoised: when a list loads its next page, the cards already on screen keep their props (same product objects)
+ * and do not render again, which keeps long lists (Offerte Soci, 787 products) smooth on modest phones.
+ */
+export const ProductCard = memo(ProductCardView);
