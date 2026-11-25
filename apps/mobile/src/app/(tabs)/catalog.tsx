@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CategoryBrowser, SubcategorySheet, SubcategoryTabs, departmentCount, liveChildren } from '@/components/CategoryNav';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, Platform } from 'react-native';
 import { RemoteImage } from '@/components/RemoteImage';
 import { RevealOnOpen } from '@/components/Reveal';
 import { router, useLocalSearchParams, useRoute } from 'expo-router';
@@ -21,6 +21,7 @@ import { useQuery } from '@/lib/useQuery';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { useRecentSearches } from '@/store/recentSearches';
 import { SITE_WIDTH, transition, type WebState } from '@/components/site/shared';
+import Head from 'expo-router/head';
 
 /** First page of the lists seen recently (newest last), to reopen a department without waiting. */
 const firstPages = new Map<string, { items: CatalogProduct[]; hasMore: boolean; total: number | null; fuzzy?: boolean }>();
@@ -174,6 +175,9 @@ export default function CatalogScreen() {
     </Pressable>;
 
   const searching = !!debounced.trim();
+  // Web: the browser tab names the page (search, collection, category) instead of only "CASA & TE".
+  const pageName = searching ? `Ricerca “${debounced.trim()}”` : collection ?? current?.name ?? (categoryId ? null : 'Categorie');
+  const docHead = Platform.OS === 'web' && pageName ? <Head><title>{`${pageName} · CASA & TE`}</title></Head> : null;
   const pageHead = <View style={styles.deskHead}>
     <View style={styles.crumbs}>
       <Pressable onPress={() => router.push('/')} accessibilityRole="link">
@@ -240,7 +244,7 @@ export default function CatalogScreen() {
         return n > 0 && words.every((w) => name.split(/[^a-z0-9]+/).some((part) => part.startsWith(w)));
       }).sort((a, b) => (counts.data?.[b.id] ?? 0) - (counts.data?.[a.id] ?? 0)).slice(0, 5) : [];
       const openCategory = (id: string) => { recent.remember(query); openList({ category: id }); };
-      return <Screen header={header} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
+      return <>{docHead}<Screen header={header} ground={colors.page} contentContainerStyle={{ padding: 0, paddingBottom: 24 }}>
         {!debounced.trim() ? <View style={{ paddingHorizontal: 16, paddingTop: 22 }}>
           {/* Recent searches only while typing a new one (field focused, still empty): out of the way otherwise. */}
           {showRecents && <View style={{ marginBottom: 26 }}>
@@ -324,13 +328,13 @@ export default function CatalogScreen() {
           {more}
           </>}
         </View>}
-      </Screen>;
+      </Screen></>;
     }
 
     // "Categorie" tab with nothing chosen: the category browser instead of every product in one list.
     if (!categoryId && !collection) {
-      return <CategoryBrowser all={all} counts={counts.data} covers={covers.data}
-        onOpen={(id) => openList({ category: id })} onSearch={openSearch} />;
+      return <>{docHead}<CategoryBrowser all={all} counts={counts.data} covers={covers.data}
+        onOpen={(id) => openList({ category: id })} onSearch={openSearch} /></>;
     }
 
     const coverOf = (id: string) => covers.data?.[id]?.image ?? liveChildren(all, counts.data, id).map((c) => covers.data?.[c.id]?.image).find(Boolean) ?? null;
@@ -342,7 +346,7 @@ export default function CatalogScreen() {
     const sub = !collection && parent && current && current.id !== parent.id ? current : null;
     const deptTitle = collection ? (parent ? `${collection} · ${parent.name}` : collection) : sub ? sub.name : parent?.name ?? 'Tutti i prodotti';
     // No photo before the title (plan §5.2): it cut long names short, and the tabs below already show the subcategory.
-    return <RollingAwning title={deptTitle} eyebrow={sub ? parent!.name : undefined} image={null}
+    return <>{docHead}<RollingAwning title={deptTitle} eyebrow={sub ? parent!.name : undefined} image={null}
       onBack={canGoBackHere() ? goBack : undefined} searchScope={parent?.name}
       onSearch={openSearch} resetKey={`${categoryId ?? ''}|${collection ?? ''}`} onEndReached={loadMore}
       overlay={<>{filterSheetPhone}
@@ -361,10 +365,10 @@ export default function CatalogScreen() {
         <View style={styles.fGrid}>{loading && !items.length ? <ProductSkeletons /> : shown.map((product) => <View key={product.id} style={styles.fCell}><ProductCard product={product} /></View>)}</View>
         {more}
       </View>
-    </RollingAwning>;
+    </RollingAwning></>;
   }
 
-  return <Screen contentContainerStyle={wide ? { paddingTop: 0, paddingHorizontal: 40 } : { paddingTop: 4 }} maxWidth={wide ? SITE_WIDTH - 80 : undefined}
+  return <>{docHead}<Screen contentContainerStyle={wide ? { paddingTop: 0, paddingHorizontal: 40 } : { paddingTop: 4 }} maxWidth={wide ? SITE_WIDTH - 80 : undefined}
     after={wide ? <SiteFooter /> : undefined} bleed={40}>
     <FilterSheet visible={sheet !== null} section={sheet ?? 'all'} filters={filters} onChange={setFilters} onClose={() => setSheet(null)}
       facets={facets.data ?? null} total={loading ? null : count} />
@@ -435,7 +439,7 @@ export default function CatalogScreen() {
       : <View style={wide ? { flexDirection: 'row', flexWrap: 'wrap', columnGap: 24 } : undefined}>{shown.map((product) =>
           <View key={product.id} style={wide ? { width: '48%' } : undefined}><ProductCard product={product} variant="list" /></View>)}</View>}
     {loading || loadingMore ? <Loading /> : hasMore ? <View style={{ marginTop: 24 }}><SecondaryButton title="Mostra altri prodotti" onPress={loadMore} /></View> : null}
-  </Screen>;
+  </Screen></>;
 }
 
 /** Department photo (a real product of it) on a white plate, like every product photo; the department icon while there is none. */

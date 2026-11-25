@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, Linking } from 'react-native';
+import { disablePush, enablePush, pushSupported, usePushPreference } from '@/lib/push';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { brandMonogramGreen, brandMonogramYellow, MONOGRAM_ASPECT } from '@/config/brand';
 import { router, type Href } from 'expo-router';
@@ -70,8 +71,15 @@ export default function ProfileScreen() {
   const favourites = useFavorites((s) => s.ids.length);
   const [storeSheet, setStoreSheet] = useState(false);
   const [askSignOut, setAskSignOut] = useState(false);
+  const pushOn = usePushPreference((p) => p.enabled);
+  const togglePush = async () => {
+    if (pushOn) { await disablePush().catch(() => {}); return; }
+    const on = await enablePush().catch(() => false);
+    // Refused for good in the system: only the phone's settings can turn them on.
+    if (!on) Linking.openSettings().catch(() => {});
+  };
   const signOutSheet = <ConfirmSheet visible={askSignOut} title="Vuoi uscire dall’account?" keepLabel="Resta" confirmLabel="Esci"
-    onClose={() => setAskSignOut(false)} onConfirm={() => { setAskSignOut(false); void supabase.auth.signOut(); }} />;
+    onClose={() => setAskSignOut(false)} onConfirm={() => { setAskSignOut(false); void disablePush(true).catch(() => {}).finally(() => supabase.auth.signOut()); }} />;
   const profile = useQuery(user ? `profile:${user.id}` : null, () => fetchProfile(user!.id));
   const orders = useQuery<OrderWithItems[]>(user ? `orders:list:${user.id}` : null, fetchOrders);
   useRefetchOnFocus(orders.refetch);
@@ -148,7 +156,8 @@ export default function ProfileScreen() {
     {user && <Group title="Account">
       {/* Orders, addresses and favourites are the shortcuts above; here only what has no shortcut. */}
       <Row icon="user" title="Dati personali" subtitle={[name, profile.data?.phone].filter(Boolean).join(' · ') || 'Nome e telefono'} onPress={() => go('/account/edit')} />
-      <Row icon="shield" title="Password" subtitle="Imposta o cambia la password di accesso" onPress={() => go('/account/password')} last />
+      <Row icon="shield" title="Password" subtitle="Imposta o cambia la password di accesso" onPress={() => go('/account/password')} last={!pushSupported} />
+      {pushSupported && <Row icon="bell" title="Notifiche" subtitle={pushOn ? 'Attive: ordine pronto, annullato, rimborsi' : 'Disattivate'} onPress={togglePush} last />}
     </Group>}
     <Group title="Assistenza e informazioni">
       <Row icon="help" title="Domande frequenti" subtitle="Ritiro, pagamento, resi e contatti" onPress={() => go('/aiuto')} />

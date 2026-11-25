@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated as RNAnimated, Easing as RNEasing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { enablePush, pushSupported, usePushPreference } from '@/lib/push';
+import { haptic } from '@/lib/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -9,7 +11,7 @@ import { Screen } from '@/components/Screen';
 import { Icon } from '@/components/Icon';
 import { StepTag } from '@/components/ShopMarks';
 import { EmptyState, Loading, PrimaryButton, SecondaryButton } from '@/components/UI';
-import { colors, fonts } from '@/config/theme';
+import { colors, fonts, radius } from '@/config/theme';
 import { useLayout, useStores } from '@/lib/hooks';
 import { Monogram } from '@/components/ClubPass';
 import { Barcode } from '@/components/Barcode';
@@ -72,10 +74,12 @@ export default function CheckoutReturnScreen() {
 
   // Confirmed: paid online, or received to be paid in store (payment_method 'store', status 'paid' = received).
   const atTill = !!order && order.payment_method === 'store';
+  const pushOn = usePushPreference((p) => p.enabled);
   const paid = order && (order.payment_status !== 'unpaid' || (atTill && order.status !== 'pending_payment')) && order.status !== 'cancelled';
   const slot = order?.pickup_slot_start && order.pickup_slot_end ? slotText(order.pickup_slot_start, order.pickup_slot_end) : null;
   useEffect(() => {
     if (paid && order && !cleared.current) {
+      haptic.success();
       cleared.current = true;
       removeOrdered(order.order_items.map((i) => i.product_id).filter((id): id is string => !!id));
       invalidate('orders'); invalidate('featured');
@@ -124,6 +128,11 @@ export default function CheckoutReturnScreen() {
           </View>}
         </PrintedTicket>
         <Animated.View entering={FadeInDown.delay(900).duration(420)} style={{ marginTop: 'auto', gap: 14, alignItems: 'center' }}>
+          {pushSupported && !pushOn && <Pressable onPress={() => { void enablePush(); }} accessibilityRole="button"
+            style={({ pressed }) => [styles.gOutline, pressed && { opacity: 0.85 }]}>
+            <Icon name="bell" size={18} color={colors.onBrand} />
+            <Text style={styles.gOutlineText}>Avvisami quando è pronto</Text></Pressable>}
+          {pushSupported && pushOn && <Text style={styles.gNote}>Ti avvisiamo con una notifica.</Text>}
           <Pressable onPress={() => router.replace(`/order/${order.id}`)} accessibilityRole="button" style={({ pressed }) => [styles.gButton, pressed && { opacity: 0.9 }]}>
             <Text style={styles.gButtonText}>Segui l’ordine</Text></Pressable>
           <Pressable onPress={() => router.replace('/')} accessibilityRole="button" hitSlop={8}><Text style={styles.gLink}>Continua lo shopping</Text></Pressable>
@@ -193,6 +202,10 @@ const styles = StyleSheet.create({
   gButton: { alignSelf: 'stretch', height: 54, paddingHorizontal: 26, borderRadius: 27, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', minWidth: 300 },
   gButtonText: { fontSize: 17, fontFamily: fonts.sansBold, color: colors.text },
   gLink: { fontSize: 15, fontFamily: fonts.sansBold, color: colors.onBrand, textDecorationLine: 'underline' },
+  gOutline: { alignSelf: 'stretch', minWidth: 300, height: 50, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.onBrand,
+    flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
+  gOutlineText: { fontSize: 16, fontFamily: fonts.sansBold, color: colors.onBrand },
+  gNote: { fontSize: 15, fontFamily: fonts.sans, color: colors.onBrand },
   done: { alignItems: 'center', paddingTop: 24, gap: 8 },
   badge: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   title: { fontSize: 28, lineHeight: 34, fontFamily: fonts.display, color: colors.text, textAlign: 'center' },

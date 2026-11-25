@@ -11,6 +11,11 @@ import { StatusBar } from 'expo-status-bar';
 import { colors, fonts } from '@/config/theme';
 import { PersistenceGate } from '@/components/PersistenceGate';
 import { AppGate } from '@/components/AppGate';
+import { AnimatedSplash } from '@/components/AnimatedSplash';
+import { usePreferences } from '@/store/preferences';
+import { listenForPushTaps, syncPushToken } from '@/lib/push';
+import { supabase } from '@/lib/supabase';
+import * as SplashScreen from 'expo-splash-screen';
 import { HeaderBack } from '@/components/BrandHeader';
 import { Monogram } from '@/components/ClubPass';
 import { useLayout } from '@/lib/hooks';
@@ -35,6 +40,7 @@ function NotConfigured() {
  * a retry and the way home. Plain React Native only (fonts or providers may be what failed).
  */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  SplashScreen.hideAsync().catch(() => {});
   return <View style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
     <Text style={{ fontSize: 22, lineHeight: 27, fontWeight: '700', color: colors.text, textAlign: 'center' }} accessibilityRole="header">Qualcosa è andato storto</Text>{/* ui-check: allow (error screen: fonts may not be loaded) */}
     <Text style={{ fontSize: 15, lineHeight: 21, color: colors.muted, textAlign: 'center', marginTop: 8 }}>Riprova: se il problema continua, chiudi e riapri l’app.</Text>{/* ui-check: allow (error screen: fonts may not be loaded) */}
@@ -47,6 +53,12 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   </View>;
 }
 
+/** The opening animation on phones; none on the first launch, where the welcome opens with the logo itself. */
+function OpeningSplash({ wide }: { wide: boolean }) {
+  const onboarded = usePreferences((p) => p.onboarded);
+  return <AnimatedSplash ready skip={wide || !onboarded} />;
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     // Latin subsets of EB Garamond and Bodoni Moda (assets/fonts, SIL Open Font License).
@@ -57,7 +69,15 @@ export default function RootLayout() {
   });
   const { wide } = useLayout();
   useEffect(() => { if (isConfigured) { startSessionListener(); startClubListener(); } }, []);
-  if (!isConfigured) return <NotConfigured />;
+  // Push: a tapped notification opens its order; signing in saves this phone for that customer (if turned on).
+  useEffect(() => {
+    if (!isConfigured) return;
+    const stopTaps = listenForPushTaps();
+    void syncPushToken().catch(() => {});
+    const { data } = supabase.auth.onAuthStateChange((event) => { if (event === 'SIGNED_IN') void syncPushToken().catch(() => {}); });
+    return () => { stopTaps(); data.subscription.unsubscribe(); };
+  }, []);
+  if (!isConfigured) return <><NotConfigured /><AnimatedSplash ready skip /></>;
   // Native needs the faces registered before first render; the web shop falls back to system fonts meanwhile.
   if (Platform.OS !== 'web' && !fontsLoaded && !fontError) return null;
   return (
@@ -104,6 +124,7 @@ export default function RootLayout() {
         <Stack.Screen name="benvenuto" options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />
       </Stack>
       </AppGate>
+      <OpeningSplash wide={wide} />
     </PersistenceGate>
   );
 }

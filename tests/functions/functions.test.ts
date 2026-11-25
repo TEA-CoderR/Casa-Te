@@ -11,7 +11,9 @@ import { checkoutReturn } from '../../supabase/functions/checkout-return/handler
 import { stripeWebhook } from '../../supabase/functions/stripe-webhook/handler.ts';
 import { adminRefund } from '../../supabase/functions/admin-refund/handler.ts';
 import { deleteAccount } from '../../supabase/functions/delete-account/handler.ts';
-import { buildEmail, hoursLines } from '../../supabase/functions/notify-order-event/handler.ts';
+import { buildEmail, hoursLines, notifyOrderEvent, pushMessage } from '../../supabase/functions/notify-order-event/handler.ts';
+import { resetFcmToken } from '../../supabase/functions/_shared/fcm.ts';
+import { generateKeyPairSync, createVerify } from 'node:crypto';
 import { erpSync } from '../../supabase/functions/erp-sync/handler.ts';
 import { memberCard } from '../../supabase/functions/member-card/handler.ts';
 import { memberCardHashes } from '../../supabase/functions/_shared/member-card.ts';
@@ -483,4 +485,64 @@ test('member-card: hashes the card and check, links via the service role; refusa
   assert.equal((await res.json()).error, 'invalid_card_check');
   res = await handle((r) => memberCard(r, config))(post('member-card', { card: '00123456', phone_last4: '4567' }));
   assert.equal(res.status, 503);
+});
+
+// ---- Push notifications (FCM HTTP v1) --------------------------------------------------------
+
+test('push: only the events the customer acts on', () => {
+  const ev = (status: string | null, kind = 'status', note: string | null = null) => ({ id: 1, order_id: ORDER_ID, status, kind, note, visible_to_customer: true });
+  const order = { id: ORDER_ID, order_number: 'CT1', fulfilment: 'store' as const, customer_email: 'a@b.it', customer_name: null, total_cents: 1250,
+    tracking_number: null, tracking_url: null, carrier: null, store_id: 's', payment_method: 'store' as const, payment_status: 'unpaid' };
+  assert.equal(pushMessage(ev('paid'), order), null, 'no push for the confirmation');
+  const ready = pushMessage(ev('ready'), order)!;
+  assert.equal(ready.title, 'Il tuo ordine è pronto');
+  assert.match(ready.body, /paga alla cassa €12,50/);
+  assert.equal(ready.data!.url, `casate://order/${ORDER_ID}`);
+  assert.equal(pushMessage(ev('cancelled', 'status', 'Pagamento scaduto'), order), null, 'expired checkout is silent');
+  assert.match(pushMessage(ev('cancelled', 'status', 'Prodotto esaurito'), order)!.body, /annullato/);
+  assert.equal(pushMessage(ev(null, 'return', null), order), null);
+  assert.ok(pushMessage(ev(null, 'refund', 'Rimborso di €5,00'), order));
+});
+
+test('push: signs with the service account, sends to each phone, forgets uninstalled ones', async () => {
+  const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048, privateKeyEncoding: { type: 'pkcs8', format: 'pem' }, publicKeyEncoding: { type: 'spki', format: 'pem' } });
+  const saved = { ...process.env };
+  process.env.ORDER_WEBHOOK_SECRET = 'hook';
+  delete process.env.RESEND_API_KEY;
+  process.env.FCM_SERVICE_ACCOUNT = JSON.stringify({ client_email: 'push@casa-te.iam.gserviceaccount.com', private_key: privateKey, project_id: 'casa-te' });
+  resetFcmToken();
+  try {
+    let assertion = '';
+    routes.push(
+      route(/GET .*\/rest\/v1\/orders\?/, () => jsonRes([{ id: ORDER_ID, order_number: 'CT9', fulfilment: 'store', customer_email: 'x@y.it', customer_name: 'Anna', total_cents: 900,
+        tracking_number: null, tracking_url: null, carrier: null, store_id: 's', user_id: 'u1', payment_method: 'card', payment_status: 'paid' }])),
+      route(/GET .*\/rest\/v1\/push_tokens\?select=token&user_id=eq\.u1/, () => jsonRes([{ token: 'phone-ok' }, { token: 'phone-gone' }])),
+      route(/POST https:\/\/oauth2\.googleapis\.com\/token/, (c) => { assertion = decode(c.body).assertion; return jsonRes({ access_token: 'ya29.test', expires_in: 3600 }); }),
+      route(/POST https:\/\/fcm\.googleapis\.com\/v1\/projects\/casa-te\/messages:send/, (c) => JSON.parse(c.body).message.token === 'phone-gone'
+        ? new Response(JSON.stringify({ error: { status: 'NOT_FOUND', details: [{ errorCode: 'UNREGISTERED' }] } }), { status: 404 })
+        : jsonRes({ name: 'projects/casa-te/messages/1' })),
+      route(/DELETE .*\/rest\/v1\/push_tokens\?token=in\./, () => new Response(null, { status: 204 })),
+    );
+    const req = new Request('https://fn.local/notify-order-event', { method: 'POST', headers: { 'x-webhook-secret': 'hook', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'INSERT', table: 'order_events', record: { id: 7, order_id: ORDER_ID, status: 'ready', kind: 'status', note: null, visible_to_customer: true } }) });
+    const res = await notifyOrderEvent(req, config);
+    const body = await res.json() as { pushed: number; email: string };
+    assert.equal(body.pushed, 1, 'one phone reached');
+    assert.equal(body.email, 'not_configured', 'push works without email');
+    // The OAuth assertion is a valid RS256 JWT for the FCM scope, signed by the service account key.
+    const [h, c, sig] = assertion.split('.');
+    const claims = JSON.parse(Buffer.from(c, 'base64url').toString());
+    assert.equal(claims.scope, 'https://www.googleapis.com/auth/firebase.messaging');
+    assert.equal(claims.iss, 'push@casa-te.iam.gserviceaccount.com');
+    assert.ok(createVerify('RSA-SHA256').update(`${h}.${c}`).verify(publicKey, Buffer.from(sig, 'base64url')), 'signature valid');
+    const sent = callsTo(/fcm\.googleapis/).map((x) => JSON.parse(x.body).message);
+    assert.equal(sent.length, 2);
+    assert.equal(sent[0].notification.title, 'Il tuo ordine è pronto');
+    assert.equal(sent[0].android.notification.channel_id, 'orders');
+    assert.equal(callsTo(/oauth2/)[0].headers['content-type'], 'application/x-www-form-urlencoded');
+    assert.match(decodeURIComponent(callsTo(/DELETE .*push_tokens/)[0].url), /token=in\.\("phone-gone"\)/, 'uninstalled phone forgotten');
+  } finally {
+    process.env = saved;
+    resetFcmToken();
+  }
 });
