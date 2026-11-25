@@ -2,7 +2,7 @@
   "expo": {
     "name": "CASA & TE",
     "slug": "casa-te",
-    "version": "1.2.5",
+    "version": "1.3.0",
     "scheme": "casate",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -14,9 +14,10 @@
     },
     "android": {
       "package": "it.casate.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#3B6B31" }
     },
-    "plugins": ["expo-router", "expo-web-browser", ["expo-image-picker", { "photosPermission": "Le foto servono per trovare un prodotto nel negozio online o per mostrare al negozio un prodotto danneggiato in una richiesta di reso.", "cameraPermission": "La fotocamera serve per fotografare un prodotto e trovarlo nel negozio online. La foto resta sul telefono.", "microphonePermission": false }], "./plugins/with-mlkit-ocr", ["expo-splash-screen", { "backgroundColor": "#3B6B31", "image": "./assets/brand/splash-mono.png", "imageWidth": 104 }]],
+    "plugins": ["expo-router", "expo-web-browser", ["expo-image-picker", { "photosPermission": "Le foto servono per trovare un prodotto nel negozio online o per mostrare al negozio un prodotto danneggiato in una richiesta di reso.", "cameraPermission": "La fotocamera serve per fotografare un prodotto e trovarlo nel negozio online. La foto resta sul telefono.", "microphonePermission": false }], "./plugins/with-mlkit-ocr", ["expo-notifications", { "icon": "./assets/brand/notification-icon.png", "color": "#1F4127", "defaultChannel": "orders" }], ["expo-splash-screen", { "backgroundColor": "#3B6B31", "image": "./assets/brand/splash-mono.png", "imageWidth": 104 }]],
     "experiments": { "typedRoutes": true },
     "web": { "bundler": "metro", "output": "single", "favicon": "./assets/icon.png" },
     "extra": { "router": { "origin": false } }

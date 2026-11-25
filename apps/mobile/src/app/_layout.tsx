@@ -13,6 +13,8 @@ import { PersistenceGate } from '@/components/PersistenceGate';
 import { AppGate } from '@/components/AppGate';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { usePreferences } from '@/store/preferences';
+import { listenForPushTaps, syncPushToken } from '@/lib/push';
+import { supabase } from '@/lib/supabase';
 import * as SplashScreen from 'expo-splash-screen';
 import { HeaderBack } from '@/components/BrandHeader';
 import { Monogram } from '@/components/ClubPass';
@@ -67,6 +69,14 @@ export default function RootLayout() {
   });
   const { wide } = useLayout();
   useEffect(() => { if (isConfigured) { startSessionListener(); startClubListener(); } }, []);
+  // Push: a tapped notification opens its order; signing in saves this phone for that customer (if turned on).
+  useEffect(() => {
+    if (!isConfigured) return;
+    const stopTaps = listenForPushTaps();
+    void syncPushToken().catch(() => {});
+    const { data } = supabase.auth.onAuthStateChange((event) => { if (event === 'SIGNED_IN') void syncPushToken().catch(() => {}); });
+    return () => { stopTaps(); data.subscription.unsubscribe(); };
+  }, []);
   if (!isConfigured) return <><NotConfigured /><AnimatedSplash ready skip /></>;
   // Native needs the faces registered before first render; the web shop falls back to system fonts meanwhile.
   if (Platform.OS !== 'web' && !fontsLoaded && !fontError) return null;

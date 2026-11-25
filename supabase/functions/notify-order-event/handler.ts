@@ -5,14 +5,15 @@
 import type { Config } from '../_shared/env.ts';
 import { env } from '../_shared/env.ts';
 import { HttpError } from '../_shared/http.ts';
-import { select } from '../_shared/supabase.ts';
+import { remove, select } from '../_shared/supabase.ts';
+import { sendPush, serviceAccount, type PushMessage } from '../_shared/fcm.ts';
 
 type EventRecord = { id: number; order_id: string; status: string | null; kind: string; note: string | null; visible_to_customer: boolean; created_at?: string };
 type Payload = { type: string; table: string; record: EventRecord };
 type Order = {
   id: string; order_number: string; fulfilment: 'home' | 'pickup' | 'store'; customer_email: string | null;
   customer_name: string | null; total_cents: number; tracking_number: string | null; tracking_url: string | null;
-  carrier: string | null; store_id: string;
+  carrier: string | null; store_id: string; user_id?: string | null;
   subtotal_cents?: number; discount_cents?: number; shipping_cents?: number; coupon_code?: string | null;
   payment_method?: 'card' | 'store'; payment_status?: string; pickup_slot_start?: string | null; pickup_slot_end?: string | null;
   seller_snapshot?: { legal_name: string; vat_number: string; address?: string | null; postal_code?: string | null; city?: string | null; province?: string | null } | null;
@@ -161,6 +162,44 @@ export function buildEmail(event: EventRecord, order: Order, ctxOrStore: EmailCo
   return { subject, body: frame(order, ctx, hello, content) };
 }
 
+/**
+ * The push for an order event (plan v3 L2): only what the customer needs to act on — ready for pickup,
+ * shipped, cancelled, refunded, an answer about a return. No push for the confirmation (they are in the app)
+ * and never marketing. Tapping it opens the order.
+ */
+export function pushMessage(event: EventRecord, order: Order): PushMessage | null {
+  const n = order.order_number;
+  const data = { url: `casate://order/${order.id}`, order_id: order.id };
+  const tag = `order-${order.id}`;
+  if (event.kind === 'return') return event.note ? { title: `Reso dell'ordine ${n}`, body: event.note.slice(0, 180), data, tag } : null;
+  if (event.kind === 'refund') return { title: `Rimborso per l'ordine ${n}`, body: event.note?.slice(0, 180) || 'Abbiamo emesso un rimborso.', data, tag };
+  if (event.kind !== 'status') return null;
+  switch (event.status) {
+    case 'ready':
+      if (order.fulfilment !== 'store') return null;
+      return { title: 'Il tuo ordine è pronto', body: order.payment_method === 'store' && order.payment_status === 'unpaid'
+        ? `Ordine ${n}: ritiralo in negozio e paga alla cassa ${euro(order.total_cents)}.` : `Ordine ${n}: ti aspetta in negozio.`, data, tag };
+    case 'shipped':
+      return { title: 'Ordine spedito', body: `L'ordine ${n} è stato affidato al corriere.`, data, tag };
+    case 'cancelled':
+      if (event.note?.includes('scaduto') || event.note?.includes('prima del pagamento') || event.note?.includes('non avviato')) return null;
+      return { title: 'Ordine annullato', body: `L'ordine ${n} è stato annullato.${event.note ? ` ${event.note.slice(0, 120)}` : ''}`, data, tag };
+    default:
+      return null;
+  }
+}
+
+async function pushToCustomer(config: Config, event: EventRecord, order: Order): Promise<number> {
+  const sa = serviceAccount();
+  const msg = pushMessage(event, order);
+  if (!sa || !msg || !order.user_id) return 0;
+  const rows = await select<{ token: string }>(config, config.serviceRoleKey, 'push_tokens', `select=token&user_id=eq.${order.user_id}`);
+  const results = await sendPush(sa, rows.map((r) => r.token), msg);
+  const gone = results.filter((r) => r.gone).map((r) => r.token);
+  if (gone.length) await remove(config, config.serviceRoleKey, 'push_tokens', `token=in.(${gone.map((t) => `"${t}"`).join(',')})`).catch(() => {});
+  return results.filter((r) => r.ok).length;
+}
+
 export async function notifyOrderEvent(req: Request, config: Config): Promise<Response> {
   const secret = env('ORDER_WEBHOOK_SECRET');
   if (!secret || req.headers.get('x-webhook-secret') !== secret) throw new HttpError(401, 'unauthorized');
@@ -169,19 +208,23 @@ export async function notifyOrderEvent(req: Request, config: Config): Promise<Re
   if (payload.type !== 'INSERT' || payload.table !== 'order_events' || !event?.visible_to_customer) {
     return new Response(JSON.stringify({ skipped: true }), { status: 200 });
   }
+  const [order] = await select<Order>(config, config.serviceRoleKey, 'orders', `select=*&id=eq.${event.order_id}`);
+  if (!order) return new Response(JSON.stringify({ skipped: 'no_order' }), { status: 200 });
+
+  // Push first, on its own: a push failure never blocks the email, and the email does not need push.
+  const pushed = await pushToCustomer(config, event, order).catch((e) => { console.error('push failed', e); return 0; });
+
   const apiKey = env('RESEND_API_KEY');
   const from = env('EMAIL_FROM');
-  if (!apiKey || !from) return new Response(JSON.stringify({ skipped: 'email_not_configured' }), { status: 200 });
-
-  const [order] = await select<Order>(config, config.serviceRoleKey, 'orders', `select=*&id=eq.${event.order_id}`);
-  if (!order?.customer_email) return new Response(JSON.stringify({ skipped: 'no_email' }), { status: 200 });
+  if (!apiKey || !from) return new Response(JSON.stringify({ pushed, email: 'not_configured' }), { status: 200 });
+  if (!order.customer_email) return new Response(JSON.stringify({ pushed, email: 'no_email' }), { status: 200 });
   const [store] = await select<EmailStore>(config, config.serviceRoleKey, 'stores', `select=name,address,postal_code,city,phone&id=eq.${order.store_id}`);
   const [hours, items] = await Promise.all([
     select<EmailHours>(config, config.serviceRoleKey, 'store_opening_hours', `select=weekday,opens,closes&store_id=eq.${order.store_id}&order=weekday,opens`).catch(() => []),
     select<EmailItem>(config, config.serviceRoleKey, 'order_items', `select=name,quantity,unit_price_cents,line_total_cents&order_id=eq.${order.id}&order=name`),
   ]);
   const email = buildEmail(event, order, { store: store ?? { name: 'il negozio' }, hours, items, shopUrl: config.webShopUrl || undefined });
-  if (!email) return new Response(JSON.stringify({ skipped: 'not_notifiable' }), { status: 200 });
+  if (!email) return new Response(JSON.stringify({ pushed, email: 'not_notifiable' }), { status: 200 });
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -192,5 +235,5 @@ export async function notifyOrderEvent(req: Request, config: Config): Promise<Re
     }),
   });
   if (!res.ok) throw new HttpError(502, 'email_failed', await res.text());
-  return new Response(JSON.stringify({ sent: true }), { status: 200 });
+  return new Response(JSON.stringify({ pushed, sent: true }), { status: 200 });
 }

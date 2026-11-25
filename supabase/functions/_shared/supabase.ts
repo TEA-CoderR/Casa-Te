@@ -102,3 +102,9 @@ export async function adminFindUserByEmail(config: Config, email: string): Promi
   }
   return null;
 }
+
+/** DELETE /rest/v1/<table>?<query> */
+export async function remove(config: Config, token: string, table: string, query: string): Promise<void> {
+  const res = await fetch(`${config.supabaseUrl}/rest/v1/${table}?${query}`, { method: 'DELETE', headers: headers(config, token) });
+  if (!res.ok) throw await postgrestError(res);
+}

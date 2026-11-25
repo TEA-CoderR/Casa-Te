@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "392486426456",
+    "project_id": "casa-te",
+    "storage_bucket": "casa-te.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:392486426456:android:8afeff4e255d19975eb72d",
+        "android_client_info": {
+          "package_name": "it.casate.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjzgBF_NfhHX2RnaQzanwEDwckPbGy6Aw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
