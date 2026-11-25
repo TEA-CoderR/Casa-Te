@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { haptic } from '@/lib/haptics';
+import { useBrightScreen } from '@/lib/brightScreen';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, type } from '@/config/theme';
 import { LOGO_MONO } from '@/config/logoPaths';
@@ -30,7 +32,7 @@ export function ClubPass({ name, card, title, action, onPress, style, kicker = '
   kicker?: string; name?: string; card?: string | null; title?: string; action?: string; onPress?: () => void; style?: ViewStyle;
 }) {
   const [zoom, setZoom] = useState(false);
-  const press = card ? () => setZoom(true) : onPress;
+  const press = card ? () => { haptic.tap(); setZoom(true); } : onPress;
   return <>
     <Pressable onPress={press} accessibilityRole="button"
       accessibilityLabel={card ? 'Tessera Soci: tocca per ingrandire il codice a barre' : [title, action].filter(Boolean).join('. ')}
@@ -55,6 +57,7 @@ export function ClubPass({ name, card, title, action, onPress, style, kicker = '
 
 /** The member's barcode, large and on white, to scan at the till. */
 export function ClubCodeModal({ card, visible, onClose }: { card: string; visible: boolean; onClose: () => void }) {
+  useBrightScreen(visible);
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <Pressable style={styles.scrim} onPress={onClose} accessibilityRole="button" accessibilityLabel="Chiudi">
       <View style={styles.big}>
@@ -74,7 +77,7 @@ export function ClubCodeModal({ card, visible, onClose }: { card: string; visibl
 export function ClubRow({ card, title, text, onPress, style }: { card?: string | null; title: string; text: string; onPress?: () => void; style?: ViewStyle }) {
   const [zoom, setZoom] = useState(false);
   return <>
-    <Pressable onPress={card ? () => setZoom(true) : onPress} accessibilityRole="button" accessibilityLabel={`${title}. ${text}`}
+    <Pressable onPress={card ? () => { haptic.tap(); setZoom(true); } : onPress} accessibilityRole="button" accessibilityLabel={`${title}. ${text}`}
       style={({ pressed }) => [styles.row, style, pressed && { opacity: 0.85 }]}>
       <View style={styles.mini}><Monogram width={26} color={colors.band} /></View>
       <View style={{ flex: 1, minWidth: 0 }}>

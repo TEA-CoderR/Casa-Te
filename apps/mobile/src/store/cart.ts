@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { MAX_LINE_QUANTITY, type CartItemInput } from '@casa-te/shared';
+import { haptic } from '@/lib/haptics';
 
 /**
  * The cart only stores product ids and quantities. Names, prices, availability and totals are
@@ -30,10 +31,12 @@ export const useCartStore = create<CartState>()(
       }),
       add: (productId, quantity = 1) => set((state) => {
         if (!Number.isFinite(quantity) || quantity <= 0) return state;
+        haptic.tap();
         return { items: { ...state.items, [productId]: clamp((state.items[productId] ?? 0) + quantity) } };
       }),
       setQuantity: (productId, quantity) => set((state) => {
         if (!Number.isFinite(quantity)) return state;
+        if (clamp(quantity) !== (state.items[productId] ?? 0)) haptic.tick();
         const next = { ...state.items };
         const q = clamp(quantity);
         if (q <= 0) delete next[productId]; else next[productId] = q;

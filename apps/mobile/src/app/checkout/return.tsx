@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated as RNAnimated, Easing as RNEasing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { haptic } from '@/lib/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -76,6 +77,7 @@ export default function CheckoutReturnScreen() {
   const slot = order?.pickup_slot_start && order.pickup_slot_end ? slotText(order.pickup_slot_start, order.pickup_slot_end) : null;
   useEffect(() => {
     if (paid && order && !cleared.current) {
+      haptic.success();
       cleared.current = true;
       removeOrdered(order.order_items.map((i) => i.product_id).filter((id): id is string => !!id));
       invalidate('orders'); invalidate('featured');
